@@ -162,7 +162,7 @@ class Frame extends ProtoLayer {
 
   drawSVG() {
     let svgFrame = createSVG(this.size.x, this.size.y)
-      .style(CS.background, 'orangered')
+      .style(CS.background, 'yellow')
       .style(CS.borderRadius, '100px')
       .position(0 - this.anchor.y / 2, 0 - this.anchor.x / 2, 'relative')
       // .position(0, 0, 'relative')
