@@ -139,7 +139,7 @@ class Frame extends ProtoLayer {
   constructor(parentP5Elt) {
     super(parentP5Elt)
     this.finishSetup(S.Frame)
-    this.drawSVG()
+    // this.drawSVG()
   }
   get parentBoundsRect() { return this.parentP5Elt.elt.getBoundingClientRect() }
   get parentSize() { return vert(this.parentBoundsRect.width, this.parentBoundsRect.height) }
@@ -161,29 +161,64 @@ class Frame extends ProtoLayer {
   get testLook() { return Look.test(this.size, 'frame') }
 
   drawSVG() {
-    let svgFrame = createSVG(this.size.x, this.size.y)
+    let svgFrame = createSVG(this.insetSize.x, this.insetSize.y)
       .style(CS.background, 'yellow')
       .style(CS.borderRadius, '100px')
-      .position(0 - this.anchor.y / 2, 0 - this.anchor.x / 2, 'relative')
+      .position(0 + this.insetAnchor.x, 0 + this.insetAnchor.y, 'absolute')
       // .position(0, 0, 'relative')
-      // .position(0, 0, 'fixed')
+      // .position(0, 0, 'absolute')
+      // .size(this.insetSize.x, this.insetSize.y)
       .attribute(
         SVG.viewBox,
-        `${0}, ${0}, 
-        ${this.size.x}, 
-        ${this.size.y}`
+        `${0}, 
+        ${0}, 
+        ${this.insetSize.x}, 
+        ${this.insetSize.y}`
         // ${this.size.x + this.anchor.x}, 
         // ${this.size.y + this.anchor.y},
 
       )
-      .parent(this.p5Elt)
+    // .parent(this.p5Elt)
+
+    return svgFrame
+  }
+
+  assignElement() {
+    // this.p5Elt = createSVG(this.insetSize.x, this.insetSize.y)
+    this.p5Elt = createSVG(0, 0)
+      // print(`id (${this.id}) is a string: ${typeof this.id === 'string'}`)
+      // this.p5Elt = createDiv(TestMode ? this.id : '')
+      .id(this.id)
+      .parent(this.parentP5Elt)
+      .addToClassList(this.id)
+      .addToClassList(this.parentP5Elt.elt.classList.value)
   }
 
   drawElement(look = this.testLook) {
     this.p5Elt
-      .look(look)
-      .size(this.insetSize.x, this.insetSize.y)
-      .style(CS.background, frameColor)
+      //   .look(look)
+      // .size(this.insetSize.x, this.insetSize.y)
+      //   .style(CS.background, frameColor)
+      .style(CS.background, 'deeppink')
+      .style(CS.borderRadius, '100px')
+      // .position(this.insetAnchor.x, this.insetAnchor.y, 'absolute')
+      // .position(0, 0, 'relative')
+      // .position(0, 0, 'absolute')
+      // .size(this.insetSize.x, this.insetSize.y)
+      // .attribute(SVG.width, '400')
+      // .attribute(SVG.height, '400')
+      .attribute(SVG.viewBox,
+        `
+        ${0}, 
+      ${0},
+      ${100}, 
+      ${200}
+      `
+      )
+      .attribute('preserveAspectRatio', 'xMidyMid')
+      .attribute('width', `${this.size.x}`)
+      .attribute('height', `${this.size.y}`)
+
   }
 }
 
