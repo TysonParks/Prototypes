@@ -160,29 +160,6 @@ class Frame extends ProtoLayer {
 
   get testLook() { return Look.test(this.size, 'frame') }
 
-  drawSVG() {
-    let svgFrame = createSVG(this.insetSize.x, this.insetSize.y)
-      .style(CS.background, 'yellow')
-      .style(CS.borderRadius, '100px')
-      .position(0 + this.insetAnchor.x, 0 + this.insetAnchor.y, 'absolute')
-      // .position(0, 0, 'relative')
-      // .position(0, 0, 'absolute')
-      // .size(this.insetSize.x, this.insetSize.y)
-      .attribute(
-        SVG.viewBox,
-        `${0}, 
-        ${0}, 
-        ${this.insetSize.x}, 
-        ${this.insetSize.y}`
-        // ${this.size.x + this.anchor.x}, 
-        // ${this.size.y + this.anchor.y},
-
-      )
-    // .parent(this.p5Elt)
-
-    return svgFrame
-  }
-
   assignElement() {
     // this.p5Elt = createSVG(this.insetSize.x, this.insetSize.y)
     this.p5Elt = createSVG(0, 0)
@@ -196,17 +173,9 @@ class Frame extends ProtoLayer {
 
   drawElement(look = this.testLook) {
     this.p5Elt
-      //   .look(look)
-      // .size(this.insetSize.x, this.insetSize.y)
-      //   .style(CS.background, frameColor)
-      .style(CS.background, 'deeppink')
-      .style(CS.borderRadius, '100px')
-      // .position(this.insetAnchor.x, this.insetAnchor.y, 'absolute')
-      // .position(0, 0, 'relative')
-      // .position(0, 0, 'absolute')
-      // .size(this.insetSize.x, this.insetSize.y)
-      // .attribute(SVG.width, '400')
-      // .attribute(SVG.height, '400')
+      .look(look)
+      // .style(CS.background, 'deeppink')
+      // .style(CS.borderRadius, '25px')
       .attribute(SVG.viewBox,
         `
         ${0}, 
