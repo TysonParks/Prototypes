@@ -3,7 +3,7 @@ let gui
 let testingControls = {
   hashNumber: 0,
   lastHash: true,
-  labels: false,
+  labels: true,
   borders: true,
   testColors: false,
   shapeVerts: true,

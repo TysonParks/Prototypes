@@ -139,7 +139,6 @@ class Frame extends ProtoLayer {
   constructor(parentP5Elt) {
     super(parentP5Elt)
     this.finishSetup(S.Frame)
-    // this.drawSVG()
   }
   get parentBoundsRect() { return this.parentP5Elt.elt.getBoundingClientRect() }
   get parentSize() { return vert(this.parentBoundsRect.width, this.parentBoundsRect.height) }
@@ -156,15 +155,10 @@ class Frame extends ProtoLayer {
       })
   }
 
-  // get center() { return Vertex.div(this.size, 2).add(this.anchor) }
-
   get testLook() { return Look.test(this.size, 'frame') }
 
   assignElement() {
-    // this.p5Elt = createSVG(this.insetSize.x, this.insetSize.y)
     this.p5Elt = createSVG(0, 0)
-      // print(`id (${this.id}) is a string: ${typeof this.id === 'string'}`)
-      // this.p5Elt = createDiv(TestMode ? this.id : '')
       .id(this.id)
       .parent(this.parentP5Elt)
       .addToClassList(this.id)
@@ -174,20 +168,10 @@ class Frame extends ProtoLayer {
   drawElement(look = this.testLook) {
     this.p5Elt
       .look(look)
-      // .style(CS.background, 'deeppink')
-      // .style(CS.borderRadius, '25px')
-      .attribute(SVG.viewBox,
-        `
-        ${0}, 
-      ${0},
-      ${100}, 
-      ${200}
-      `
-      )
+      .attribute(SVG.viewBox, `0,0,100,200`)
       .attribute('preserveAspectRatio', 'xMidyMid')
       .attribute('width', `${this.size.x}`)
       .attribute('height', `${this.size.y}`)
-
   }
 }
 
