@@ -46,13 +46,12 @@ p5.Element.prototype.addToClassList = function (newClass) {
 // MARK: p5.Element extension 'type' property
 Object.defineProperty(p5.Element.prototype, 'type', {
   get: function () {
-    switch (this.elt.namespaceURI) {
-      case 'http://www.w3.org/1999/xhtml':
-        return 'html'
-      case 'http://www.w3.org/2000/svg':
-        return 'svg'
-      default:
-        return -1
+    if (this.elt instanceof HTMLElement) {
+      return 'html'
+    } else if (this.elt instanceof SVGElement) {
+      return 'svg'
+    } else {
+      return 'unknown'
     }
   }
 })
@@ -148,7 +147,7 @@ function addElement(elt, pInst, media) {
 // NOTE: Created with GPT-4 on Tues Mar 21, 2023
 //FUNC: p5.Element extension dropShadow(dx, dy, blurRadius, spreadRadius, opacity, color, inset = false)
 // Create a dropShadow function to extend p5.Element prototype
-p5.Element.prototype.dropShadow = function (dx, dy, blurRadius, spreadRadius, opacity, color, inset = false) {
+p5.Element.prototype.dropShadow = function ({ dx = 5, dy = 5, blurRadius = 10, spreadRadius = 0, opacity = 1, color = 'black', inset = false } = {}) {
   if (this.elt.tagName.toLowerCase() === SVG.svg) {
     const filter = createSVGElt(SVG.filter)
       .attribute('id', 'drop-shadow')
@@ -203,5 +202,5 @@ p5.Element.prototype.dropShadow = function (dx, dy, blurRadius, spreadRadius, op
     console.warn('The dropShadow function can only be applied to SVG elements.')
   }
 
-  return this;
-};
+  return this
+}
