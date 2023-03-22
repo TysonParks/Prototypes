@@ -172,6 +172,7 @@ class Frame extends ProtoLayer {
       .attribute('preserveAspectRatio', 'xMidyMid')
       .attribute('width', `${this.size.x}`)
       .attribute('height', `${this.size.y}`)
+    // .style(CS.border, '1px solid green')
   }
 }
 

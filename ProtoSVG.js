@@ -116,8 +116,7 @@ class SVG {
   static feGaussianBlur = `feGaussianBlur`
   static feFlood = `feFlood`
   static feComposite = `feComposite`
-  static feGaussianBlur = `feGaussianBlur`
-  static feFlood = `feFlood`
+
 }
 
 
@@ -144,3 +143,65 @@ function addElement(elt, pInst, media) {
   pInst._elements.push(c);
   return c;
 }
+
+
+// NOTE: Created with GPT-4 on Tues Mar 21, 2023
+//FUNC: p5.Element extension dropShadow(dx, dy, blurRadius, spreadRadius, opacity, color, inset = false)
+// Create a dropShadow function to extend p5.Element prototype
+p5.Element.prototype.dropShadow = function (dx, dy, blurRadius, spreadRadius, opacity, color, inset = false) {
+  if (this.elt.tagName.toLowerCase() === SVG.svg) {
+    const filter = createSVGElt(SVG.filter)
+      .attribute('id', 'drop-shadow')
+
+    const gaussianBlur = createSVGElt(SVG.feGaussianBlur)
+      .attribute('in', 'SourceAlpha')
+      .attribute('stdDeviation', blurRadius)
+
+    const offset = createSVGElt(SVG.feOffset)
+      .attribute('dx', dx)
+      .attribute('dy', dy)
+
+    const componentTransfer = createSVGElt('feComponentTransfer')
+    const funcA = createSVGElt('feFuncA')
+      .attribute('type', 'linear')
+      .attribute('slope', opacity)
+    componentTransfer.child(funcA)
+
+    const flood = createSVGElt(SVG.feFlood)
+      .attribute('flood-color', color)
+      .attribute('result', 'color')
+
+    const composite = createSVGElt(SVG.feComposite)
+      .attribute('in', 'color')
+      .attribute('in2', 'blurOut')
+      .attribute('operator', 'in')
+      .attribute('result', 'shadow')
+
+    const morphology = createSVGElt('feMorphology')
+      .attribute('in', 'SourceAlpha')
+      .attribute('operator', spreadRadius >= 0 ? 'dilate' : 'erode')
+      .attribute('radius', Math.abs(spreadRadius))
+      .attribute('result', 'spreadOut')
+    gaussianBlur.attribute('in', 'spreadOut')
+
+    filter.child(morphology)
+    filter.child(gaussianBlur)
+    filter.child(offset)
+    filter.child(componentTransfer)
+    filter.child(flood)
+    filter.child(composite)
+
+    const defs = this.elt.querySelector(SVG.defs) || createSVGElt(SVG.defs).elt
+    defs.appendChild(filter.elt)
+    this.elt.insertBefore(defs, this.elt.firstChild)
+
+    this.elt.style.filter = 'url(#drop-shadow)'
+    if (inset) {
+      this.elt.style.overflow = 'hidden'
+    }
+  } else {
+    console.warn('The dropShadow function can only be applied to SVG elements.')
+  }
+
+  return this;
+};
