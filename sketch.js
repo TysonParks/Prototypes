@@ -42,53 +42,14 @@ function setup() {
 
   functionTestPrint()
 
-  setupStore()
   setupPrefs()
+  setupStore()
   setupColors()
   setupBackground()
   // redrawAll()
 
   //TESTING
-  // functionTestPrint()
-  // createPElements()
-  // stylePElements()
   createGUI()
-
-  // Drawing Code
-
-  // let backdropFilterSettings = "blur(2px)"
-
-  // MARK: rounded rect Test
-  // container = createDiv().id("container")
-  //   .parent(F)
-  // drawContainer()
-
-  // clone = createDiv().id("clone")
-  //   .parent(container)
-  // drawClone()
-
-  // MARK: squircle Test
-  // let testSquircle = squircleShape(200, 200, 1, 1)
-  //   .parent(F.p5Elt)
-  //   .style(CS.backgroundColor, '#a0a')
-
-  // Wrapper enables use of drop-shadow on SVG-like shape
-  // squircleWrapper = createDiv()
-  // squircleWrapper.parent(F.p5Elt)
-  // Actual shape
-  // squircle = createDiv()
-  // squircle.parent(squircleWrapper)
-
-  // drawSquircle(squircle, squircleWrapper)
-
-  // MARK: curvedShape Test
-  // curvedShapeWrapper = createDiv()
-  // curvedShapeWrapper.parent(Frame.p5Elt)
-
-  // curvedShape = createDiv()
-  // curvedShape.parent(curvedShapeWrapper)
-
-  // drawCurvedShape({ shape: curvedShape, wrapper: curvedShapeWrapper })
 
   // MARK: grid Test
   let gridX = R.random_int(2, 10)
@@ -313,6 +274,84 @@ function drawObjects() {
   // drawSquircle()
 }
 
+
+// MARK: GLOBAL FUNCS
+
+// FUNC: windowResized()
+function windowResized() {
+  sizeFrame()
+  BG.size(windowWidth, windowHeight)
+  redrawAll()
+}
+
+function redrawAll() {
+  BG.size(windowWidth, windowHeight)
+  S.allLayers.forEach(e => e.resize())
+}
+
+// FUNC: sizeFrame()
+function sizeFrame() {
+  const width = min(windowWidth, windowHeight / 2)
+  const height = width * 2
+  // const height = 2 * floor(windowHeight / 2)
+  // const width = 2 * floor(height / 4)
+  frameSize = vert(width, width * 2)
+  // print(frameSize)
+}
+
+// FUNC: wix() : returns pixel value of a wixel count
+// NOTE: 'wixel' is the fundamental measure unit of Prototypes, its the percent of frameSize.x
+// NOTE: i.e. every Prototype is 100 wixels wide x 200 wixels high
+// NOTE: 0.5 wix should be minimum Element size (~3px on 4K Landscape, ~6px on iphone Portrait)
+function wix(count) { return count / 100 * frameSize.x }
+function wixPx(count) { return `${wix(count)}px` }
+
+// FUNC: globalShadowVector()
+function globalShadowVector() {
+  return Shade.shadVect(globalControls.shadAngle, globalControls.shadMag)
+}
+
+
+// MARK: SETUP FUNCS
+
+// FUNC: setupPrefs()
+function setupPrefs() {
+  angleMode(DEGREES)
+  R = new Random()
+  TestMode = true
+}
+
+// FUNC: setupStore()
+function setupStore() { S = new Store() }
+
+// FUNC: setupColors()
+function setupColors() {
+  backgroundColor = color(0)
+  frameColor = color(240)
+  accentColor = color("hsb(190, 100%, 90%)")
+
+  acHiCol = color("hsb(190, 20%, 100%)").toString('#rrggbb')
+  acShCol = color("hsb(190, 100%, 70%)").toString('#rrggbb')
+
+  bgCol = backgroundColor.toString('#rrggbb')
+  acCol = accentColor.toString('#rrggbb')
+  hiCol = color(255).toString('#rrggbb')
+  shCol = color(210).toString('#rrggbb')
+}
+
+// FUNC: setupBackground()
+function setupBackground() {
+  BG = createDiv().id('BG')
+    .size(windowWidth, windowHeight)
+    .look(Look.centeredFlex(backgroundColor, 'column'))
+
+  F = new Frame(BG)
+  // .look(Look.centeredFlex(frameColor))
+}
+
+// MARK: Testing Functions
+
+// FUNC: makeTestSVG()
 function makeTestSVG(parent) {
   let testSVG = createSVG(400, 400)
   testSVG
@@ -520,80 +559,4 @@ function displayHash() {
   let testEnum = createDiv(testStyle)
     .parent(Frame)
     .style(CS.padding, '0 20px')
-}
-
-// MARK: GLOBAL FUNCS
-
-// FUNC: windowResized()
-function windowResized() {
-  sizeFrame()
-  BG.size(windowWidth, windowHeight)
-  redrawAll()
-}
-
-function redrawAll() {
-  BG.size(windowWidth, windowHeight)
-  S.allLayers.forEach(e => e.resize())
-}
-
-// FUNC: sizeFrame()
-function sizeFrame() {
-  const width = min(windowWidth, windowHeight / 2)
-  const height = width * 2
-  // const height = 2 * floor(windowHeight / 2)
-  // const width = 2 * floor(height / 4)
-  frameSize = vert(width, width * 2)
-  // print(frameSize)
-}
-
-// FUNC: wix() : returns pixel value of a wixel count
-// NOTE: 'wixel' is the fundamental measure unit of Prototypes, its the percent of frameSize.x
-// NOTE: i.e. every Prototype is 100 wixels wide x 200 wixels high
-// NOTE: 0.5 wix should be minimum Element size (~3px on 4K Landscape, ~6px on iphone Portrait)
-function wix(count) { return count / 100 * frameSize.x }
-function wixPx(count) { return `${wix(count)}px` }
-
-// FUNC: globalShadowVector()
-function globalShadowVector() {
-  return Shade.shadVect(globalControls.shadAngle, globalControls.shadMag)
-}
-
-
-// MARK: SETUP FUNCS
-
-// FUNC: setupPrefs()
-function setupPrefs() {
-  angleMode(DEGREES)
-  R = new Random()
-  TestMode = true
-}
-
-// FUNC: setupStore()
-function setupStore() {
-  S = new Store()
-}
-
-// FUNC: setupBackground()
-function setupBackground() {
-  BG = createDiv().id('BG')
-    .size(windowWidth, windowHeight)
-    .look(Look.centeredFlex(backgroundColor, 'column'))
-
-  F = new Frame(BG)
-  // .look(Look.centeredFlex(frameColor))
-}
-
-// FUNC: setupColors()
-function setupColors() {
-  backgroundColor = color(0)
-  frameColor = color(240)
-  accentColor = color("hsb(190, 100%, 90%)")
-
-  acHiCol = color("hsb(190, 20%, 100%)").toString('#rrggbb')
-  acShCol = color("hsb(190, 100%, 70%)").toString('#rrggbb')
-
-  bgCol = backgroundColor.toString('#rrggbb')
-  acCol = accentColor.toString('#rrggbb')
-  hiCol = color(255).toString('#rrggbb')
-  shCol = color(210).toString('#rrggbb')
 }
