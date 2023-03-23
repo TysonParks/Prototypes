@@ -162,6 +162,8 @@ class Frame extends ProtoLayer {
 
   get testLook() { return Look.test(this.size, 'frame') }
 
+  // MARK: Setup Methods
+  // #region Setup Methods
   assignElement() {
     // if (this.parentIsBody) {
     this.p5Elt = createSVG(0, 0)
@@ -215,6 +217,7 @@ class Frame extends ProtoLayer {
     // .dropShadow({ color: red })
 
   }
+  // #endregion
 }
 
 //TODO: DEPRECATE
