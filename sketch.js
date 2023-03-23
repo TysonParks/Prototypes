@@ -346,7 +346,6 @@ function setupBackground() {
     .look(Look.centeredFlex(backgroundColor, 'column'))
 
   F = new Frame(BG)
-  // .look(Look.centeredFlex(frameColor))
 }
 
 // MARK: Testing Functions

@@ -15,6 +15,7 @@ class ProtoLayer {
   parent
   p5Elt
   parentP5Elt
+  // parentIsBody = false
 
   layers = []
   insetAmount = 1
@@ -25,6 +26,7 @@ class ProtoLayer {
       this.parentP5Elt = parent.p5Elt
     }
     else if (parent instanceof p5.Element) { this.parentP5Elt = parent }
+    // else if (parent instanceof HTMLElement && parent.tagName === 'BODY') { this.parentIsBody = true }
     else { console.error('parent is not valid') }
     this.#assignUID()
   }
@@ -143,7 +145,7 @@ class Frame extends ProtoLayer {
     super(parentP5Elt)
     this.finishSetup(S.Frame)
   }
-  get parentBoundsRect() { return this.parentP5Elt.elt.getBoundingClientRect() }
+  get parentBoundsRect() { return document.body.getBoundingClientRect() }
   get parentSize() { return vert(this.parentBoundsRect.width, this.parentBoundsRect.height) }
 
   get size() { return frameSize }
@@ -161,11 +163,14 @@ class Frame extends ProtoLayer {
   get testLook() { return Look.test(this.size, 'frame') }
 
   assignElement() {
+    // if (this.parentIsBody) {
     this.p5Elt = createSVG(0, 0)
       .id(this.id)
       .parent(this.parentP5Elt)
       .addToClassList(this.id)
       .addToClassList(this.parentP5Elt.elt.classList.value)
+    //   document.body.appendChild(this.p5Elt.elt)
+    // }
   }
 
   drawElement(look = this.testLook) {
