@@ -17,13 +17,6 @@ p5.prototype.createSVG = function (width, height) {
     .attribute(SVG.height, `${height}`)
 }
 
-p5.Element.prototype.svgStyle = function (prop, value) {
-  if (this.type === 'svg') {
-    this.elt.style.setProperty(prop, value)
-  }
-  return this
-}
-
 //FUNC: p5.Element extension attributeNS(nameSpaceURI, attr, value)
 p5.Element.prototype.addToClassList = function (newClass) {
   // print(`addToClassList():`)
@@ -48,7 +41,6 @@ p5.Element.prototype.addToClassList = function (newClass) {
   }
   return this
 }
-
 
 // MARK: p5.Element extension 'type' property
 Object.defineProperty(p5.Element.prototype, 'type', {
