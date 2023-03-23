@@ -291,11 +291,11 @@ function redrawAll() {
 
 // FUNC: sizeFrame()
 function sizeFrame() {
-  const width = min(windowWidth, windowHeight / 2)
-  const height = width * 2
+  const width = min(windowWidth, windowHeight / 2) * 1.1
+  const height = width * 1.8
   // const height = 2 * floor(windowHeight / 2)
   // const width = 2 * floor(height / 4)
-  frameSize = vert(width, width * 2)
+  frameSize = vert(width, height)
   // print(frameSize)
 }
 

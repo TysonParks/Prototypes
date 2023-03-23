@@ -54,6 +54,7 @@ class ProtoLayer {
       })
   }
   get padSize() { return Vertex.sub(this.size, this.insetSize).div(2) }
+
   get center() { return Vertex.div(this.size, 2).add(this.anchor) }
   get corners() {
     return {
@@ -92,7 +93,9 @@ class ProtoLayer {
     this.assignElement()
     this.drawElement()
   }
+
   assignID() { this.id = this.store.add(this) }
+
   assignElement() {
     // print(`id (${this.id}) is a string: ${typeof this.id === 'string'}`)
     this.p5Elt = createDiv(TestMode ? this.id : '')
@@ -101,6 +104,7 @@ class ProtoLayer {
       .addToClassList(this.id)
       .addToClassList(this.parentP5Elt.elt.classList.value)
   }
+
   drawElement(look = this.testLook) {
     this.p5Elt
       .look(look)
@@ -116,10 +120,10 @@ class ProtoLayer {
     }
     // if (this.islandID) { this.p5Elt.look(Look.testCell(this.color)) }
   }
+
   #assignUID() { this.#uid = R.random_hash() }
-  resize() {
-    this.drawElement()
-  }
+
+  resize() { this.drawElement() }
   // #endregion
   // MARK: Layer Grammar Methods
   // #region LayerGrammar Methods
@@ -167,14 +171,44 @@ class Frame extends ProtoLayer {
   drawElement(look = this.testLook) {
     this.p5Elt
       .look(look)
-      .attribute(SVG.viewBox, `0,0,100,200`)
+      .attribute(SVG.viewBox, `0 0 110 200`)
       .attribute('preserveAspectRatio', 'xMidyMid')
       .attribute('width', `${this.size.x}`)
       .attribute('height', `${this.size.y}`)
-      .dropShadow({ color: green })
+    // .style(CS.border, '1px dashed blue')
 
+    this.testElements()
+  }
 
-    // .style(CS.border, '1px solid green')
+  testElements() {
+    let testRect = createSVGElt('rect')
+      .id('testRect')
+      .attribute(SVG.viewBox, `0 0 100 200`)
+      .attribute('preserveAspectRatio', 'xMidyMid')
+      .attribute('width', `${90}`)
+      .attribute('height', `${180}`)
+      .attribute('x', `${10}`)
+      .attribute('y', `${10}`)
+      // .attribute('stroke', 'red')
+      .attribute('style', 'fill : #DDD')
+      // .style('fill', 'orange')
+      // .style('border-radius', '20px')
+      // .style('stroke', 'green')
+      // .style('stroke-width', '2')
+      // .attribute('stroke-width', '0.25')
+      // .style(CS.border, 'dashed red')
+      // .style('border', 'dashed red')
+      // .style(CS.border, '1px dashed blue')
+
+      .parent(this.p5Elt)
+
+      // .attribute('cx', `${50}`)
+      // .attribute('cy', `${100}`)
+      .attribute('rx', `${5}`)
+      .attribute('ry', `${5}`)
+
+    // .dropShadow({ color: red })
+
   }
 }
 
