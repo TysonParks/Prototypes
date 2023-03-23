@@ -54,7 +54,6 @@ class ProtoLayer {
       })
   }
   get padSize() { return Vertex.sub(this.size, this.insetSize).div(2) }
-
   get center() { return Vertex.div(this.size, 2).add(this.anchor) }
   get corners() {
     return {
@@ -173,6 +172,8 @@ class Frame extends ProtoLayer {
       .attribute('width', `${this.size.x}`)
       .attribute('height', `${this.size.y}`)
       .dropShadow({ color: green })
+
+
     // .style(CS.border, '1px solid green')
   }
 }
