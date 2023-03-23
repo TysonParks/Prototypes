@@ -148,7 +148,7 @@ function addElement(elt, pInst, media) {
 //FUNC: p5.Element extension dropShadow(dx, dy, blurRadius, spreadRadius, opacity, color, inset = false)
 // Create a dropShadow function to extend p5.Element prototype
 p5.Element.prototype.dropShadow = function ({ dx = 5, dy = 5, blurRadius = 10, spreadRadius = 0, opacity = 1, color = 'black', inset = false } = {}) {
-  if (this.elt.tagName.toLowerCase() === SVG.svg) {
+  if (this.type === 'svg') {
     const filter = createSVGElt(SVG.filter)
       .attribute('id', 'drop-shadow')
 
