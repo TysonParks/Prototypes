@@ -292,36 +292,38 @@ p5.Element.prototype.dropShadow2 = function (dx, dy, blur, color) {
 };
 
 let filterCounter = 0;
-// NOTE: Created with GPT-4 on Tues Mar 26, 2023
+
+
+// NOTE: Created with GPT-4 on Sun Mar 26, 2023
 //FUNC: p5.Element extension dropShadow3(shadows)
 p5.Element.prototype.dropShadow3 = function (shadows) {
   if (!Array.isArray(shadows)) {
     shadows = [shadows]
   }
 
-  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9); // modify this line
-  filterCounter++;
+  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9) // modify this line
+  filterCounter++
   const defs = createSVGElt('defs')
 
-  const xPadding = Math.max(...shadows.map(shadow => shadow.blur * 3));
-  const yPadding = Math.max(...shadows.map(shadow => shadow.blur * 3));
+  const xPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
+  const yPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
 
   const viewBoxConstraints = shadows.reduce((constraints, shadow) => {
-    const blurPadding = shadow.blur * 3;
+    const blurPadding = shadow.blur * 3
     return {
       minX: Math.min(constraints.minX, -blurPadding + shadow.dx),
       maxX: Math.max(constraints.maxX, blurPadding + shadow.dx),
       minY: Math.min(constraints.minY, -blurPadding + shadow.dy),
       maxY: Math.max(constraints.maxY, blurPadding + shadow.dy),
-    };
-  }, { minX: 0, maxX: 0, minY: 0, maxY: 0 });
+    }
+  }, { minX: 0, maxX: 0, minY: 0, maxY: 0 })
 
   const filter = createSVGElt('filter').attribute('id', id)
     .attribute('x', `${viewBoxConstraints.minX - 10}%`)
     .attribute('y', `${viewBoxConstraints.minY - 10}%`)
     .attribute('width', `${200 + viewBoxConstraints.maxX - viewBoxConstraints.minX}%`)
     .attribute('height', `${200 + viewBoxConstraints.maxY - viewBoxConstraints.minY}%`)
-    .attribute('viewBox', `${viewBoxConstraints.minX - xPadding} ${viewBoxConstraints.minY - yPadding} ${100 + viewBoxConstraints.maxX - viewBoxConstraints.minX + xPadding * 2} ${100 + viewBoxConstraints.maxY - viewBoxConstraints.minY + yPadding * 2}`);
+    .attribute('viewBox', `${viewBoxConstraints.minX - xPadding} ${viewBoxConstraints.minY - yPadding} ${100 + viewBoxConstraints.maxX - viewBoxConstraints.minX + xPadding * 2} ${100 + viewBoxConstraints.maxY - viewBoxConstraints.minY + yPadding * 2}`)
 
   const feMerge = createSVGElt('feMerge')
 
@@ -347,7 +349,7 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
       .attribute('flood-opacity', 1)
       .attribute('result', `flood-${color}`)
       .parent(filter)
-    // console.log(`flood-${color}:`, color);
+    // console.log(`flood-${color}:`, color)
     createSVGElt('feComposite')
       .attribute('in', `flood-${color}`)
       .attribute('in2', `offset-${color}`)
@@ -360,13 +362,9 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
       .attribute('in2', previousResult)
       .attribute('mode', 'normal')
       .attribute('result', `blend-${color}`)
-      .parent(filter);
+      .parent(filter)
 
-    previousResult = `blend-${color}`;
-
-    // const feMergeNode = createSVGElt('feMergeNode')
-    //   .attribute('in', `composite-${color}`)
-    //   .parent(feMerge)
+    previousResult = `blend-${color}`
   }
 
   createSVGElt('feBlend')
@@ -374,23 +372,11 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
     .attribute('in2', previousResult)
     .attribute('mode', 'normal')
     .attribute('result', 'finalResult')
-    .parent(filter);
+    .parent(filter)
 
   createSVGElt('feMergeNode')
     .attribute('in', 'finalResult')
     .parent(feMerge)
-
-  // if (shadows.some((shadow) => shadow.inset)) {
-  //   createSVGElt('feBlend')
-  //     .attribute('in', 'SourceGraphic')
-  //     .attribute('in2', 'effectResult')
-  //     .attribute('mode', 'multiply')
-  //     .attribute('result', 'blendResult')
-  //     .parent(filter)
-  //   createSVGElt('feMergeNode')
-  //     .attribute('in', 'blendResult')
-  //     .parent(feMerge)
-  // }
 
   filter.child(feMerge)
   defs.child(filter)
@@ -403,6 +389,77 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
   return this
 }
 
+// NOTE: Created with GPT-4 on Mon Mar 27, 2023
+//FUNC: p5.Element extension insetDropShadow(shadows)
+p5.Element.prototype.insetDropShadow = function (shadows) {
+  if (!Array.isArray(shadows)) {
+    shadows = [shadows]
+  }
+
+  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9);
+  filterCounter++;
+  const defs = createSVGElt('defs')
+
+  const filter = createSVGElt('filter').attribute('id', id);
+  let previousResult = 'SourceGraphic';
+
+  for (const shadow of shadows) {
+    const { dx, dy, blur, color, inset } = shadow;
+    const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`;
+
+    createSVGElt('feOffset')
+      .attribute('dx', dx)
+      .attribute('dy', dy)
+      .parent(filter);
+
+    createSVGElt('feGaussianBlur')
+      .attribute('stdDeviation', blur)
+      .attribute('result', 'offset-blur')
+      .parent(filter);
+
+    createSVGElt('feComposite')
+      .attribute('operator', 'out')
+      .attribute('in', previousResult)
+      .attribute('in2', 'offset-blur')
+      .attribute('result', 'inverse')
+      .parent(filter);
+
+    createSVGElt('feFlood')
+      .attribute('flood-color', color)
+      .attribute('flood-opacity', 1)
+      .attribute('result', 'color')
+      .parent(filter);
+
+    createSVGElt('feComposite')
+      .attribute('operator', 'in')
+      .attribute('in', 'color')
+      .attribute('in2', 'inverse')
+      .attribute('result', shadowID)
+      .parent(filter);
+
+    createSVGElt('feComposite')
+      .attribute('operator', 'over')
+      .attribute('in', shadowID)
+      .attribute('in2', previousResult)
+      .attribute('result', `merged-${shadowID}`)
+      .parent(filter);
+
+    previousResult = `merged-${shadowID}`;
+  }
+
+  createSVGElt('feMergeNode')
+    .attribute('in', previousResult)
+    .parent(filter);
+
+  defs.child(filter);
+
+  const g = createSVGElt('g')
+    .attribute('filter', `url(#${id})`)
+    .parent(svg)
+  this.parent(g)
+  g.child(defs)
+  return this
+}
 
 
 
