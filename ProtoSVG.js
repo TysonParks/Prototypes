@@ -297,9 +297,7 @@ let filterCounter = 0;
 // NOTE: Created with GPT-4 on Sun Mar 26, 2023
 //FUNC: p5.Element extension dropShadow3(shadows)
 p5.Element.prototype.dropShadow3 = function (shadows) {
-  if (!Array.isArray(shadows)) {
-    shadows = [shadows]
-  }
+  shadows = OpArray.format(shadows)
 
   const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9) // modify this line
   filterCounter++
@@ -392,9 +390,7 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
 // NOTE: Created with GPT-4 on Mon Mar 27, 2023
 //FUNC: p5.Element extension insetDropShadow(shadows)
 p5.Element.prototype.insetDropShadow = function (shadows) {
-  if (!Array.isArray(shadows)) {
-    shadows = [shadows]
-  }
+  shadows = OpArray.format(shadows)
 
   const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9);
   filterCounter++;

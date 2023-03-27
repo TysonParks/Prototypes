@@ -101,7 +101,7 @@ class Look {
   static test(size, type) {
     switch (type) {
       case 'frame':
-        return [...Look.textAlign({ size: size, vert: 'top' }), ...Look.testText(size.x, '#80F8', 50)]
+        return [...Look.textAlign({ size: size, vert: 'top' }), ...Look.testText(size.x, '#80F8', 10)]
       case 'grid':
         return [...Look.textAlign({ size: size, vert: 'top', hor: 'start' }), ...Look.testText(size.x, '#08F8')]
       case 'group':

@@ -256,18 +256,30 @@ class Frame extends ProtoLayer {
 
     const testRect = createSVGElt('rect')
       .id('testRect')
-      .attribute('x', `${10}`)
-      .attribute('y', `${10}`)
-      .attribute('width', `${80}`)
-      .attribute('height', `${180}`)
-      .attribute('rx', `${10}`)
-      .attribute('ry', `${10}`)
-      // .attribute('fill', 'red')
-      .attribute('fill-opacity', '0')
+      .attribute('x', `${5}`)
+      .attribute('y', `${5}`)
+      .attribute('width', `${90}`)
+      .attribute('height', `${190}`)
+      .attribute('rx', `${15}`)
+      .attribute('ry', `${15}`)
+      .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '1')
       // .attribute('stroke', 'blue')
       // .attribute('stroke-width', '1')
       // .attribute('stroke-linejoin', 'round')
       .parent(this.bleed)
+      .insetDropShadow([
+        insetShadow8,
+        insetShadow7,
+        insetShadow6,
+        insetShadow5,
+        insetShadow4,
+        insetShadow3,
+        insetShadow2,
+        insetShadow1,
+        insetShadow0,
+        insetShadow01,
+      ])
     // .blur(2)
     // .attribute('filter', 'url(#blur)')
     // .dropShadow({ color: red })
@@ -277,17 +289,17 @@ class Frame extends ProtoLayer {
       .attribute('cx', `${50}`)
       .attribute('cy', `${60}`)
       .attribute('r', `${40}`)
-      .attribute('fill', protoColor(220))
+      .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
       // .attribute('stroke', 'green')
       // .attribute('stroke-width', '4')
       .attribute('stroke-linejoin', 'round')
       .parent(this.bleed)
       .dropShadow3([
-        shadow8,
-        shadow7,
-        shadow6,
-        shadow5,
+        // shadow8,
+        // shadow7,
+        // shadow6,
+        // shadow5,
         shadow4,
         shadow3,
         shadow2,
@@ -301,7 +313,7 @@ class Frame extends ProtoLayer {
       .attribute('cx', `${50}`)
       .attribute('cy', `${140}`)
       .attribute('r', `${20}`)
-      .attribute('fill', protoColor(220))
+      .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
       // .attribute('stroke', 'green')
       // .attribute('stroke-width', '5')
@@ -314,12 +326,10 @@ class Frame extends ProtoLayer {
         insetShadow5,
         insetShadow4,
         insetShadow3,
-        insetShadow2,
-        insetShadow1,
-        insetShadow2,
-        insetShadow1,
-        insetShadow0,
-        insetShadow01,
+        // insetShadow2,
+        // insetShadow1,
+        // insetShadow0,
+        // insetShadow01,
       ])
     // .dropShadow2(2, 2, 4, protoColor(160))
     // .look(Look.test(5, 'cell'))
