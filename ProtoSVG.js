@@ -5,7 +5,7 @@ p5.prototype.createElementNS = function (namespaceURI, qualifiedName) {
 }
 
 //FUNC: p5 extension createSVGElt(qualifiedName)
-p5.prototype.createSVGElt = function (qualifiedName = SVG.svg) {
+p5.prototype.createSVGElt = function (qualifiedName = 'svg') {
   let elt = document.createElementNS(SVG.xmlns, qualifiedName)
   return addElement(elt, this)
 }
@@ -142,11 +142,40 @@ function addElement(elt, pInst, media) {
   return c;
 }
 
+// NOTE: Created with GPT-4 on Fri Mar 24, 2023
+//FUNC: p5.Element extension blur(radius)
+p5.Element.prototype.blur = function (radius) {
+  const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
+  const [x, y, width, height] = viewBox
+  const padding = Math.ceil(radius * 3)
+  const newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' ')
+  const filterID = 'blur-' + Math.floor(Math.random() * 100000)
+
+  const filter = createSVGElt('filter')
+    .attribute('id', filterID)
+    .attribute('x', '-50%')
+    .attribute('y', '-50%')
+    .attribute('width', '200%')
+    .attribute('height', '200%')
+    .parent(this.parent())
+
+  createSVGElt('feGaussianBlur')
+    .attribute('in', 'SourceGraphic')
+    .attribute('stdDeviation', radius)
+    .parent(filter)
+
+  this.attribute('filter', `url(#${filterID})`)
+    .attribute('viewBox', newViewBox)
+
+  return this
+}
+
+
 
 // NOTE: Created with GPT-4 on Tues Mar 21, 2023
 //FUNC: p5.Element extension dropShadow(dx, dy, blurRadius, spreadRadius, opacity, color, inset = false)
 // Create a dropShadow function to extend p5.Element prototype
-p5.Element.prototype.dropShadow = function ({ dx = 5, dy = 5, blurRadius = 10, spreadRadius = 0, opacity = 1, color = 'black', inset = false } = {}) {
+p5.Element.prototype.dropShadow1 = function ({ dx = 5, dy = 5, blurRadius = 10, spreadRadius = 0, opacity = 1, color = 'black', inset = false } = {}) {
   if (this.type === 'svg') {
     const filter = createSVGElt(SVG.filter)
       .attribute('id', 'drop-shadow')
@@ -203,3 +232,177 @@ p5.Element.prototype.dropShadow = function ({ dx = 5, dy = 5, blurRadius = 10, s
 
   return this
 }
+
+
+// NOTE: Created with GPT-4 on Tues Mar 21, 2023
+//FUNC: p5.Element extension dropShadow(dx, dy, blur, color)
+p5.Element.prototype.dropShadow2 = function (dx, dy, blur, color) {
+  const id = 'dropshadow-' + Math.random().toString(36).substr(2, 9);
+  const padding = blur * 3;
+
+  const defs = createSVGElt('defs');
+  const filter = createSVGElt('filter');
+  filter.attribute('id', id);
+  filter.attribute('x', `-${padding}%`);
+  filter.attribute('y', `-${padding}%`);
+  filter.attribute('width', `${100 + 2 * padding}%`);
+  filter.attribute('height', `${100 + 2 * padding}%`);
+
+  const feGaussianBlur = createSVGElt('feGaussianBlur');
+  feGaussianBlur.attribute('in', 'SourceAlpha');
+  feGaussianBlur.attribute('stdDeviation', blur);
+
+  const feOffset = createSVGElt('feOffset');
+  feOffset.attribute('dx', dx);
+  feOffset.attribute('dy', dy);
+  feOffset.attribute('result', 'offsetblur');
+
+  const feFlood = createSVGElt('feFlood');
+  feFlood.attribute('flood-color', color);
+
+  const feComposite = createSVGElt('feComposite');
+  feComposite.attribute('in2', 'offsetblur');
+  feComposite.attribute('operator', 'in');
+
+  const feBlend = createSVGElt('feBlend');
+  feBlend.attribute('in', 'SourceGraphic');
+  feBlend.attribute('mode', 'normal');
+
+  const feMerge = createSVGElt('feMerge');
+  const feMergeNode1 = createSVGElt('feMergeNode');
+  const feMergeNode2 = createSVGElt('feMergeNode');
+  feMergeNode2.attribute('in', 'SourceGraphic');
+
+  feMerge.child(feMergeNode1);
+  feMerge.child(feMergeNode2);
+
+  filter.child(feGaussianBlur);
+  filter.child(feOffset);
+  filter.child(feFlood);
+  filter.child(feComposite);
+  filter.child(feBlend);
+  filter.child(feMerge);
+
+  defs.child(filter);
+
+  this.child(defs);
+
+  this.attribute('filter', `url(#${id})`);
+  return this;
+};
+
+let filterCounter = 0;
+// NOTE: Created with GPT-4 on Tues Mar 26, 2023
+//FUNC: p5.Element extension dropShadow3(shadows)
+p5.Element.prototype.dropShadow3 = function (shadows) {
+  if (!Array.isArray(shadows)) {
+    shadows = [shadows]
+  }
+
+  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9); // modify this line
+  filterCounter++;
+  const defs = createSVGElt('defs')
+
+  const xPadding = Math.max(...shadows.map(shadow => shadow.blur * 3));
+  const yPadding = Math.max(...shadows.map(shadow => shadow.blur * 3));
+
+  const viewBoxConstraints = shadows.reduce((constraints, shadow) => {
+    const blurPadding = shadow.blur * 3;
+    return {
+      minX: Math.min(constraints.minX, -blurPadding + shadow.dx),
+      maxX: Math.max(constraints.maxX, blurPadding + shadow.dx),
+      minY: Math.min(constraints.minY, -blurPadding + shadow.dy),
+      maxY: Math.max(constraints.maxY, blurPadding + shadow.dy),
+    };
+  }, { minX: 0, maxX: 0, minY: 0, maxY: 0 });
+
+  const filter = createSVGElt('filter').attribute('id', id)
+    .attribute('x', `${viewBoxConstraints.minX - 10}%`)
+    .attribute('y', `${viewBoxConstraints.minY - 10}%`)
+    .attribute('width', `${200 + viewBoxConstraints.maxX - viewBoxConstraints.minX}%`)
+    .attribute('height', `${200 + viewBoxConstraints.maxY - viewBoxConstraints.minY}%`)
+    .attribute('viewBox', `${viewBoxConstraints.minX - xPadding} ${viewBoxConstraints.minY - yPadding} ${100 + viewBoxConstraints.maxX - viewBoxConstraints.minX + xPadding * 2} ${100 + viewBoxConstraints.maxY - viewBoxConstraints.minY + yPadding * 2}`);
+
+  const feMerge = createSVGElt('feMerge')
+
+  let previousResult = 'SourceGraphic'
+
+  for (const shadow of shadows) {
+    const { dx, dy, blur, color, inset } = shadow
+
+
+    createSVGElt('feGaussianBlur')
+      .attribute('in', 'SourceAlpha')
+      .attribute('stdDeviation', blur)
+      .attribute('result', `blur-${color}`)
+      .parent(filter)
+    createSVGElt('feOffset')
+      .attribute('in', `blur-${color}`)
+      .attribute('dx', inset ? -dx : dx)
+      .attribute('dy', inset ? -dy : dy)
+      .attribute('result', `offset-${color}`)
+      .parent(filter)
+    createSVGElt('feFlood')
+      .attribute('flood-color', color)
+      .attribute('flood-opacity', 1)
+      .attribute('result', `flood-${color}`)
+      .parent(filter)
+    // console.log(`flood-${color}:`, color);
+    createSVGElt('feComposite')
+      .attribute('in', `flood-${color}`)
+      .attribute('in2', `offset-${color}`)
+      .attribute('operator', 'in')
+      .attribute('result', `composite-${color}`)
+      .parent(filter)
+
+    createSVGElt('feBlend')
+      .attribute('in', `composite-${color}`)
+      .attribute('in2', previousResult)
+      .attribute('mode', 'normal')
+      .attribute('result', `blend-${color}`)
+      .parent(filter);
+
+    previousResult = `blend-${color}`;
+
+    // const feMergeNode = createSVGElt('feMergeNode')
+    //   .attribute('in', `composite-${color}`)
+    //   .parent(feMerge)
+  }
+
+  createSVGElt('feBlend')
+    .attribute('in', 'SourceGraphic')
+    .attribute('in2', previousResult)
+    .attribute('mode', 'normal')
+    .attribute('result', 'finalResult')
+    .parent(filter);
+
+  createSVGElt('feMergeNode')
+    .attribute('in', 'finalResult')
+    .parent(feMerge)
+
+  // if (shadows.some((shadow) => shadow.inset)) {
+  //   createSVGElt('feBlend')
+  //     .attribute('in', 'SourceGraphic')
+  //     .attribute('in2', 'effectResult')
+  //     .attribute('mode', 'multiply')
+  //     .attribute('result', 'blendResult')
+  //     .parent(filter)
+  //   createSVGElt('feMergeNode')
+  //     .attribute('in', 'blendResult')
+  //     .parent(feMerge)
+  // }
+
+  filter.child(feMerge)
+  defs.child(filter)
+
+  const g = createSVGElt('g')
+    .attribute('filter', `url(#${id})`)
+    .parent(svg)
+  this.parent(g)
+  g.child(defs)
+  return this
+}
+
+
+
+

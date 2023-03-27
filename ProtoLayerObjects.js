@@ -141,11 +141,13 @@ class ProtoLayer {
 
 // CLASS: Frame
 class Frame extends ProtoLayer {
+  bleed
+
   constructor(parentP5Elt) {
     super(parentP5Elt)
     this.finishSetup(S.Frame)
   }
-  get parentBoundsRect() { return document.body.getBoundingClientRect() }
+  get parentBoundsRect() { return this.parentP5Elt.elt.getBoundingClientRect() }
   get parentSize() { return vert(this.parentBoundsRect.width, this.parentBoundsRect.height) }
 
   get size() { return frameSize }
@@ -165,56 +167,124 @@ class Frame extends ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   assignElement() {
-    // if (this.parentIsBody) {
-    this.p5Elt = createSVG(0, 0)
-      .id(this.id)
+
+    this.bleed = createSVG(0, 0)
+      .id('bleed')
       .parent(this.parentP5Elt)
+    // .addToClassList(this.id)
+    // .addToClassList(this.parentP5Elt.elt.classList.value)
+
+    this.p5Elt = createSVGElt('rect')
+      .id(this.id)
+      .parent(this.bleed)
       .addToClassList(this.id)
-      .addToClassList(this.parentP5Elt.elt.classList.value)
-    //   document.body.appendChild(this.p5Elt.elt)
-    // }
+
   }
 
   drawElement(look = this.testLook) {
-    this.p5Elt
+    this.bleed
       .look(look)
-      .attribute(SVG.viewBox, `0 0 110 200`)
+      .attribute(SVG.viewBox, `-5 -10 110 220`)
       .attribute('preserveAspectRatio', 'xMidyMid')
       .attribute('width', `${this.size.x}`)
       .attribute('height', `${this.size.y}`)
     // .style(CS.border, '1px dashed blue')
 
+    this.p5Elt
+      // .attribute(SVG.viewBox, `0 0 100 200`)
+      // .attribute('preserveAspectRatio', 'xMidyMid')
+      .attribute('x', `${0}`)
+      .attribute('y', `${0}`)
+      .attribute('width', `${100}`)
+      .attribute('height', `${200}`)
+
+      .attribute('rx', `${20}`)
+      .attribute('ry', `${20}`)
+      .attribute('style', `fill : ${protoColor(230)}`)
+
     this.testElements()
   }
 
   testElements() {
-    let testRect = createSVGElt('rect')
+    // const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: false };
+    // const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: false };
+    // const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: false };
+    // const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: false };
+    // const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: false };
+    // const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: false };
+
+    const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: false };
+    const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: false };
+    const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: false };
+    const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: false };
+    const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: false };
+    const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: false };
+    const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: false };
+    const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: false };
+
+
+    const testRect = createSVGElt('rect')
       .id('testRect')
-      .attribute(SVG.viewBox, `0 0 100 200`)
-      .attribute('preserveAspectRatio', 'xMidyMid')
-      .attribute('width', `${90}`)
-      .attribute('height', `${180}`)
       .attribute('x', `${10}`)
       .attribute('y', `${10}`)
-      // .attribute('stroke', 'red')
-      .attribute('style', 'fill : #DDD')
-      // .style('fill', 'orange')
-      // .style('border-radius', '20px')
-      // .style('stroke', 'green')
-      // .style('stroke-width', '2')
-      // .attribute('stroke-width', '0.25')
-      // .style(CS.border, 'dashed red')
-      // .style('border', 'dashed red')
-      // .style(CS.border, '1px dashed blue')
-
-      .parent(this.p5Elt)
-
-      // .attribute('cx', `${50}`)
-      // .attribute('cy', `${100}`)
-      .attribute('rx', `${5}`)
-      .attribute('ry', `${5}`)
-
+      .attribute('width', `${80}`)
+      .attribute('height', `${180}`)
+      .attribute('rx', `${10}`)
+      .attribute('ry', `${10}`)
+      // .attribute('fill', 'red')
+      .attribute('fill-opacity', '0')
+      // .attribute('stroke', 'blue')
+      // .attribute('stroke-width', '1')
+      // .attribute('stroke-linejoin', 'round')
+      .parent(this.bleed)
+    // .blur(2)
+    // .attribute('filter', 'url(#blur)')
     // .dropShadow({ color: red })
+
+    const testCircle = createSVGElt('circle')
+      .id('testCircle')
+      .attribute('cx', `${50}`)
+      .attribute('cy', `${60}`)
+      .attribute('r', `${20}`)
+      .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '1')
+      // .attribute('stroke', 'green')
+      // .attribute('stroke-width', '4')
+      .attribute('stroke-linejoin', 'round')
+      .parent(this.bleed)
+      .dropShadow3([
+        shadow8,
+        shadow7,
+        shadow6,
+        shadow5,
+        shadow4,
+        shadow3,
+        shadow2,
+        shadow1,
+      ])
+
+    const testCircle2 = createSVGElt('circle')
+      .id('testCircle')
+      .attribute('cx', `${50}`)
+      .attribute('cy', `${140}`)
+      .attribute('r', `${20}`)
+      .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '1')
+      // .attribute('stroke', 'green')
+      // .attribute('stroke-width', '5')
+      // .attribute('stroke-linejoin', 'round')
+      .parent(this.bleed)
+      .look(Look.test(5, 'cell'))
+    // .blur(5)
+    // .attribute('x', `${-20}`)
+    // .attribute('y', `${-20}`)
+    // .attribute('width', `${80}`)
+    // .attribute('height', `${80}`)
+    // .attribute('filter', 'url(#blur)')
+
+
+
+
 
   }
   // #endregion
@@ -875,6 +945,7 @@ class Grid extends ProtoLayer {
   }
 
   // #endregion
+
   // MARK: Grid Grammar Ops
   // #region Grid Grammar Ops
   insetCells(amount, groupID) {
@@ -919,6 +990,7 @@ class Grid extends ProtoLayer {
     this.assign(selection)
   }
   // #endregion
+
   // MARK: General Grammar Methods
   // #region General Grammar Methods
   assign(selection, group) {
@@ -962,8 +1034,68 @@ class Grid extends ProtoLayer {
       })
     }
   }
+  // #endregion
 
+  // MARK: Setup Methods
+  // #region Setup Methods
+  assignElement() {
+    // if (this.parentIsBody) {
+    this.p5Elt = createSVGElt('rect')
+      .id(this.id)
+      .parent(this.parentP5Elt)
+      .addToClassList(this.id)
+      .addToClassList(this.parentP5Elt.elt.classList.value)
+    //   document.body.appendChild(this.p5Elt.elt)
+    // }
+  }
 
+  drawElement(look = this.testLook) {
+    this.p5Elt
+      // .look(look)
+      // .attribute(SVG.viewBox, `0 0 100 200`)
+      // .attribute('preserveAspectRatio', 'xMidyMid')
+      .attribute('x', `${20}`)
+      .attribute('y', `${20}`)
+      .attribute('width', `${60}`)
+      .attribute('height', `${160}`)
+      .attribute('fill', 'red')
+      .attribute('stroke', 'blue')
+    // .attribute('style', 'fill : green')
+    // .style(CS.border, '1px dashed blue')
+
+    // this.testElements()
+  }
+
+  testElements() {
+    let testRect = createSVGElt('rect')
+      .id('testRect')
+      .attribute(SVG.viewBox, `0 0 100 200`)
+      .attribute('preserveAspectRatio', 'xMidyMid')
+      .attribute('width', `${90}`)
+      .attribute('height', `${180}`)
+      .attribute('x', `${10}`)
+      .attribute('y', `${10}`)
+      // .attribute('stroke', 'red')
+      .attribute('style', 'fill : green')
+      // .style('fill', 'orange')
+      // .style('border-radius', '20px')
+      // .style('stroke', 'green')
+      // .style('stroke-width', '2')
+      // .attribute('stroke-width', '0.25')
+      // .style(CS.border, 'dashed red')
+      // .style('border', 'dashed red')
+      // .style(CS.border, '1px dashed blue')
+
+      .parent(this.p5Elt)
+
+      // .attribute('cx', `${50}`)
+      // .attribute('cy', `${100}`)
+      .attribute('rx', `${5}`)
+      .attribute('ry', `${5}`)
+
+    // .dropShadow({ color: red })
+
+  }
   // #endregion
 }
 
