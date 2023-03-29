@@ -238,63 +238,6 @@ p5.Element.prototype.dropShadow1 = function ({ dx = 5, dy = 5, blurRadius = 10, 
 }
 
 
-// NOTE: Created with GPT-4 on Tues Mar 21, 2023
-//FUNC: p5.Element extension dropShadow(dx, dy, blur, color)
-p5.Element.prototype.dropShadow2 = function (dx, dy, blur, color) {
-  const id = 'dropshadow-' + Math.random().toString(36).substr(2, 9);
-  const padding = blur * 3;
-
-  const defs = createSVGElt('defs');
-  const filter = createSVGElt('filter');
-  filter.attribute('id', id);
-  filter.attribute('x', `-${padding}%`);
-  filter.attribute('y', `-${padding}%`);
-  filter.attribute('width', `${100 + 2 * padding}%`);
-  filter.attribute('height', `${100 + 2 * padding}%`);
-
-  const feGaussianBlur = createSVGElt('feGaussianBlur');
-  feGaussianBlur.attribute('in', 'SourceAlpha');
-  feGaussianBlur.attribute('stdDeviation', blur);
-
-  const feOffset = createSVGElt('feOffset');
-  feOffset.attribute('dx', dx);
-  feOffset.attribute('dy', dy);
-  feOffset.attribute('result', 'offsetblur');
-
-  const feFlood = createSVGElt('feFlood');
-  feFlood.attribute('flood-color', color);
-
-  const feComposite = createSVGElt('feComposite');
-  feComposite.attribute('in2', 'offsetblur');
-  feComposite.attribute('operator', 'in');
-
-  const feBlend = createSVGElt('feBlend');
-  feBlend.attribute('in', 'SourceGraphic');
-  feBlend.attribute('mode', 'normal');
-
-  const feMerge = createSVGElt('feMerge');
-  const feMergeNode1 = createSVGElt('feMergeNode');
-  const feMergeNode2 = createSVGElt('feMergeNode');
-  feMergeNode2.attribute('in', 'SourceGraphic');
-
-  feMerge.child(feMergeNode1);
-  feMerge.child(feMergeNode2);
-
-  filter.child(feGaussianBlur);
-  filter.child(feOffset);
-  filter.child(feFlood);
-  filter.child(feComposite);
-  filter.child(feBlend);
-  filter.child(feMerge);
-
-  defs.child(filter);
-
-  this.child(defs);
-
-  this.attribute('filter', `url(#${id})`);
-  return this;
-};
-
 let filterCounter = 0;
 
 
