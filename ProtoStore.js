@@ -74,6 +74,27 @@ class ProtoStorage {
   }
 }
 
+// MARK: storedProtocol: a mixin for storing objects to the ProtoStore Store
+const storedProtocol = {
+  store: 'unassigned',
+  id: 'unassigned',
 
+  storeObject(store) {
+    if (store) {
+      this.store = store
+      this.assignID()
+    }
+  },
 
+  assignID() { this.id = this.store.add(this) }
+}
+
+// MARK: identifiableProtocol: a mixin for assigning uids to objects
+const identifiableProtocol = {
+  uid: 'unassigned',
+  assignUID() { this.uid = R.random_hash() }
+}
+
+// MARK: identifiableStored: a mixin composition of storedProtocol and identifiableProtocol
+const identifiableStored = Object.assign({}, storedProtocol, identifiableProtocol)
 
