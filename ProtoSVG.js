@@ -118,6 +118,10 @@ class SVG {
 }
 
 
+// class ProtoSVG {
+
+// }
+
 
 // make .attr() prototype extension that gets and sets attributes similar to p5's .style() 
 // make neuShadow equivalents for inset shadows in SVG
