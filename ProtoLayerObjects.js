@@ -9,15 +9,13 @@
 
 // CLASS: ProtoLayer
 class ProtoLayer {
-  #uid
-  id
-  store
+  // #uid
+  // id
+  // store
+  // layers = []
   parent
   p5Elt
   parentP5Elt
-  // parentIsBody = false
-
-  layers = []
   insetAmount = 1
 
   constructor(parent) {
@@ -26,14 +24,14 @@ class ProtoLayer {
       this.parentP5Elt = parent.p5Elt
     }
     else if (parent instanceof p5.Element) { this.parentP5Elt = parent }
-    // else if (parent instanceof HTMLElement && parent.tagName === 'BODY') { this.parentIsBody = true }
     else { console.error('parent is not valid') }
-    this.#assignUID()
+    // this.#assignUID()
+    this.assignUID()
   }
 
   // MARK: Computed Properties
   // #region Computed Properties
-  get uid() { return this.#uid }
+  // get uid() { return this.#uid }
   get parentID() { return this.parent.id }
 
   get testLook() { return Look.test(this.size, 'frame') }
@@ -88,15 +86,16 @@ class ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   finishSetup(store) {
-    if (store) {
-      this.store = store
-      this.assignID()
-    }
+    // if (store) {
+    //   this.store = store
+    //   this.assignID()
+    // }
+    this.storeObject(store)
     this.assignElement()
     this.drawElement()
   }
 
-  assignID() { this.id = this.store.add(this) }
+  // assignID() { this.id = this.store.add(this) }
 
   assignElement() {
     // print(`id (${this.id}) is a string: ${typeof this.id === 'string'}`)
@@ -123,7 +122,7 @@ class ProtoLayer {
     // if (this.islandID) { this.p5Elt.look(Look.testCell(this.color)) }
   }
 
-  #assignUID() { this.#uid = R.random_hash() }
+  // #assignUID() { this.#uid = R.random_hash() }
 
   resize() { this.drawElement() }
   // #endregion
@@ -138,6 +137,8 @@ class ProtoLayer {
   // MARK: Static Methods
   static equal(a, b) { return a.uid === b.uid }
 }
+
+Object.assign(ProtoLayer.prototype, identifiableStored)
 
 // CLASS: Frame
 class Frame extends ProtoLayer {
@@ -188,7 +189,7 @@ class Frame extends ProtoLayer {
       .attribute('preserveAspectRatio', 'xMidyMid')
       .attribute('width', `${this.size.x}`)
       .attribute('height', `${this.size.y}`)
-    // .style(CS.border, '1px dashed blue')
+      .style(CS.border, '1px dashed blue')
 
     this.p5Elt
       // .attribute(SVG.viewBox, `0 0 100 200`)
@@ -200,7 +201,19 @@ class Frame extends ProtoLayer {
 
       .attribute('rx', `${20}`)
       .attribute('ry', `${20}`)
-      .attribute('style', `fill : ${protoColor(230)}`)
+      .attribute(`fill`, ` ${protoColor(230)}`)
+    // .insetDropShadow([
+    //   insetShadow8,
+    //   insetShadow7,
+    //   insetShadow6,
+    //   insetShadow5,
+    //   insetShadow4,
+    //   insetShadow3,
+    //   insetShadow2,
+    //   insetShadow1,
+    //   insetShadow0,
+    //   insetShadow01,
+    // ])
 
     this.testElements()
   }
@@ -265,14 +278,14 @@ class Frame extends ProtoLayer {
       .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
       // .attribute('stroke', 'blue')
-      // .attribute('stroke-width', '1')
-      // .attribute('stroke-linejoin', 'round')
-      .parent(this.bleed)
+      .attribute('stroke-width', '1')
+      .attribute('stroke-linejoin', 'round')
+      .parent(this.p5Elt)
       .insetDropShadow([
-        insetShadow8,
-        insetShadow7,
-        insetShadow6,
-        insetShadow5,
+        // insetShadow8,
+        // insetShadow7,
+        // insetShadow6,
+        // insetShadow5,
         insetShadow4,
         insetShadow3,
         insetShadow2,
@@ -280,6 +293,18 @@ class Frame extends ProtoLayer {
         insetShadow0,
         insetShadow01,
       ])
+    // .dropShadow3([
+    //   // shadow8,
+    //   // shadow7,
+    //   // shadow6,
+    //   // shadow5,
+    //   shadow4,
+    //   shadow3,
+    //   shadow2,
+    //   shadow1,
+    //   shadow0,
+    //   shadow01,
+    // ])
     // .blur(2)
     // .attribute('filter', 'url(#blur)')
     // .dropShadow({ color: red })
@@ -290,11 +315,11 @@ class Frame extends ProtoLayer {
       .attribute('cy', `${60}`)
       .attribute('r', `${40}`)
       .attribute('fill', protoColor(230))
-      .attribute('fill-opacity', '1')
-      // .attribute('stroke', 'green')
-      // .attribute('stroke-width', '4')
+      .attribute('fill-opacity', '0')
+      .attribute('stroke', protoColor(230))
+      .attribute('stroke-width', '2')
       .attribute('stroke-linejoin', 'round')
-      .parent(this.bleed)
+      .parent(this.p5Elt)
       .dropShadow3([
         // shadow8,
         // shadow7,
@@ -308,37 +333,69 @@ class Frame extends ProtoLayer {
         shadow01,
       ])
 
+    // const testCircle3 = createSVGElt('circle')
+    //   .id('testCircle')
+    //   .attribute('cx', `${50}`)
+    //   .attribute('cy', `${140}`)
+    //   .attribute('r', `${20}`)
+    //   .attribute('fill', protoColor(230))
+    //   .attribute('fill-opacity', '1')
+    //   .attribute('stroke', 'green')
+    //   // .attribute('stroke-width', '5')
+    //   // .attribute('stroke-linejoin', 'round')
+    //   .parent(this.p5Elt)
+
     const testCircle2 = createSVGElt('circle')
       .id('testCircle')
       .attribute('cx', `${50}`)
       .attribute('cy', `${140}`)
       .attribute('r', `${20}`)
       .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '.25')
+      .attribute('stroke', protoColor(230))
+      .attribute('stroke-width', '4')
+      .attribute('pathLength', '360')
+      .attribute('stroke-dashoffset', '0')
+      .attribute('stroke-dasharray', `${180 / 8} `)
+      .attribute('stroke-linejoin', 'round')
+      .attribute('stroke-linecap', 'round')
+      .parent(this.p5Elt)
+      .dropShadow3([
+        shadow8,
+        shadow7,
+        shadow6,
+        shadow5,
+        shadow4,
+        shadow3,
+        shadow2,
+        shadow1,
+        shadow0,
+        shadow01,
+      ])
+    // .insetDropShadow([
+    //   insetShadow8,
+    //   insetShadow7,
+    //   insetShadow6,
+    //   insetShadow5,
+    //   insetShadow4,
+    //   insetShadow3,
+    //   insetShadow2,
+    //   insetShadow1,
+    //   insetShadow0,
+    //   insetShadow01,
+    // ])
+
+    const testCircle3 = createSVGElt('circle')
+      .id('testCircle')
+      .attribute('cx', `${50}`)
+      .attribute('cy', `${140}`)
+      .attribute('r', `${20}`)
+      .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
-      // .attribute('stroke', 'green')
+      .attribute('stroke', 'green')
       // .attribute('stroke-width', '5')
       // .attribute('stroke-linejoin', 'round')
-      .parent(this.bleed)
-      .insetDropShadow([
-        insetShadow8,
-        insetShadow7,
-        insetShadow6,
-        insetShadow5,
-        insetShadow4,
-        insetShadow3,
-        // insetShadow2,
-        // insetShadow1,
-        // insetShadow0,
-        // insetShadow01,
-      ])
-    // .dropShadow2(2, 2, 4, protoColor(160))
-    // .look(Look.test(5, 'cell'))
-    // .blur(5)
-    // .attribute('x', `${-20}`)
-    // .attribute('y', `${-20}`)
-    // .attribute('width', `${80}`)
-    // .attribute('height', `${80}`)
-    // .attribute('filter', 'url(#blur)')
+      .parent(this.p5Elt)
 
 
 
