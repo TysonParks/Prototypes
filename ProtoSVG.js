@@ -118,9 +118,7 @@ class SVG {
 }
 
 
-// class ProtoSVG {
 
-// }
 
 
 // make .attr() prototype extension that gets and sets attributes similar to p5's .style() 
@@ -241,15 +239,30 @@ p5.Element.prototype.dropShadow1 = function ({ dx = 5, dy = 5, blurRadius = 10, 
 let filterCounter = 0;
 
 
+//FIXME: this function should just create the filter and return filter ID (not apply the filter)
 // NOTE: Created with GPT-4 on Sun Mar 26, 2023
 //FUNC: p5.Element extension dropShadow3(shadows)
 p5.Element.prototype.dropShadow3 = function (shadows) {
+  //NOTE: This block is good to stay
   shadows = OpArray.format(shadows)
 
+  //debug:
+  console.log("Applying drop shadow to:", this);
+
+  //FIXME: use store protocol instead
   const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9) // modify this line
   filterCounter++
-  const defs = createSVGElt('defs')
 
+  //NOTE: This block is good to stay
+  const filter = createSVGElt('filter').attribute('id', id)
+  const defs = createSVGElt('defs')
+  const feMerge = createSVGElt('feMerge')
+  let previousResult = 'SourceGraphic'
+
+
+  //FIXME: migrate padding calculation to it's own function that can be applied to the filter element
+  //FIXME: this function should be inside the 'applyFilter' or 'useFilter' func, not this filter creation step
+  //FIXME: fix the padding calc function, it does not work properly
   const xPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
   const yPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
 
@@ -263,20 +276,18 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
     }
   }, { minX: 0, maxX: 0, minY: 0, maxY: 0 })
 
-  const filter = createSVGElt('filter').attribute('id', id)
+  filter
     .attribute('x', `${viewBoxConstraints.minX - 10}%`)
     .attribute('y', `${viewBoxConstraints.minY - 10}%`)
     .attribute('width', `${200 + viewBoxConstraints.maxX - viewBoxConstraints.minX}%`)
     .attribute('height', `${200 + viewBoxConstraints.maxY - viewBoxConstraints.minY}%`)
     .attribute('viewBox', `${viewBoxConstraints.minX - xPadding} ${viewBoxConstraints.minY - yPadding} ${100 + viewBoxConstraints.maxX - viewBoxConstraints.minX + xPadding * 2} ${100 + viewBoxConstraints.maxY - viewBoxConstraints.minY + yPadding * 2}`)
+    .attribute('stroke', 'red')
 
-  const feMerge = createSVGElt('feMerge')
 
-  let previousResult = 'SourceGraphic'
-
+  //NOTE: This block is good to stay
   for (const shadow of shadows) {
     const { dx, dy, blur, color, inset } = shadow
-
 
     createSVGElt('feGaussianBlur')
       .attribute('in', 'SourceAlpha')
@@ -326,26 +337,37 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
   filter.child(feMerge)
   defs.child(filter)
 
+
+  //FIXME: migrate to function for applying effects or just dropShadows?
+  const parentSVG = this.elt.ownerSVGElement
+
   const g = createSVGElt('g')
     .attribute('filter', `url(#${id})`)
-    .parent(svg)
+    .parent(parentSVG)
   this.parent(g)
   g.child(defs)
   return this
 }
 
+//FIXME: this function should just create the filter and return filter ID (not apply the filter)
 // NOTE: Created with GPT-4 on Mon Mar 27, 2023
 //FUNC: p5.Element extension insetDropShadow(shadows)
 p5.Element.prototype.insetDropShadow = function (shadows) {
   shadows = OpArray.format(shadows)
 
-  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9);
-  filterCounter++;
-  const defs = createSVGElt('defs')
+  //debug:
+  console.log("Applying drop shadow to:", this);
 
+  //FIXME: use store protocol instead
+  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9);
+  filterCounter++
+
+  //NOTE: This block is good to stay
+  const defs = createSVGElt('defs')
   const filter = createSVGElt('filter').attribute('id', id);
   let previousResult = 'SourceGraphic';
 
+  //NOTE: This block is good to stay
   for (const shadow of shadows) {
     const { dx, dy, blur, color, inset } = shadow;
     const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`;
@@ -396,13 +418,20 @@ p5.Element.prototype.insetDropShadow = function (shadows) {
 
   defs.child(filter);
 
+
+  //FIXME: migrate to function for applying effects or just dropShadows?
+  console.log("SVG variable: ", svg);
+  const parentSVG = this.elt.ownerSVGElement
+
   const g = createSVGElt('g')
     .attribute('filter', `url(#${id})`)
-    .parent(svg)
+    .parent(parentSVG)
   this.parent(g)
   g.child(defs)
   return this
 }
+
+
 
 
 
