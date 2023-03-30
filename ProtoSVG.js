@@ -431,7 +431,33 @@ p5.Element.prototype.insetDropShadow = function (shadows) {
   return this
 }
 
+class ProtoFilter {
+  constructor() {
 
+    this.storeObject(store)
+  }
 
+  insetDropShadow(shadows) {
+    // Create the filter and set the filter ID
+    // ...
+
+    // Return the instance to allow method chaining
+    return this;
+  }
+
+  applyFilterToElement(element) {
+    // Assign the filter and handle the parenting
+    // ...
+
+    // Return the instance to allow method chaining
+    return this;
+  }
+
+  finishSetup(store) {
+    this.storeObject(store)
+  }
+}
+
+Object.assign(ProtoFilter.prototype, identifiableStored)
 
 
