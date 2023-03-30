@@ -284,7 +284,9 @@ function windowResized() {
   redrawAll()
 }
 
+// FUNC: redrawAll()
 function redrawAll() {
+  print('REDRAW ALL called')
   BG.size(windowWidth, windowHeight)
   S.allLayers.forEach(e => e.resize())
 }
