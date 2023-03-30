@@ -180,6 +180,7 @@ class Frame extends ProtoLayer {
       .parent(this.bleed)
       .addToClassList(this.id)
 
+    this.testElementsSetup()
   }
 
   drawElement(look = this.testLook) {
@@ -215,10 +216,17 @@ class Frame extends ProtoLayer {
     //   insetShadow01,
     // ])
 
-    this.testElements()
+    this.testElementsDraw()
   }
 
-  testElements() {
+  testElementsSetup() {
+    this.testRect = createSVGElt('rect').id('testRect')
+    this.testCircle1 = createSVGElt('circle').id('testCircle1')
+    this.testCircle2 = createSVGElt('circle').id('testCircle2')
+    this.testCircle3 = createSVGElt('circle').id('testCircle3')
+  }
+
+  testElementsDraw() {
     //COLORIZED
     // const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: false };
     // const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: false };
@@ -267,8 +275,7 @@ class Frame extends ProtoLayer {
 
 
 
-    const testRect = createSVGElt('rect')
-      .id('testRect')
+    this.testRect
       .attribute('x', `${5}`)
       .attribute('y', `${5}`)
       .attribute('width', `${90}`)
@@ -309,8 +316,7 @@ class Frame extends ProtoLayer {
     // .attribute('filter', 'url(#blur)')
     // .dropShadow({ color: red })
 
-    const testCircle = createSVGElt('circle')
-      .id('testCircle')
+    this.testCircle1
       .attribute('cx', `${50}`)
       .attribute('cy', `${60}`)
       .attribute('r', `${40}`)
@@ -345,8 +351,7 @@ class Frame extends ProtoLayer {
     //   // .attribute('stroke-linejoin', 'round')
     //   .parent(this.p5Elt)
 
-    const testCircle2 = createSVGElt('circle')
-      .id('testCircle')
+    this.testCircle2
       .attribute('cx', `${50}`)
       .attribute('cy', `${140}`)
       .attribute('r', `${20}`)
@@ -385,8 +390,7 @@ class Frame extends ProtoLayer {
     //   insetShadow01,
     // ])
 
-    const testCircle3 = createSVGElt('circle')
-      .id('testCircle')
+    this.testCircle3
       .attribute('cx', `${50}`)
       .attribute('cy', `${140}`)
       .attribute('r', `${20}`)
