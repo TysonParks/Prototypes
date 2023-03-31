@@ -431,33 +431,96 @@ p5.Element.prototype.insetDropShadow = function (shadows) {
   return this
 }
 
+function createfilter() {
+  return new ProtoFilter()
+}
+
+//CLASS: ProtoFilter
 class ProtoFilter {
+  filter
+  defs
+  type
   constructor() {
 
-    this.storeObject(store)
+    this.storeObject(S.Effects)
   }
 
   insetDropShadow(shadows) {
-    // Create the filter and set the filter ID
-    // ...
+    this.type = 'dropShadow'
 
-    // Return the instance to allow method chaining
-    return this;
+    this.defs = createSVGElt('defs')
+    this.filter = createSVGElt('filter').attribute('id', this.id)
+    let previousResult = 'SourceGraphic'
+
+    for (const shadow of shadows) {
+      const { dx, dy, blur, color, inset } = shadow;
+      const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`
+
+      createSVGElt('feOffset')
+        .attribute('dx', dx)
+        .attribute('dy', dy)
+        .parent(this.filter);
+
+      createSVGElt('feGaussianBlur')
+        .attribute('stdDeviation', blur)
+        .attribute('result', 'offset-blur')
+        .parent(this.filter);
+
+      createSVGElt('feComposite')
+        .attribute('operator', 'out')
+        .attribute('in', previousResult)
+        .attribute('in2', 'offset-blur')
+        .attribute('result', 'inverse')
+        .parent(this.filter);
+
+      createSVGElt('feFlood')
+        .attribute('flood-color', color)
+        .attribute('flood-opacity', 1)
+        .attribute('result', 'color')
+        .parent(this.filter);
+
+      createSVGElt('feComposite')
+        .attribute('operator', 'in')
+        .attribute('in', 'color')
+        .attribute('in2', 'inverse')
+        .attribute('result', shadowID)
+        .parent(this.filter);
+
+      createSVGElt('feComposite')
+        .attribute('operator', 'over')
+        .attribute('in', shadowID)
+        .attribute('in2', previousResult)
+        .attribute('result', `merged-${shadowID}`)
+        .parent(this.filter);
+
+      previousResult = `merged-${shadowID}`
+    }
+
+    createSVGElt('feMergeNode')
+      .attribute('in', previousResult)
+      .parent(this.filter)
+
+    this.defs.child(this.filter)
+
+    return this
   }
 
   applyFilterToElement(element) {
-    // Assign the filter and handle the parenting
-    // ...
+    const parentSVG = element.elt.ownerSVGElement
+    const g = createSVGElt('g')
+      .attribute('filter', `url(#${this.id})`)
+      .parent(parentSVG)
+    element.parent(g)
+    g.child(this.defs)
 
-    // Return the instance to allow method chaining
-    return this;
+    return this
   }
 
   finishSetup(store) {
-    this.storeObject(store)
+    this.storeObject(store) // this function assigns an id, a uid, and stores the instance
   }
 }
 
-Object.assign(ProtoFilter.prototype, identifiableStored)
+Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides store,ID, and UID functionality
 
 
