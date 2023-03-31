@@ -537,14 +537,12 @@ class ProtoFilter {
         .attribute('flood-opacity', 1)
         .attribute('result', `flood-${color}`)
         .parent(this.filter)
-      // console.log(`flood-${color}:`, color)
       createSVGElt('feComposite')
         .attribute('in', `flood-${color}`)
         .attribute('in2', `offset-${color}`)
         .attribute('operator', 'in')
         .attribute('result', `composite-${color}`)
         .parent(this.filter)
-
       createSVGElt('feBlend')
         .attribute('in', `composite-${color}`)
         .attribute('in2', previousResult)
@@ -561,7 +559,6 @@ class ProtoFilter {
       .attribute('mode', 'normal')
       .attribute('result', 'finalResult')
       .parent(this.filter)
-
     createSVGElt('feMergeNode')
       .attribute('in', 'finalResult')
       .parent(feMerge)
@@ -572,7 +569,7 @@ class ProtoFilter {
     return this
   }
 
-  calculatePaddingAndOffset(shadows) {
+  calculatePadding(shadows) {
     const xPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
     const yPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
 
@@ -585,7 +582,9 @@ class ProtoFilter {
         maxY: Math.max(constraints.maxY, blurPadding + shadow.dy),
       }
     }, { minX: 0, maxX: 0, minY: 0, maxY: 0 })
+  }
 
+  applyPadding() {
     this.filter
       .attribute('x', `${viewBoxConstraints.minX - 10}%`)
       .attribute('y', `${viewBoxConstraints.minY - 10}%`)
@@ -596,6 +595,8 @@ class ProtoFilter {
   }
 
   applyFilterToElement(element) {
+    if (this.needsPadding) { this.applyPadding() }
+
     const parentSVG = element.elt.ownerSVGElement
     const g = createSVGElt('g')
       .attribute('filter', `url(#${this.id})`)
