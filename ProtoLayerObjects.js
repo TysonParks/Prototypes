@@ -224,6 +224,8 @@ class Frame extends ProtoLayer {
     this.testCircle1 = createSVGElt('circle').id('testCircle1')
     this.testCircle2 = createSVGElt('circle').id('testCircle2')
     this.testCircle3 = createSVGElt('circle').id('testCircle3')
+
+    this.dropShadow1 = createfilter()
   }
 
   testElementsDraw() {
@@ -365,18 +367,18 @@ class Frame extends ProtoLayer {
       .attribute('stroke-linejoin', 'round')
       .attribute('stroke-linecap', 'round')
       .parent(this.p5Elt)
-      .dropShadow3([
-        shadow8,
-        shadow7,
-        shadow6,
-        shadow5,
-        shadow4,
-        shadow3,
-        shadow2,
-        shadow1,
-        shadow0,
-        shadow01,
-      ])
+    // .dropShadow3([
+    //   shadow8,
+    //   shadow7,
+    //   shadow6,
+    //   shadow5,
+    //   shadow4,
+    //   shadow3,
+    //   shadow2,
+    //   shadow1,
+    //   shadow0,
+    //   shadow01,
+    // ])
     // .insetDropShadow([
     //   insetShadow8,
     //   insetShadow7,
@@ -389,6 +391,21 @@ class Frame extends ProtoLayer {
     //   insetShadow0,
     //   insetShadow01,
     // ])
+
+    this.dropShadow1
+      .insetDropShadow([
+        insetShadow8,
+        insetShadow7,
+        insetShadow6,
+        insetShadow5,
+        insetShadow4,
+        insetShadow3,
+        insetShadow2,
+        insetShadow1,
+        insetShadow0,
+        insetShadow01,
+      ])
+      .applyFilterToElement(this.testCircle2)
 
     this.testCircle3
       .attribute('cx', `${50}`)
