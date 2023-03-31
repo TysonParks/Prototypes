@@ -440,14 +440,17 @@ class ProtoFilter {
   filter
   defs
   type
+  needsPadding
+  padding
   constructor() {
-
+    this.needsPadding = false
     this.storeObject(S.Effects)
   }
 
   insetDropShadow(shadows) {
-    this.type = 'dropShadow'
+    shadows = OpArray.format(shadows)
 
+    this.type = 'insetDropShadow'
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').attribute('id', this.id)
     let previousResult = 'SourceGraphic'
@@ -459,39 +462,39 @@ class ProtoFilter {
       createSVGElt('feOffset')
         .attribute('dx', dx)
         .attribute('dy', dy)
-        .parent(this.filter);
+        .parent(this.filter)
 
       createSVGElt('feGaussianBlur')
         .attribute('stdDeviation', blur)
         .attribute('result', 'offset-blur')
-        .parent(this.filter);
+        .parent(this.filter)
 
       createSVGElt('feComposite')
         .attribute('operator', 'out')
         .attribute('in', previousResult)
         .attribute('in2', 'offset-blur')
         .attribute('result', 'inverse')
-        .parent(this.filter);
+        .parent(this.filter)
 
       createSVGElt('feFlood')
         .attribute('flood-color', color)
         .attribute('flood-opacity', 1)
         .attribute('result', 'color')
-        .parent(this.filter);
+        .parent(this.filter)
 
       createSVGElt('feComposite')
         .attribute('operator', 'in')
         .attribute('in', 'color')
         .attribute('in2', 'inverse')
         .attribute('result', shadowID)
-        .parent(this.filter);
+        .parent(this.filter)
 
       createSVGElt('feComposite')
         .attribute('operator', 'over')
         .attribute('in', shadowID)
         .attribute('in2', previousResult)
         .attribute('result', `merged-${shadowID}`)
-        .parent(this.filter);
+        .parent(this.filter)
 
       previousResult = `merged-${shadowID}`
     }
@@ -503,6 +506,93 @@ class ProtoFilter {
     this.defs.child(this.filter)
 
     return this
+  }
+
+  dropShadow(shadows) {
+    shadows = OpArray.format(shadows)
+
+    this.calculatePadding = true
+    this.type = 'dropShadow'
+    this.filter = createSVGElt('filter').attribute('id', this.id)
+    this.defs = createSVGElt('defs')
+    const feMerge = createSVGElt('feMerge')
+    let previousResult = 'SourceGraphic'
+
+    for (const shadow of shadows) {
+      const { dx, dy, blur, color, inset } = shadow
+
+      createSVGElt('feGaussianBlur')
+        .attribute('in', 'SourceAlpha')
+        .attribute('stdDeviation', blur)
+        .attribute('result', `blur-${color}`)
+        .parent(this.filter)
+      createSVGElt('feOffset')
+        .attribute('in', `blur-${color}`)
+        .attribute('dx', inset ? -dx : dx)
+        .attribute('dy', inset ? -dy : dy)
+        .attribute('result', `offset-${color}`)
+        .parent(this.filter)
+      createSVGElt('feFlood')
+        .attribute('flood-color', color)
+        .attribute('flood-opacity', 1)
+        .attribute('result', `flood-${color}`)
+        .parent(this.filter)
+      // console.log(`flood-${color}:`, color)
+      createSVGElt('feComposite')
+        .attribute('in', `flood-${color}`)
+        .attribute('in2', `offset-${color}`)
+        .attribute('operator', 'in')
+        .attribute('result', `composite-${color}`)
+        .parent(this.filter)
+
+      createSVGElt('feBlend')
+        .attribute('in', `composite-${color}`)
+        .attribute('in2', previousResult)
+        .attribute('mode', 'normal')
+        .attribute('result', `blend-${color}`)
+        .parent(this.filter)
+
+      previousResult = `blend-${color}`
+    }
+
+    createSVGElt('feBlend')
+      .attribute('in', 'SourceGraphic')
+      .attribute('in2', previousResult)
+      .attribute('mode', 'normal')
+      .attribute('result', 'finalResult')
+      .parent(this.filter)
+
+    createSVGElt('feMergeNode')
+      .attribute('in', 'finalResult')
+      .parent(feMerge)
+
+    this.filter.child(feMerge)
+    this.defs.child(this.filter)
+
+    return this
+  }
+
+  calculatePaddingAndOffset(shadows) {
+    const xPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
+    const yPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
+
+    const viewBoxConstraints = shadows.reduce((constraints, shadow) => {
+      const blurPadding = shadow.blur * 3
+      return {
+        minX: Math.min(constraints.minX, -blurPadding + shadow.dx),
+        maxX: Math.max(constraints.maxX, blurPadding + shadow.dx),
+        minY: Math.min(constraints.minY, -blurPadding + shadow.dy),
+        maxY: Math.max(constraints.maxY, blurPadding + shadow.dy),
+      }
+    }, { minX: 0, maxX: 0, minY: 0, maxY: 0 })
+
+    this.filter
+      .attribute('x', `${viewBoxConstraints.minX - 10}%`)
+      .attribute('y', `${viewBoxConstraints.minY - 10}%`)
+      .attribute('width', `${200 + viewBoxConstraints.maxX - viewBoxConstraints.minX}%`)
+      .attribute('height', `${200 + viewBoxConstraints.maxY - viewBoxConstraints.minY}%`)
+      .attribute('viewBox', `${viewBoxConstraints.minX - xPadding} ${viewBoxConstraints.minY - yPadding} ${100 + viewBoxConstraints.maxX - viewBoxConstraints.minX + xPadding * 2} ${100 + viewBoxConstraints.maxY - viewBoxConstraints.minY + yPadding * 2}`)
+      .attribute('stroke', 'red')
   }
 
   applyFilterToElement(element) {
