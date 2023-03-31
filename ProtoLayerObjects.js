@@ -226,6 +226,7 @@ class Frame extends ProtoLayer {
     this.testCircle3 = createSVGElt('circle').id('testCircle3')
 
     this.dropShadow1 = createfilter()
+    this.dropShadow2 = createfilter()
   }
 
   testElementsDraw() {
@@ -328,18 +329,18 @@ class Frame extends ProtoLayer {
       .attribute('stroke-width', '2')
       .attribute('stroke-linejoin', 'round')
       .parent(this.p5Elt)
-      .dropShadow3([
-        // shadow8,
-        // shadow7,
-        // shadow6,
-        // shadow5,
-        shadow4,
-        shadow3,
-        shadow2,
-        shadow1,
-        shadow0,
-        shadow01,
-      ])
+    // .dropShadow3([
+    //   // shadow8,
+    //   // shadow7,
+    //   // shadow6,
+    //   // shadow5,
+    //   shadow4,
+    //   shadow3,
+    //   shadow2,
+    //   shadow1,
+    //   shadow0,
+    //   shadow01,
+    // ])
 
     // const testCircle3 = createSVGElt('circle')
     //   .id('testCircle')
@@ -407,16 +408,20 @@ class Frame extends ProtoLayer {
       ])
       .applyFilterToElement(this.testCircle2)
 
-    this.testCircle3
-      .attribute('cx', `${50}`)
-      .attribute('cy', `${140}`)
-      .attribute('r', `${20}`)
-      .attribute('fill', protoColor(230))
-      .attribute('fill-opacity', '1')
-      .attribute('stroke', 'green')
-      // .attribute('stroke-width', '5')
-      // .attribute('stroke-linejoin', 'round')
-      .parent(this.p5Elt)
+    this.dropShadow2
+      .dropShadow([
+        shadow8,
+        shadow7,
+        shadow6,
+        shadow5,
+        shadow4,
+        shadow3,
+        shadow2,
+        shadow1,
+        shadow0,
+        shadow01,
+      ])
+      .applyFilterToElement(this.testCircle1)
 
 
 
