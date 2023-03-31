@@ -14,7 +14,7 @@ class Store {
     this.Grammars = new ProtoStorage('grmr', 2)
     this.Looks = new ProtoStorage('look', 2)
     this.Actions = new ProtoStorage('axn')
-    this.Effects = new ProtoStorage('fx')
+    this.Effects = new ProtoStorage('fx', 2)
   }
 
   get allLayers() {
