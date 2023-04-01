@@ -447,6 +447,8 @@ class ProtoFilter {
     this.storeObject(S.Effects)
   }
 
+
+
   insetDropShadow(shadows) {
     shadows = OpArray.format(shadows)
 
@@ -508,7 +510,7 @@ class ProtoFilter {
     return this
   }
 
-  dropShadow(shadows) {
+  nonInsetDropShadow(shadows) {
     shadows = OpArray.format(shadows)
     this.shadows = shadows
 
