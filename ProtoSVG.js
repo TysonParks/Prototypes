@@ -452,7 +452,7 @@ class ProtoFilter {
 
     this.type = 'insetDropShadow'
     this.defs = createSVGElt('defs')
-    this.filter = createSVGElt('filter').attribute('id', this.id)
+    this.filter = createSVGElt('filter').id(this.id)
     let previousResult = 'SourceGraphic'
 
     for (const shadow of shadows) {
@@ -510,10 +510,18 @@ class ProtoFilter {
 
   dropShadow(shadows) {
     shadows = OpArray.format(shadows)
+    this.shadows = shadows
 
-    this.calculatePadding = true
+    this.needsPadding = true
+    this.padding = this.calculatePadding(shadows)
+
     this.type = 'dropShadow'
-    this.filter = createSVGElt('filter').attribute('id', this.id)
+    this.filter = createSVGElt('filter').id(this.id)
+    // .attribute('x', '-100%')
+    // .attribute('y', '-100%')
+    // .attribute('width', '300%')
+    // .attribute('height', '300%')
+
     this.defs = createSVGElt('defs')
     const feMerge = createSVGElt('feMerge')
     let previousResult = 'SourceGraphic'
@@ -569,37 +577,106 @@ class ProtoFilter {
     return this
   }
 
-  calculatePadding(shadows) {
-    const xPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
-    const yPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
+  updateFilter(shadows, scale = 2) {
+    shadows = OpArray.format(shadows);
+    this.shadows = shadows;
 
-    const viewBoxConstraints = shadows.reduce((constraints, shadow) => {
-      const blurPadding = shadow.blur * 3
-      return {
-        minX: Math.min(constraints.minX, -blurPadding + shadow.dx),
-        maxX: Math.max(constraints.maxX, blurPadding + shadow.dx),
-        minY: Math.min(constraints.minY, -blurPadding + shadow.dy),
-        maxY: Math.max(constraints.maxY, blurPadding + shadow.dy),
+    if (this.type === 'insetDropShadow') {
+      let previousResult = 'SourceGraphic';
+      let shadowIndex = 0;
+
+      for (const shadow of shadows) {
+        const { dx, dy, blur, color, inset } = shadow;
+
+        const feOffset = this.filter.elt.children[shadowIndex * 6];
+        const feGaussianBlur = this.filter.elt.children[shadowIndex * 6 + 1];
+        const feFlood = this.filter.elt.children[shadowIndex * 6 + 4];
+
+        feOffset.setAttribute('dx', inset ? -dx * scale : dx * scale);
+        feOffset.setAttribute('dy', inset ? -dy * scale : dy * scale);
+        feGaussianBlur.setAttribute('stdDeviation', blur * scale);
+        feFlood.setAttribute('flood-color', color);
+
+        shadowIndex++;
       }
-    }, { minX: 0, maxX: 0, minY: 0, maxY: 0 })
+    } else if (this.type === 'dropShadow') {
+      let shadowIndex = 0;
+
+      for (const shadow of shadows) {
+        const { dx, dy, blur, color, inset } = shadow
+
+        const feGaussianBlur = this.filter.elt.children[shadowIndex * 5];
+        const feOffset = this.filter.elt.children[shadowIndex * 5 + 1];
+        const feFlood = this.filter.elt.children[shadowIndex * 5 + 2];
+
+        feGaussianBlur.setAttribute('stdDeviation', blur);
+        feOffset.setAttribute('dx', inset ? -dx : dx);
+        feOffset.setAttribute('dy', inset ? -dy : dy);
+        feFlood.setAttribute('flood-color', color);
+
+        shadowIndex++;
+      }
+    }
   }
 
-  applyPadding() {
-    this.filter
-      .attribute('x', `${viewBoxConstraints.minX - 10}%`)
-      .attribute('y', `${viewBoxConstraints.minY - 10}%`)
-      .attribute('width', `${200 + viewBoxConstraints.maxX - viewBoxConstraints.minX}%`)
-      .attribute('height', `${200 + viewBoxConstraints.maxY - viewBoxConstraints.minY}%`)
-      .attribute('viewBox', `${viewBoxConstraints.minX - xPadding} ${viewBoxConstraints.minY - yPadding} ${100 + viewBoxConstraints.maxX - viewBoxConstraints.minX + xPadding * 2} ${100 + viewBoxConstraints.maxY - viewBoxConstraints.minY + yPadding * 2}`)
-      .attribute('stroke', 'red')
+  calculatePadding(shadows, scale) {
+    let minX = 0
+    let minY = 0
+    let maxX = 0
+    let maxY = 0
+
+    shadows.forEach((shadow) => {
+      const offsetX = shadow.dx * scale
+      const offsetY = shadow.dy * scale
+      const blurRadius = shadow.blur * scale
+
+      const left = offsetX - blurRadius
+      const right = offsetX + blurRadius
+      const top = offsetY - blurRadius
+      const bottom = offsetY + blurRadius
+
+      minX = Math.min(minX, left)
+      minY = Math.min(minY, top)
+      maxX = Math.max(maxX, right)
+      maxY = Math.max(maxY, bottom)
+    })
+
+    return {
+      minX: Math.ceil(Math.abs(minX) * scale),
+      minY: Math.ceil(Math.abs(minY) * scale),
+      maxX: Math.ceil(Math.abs(maxX) * scale),
+      maxY: Math.ceil(Math.abs(maxY) * scale),
+    }
   }
 
-  applyFilterToElement(element) {
-    if (this.needsPadding) { this.applyPadding() }
+  applyPadding(element, padding) {
+    const { minX, minY, maxX, maxY } = padding;
+
+    element
+      .attribute("x", `${-minX}%`)
+      .attribute("y", `${-minY}%`)
+      .attribute("width", `${100 + maxX + minX}%`)
+      .attribute("height", `${100 + maxY + minY}%`)
+
+  }
+
+  applyFilterToElement(element, scale = 2) {
+    if (this.needsPadding) {
+      this.updateFilter(this.shadows, scale)
+      const padding = this.calculatePadding(this.shadows, scale)
+      this.applyPadding(element, padding)
+
+      const { minX, minY, maxX, maxY } = padding;
+      this.filter
+        .attribute("x", `${-minX}%`)
+        .attribute("y", `${-minY}%`)
+        .attribute("width", `${100 + maxX + minX}%`)
+        .attribute("height", `${100 + maxY + minY}%`);
+    }
 
     const parentSVG = element.elt.ownerSVGElement
-    const g = createSVGElt('g')
-      .attribute('filter', `url(#${this.id})`)
+    const g = createSVGElt("g")
+      .attribute("filter", `url(#${this.id})`)
       .parent(parentSVG)
     element.parent(g)
     g.child(this.defs)
@@ -615,3 +692,8 @@ class ProtoFilter {
 Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides store,ID, and UID functionality
 
 
+//FUNC: p5.Element extension applyFilter(filterInstance, scale = 1)
+p5.Element.prototype.applyFilter = function (filterInstance, scale = 2) {
+  filterInstance.applyFilterToElement(this, scale)
+  return this
+};
