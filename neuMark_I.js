@@ -195,6 +195,11 @@ class Shade {
     // return max(this.x, this.y)
   }
 
+  //Drop-Shadow 
+  static dropShadSVG(x, y, blurRad = 0, col = color(0)) {
+
+  }
+
   // Box-Shadow CSS
   static boxShadCSS(x, y, blurRad = 0, spreadRad = 0, col = color(0), inset = false) {
     let color = col.toString('#rrggbb')
