@@ -231,50 +231,50 @@ class Frame extends ProtoLayer {
 
   testElementsDraw() {
     //COLORIZED
-    const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: false };
-    const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: false };
-    const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: false };
-    const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: false };
-    const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: false };
-    const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: false };
-    const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: false };
-    const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: false };
-    const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: false };
-    const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: false };
+    // const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: false };
+    // const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: false };
+    // const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: false };
+    // const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: false };
+    // const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: false };
+    // const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: false };
+    // const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: false };
+    // const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: false };
+    // const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: false };
+    // const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: false };
 
-    const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: true };
-    const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: true };
-    const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: true };
-    const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: true };
-    const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: true };
-    const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: true };
-    const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: true };
-    const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: true };
-    const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: true };
-    const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: true };
+    // const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: true };
+    // const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: true };
+    // const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: true };
+    // const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: true };
+    // const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: true };
+    // const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: true };
+    // const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: true };
+    // const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: true };
+    // const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: true };
+    // const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: true };
 
     // MONO
-    // const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: false };
-    // const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: false };
-    // const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: false };
-    // const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: false };
-    // const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: false };
-    // const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: false };
-    // const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: false };
-    // const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: false };
-    // const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: false };
-    // const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: false };
+    const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: false };
+    const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: false };
+    const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: false };
+    const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: false };
+    const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: false };
+    const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: false };
+    const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: false };
+    const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: false };
+    const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: false };
+    const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: false };
 
-    // const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: true };
-    // const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: true };
-    // const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: true };
-    // const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: true };
-    // const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: true };
-    // const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: true };
-    // const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: true };
-    // const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: true };
-    // const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: true };
-    // const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: true };
+    const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: true };
+    const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: true };
+    const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: true };
+    const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: true };
+    const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: true };
+    const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: true };
+    const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: true };
+    const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: true };
+    const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: true };
+    const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: true };
 
 
 
