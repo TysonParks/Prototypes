@@ -412,7 +412,7 @@ class Frame extends ProtoLayer {
     // .applyFilterToElement(this.testCircle2)
 
     this.dropShadow2
-      .dropShadow([
+      .nonInsetDropShadow([
         shadow8,
         shadow7,
         shadow6,
