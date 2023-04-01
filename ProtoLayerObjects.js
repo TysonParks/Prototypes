@@ -276,6 +276,36 @@ class Frame extends ProtoLayer {
     const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: true };
     const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: true };
 
+    this.dropShadow1
+      .insetDropShadow([
+        // insetShadow8,
+        // insetShadow7,
+        insetShadow6,
+        insetShadow5,
+        insetShadow4,
+        insetShadow3,
+        insetShadow2,
+        insetShadow1,
+        insetShadow0,
+        insetShadow01,
+      ])
+    // .applyFilterToElement(this.testCircle2)
+
+    this.dropShadow2
+      .nonInsetDropShadow([
+        shadow8,
+        shadow7,
+        shadow6,
+        shadow5,
+        shadow4,
+        shadow3,
+        shadow2,
+        shadow1,
+        shadow0,
+        shadow01,
+      ])
+    // .applyFilterToElement(this.testCircle1)
+    // .applyFilterToElement(this.testCircle2)
 
 
     this.testRect
@@ -395,40 +425,6 @@ class Frame extends ProtoLayer {
     //   insetShadow0,
     //   insetShadow01,
     // ])
-
-    this.dropShadow1
-      .insetDropShadow([
-        // insetShadow8,
-        // insetShadow7,
-        insetShadow6,
-        insetShadow5,
-        insetShadow4,
-        insetShadow3,
-        insetShadow2,
-        insetShadow1,
-        insetShadow0,
-        insetShadow01,
-      ])
-    // .applyFilterToElement(this.testCircle2)
-
-    this.dropShadow2
-      .nonInsetDropShadow([
-        shadow8,
-        shadow7,
-        shadow6,
-        shadow5,
-        shadow4,
-        shadow3,
-        shadow2,
-        shadow1,
-        shadow0,
-        shadow01,
-      ])
-    // .applyFilterToElement(this.testCircle1)
-    // .applyFilterToElement(this.testCircle2)
-
-
-
 
   }
   // #endregion
