@@ -203,6 +203,7 @@ class Frame extends ProtoLayer {
       .attribute('rx', `${20}`)
       .attribute('ry', `${20}`)
       .attribute(`fill`, ` ${protoColor(230)}`)
+      .attribute('fill-opacity', '.5')
     // .insetDropShadow([
     //   insetShadow8,
     //   insetShadow7,
@@ -225,56 +226,57 @@ class Frame extends ProtoLayer {
     this.testCircle2 = createSVGElt('circle').id('testCircle2')
     this.testCircle3 = createSVGElt('circle').id('testCircle3')
 
-    this.dropShadow1 = createfilter()
-    this.dropShadow2 = createfilter()
+    this.dropShadow1 = createFilter()
+    this.dropShadow2 = createFilter()
+    this.dropShadow3 = createFilter()
   }
 
   testElementsDraw() {
     //COLORIZED
-    // const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: false };
-    // const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: false };
-    // const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: false };
-    // const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: false };
-    // const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: false };
-    // const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: false };
-    // const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: false };
-    // const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: false };
-    // const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: false };
-    // const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: false };
+    const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: false };
+    const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: false };
+    const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: false };
+    const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: false };
+    const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: false };
+    const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: false };
+    const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: false };
+    const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: false };
+    const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: false };
+    const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: false };
 
-    // const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: true };
-    // const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: true };
-    // const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: true };
-    // const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: true };
-    // const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: true };
-    // const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: true };
-    // const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: true };
-    // const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: true };
-    // const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: true };
-    // const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: true };
+    const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: true };
+    const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: true };
+    const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: true };
+    const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: true };
+    const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: true };
+    const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: true };
+    const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: true };
+    const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: true };
+    const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: true };
+    const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: true };
 
     // MONO
-    const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: false };
-    const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: false };
-    const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: false };
-    const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: false };
-    const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: false };
-    const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: false };
-    const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: false };
-    const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: false };
-    const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: false };
-    const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: false };
+    // const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: false };
+    // const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: false };
+    // const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: false };
+    // const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: false };
+    // const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: false };
+    // const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: false };
+    // const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: false };
+    // const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: false };
+    // const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: false };
+    // const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: false };
 
-    const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: true };
-    const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: true };
-    const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: true };
-    const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: true };
-    const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: true };
-    const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: true };
-    const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: true };
-    const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: true };
-    const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: true };
-    const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: true };
+    // const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: true };
+    // const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: true };
+    // const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: true };
+    // const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: true };
+    // const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: true };
+    // const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: true };
+    // const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: true };
+    // const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: true };
+    // const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: true };
+    // const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: true };
 
     this.dropShadow1
       .insetDropShadow([
@@ -292,7 +294,7 @@ class Frame extends ProtoLayer {
     // .applyFilterToElement(this.testCircle2)
 
     this.dropShadow2
-      .nonInsetDropShadow([
+      .outsetDropShadow([
         shadow8,
         shadow7,
         shadow6,
@@ -307,22 +309,8 @@ class Frame extends ProtoLayer {
     // .applyFilterToElement(this.testCircle1)
     // .applyFilterToElement(this.testCircle2)
 
-
-    this.testRect
-      .attribute('x', `${5}`)
-      .attribute('y', `${5}`)
-      .attribute('width', `${90}`)
-      .attribute('height', `${190}`)
-      .attribute('rx', `${15}`)
-      .attribute('ry', `${15}`)
-      .attribute('fill', protoColor(230))
-      .attribute('fill-opacity', '1')
-      // .attribute('stroke', 'blue')
-      .attribute('stroke-width', '1')
-      .attribute('stroke-linejoin', 'round')
-      .parent(this.p5Elt)
-      // .applyFilter(this.dropShadow1)
-      .insetDropShadow([
+    this.dropShadow3
+      .combinedDropShadow([
         // insetShadow8,
         // insetShadow7,
         // insetShadow6,
@@ -333,7 +321,47 @@ class Frame extends ProtoLayer {
         insetShadow1,
         insetShadow0,
         insetShadow01,
+        // shadow8,
+        // shadow7,
+        // shadow6,
+        // shadow5,
+        shadow4,
+        shadow3,
+        shadow2,
+        shadow1,
+        shadow0,
+        shadow01,
+        // insetShadow0,
+        // insetShadow01,
       ])
+
+
+    this.testRect
+      .attribute('x', `${5}`)
+      .attribute('y', `${5}`)
+      .attribute('width', `${90}`)
+      .attribute('height', `${190}`)
+      .attribute('rx', `${15}`)
+      .attribute('ry', `${15}`)
+      .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '0')
+      // .attribute('stroke', 'blue')
+      .attribute('stroke-width', '1')
+      .attribute('stroke-linejoin', 'round')
+      .parent(this.p5Elt)
+    // .applyFilter(this.dropShadow1)
+    // .insetDropShadow([
+    //   // insetShadow8,
+    //   // insetShadow7,
+    //   // insetShadow6,
+    //   // insetShadow5,
+    //   insetShadow4,
+    //   insetShadow3,
+    //   insetShadow2,
+    //   insetShadow1,
+    //   insetShadow0,
+    //   insetShadow01,
+    // ])
     // .dropShadow3([
     //   // shadow8,
     //   // shadow7,
@@ -352,15 +380,15 @@ class Frame extends ProtoLayer {
 
     this.testCircle1
       .attribute('cx', `${50}`)
-      .attribute('cy', `${60}`)
-      .attribute('r', `${40}`)
-      .attribute('fill', protoColor(230))
-      .attribute('fill-opacity', '0')
-      .attribute('stroke', protoColor(230))
-      .attribute('stroke-width', '4')
-      .attribute('stroke-linejoin', 'round')
+      .attribute('cy', `${40}`)
+      .attribute('r', `${20}`)
+      .attribute('fill', protoColor(210))
+      .attribute('fill-opacity', '1')
+      // .attribute('stroke', protoColor(230))
+      // .attribute('stroke-width', '4')
+      // .attribute('stroke-linejoin', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow2, 2)
+    // .applyFilter(this.dropShadow1, 2)
     // .dropShadow3([
     //   // shadow8,
     //   // shadow7,
@@ -388,10 +416,10 @@ class Frame extends ProtoLayer {
 
     this.testCircle2
       .attribute('cx', `${50}`)
-      .attribute('cy', `${140}`)
+      .attribute('cy', `${100}`)
       .attribute('r', `${20}`)
-      .attribute('fill', protoColor(230))
-      .attribute('fill-opacity', '.5')
+      .attribute('fill', protoColor(210))
+      .attribute('fill-opacity', '1')
       .attribute('stroke', protoColor(230))
       .attribute('stroke-width', '4')
       .attribute('pathLength', '360')
@@ -400,7 +428,7 @@ class Frame extends ProtoLayer {
       .attribute('stroke-linejoin', 'round')
       .attribute('stroke-linecap', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow1)
+    // .applyFilter(this.dropShadow2)
     // .dropShadow3([
     //   shadow8,
     //   shadow7,
@@ -426,24 +454,25 @@ class Frame extends ProtoLayer {
     //   insetShadow01,
     // ])
 
+    this.testCircle3
+      .attribute('cx', `${50}`)
+      .attribute('cy', `${160}`)
+      .attribute('r', `${20}`)
+      .attribute('fill', protoColor(210, 0, 0))
+      .attribute('fill-opacity', '1')
+      .attribute('stroke', protoColor(230))
+      .attribute('stroke-width', '4')
+      .attribute('pathLength', '360')
+      .attribute('stroke-dashoffset', '18')
+      .attribute('stroke-dasharray', `${180 / 6} `)
+      .attribute('stroke-linejoin', 'round')
+      .attribute('stroke-linecap', 'round')
+      .parent(this.p5Elt)
+    // .applyFilter(this.dropShadow1)
+
+    console.log('circle3', this.testCircle3)
   }
   // #endregion
-}
-
-//TODO: DEPRECATE
-// CLASS: Layer
-class Layer extends ProtoLayer {
-  #_anchor
-  #_size
-  constructor({ parent, anchor, size } = {}) {
-    super(parent)
-    this.finishSetup(S.Layers)
-    this.#_anchor = anchor
-    this.#_size = size
-  }
-
-  get anchor() { return this.#_anchor }
-  get size() { return this.#_size }
 }
 
 // CLASS: SelectionBounds
