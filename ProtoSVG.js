@@ -76,7 +76,7 @@ p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
     return this.elt.getAttributeNS(nameSpaceURI, attr)
   } else {
     this.elt.setAttributeNS(nameSpaceURI, attr, value)
-    return this;
+    return this
   }
 }
 
@@ -129,19 +129,19 @@ class SVG {
 
 
 function addElement(elt, pInst, media) {
-  const node = pInst._userNode ? pInst._userNode : document.body;
+  const node = pInst._userNode ? pInst._userNode : document.body
   // print(`node:`)
   // print(node)
-  node.appendChild(elt);
+  node.appendChild(elt)
   const c = media
     ? new p5.MediaElement(elt, pInst)
-    : new p5.Element(elt, pInst);
+    : new p5.Element(elt, pInst)
   // print(`c:`)
   // print(c)
   // print(`pInst._elements:`)
   // print(pInst._elements)
-  pInst._elements.push(c);
-  return c;
+  pInst._elements.push(c)
+  return c
 }
 
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
@@ -236,7 +236,7 @@ p5.Element.prototype.dropShadow1 = function ({ dx = 5, dy = 5, blurRadius = 10, 
 }
 
 
-let filterCounter = 0;
+let filterCounter = 0
 
 
 //FIXME: this function should just create the filter and return filter ID (not apply the filter)
@@ -247,7 +247,7 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
   shadows = OpArray.format(shadows)
 
   //debug:
-  console.log("Applying drop shadow to:", this);
+  console.log("Applying drop shadow to:", this)
 
   //FIXME: use store protocol instead
   const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9) // modify this line
@@ -356,71 +356,71 @@ p5.Element.prototype.insetDropShadow = function (shadows) {
   shadows = OpArray.format(shadows)
 
   //debug:
-  console.log("Applying drop shadow to:", this);
+  // console.log("Applying drop shadow to:", this)
 
   //FIXME: use store protocol instead
-  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9);
+  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9)
   filterCounter++
 
   //NOTE: This block is good to stay
   const defs = createSVGElt('defs')
-  const filter = createSVGElt('filter').attribute('id', id);
-  let previousResult = 'SourceGraphic';
+  const filter = createSVGElt('filter').attribute('id', id)
+  let previousResult = 'SourceGraphic'
 
   //NOTE: This block is good to stay
   for (const shadow of shadows) {
-    const { dx, dy, blur, color, inset } = shadow;
-    const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`;
+    const { dx, dy, blur, color, inset } = shadow
+    const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`
 
     createSVGElt('feOffset')
       .attribute('dx', dx)
       .attribute('dy', dy)
-      .parent(filter);
+      .parent(filter)
 
     createSVGElt('feGaussianBlur')
       .attribute('stdDeviation', blur)
       .attribute('result', 'offset-blur')
-      .parent(filter);
+      .parent(filter)
 
     createSVGElt('feComposite')
       .attribute('operator', 'out')
       .attribute('in', previousResult)
       .attribute('in2', 'offset-blur')
       .attribute('result', 'inverse')
-      .parent(filter);
+      .parent(filter)
 
     createSVGElt('feFlood')
       .attribute('flood-color', color)
       .attribute('flood-opacity', 1)
       .attribute('result', 'color')
-      .parent(filter);
+      .parent(filter)
 
     createSVGElt('feComposite')
       .attribute('operator', 'in')
       .attribute('in', 'color')
       .attribute('in2', 'inverse')
       .attribute('result', shadowID)
-      .parent(filter);
+      .parent(filter)
 
     createSVGElt('feComposite')
       .attribute('operator', 'over')
       .attribute('in', shadowID)
       .attribute('in2', previousResult)
       .attribute('result', `merged-${shadowID}`)
-      .parent(filter);
+      .parent(filter)
 
     previousResult = `merged-${shadowID}`;
   }
 
   createSVGElt('feMergeNode')
     .attribute('in', previousResult)
-    .parent(filter);
+    .parent(filter)
 
-  defs.child(filter);
+  defs.child(filter)
 
 
   //FIXME: migrate to function for applying effects or just dropShadows?
-  console.log("SVG variable: ", svg);
+  console.log("SVG variable: ", svg)
   const parentSVG = this.elt.ownerSVGElement
 
   const g = createSVGElt('g')
@@ -431,7 +431,7 @@ p5.Element.prototype.insetDropShadow = function (shadows) {
   return this
 }
 
-function createfilter() {
+function createFilter() {
   return new ProtoFilter()
 }
 
@@ -447,40 +447,68 @@ class ProtoFilter {
   constructor() {
     this.needsPadding = false
     this.storeObject(S.Effects)
-    console.log('filter init', this)
+    // console.log('filter init', this)
   }
 
   //MARK: Drop Shadow methods
   combinedDropShadow(shadows) {
     shadows = OpArray.format(shadows)
 
-    const insetShadows = shadows.filter(shadow => shadow.inset)
-    const nonInsetShadows = shadows.filter(shadow => !shadow.inset)
+    this.type = 'combinedDropShadow'
 
-    let insetFilter, nonInsetFilter
+    const insetShadows = shadows.filter(shadow => shadow.inset)
+    const outsetShadows = shadows.filter(shadow => !shadow.inset)
+    this.shadows = outsetShadows
+
+    this.createFilterWrapper()
+    this.defs = createSVGElt("defs")
+    this.filter = createSVGElt('filter').id(this.id)
+
+    let previousResult
 
     if (insetShadows.length > 0) {
-      insetFilter = new ProtoFilter().insetDropShadow(insetShadows)
+      const insetFilter = new ProtoFilter().insetDropShadow(insetShadows)
+      insetFilter.filter.elt.childNodes.forEach(child => {
+        this.filter.child(child)
+      })
+      previousResult = 'insetResult'
     }
 
-    if (nonInsetShadows.length > 0) {
-      nonInsetFilter = new ProtoFilter().nonInsetDropShadow(nonInsetShadows)
+    if (outsetShadows.length > 0) {
+      const outsetFilter = new ProtoFilter().outsetDropShadow(outsetShadows)
+      outsetFilter.filter.elt.childNodes.forEach(child => {
+        this.filter.child(child)
+      })
+      previousResult = 'outsetResult'
     }
 
-    this.filterWrapper = createSVGElt("g")
-    this.defs = createSVGElt("defs")
-    this.id = insetFilter ? insetFilter.id : nonInsetFilter.id
-
-    if (insetFilter) {
-      this.defs.child(insetFilter.defs)
+    if (insetShadows.length > 0 && outsetShadows.length > 0) {
+      const feComposite = createSVGElt('feComposite', {
+        operator: 'in',
+        in: 'SourceAlpha',
+        in2: 'insetResult',
+        result: 'maskedInset'
+      })
+      this.filter.child(feComposite)
+      previousResult = 'maskedInset'
     }
 
-    if (nonInsetFilter) {
-      this.defs.child(nonInsetFilter.defs)
-    }
+    const feMerge = createSVGElt('feMerge')
+    const feMergeNode1 = createSVGElt('feMergeNode', { in: previousResult })
+    const feMergeNode2 = createSVGElt('feMergeNode', { in: 'SourceGraphic' })
+    feMerge.child(feMergeNode1).child(feMergeNode2)
+    this.filter.child(feMerge)
+
+    this.needsPadding = true
+    this.padding = this.calculatePadding(outsetShadows)
+    this.defs.child(this.filter)
 
     return this
   }
+
+
+
+
 
   insetDropShadow(shadows) {
     shadows = OpArray.format(shadows)
@@ -491,10 +519,10 @@ class ProtoFilter {
     this.filter = createSVGElt('filter').id(this.id)
     let previousResult = 'SourceGraphic'
 
-    console.log('insetDropShadow init', this)
+    // console.log('insetDropShadow init', this)
 
     for (const shadow of shadows) {
-      const { dx, dy, blur, color, inset } = shadow;
+      const { dx, dy, blur, color, inset } = shadow
       const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`
 
       createSVGElt('feOffset')
@@ -546,7 +574,7 @@ class ProtoFilter {
     return this
   }
 
-  nonInsetDropShadow(shadows) {
+  outsetDropShadow(shadows) {
     shadows = OpArray.format(shadows)
     this.shadows = shadows
 
@@ -554,13 +582,13 @@ class ProtoFilter {
     this.padding = this.calculatePadding(shadows)
 
     this.createFilterWrapper()
-    this.type = 'dropShadow'
+    this.type = 'outsetDropShadow'
     this.filter = createSVGElt('filter').id(this.id)
     this.defs = createSVGElt('defs')
     const feMerge = createSVGElt('feMerge')
     let previousResult = 'SourceGraphic'
 
-    console.log('insetDropShadow init', this)
+    // console.log('insetDropShadow init', this)
 
     for (const shadow of shadows) {
       const { dx, dy, blur, color, inset } = shadow
@@ -616,60 +644,37 @@ class ProtoFilter {
   //MARK: Utility methods
   createFilterWrapper() {
     this.filterWrapper = createSVGElt('g')
-    console.log('wrapper', this.wrapper)
+    // console.log('wrapper', this.wrapper)
     return this
   }
 
   applyFilterToElement(element, scale = 2) {
-    let filtersToApply = []
-
-    switch (this.type) {
-      case 'combinedDropShadow':
-        if (this.insetFilter) {
-          filtersToApply.push(this.insetFilter)
-        }
-        if (this.nonInsetFilter) {
-          filtersToApply.push(this.nonInsetFilter)
-        }
-        break
-      case 'insetDropShadow':
-      case 'dropShadow':
-        filtersToApply.push(this)
-        break
-      default:
-        console.error(`Cannot apply filter to element: Unknown filter type '${this.type}'.`)
-        return
-    }
-
-    for (const filter of filtersToApply) {
-      if (filter.needsPadding) {
-        filter.updateFilter(filter.shadows, scale)
-        const padding = filter.calculatePadding(filter.shadows, scale)
-        filter.applyPadding(element, padding)
-
-        const { minX, minY, maxX, maxY } = padding
-        filter.filter
-          .attribute("x", `${-minX}%`)
-          .attribute("y", `${-minY}%`)
-          .attribute("width", `${100 + maxX + minX}%`)
-          .attribute("height", `${100 + maxY + minY}%`)
-      }
-    }
-
-    const parentSVG = element.elt.ownerSVGElement;
+    const parentSVG = element.elt.ownerSVGElement
     this.filterWrapper
       .attribute("filter", `url(#${this.id})`)
-      .parent(parentSVG);
-    element.parent(this.filterWrapper);
-    this.filterWrapper.child(this.defs);
+      .parent(parentSVG)
+    element.parent(this.filterWrapper)
+    this.filterWrapper.child(this.defs)
 
-    return this;
+    if (this.needsPadding) {
+      this.updateFilter(this.shadows, scale)
+      const padding = this.calculatePadding(this.shadows, scale)
+      this.applyPadding(element, padding)
+
+      const { minX, minY, maxX, maxY } = padding
+      this.filter
+        .attribute("x", `${-minX}%`)
+        .attribute("y", `${-minY}%`)
+        .attribute("width", `${100 + maxX + minX}%`)
+        .attribute("height", `${100 + maxY + minY}%`)
+    }
+
+    return this
   }
 
-
   updateFilter(shadows, scale = 2) {
-    shadows = OpArray.format(shadows);
-    this.shadows = shadows;
+    shadows = OpArray.format(shadows)
+    this.shadows = shadows
 
     if (this.type === 'insetDropShadow') {
       let previousResult = 'SourceGraphic'
@@ -689,8 +694,8 @@ class ProtoFilter {
 
         shadowIndex++
       }
-    } else if (this.type === 'dropShadow') {
-      let shadowIndex = 0;
+    } else if (this.type === 'outsetDropShadow') {
+      let shadowIndex = 0
 
       for (const shadow of shadows) {
         const { dx, dy, blur, color, inset } = shadow
@@ -741,7 +746,7 @@ class ProtoFilter {
   }
 
   applyPadding(element, padding) {
-    const { minX, minY, maxX, maxY } = padding;
+    const { minX, minY, maxX, maxY } = padding
 
     element
       .attribute("x", `${-minX}%`)
@@ -764,4 +769,4 @@ Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides 
 p5.Element.prototype.applyFilter = function (filterInstance, scale = 2) {
   filterInstance.applyFilterToElement(this, scale)
   return this
-};
+}
