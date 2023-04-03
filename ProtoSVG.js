@@ -442,7 +442,7 @@ class ProtoFilter {
   type
   needsPadding
   padding
-  filterWrapper
+  // filterWrapper
 
   constructor() {
     this.needsPadding = false
@@ -451,69 +451,10 @@ class ProtoFilter {
   }
 
   //MARK: Drop Shadow methods
-  combinedDropShadow(shadows) {
-    shadows = OpArray.format(shadows)
-
-    this.type = 'combinedDropShadow'
-
-    const insetShadows = shadows.filter(shadow => shadow.inset)
-    const outsetShadows = shadows.filter(shadow => !shadow.inset)
-    this.shadows = outsetShadows
-
-    this.createFilterWrapper()
-    this.defs = createSVGElt("defs")
-    this.filter = createSVGElt('filter').id(this.id)
-
-    let previousResult
-
-    if (insetShadows.length > 0) {
-      const insetFilter = new ProtoFilter().insetDropShadow(insetShadows)
-      insetFilter.filter.elt.childNodes.forEach(child => {
-        this.filter.child(child)
-      })
-      previousResult = 'insetResult'
-    }
-
-    if (outsetShadows.length > 0) {
-      const outsetFilter = new ProtoFilter().outsetDropShadow(outsetShadows)
-      outsetFilter.filter.elt.childNodes.forEach(child => {
-        this.filter.child(child)
-      })
-      previousResult = 'outsetResult'
-    }
-
-    if (insetShadows.length > 0 && outsetShadows.length > 0) {
-      const feComposite = createSVGElt('feComposite', {
-        operator: 'in',
-        in: 'SourceAlpha',
-        in2: 'insetResult',
-        result: 'maskedInset'
-      })
-      this.filter.child(feComposite)
-      previousResult = 'maskedInset'
-    }
-
-    const feMerge = createSVGElt('feMerge')
-    const feMergeNode1 = createSVGElt('feMergeNode', { in: previousResult })
-    const feMergeNode2 = createSVGElt('feMergeNode', { in: 'SourceGraphic' })
-    feMerge.child(feMergeNode1).child(feMergeNode2)
-    this.filter.child(feMerge)
-
-    this.needsPadding = true
-    this.padding = this.calculatePadding(outsetShadows)
-    this.defs.child(this.filter)
-
-    return this
-  }
-
-
-
-
-
   insetDropShadow(shadows) {
     shadows = OpArray.format(shadows)
 
-    this.createFilterWrapper()
+    // this.createFilterWrapper()
     this.type = 'insetDropShadow'
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
@@ -581,7 +522,7 @@ class ProtoFilter {
     this.needsPadding = true
     this.padding = this.calculatePadding(shadows)
 
-    this.createFilterWrapper()
+    // this.createFilterWrapper()
     this.type = 'outsetDropShadow'
     this.filter = createSVGElt('filter').id(this.id)
     this.defs = createSVGElt('defs')
@@ -642,32 +583,26 @@ class ProtoFilter {
   }
 
   //MARK: Utility methods
-  createFilterWrapper() {
-    this.filterWrapper = createSVGElt('g')
-    // console.log('wrapper', this.wrapper)
-    return this
-  }
-
   applyFilterToElement(element, scale = 2) {
-    const parentSVG = element.elt.ownerSVGElement
-    this.filterWrapper
-      .attribute("filter", `url(#${this.id})`)
-      .parent(parentSVG)
-    element.parent(this.filterWrapper)
-    this.filterWrapper.child(this.defs)
-
     if (this.needsPadding) {
       this.updateFilter(this.shadows, scale)
       const padding = this.calculatePadding(this.shadows, scale)
       this.applyPadding(element, padding)
 
-      const { minX, minY, maxX, maxY } = padding
+      const { minX, minY, maxX, maxY } = padding;
       this.filter
         .attribute("x", `${-minX}%`)
         .attribute("y", `${-minY}%`)
         .attribute("width", `${100 + maxX + minX}%`)
-        .attribute("height", `${100 + maxY + minY}%`)
+        .attribute("height", `${100 + maxY + minY}%`);
     }
+
+    const parentSVG = element.elt.ownerSVGElement
+    const g = createSVGElt("g")
+      .attribute("filter", `url(#${this.id})`)
+      .parent(parentSVG)
+    element.parent(g)
+    g.child(this.defs)
 
     return this
   }
