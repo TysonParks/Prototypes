@@ -52,6 +52,129 @@ function setup() {
   createGUI()
 
   // MARK: grid Test
+  // gridTests()
+
+
+  // MARK: Test Display
+  // displayPalettes()
+  // displayHash()
+  // fpsDisplay = createDiv('FPS')
+  //   .parent(Frame)
+  // .center('horizontal')
+
+  // timeDisplay = createDiv('Time')
+  //   .parent(Frame)
+  // .center('horizontal')
+
+  // setInterval(displayFrameRate, 100)
+  redrawAll()
+}
+
+// MARK: DRAWING FUNCS
+
+// FUNC: draw()
+function draw() {
+  // drawContainer()
+  if (globalControls.animated) {
+    globalAnimation()
+  }
+}
+
+// FUNC: globalAnimation()
+function globalAnimation() {
+  globalControls.shadAngle = (millis() / (1000 * 8)) * 360 % 360
+  // globalControls.shadMag = (millis() / (1000 * 4)) * 64 % 64
+
+  // displayTime()
+  drawObjects()
+}
+
+// FUNC: drawObjects()
+function drawObjects() {
+  redrawAll()
+  // drawContainer()
+  // drawClone()
+  // drawSquircle()
+}
+
+
+// MARK: GLOBAL FUNCS
+
+// FUNC: windowResized()
+function windowResized() {
+  sizeFrame()
+  BG.size(windowWidth, windowHeight)
+  redrawAll()
+}
+
+// FUNC: redrawAll()
+function redrawAll() {
+  print('REDRAW ALL called')
+  BG.size(windowWidth, windowHeight)
+  S.allLayers.forEach(e => e.resize())
+}
+
+// FUNC: sizeFrame()
+function sizeFrame() {
+  const width = min(windowWidth, windowHeight / 2) * 1.1
+  const height = width * 1.8
+  // const height = 2 * floor(windowHeight / 2)
+  // const width = 2 * floor(height / 4)
+  frameSize = vert(width, height)
+  // print(frameSize)
+}
+
+// FUNC: wix() : returns pixel value of a wixel count
+// NOTE: 'wixel' is the fundamental measure unit of Prototypes, its the percent of frameSize.x
+// NOTE: i.e. every Prototype is 100 wixels wide x 200 wixels high
+// NOTE: 0.5 wix should be minimum Element size (~3px on 4K Landscape, ~6px on iphone Portrait)
+function wix(count) { return count / 100 * frameSize.x }
+function wixPx(count) { return `${wix(count)}px` }
+
+// FUNC: globalShadowVector()
+function globalShadowVector() {
+  return Shade.shadVect(globalControls.shadAngle, globalControls.shadMag)
+}
+
+
+// MARK: SETUP FUNCS
+
+// FUNC: setupPrefs()
+function setupPrefs() {
+  angleMode(DEGREES)
+  R = new Random()
+  TestMode = true
+}
+
+// FUNC: setupStore()
+function setupStore() { S = new Store() }
+
+// FUNC: setupColors()
+function setupColors() {
+  backgroundColor = color(0)
+  frameColor = color(240)
+  accentColor = color("hsb(190, 100%, 90%)")
+
+  acHiCol = color("hsb(190, 20%, 100%)").toString('#rrggbb')
+  acShCol = color("hsb(190, 100%, 70%)").toString('#rrggbb')
+
+  bgCol = backgroundColor.toString('#rrggbb')
+  acCol = accentColor.toString('#rrggbb')
+  hiCol = color(255).toString('#rrggbb')
+  shCol = color(210).toString('#rrggbb')
+}
+
+// FUNC: setupBackground()
+function setupBackground() {
+  BG = createDiv().id('BG')
+    .size(windowWidth, windowHeight)
+    .look(Look.centeredFlex(backgroundColor, 'column'))
+
+  F = new Frame(BG)
+}
+
+// MARK: Testing Functions
+function gridTests() {
   let gridX = R.random_int(2, 10)
   gridX = 4
   grid = new Grid({ parent: F, gridSize: { x: gridX, y: gridX * 2 } })
@@ -84,6 +207,7 @@ function setup() {
   // grid.randGroup(0.05)
   grid.randGroup(0.15)
   grid.outlineTaken(Direction.Ordinal)
+
   // grid.randGroup(0.05)
   // grid.outlineTaken()
   // grid.groupAvail()
@@ -230,127 +354,8 @@ function setup() {
   // print(this)
 
   // makeTestSVG(grid.islands[0])
-
-
-  // MARK: Test Display
-  // displayPalettes()
-  // displayHash()
-  // fpsDisplay = createDiv('FPS')
-  //   .parent(Frame)
-  // .center('horizontal')
-
-  // timeDisplay = createDiv('Time')
-  //   .parent(Frame)
-  // .center('horizontal')
-
-  // setInterval(displayFrameRate, 100)
-  redrawAll()
 }
 
-// MARK: DRAWING FUNCS
-
-// FUNC: draw()
-function draw() {
-  // drawContainer()
-  if (globalControls.animated) {
-    globalAnimation()
-  }
-}
-
-// FUNC: globalAnimation()
-function globalAnimation() {
-  globalControls.shadAngle = (millis() / (1000 * 8)) * 360 % 360
-  // globalControls.shadMag = (millis() / (1000 * 4)) * 64 % 64
-
-  // displayTime()
-  drawObjects()
-}
-
-// FUNC: drawObjects()
-function drawObjects() {
-  redrawAll()
-  // drawContainer()
-  // drawClone()
-  // drawSquircle()
-}
-
-
-// MARK: GLOBAL FUNCS
-
-// FUNC: windowResized()
-function windowResized() {
-  sizeFrame()
-  BG.size(windowWidth, windowHeight)
-  redrawAll()
-}
-
-// FUNC: redrawAll()
-function redrawAll() {
-  print('REDRAW ALL called')
-  BG.size(windowWidth, windowHeight)
-  S.allLayers.forEach(e => e.resize())
-}
-
-// FUNC: sizeFrame()
-function sizeFrame() {
-  const width = min(windowWidth, windowHeight / 2) * 1.1
-  const height = width * 1.8
-  // const height = 2 * floor(windowHeight / 2)
-  // const width = 2 * floor(height / 4)
-  frameSize = vert(width, height)
-  // print(frameSize)
-}
-
-// FUNC: wix() : returns pixel value of a wixel count
-// NOTE: 'wixel' is the fundamental measure unit of Prototypes, its the percent of frameSize.x
-// NOTE: i.e. every Prototype is 100 wixels wide x 200 wixels high
-// NOTE: 0.5 wix should be minimum Element size (~3px on 4K Landscape, ~6px on iphone Portrait)
-function wix(count) { return count / 100 * frameSize.x }
-function wixPx(count) { return `${wix(count)}px` }
-
-// FUNC: globalShadowVector()
-function globalShadowVector() {
-  return Shade.shadVect(globalControls.shadAngle, globalControls.shadMag)
-}
-
-
-// MARK: SETUP FUNCS
-
-// FUNC: setupPrefs()
-function setupPrefs() {
-  angleMode(DEGREES)
-  R = new Random()
-  TestMode = true
-}
-
-// FUNC: setupStore()
-function setupStore() { S = new Store() }
-
-// FUNC: setupColors()
-function setupColors() {
-  backgroundColor = color(0)
-  frameColor = color(240)
-  accentColor = color("hsb(190, 100%, 90%)")
-
-  acHiCol = color("hsb(190, 20%, 100%)").toString('#rrggbb')
-  acShCol = color("hsb(190, 100%, 70%)").toString('#rrggbb')
-
-  bgCol = backgroundColor.toString('#rrggbb')
-  acCol = accentColor.toString('#rrggbb')
-  hiCol = color(255).toString('#rrggbb')
-  shCol = color(210).toString('#rrggbb')
-}
-
-// FUNC: setupBackground()
-function setupBackground() {
-  BG = createDiv().id('BG')
-    .size(windowWidth, windowHeight)
-    .look(Look.centeredFlex(backgroundColor, 'column'))
-
-  F = new Frame(BG)
-}
-
-// MARK: Testing Functions
 
 // FUNC: makeTestSVG()
 function makeTestSVG(parent) {
