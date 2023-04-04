@@ -451,31 +451,41 @@ class ProtoFilter {
   }
 
   //MARK: Drop Shadow methods
+
+
   insetDropShadow(shadows) {
     shadows = OpArray.format(shadows)
 
-    // this.createFilterWrapper()
     this.type = 'insetDropShadow'
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
     let previousResult = 'SourceGraphic'
 
-    // console.log('insetDropShadow init', this)
-
+    // INSET
     for (const shadow of shadows) {
       const { dx, dy, blur, color, inset } = shadow
       const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`
-
+      //1 feGaussianBlur
+      createSVGElt('feGaussianBlur')
+        // .attribute('in', 'SourceAlpha')
+        .attribute('stdDeviation', blur)
+        .attribute('result', 'blur')
+        .parent(this.filter)
+      //2 feOffset
       createSVGElt('feOffset')
+        .attribute('in', 'blur')
         .attribute('dx', dx)
         .attribute('dy', dy)
-        .parent(this.filter)
-
-      createSVGElt('feGaussianBlur')
-        .attribute('stdDeviation', blur)
         .attribute('result', 'offset-blur')
         .parent(this.filter)
+      //3 feFlood
+      createSVGElt('feFlood')
+        .attribute('flood-color', color)
+        .attribute('flood-opacity', 1)
+        .attribute('result', 'color')
+        .parent(this.filter)
 
+      //4 feComposite - MASK IN
       createSVGElt('feComposite')
         .attribute('operator', 'out')
         .attribute('in', previousResult)
@@ -483,19 +493,14 @@ class ProtoFilter {
         .attribute('result', 'inverse')
         .parent(this.filter)
 
-      createSVGElt('feFlood')
-        .attribute('flood-color', color)
-        .attribute('flood-opacity', 1)
-        .attribute('result', 'color')
-        .parent(this.filter)
-
+      //5 feComposite - 'composite'
       createSVGElt('feComposite')
         .attribute('operator', 'in')
         .attribute('in', 'color')
         .attribute('in2', 'inverse')
         .attribute('result', shadowID)
         .parent(this.filter)
-
+      //6 feComposite - 'finalResult'
       createSVGElt('feComposite')
         .attribute('operator', 'over')
         .attribute('in', shadowID)
@@ -503,6 +508,12 @@ class ProtoFilter {
         .attribute('result', `merged-${shadowID}`)
         .parent(this.filter)
 
+
+      previousResult = `blur`
+      previousResult = 'offset-blur'
+      // previousResult = 'color'
+      previousResult = `inverse`
+      previousResult = shadowID
       previousResult = `merged-${shadowID}`
     }
 
@@ -522,61 +533,66 @@ class ProtoFilter {
     this.needsPadding = true
     this.padding = this.calculatePadding(shadows)
 
-    // this.createFilterWrapper()
     this.type = 'outsetDropShadow'
-    this.filter = createSVGElt('filter').id(this.id)
     this.defs = createSVGElt('defs')
-    const feMerge = createSVGElt('feMerge')
+    this.filter = createSVGElt('filter').id(this.id)
     let previousResult = 'SourceGraphic'
 
-    // console.log('insetDropShadow init', this)
+    const feMerge = createSVGElt('feMerge')
 
+    // OUTSET
     for (const shadow of shadows) {
       const { dx, dy, blur, color, inset } = shadow
-
+      //1 feGaussianBlur
       createSVGElt('feGaussianBlur')
         .attribute('in', 'SourceAlpha')
         .attribute('stdDeviation', blur)
-        .attribute('result', `blur-${color}`)
+        .attribute('result', `blur`)
         .parent(this.filter)
+      //2 feOffset
       createSVGElt('feOffset')
-        .attribute('in', `blur-${color}`)
-        .attribute('dx', inset ? -dx : dx)
-        .attribute('dy', inset ? -dy : dy)
-        .attribute('result', `offset-${color}`)
+        .attribute('in', `blur`)
+        .attribute('dx', dx)
+        .attribute('dy', dy)
+        .attribute('result', `offset-blur`)
         .parent(this.filter)
+      //3 feFlood
       createSVGElt('feFlood')
         .attribute('flood-color', color)
         .attribute('flood-opacity', 1)
-        .attribute('result', `flood-${color}`)
-        .parent(this.filter)
-      createSVGElt('feComposite')
-        .attribute('in', `flood-${color}`)
-        .attribute('in2', `offset-${color}`)
-        .attribute('operator', 'in')
-        .attribute('result', `composite-${color}`)
-        .parent(this.filter)
-      createSVGElt('feBlend')
-        .attribute('in', `composite-${color}`)
-        .attribute('in2', previousResult)
-        .attribute('mode', 'normal')
-        .attribute('result', `blend-${color}`)
+        .attribute('result', `color`)
         .parent(this.filter)
 
-      previousResult = `blend-${color}`
+      //4 feComposite - 'composite'
+      createSVGElt('feComposite')
+        .attribute('operator', 'in')
+        .attribute('in', `color`)
+        .attribute('in2', `offset-blur`)
+        .attribute('result', `composite`)
+        .parent(this.filter)
+      //5 feBlend - 'blend'
+      createSVGElt('feBlend')
+        .attribute('mode', 'normal')
+        .attribute('in', `composite`)
+        .attribute('in2', previousResult)
+        .attribute('result', `blend`)
+        .parent(this.filter)
+
+      previousResult = `blend`
     }
 
+    // feBlend - 'finalResult'
     createSVGElt('feBlend')
+      .attribute('mode', 'normal')
       .attribute('in', 'SourceGraphic')
       .attribute('in2', previousResult)
-      .attribute('mode', 'normal')
       .attribute('result', 'finalResult')
       .parent(this.filter)
+
     createSVGElt('feMergeNode')
       .attribute('in', 'finalResult')
-      .parent(feMerge)
+      .parent(this.filter)
 
-    this.filter.child(feMerge)
     this.defs.child(this.filter)
 
     return this
@@ -584,10 +600,12 @@ class ProtoFilter {
 
   //MARK: Utility methods
   applyFilterToElement(element, scale = 2) {
+    if (!this.type) { return this }
+
     if (this.needsPadding) {
-      this.updateFilter(this.shadows, scale)
-      const padding = this.calculatePadding(this.shadows, scale)
-      this.applyPadding(element, padding)
+      this.updateFilter(this.shadows, scale);
+      const padding = this.calculatePadding(this.shadows, scale);
+      this.applyPadding(element, padding);
 
       const { minX, minY, maxX, maxY } = padding;
       this.filter
@@ -597,14 +615,14 @@ class ProtoFilter {
         .attribute("height", `${100 + maxY + minY}%`);
     }
 
-    const parentSVG = element.elt.ownerSVGElement
+    const parentSVG = element.elt.ownerSVGElement;
     const g = createSVGElt("g")
       .attribute("filter", `url(#${this.id})`)
-      .parent(parentSVG)
-    element.parent(g)
-    g.child(this.defs)
+      .parent(parentSVG);
+    element.parent(g);
+    g.child(this.defs);
 
-    return this
+    return this;
   }
 
   updateFilter(shadows, scale = 2) {

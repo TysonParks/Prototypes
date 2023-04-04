@@ -281,14 +281,14 @@ class Frame extends ProtoLayer {
       .insetDropShadow([
         // insetShadow8,
         // insetShadow7,
-        insetShadow6,
-        insetShadow5,
+        // insetShadow6,
+        // insetShadow5,
         insetShadow4,
         insetShadow3,
-        insetShadow2,
-        insetShadow1,
-        insetShadow0,
-        insetShadow01,
+        // insetShadow2,
+        // insetShadow1,
+        // insetShadow0,
+        // insetShadow01,
       ])
     // .applyFilterToElement(this.testCircle2)
 
@@ -341,19 +341,19 @@ class Frame extends ProtoLayer {
       .attribute('height', `${190}`)
       .attribute('rx', `${15}`)
       .attribute('ry', `${15}`)
-      .attribute('fill', protoColor(220))
+      .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
       // .attribute('stroke', 'blue')
       .attribute('stroke-width', '1')
       .attribute('stroke-linejoin', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow1)
+    // .applyFilter(this.dropShadow1)
 
     this.testCircle1
       .attribute('cx', `${50}`)
       .attribute('cy', `${40}`)
       .attribute('r', `${20}`)
-      .attribute('fill', protoColor(200))
+      .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
       // .attribute('stroke', protoColor(230))
       // .attribute('stroke-width', '4')
@@ -365,7 +365,7 @@ class Frame extends ProtoLayer {
       .attribute('cx', `${50}`)
       .attribute('cy', `${100}`)
       .attribute('r', `${20}`)
-      .attribute('fill', protoColor(200))
+      .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '.25')
       .attribute('stroke', protoColor(230))
       .attribute('stroke-width', '4')
@@ -382,19 +382,20 @@ class Frame extends ProtoLayer {
       .attribute('cx', `${50}`)
       .attribute('cy', `${160}`)
       .attribute('r', `${20}`)
-      .attribute('fill', protoColor(200))
+      .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
-      // .attribute('stroke', protoColor(200))
-      // .attribute('stroke-width', '2')
+      // .attribute('stroke', protoColor(230))
+      // .attribute('stroke-opacity', '.125')
+      // .attribute('stroke-width', '6')
       // .attribute('pathLength', '360')
       // .attribute('stroke-dashoffset', '18')
       // .attribute('stroke-dasharray', `${180 / 16} `)
       // .attribute('stroke-linejoin', 'round')
       // .attribute('stroke-linecap', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow3)
+      .applyFilter(this.dropShadow1)
 
-    console.log('circle3', this.testCircle3)
+    // console.log('circle3', this.testCircle3)
   }
   // #endregion
 }
@@ -1133,7 +1134,7 @@ class Grid extends ProtoLayer {
   // #region Setup Methods
   assignElement() {
     // if (this.parentIsBody) {
-    this.p5Elt = createSVGElt('rect')
+    this.p5Elt = createSVGElt()
       .id(this.id)
       .parent(this.parentP5Elt)
       .addToClassList(this.id)
@@ -1147,29 +1148,29 @@ class Grid extends ProtoLayer {
       // .look(look)
       // .attribute(SVG.viewBox, `0 0 100 200`)
       // .attribute('preserveAspectRatio', 'xMidyMid')
-      .attribute('x', `${20}`)
-      .attribute('y', `${20}`)
-      .attribute('width', `${60}`)
-      .attribute('height', `${160}`)
-      .attribute('fill', 'red')
-      .attribute('stroke', 'blue')
+      .attribute('x', `${0}`)
+      .attribute('y', `${0}`)
+      .attribute('width', `${100}`)
+      .attribute('height', `${200}`)
+    // .attribute('fill', 'red')
+    // .attribute('stroke', 'blue')
     // .attribute('style', 'fill : green')
     // .style(CS.border, '1px dashed blue')
 
-    // this.testElements()
+    this.testElements()
   }
 
   testElements() {
-    let testRect = createSVGElt('rect')
-      .id('testRect')
-      .attribute(SVG.viewBox, `0 0 100 200`)
+    let gridRect = createSVGElt('rect').id('gridRect')
+      // .attribute(SVG.viewBox, `0 0 100 200`)
       .attribute('preserveAspectRatio', 'xMidyMid')
-      .attribute('width', `${90}`)
-      .attribute('height', `${180}`)
-      .attribute('x', `${10}`)
-      .attribute('y', `${10}`)
+      .attribute('x', `${0}`)
+      .attribute('y', `${0}`)
+      .attribute('width', `${100}`)
+      .attribute('height', `${200}`)
+
       // .attribute('stroke', 'red')
-      .attribute('style', 'fill : green')
+      // .attribute('style', 'fill : green')
       // .style('fill', 'orange')
       // .style('border-radius', '20px')
       // .style('stroke', 'green')
@@ -1181,10 +1182,9 @@ class Grid extends ProtoLayer {
 
       .parent(this.p5Elt)
 
-      // .attribute('cx', `${50}`)
-      // .attribute('cy', `${100}`)
-      .attribute('rx', `${5}`)
-      .attribute('ry', `${5}`)
+    // .attribute('cx', `${50}`)
+    // .attribute('cy', `${100}`)
+
 
     // .dropShadow({ color: red })
 

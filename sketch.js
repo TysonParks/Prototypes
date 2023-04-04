@@ -53,6 +53,7 @@ function setup() {
 
   // MARK: grid Test
   // gridTests()
+  gridTests2()
 
 
   // MARK: Test Display
@@ -174,6 +175,19 @@ function setupBackground() {
 }
 
 // MARK: Testing Functions
+
+function gridTests2() {
+  let gridX = R.random_int(2, 10)
+  gridX = 4
+  grid = new Grid({ parent: F, gridSize: { x: gridX, y: gridX * 2 } })
+  F.inset(0.9)
+  grid.inset(0.9)
+
+  console.log('all layers', S.allLayers)
+  // print('all layers:')
+  // print(S.allLayers)
+}
+
 function gridTests() {
   let gridX = R.random_int(2, 10)
   gridX = 4
