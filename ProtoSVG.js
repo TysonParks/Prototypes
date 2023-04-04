@@ -456,66 +456,119 @@ class ProtoFilter {
   insetDropShadow(shadows) {
     shadows = OpArray.format(shadows)
 
+
+
+    const insetShadows = shadows.filter(shadow => shadow.inset)
+    const outsetShadows = shadows.filter(shadow => !shadow.inset)
+    this.shadows = outsetShadows
+
+
+
     this.type = 'insetDropShadow'
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
     let previousResult = 'SourceGraphic'
+    let insetResult = 'SourceGraphic'
+    let outsetResult = 'SourceGraphic'
+    let inset
+
 
     // INSET
-    for (const shadow of shadows) {
-      const { dx, dy, blur, color, inset } = shadow
-      const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`
-      //1 feGaussianBlur
-      createSVGElt('feGaussianBlur')
-        // .attribute('in', 'SourceAlpha')
-        .attribute('stdDeviation', blur)
-        .attribute('result', 'blur')
-        .parent(this.filter)
-      //2 feOffset
-      createSVGElt('feOffset')
-        .attribute('in', 'blur')
-        .attribute('dx', dx)
-        .attribute('dy', dy)
-        .attribute('result', 'offset-blur')
-        .parent(this.filter)
-      //3 feFlood
-      createSVGElt('feFlood')
-        .attribute('flood-color', color)
-        .attribute('flood-opacity', 1)
-        .attribute('result', 'color')
-        .parent(this.filter)
+    function buildFilter(shadows, filter) {
+      for (const shadow of shadows) {
+        const { dx, dy, blur, color, thisInset } = shadow
+        //1 feGaussianBlur
+        createSVGElt('feGaussianBlur')
+          .attribute('in', 'SourceAlpha')
+          .attribute('stdDeviation', blur)
+          .attribute('result', 'blur')
+          .parent(filter)
+        //2 feOffset
+        createSVGElt('feOffset')
+          .attribute('in', 'blur')
+          .attribute('dx', dx)
+          .attribute('dy', dy)
+          .attribute('result', 'offset-blur')
+          .parent(filter)
+        //3 feFlood
+        createSVGElt('feFlood')
+          .attribute('flood-color', color)
+          .attribute('flood-opacity', 1)
+          .attribute('result', 'color')
+          .parent(filter)
 
-      //4 feComposite - MASK IN
-      createSVGElt('feComposite')
-        .attribute('operator', 'out')
-        .attribute('in', previousResult)
-        .attribute('in2', 'offset-blur')
-        .attribute('result', 'inverse')
-        .parent(this.filter)
+        if (inset) {
+          //3B feComposite - MASK IN
+          createSVGElt('feComposite')
+            .attribute('operator', 'out')
+            .attribute('in', insetResult)
+            .attribute('in2', 'offset-blur')
+            .attribute('result', 'mask')
+            .parent(filter)
+        }
 
-      //5 feComposite - 'composite'
-      createSVGElt('feComposite')
-        .attribute('operator', 'in')
-        .attribute('in', 'color')
-        .attribute('in2', 'inverse')
-        .attribute('result', shadowID)
-        .parent(this.filter)
-      //6 feComposite - 'finalResult'
-      createSVGElt('feComposite')
-        .attribute('operator', 'over')
-        .attribute('in', shadowID)
-        .attribute('in2', previousResult)
-        .attribute('result', `merged-${shadowID}`)
-        .parent(this.filter)
+        //4 feComposite - 'composite'
+        createSVGElt('feComposite')
+          .attribute('operator', 'in')
+          .attribute('in', `color`)
+          .attribute('in2', inset ? 'mask' : `offset-blur`)
+          .attribute('result', `composite`)
+          .parent(filter)
+        //5 feBlend - 'blend'
+        createSVGElt('feBlend')
+          .attribute('mode', 'normal')
+          .attribute('in', `composite`)
+          .attribute('in2', inset ? insetResult : outsetResult)
+          .attribute('result', `blend`)
+          .parent(filter)
 
+        // previousResult = `blend`
+        if (inset) {
+          insetResult = 'blend'
+        } else {
+          outsetResult = 'blend'
+        }
 
-      previousResult = `blur`
-      previousResult = 'offset-blur'
-      // previousResult = 'color'
-      previousResult = `inverse`
-      previousResult = shadowID
-      previousResult = `merged-${shadowID}`
+      }
     }
+
+    if (insetShadows.length > 0) {
+      inset = true
+      buildFilter(insetShadows, this.filter)
+      // previousResult = insetResult
+    }
+
+    if (outsetShadows.length > 0) {
+      inset = false
+      buildFilter(outsetShadows, this.filter)
+      // previousResult = outsetResult
+      // this.needsPadding = true
+      // this.padding = this.calculatePadding(outsetShadows)
+    }
+
+    if (insetShadows.length > 0 && outsetShadows.length > 0) {
+
+    }
+
+    if (!inset) {
+      // feBlend - 'finalResult'
+      // createSVGElt('feBlend')
+      //   .attribute('mode', 'normal')
+      //   .attribute('in', insetResult)
+      //   .attribute('in2', outsetResult)
+      //   .attribute('result', 'finalResult')
+      //   .parent(this.filter)
+
+      createSVGElt('feComposite')
+        .attribute('operator', 'atop')
+        .attribute('in', insetResult)
+        .attribute('in2', outsetResult)
+        .attribute('result', 'finalResult')
+        .parent(this.filter)
+
+      previousResult = 'finalResult'
+    }
+
 
     createSVGElt('feMergeNode')
       .attribute('in', previousResult)
