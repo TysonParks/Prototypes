@@ -456,27 +456,31 @@ class ProtoFilter {
   insetDropShadow(shadows) {
     shadows = OpArray.format(shadows)
 
-
-
     const insetShadows = shadows.filter(shadow => shadow.inset)
     const outsetShadows = shadows.filter(shadow => !shadow.inset)
     this.shadows = outsetShadows
 
-
-
-    this.type = 'insetDropShadow'
+    this.type = 'dropShadow'
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
+    // .attribute('x', `100%`)
+    // .attribute('y', `-100%`)
+    // .attribute('width', `300%`)
+    // .attribute('height', `300%`)
+
     let previousResult = 'SourceGraphic'
     let insetResult = 'SourceGraphic'
     let outsetResult = 'SourceGraphic'
-    let inset
+    // let inset
 
 
     // INSET
-    function buildFilter(shadows, filter) {
+    function buildFilter(shadows, filter, inset) {
       for (const shadow of shadows) {
-        const { dx, dy, blur, color, thisInset } = shadow
+        const { dx, dy, blur, color } = shadow
+        const resultId = `shadow-${inset ? "inset" : "outset"}-${Math.random()
+          .toString(36)
+          .substring(7)}`
         //1 feGaussianBlur
         createSVGElt('feGaussianBlur')
           .attribute('in', 'SourceAlpha')
@@ -515,52 +519,44 @@ class ProtoFilter {
           .attribute('result', `composite`)
           .parent(filter)
         //5 feBlend - 'blend'
-        createSVGElt('feBlend')
-          .attribute('mode', 'normal')
-          .attribute('in', `composite`)
-          .attribute('in2', inset ? insetResult : outsetResult)
-          .attribute('result', `blend`)
-          .parent(filter)
+        // createSVGElt('feBlend')
+        //   .attribute('mode', 'normal')
+        //   .attribute('in', `composite`)
+        //   .attribute('in2', inset ? insetResult : outsetResult)
+        //   .attribute('result', resultId)
+        //   .parent(filter)
 
-        // previousResult = `blend`
+        createSVGElt('feMerge')
+          .parent(filter)
+          .child(
+            createSVGElt('feMergeNode')
+              .attribute('in', inset ? insetResult : outsetResult)
+          )
+          .child(
+            createSVGElt('feMergeNode')
+              .attribute('in', 'composite')
+          )
+          .attribute('result', resultId)
+
         if (inset) {
-          insetResult = 'blend'
+          insetResult = resultId
         } else {
-          outsetResult = 'blend'
+          outsetResult = resultId
         }
 
       }
     }
 
     if (insetShadows.length > 0) {
-      inset = true
-      buildFilter(insetShadows, this.filter)
-      // previousResult = insetResult
+      buildFilter(insetShadows, this.filter, true)
     }
 
     if (outsetShadows.length > 0) {
-      inset = false
-      buildFilter(outsetShadows, this.filter)
-      // previousResult = outsetResult
+      buildFilter(outsetShadows, this.filter, false)
       // this.needsPadding = true
       // this.padding = this.calculatePadding(outsetShadows)
-    }
-
-    if (insetShadows.length > 0 && outsetShadows.length > 0) {
-
-    }
-
-    if (!inset) {
-      // feBlend - 'finalResult'
-      // createSVGElt('feBlend')
-      //   .attribute('mode', 'normal')
-      //   .attribute('in', insetResult)
-      //   .attribute('in2', outsetResult)
-      //   .attribute('result', 'finalResult')
-      //   .parent(this.filter)
-
       createSVGElt('feComposite')
-        .attribute('operator', 'atop')
+        .attribute('operator', 'over')
         .attribute('in', insetResult)
         .attribute('in2', outsetResult)
         .attribute('result', 'finalResult')
@@ -568,7 +564,6 @@ class ProtoFilter {
 
       previousResult = 'finalResult'
     }
-
 
     createSVGElt('feMergeNode')
       .attribute('in', previousResult)
@@ -655,18 +650,24 @@ class ProtoFilter {
   applyFilterToElement(element, scale = 2) {
     if (!this.type) { return this }
 
-    if (this.needsPadding) {
-      this.updateFilter(this.shadows, scale);
-      const padding = this.calculatePadding(this.shadows, scale);
-      this.applyPadding(element, padding);
+    // if (this.needsPadding) {
+    //   this.updateFilter(this.shadows, scale);
+    //   const padding = this.calculatePadding(this.shadows, scale);
+    //   this.applyPadding(element, padding);
 
-      const { minX, minY, maxX, maxY } = padding;
-      this.filter
-        .attribute("x", `${-minX}%`)
-        .attribute("y", `${-minY}%`)
-        .attribute("width", `${100 + maxX + minX}%`)
-        .attribute("height", `${100 + maxY + minY}%`);
-    }
+    //   const { minX, minY, maxX, maxY } = padding;
+    //   this.filter
+    //     .attribute("x", `${-minX}%`)
+    //     .attribute("y", `${-minY}%`)
+    //     .attribute("width", `${100 + maxX + minX}%`)
+    //     .attribute("height", `${100 + maxY + minY}%`);
+    // }
+
+    this.filter
+      .attribute("x", `-100%`)
+      .attribute("y", `-100%`)
+      .attribute("width", `300%`)
+      .attribute("height", `300%`);
 
     const parentSVG = element.elt.ownerSVGElement;
     const g = createSVGElt("g")
