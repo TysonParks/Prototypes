@@ -471,8 +471,6 @@ class ProtoFilter {
     let previousResult = 'SourceGraphic'
     let insetResult = 'SourceGraphic'
     let outsetResult = 'SourceGraphic'
-    // let inset
-
 
     // INSET
     function buildFilter(shadows, filter, inset) {
@@ -518,14 +516,7 @@ class ProtoFilter {
           .attribute('in2', inset ? 'mask' : `offset-blur`)
           .attribute('result', `composite`)
           .parent(filter)
-        //5 feBlend - 'blend'
-        // createSVGElt('feBlend')
-        //   .attribute('mode', 'normal')
-        //   .attribute('in', `composite`)
-        //   .attribute('in2', inset ? insetResult : outsetResult)
-        //   .attribute('result', resultId)
-        //   .parent(filter)
-
+        //5 feMerge - 'resultId'
         createSVGElt('feMerge')
           .parent(filter)
           .child(
@@ -578,24 +569,13 @@ class ProtoFilter {
   applyFilterToElement(element, scale = 2) {
     if (!this.type) { return this }
 
-    // if (this.needsPadding) {
-    //   this.updateFilter(this.shadows, scale);
-    //   const padding = this.calculatePadding(this.shadows, scale);
-    //   this.applyPadding(element, padding);
-
-    //   const { minX, minY, maxX, maxY } = padding;
-    //   this.filter
-    //     .attribute("x", `${-minX}%`)
-    //     .attribute("y", `${-minY}%`)
-    //     .attribute("width", `${100 + maxX + minX}%`)
-    //     .attribute("height", `${100 + maxY + minY}%`);
-    // }
-
+    const anchor = (scale - 1) * -50
+    const size = scale * 100
     this.filter
-      .attribute("x", `-100%`)
-      .attribute("y", `-100%`)
-      .attribute("width", `300%`)
-      .attribute("height", `300%`);
+      .attribute("x", `${anchor}%`)
+      .attribute("y", `${anchor}%`)
+      .attribute("width", `${size}%`)
+      .attribute("height", `${size}%`);
 
     const parentSVG = element.elt.ownerSVGElement;
     const g = createSVGElt("g")
