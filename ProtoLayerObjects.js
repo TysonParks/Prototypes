@@ -170,14 +170,12 @@ class Frame extends ProtoLayer {
   // #region Setup Methods
   assignElement() {
 
-    this.bleed = createSVGElt()
-      .id('bleed')
+    this.bleed = createSVGElt().id('bleed')
       .parent(this.parentP5Elt)
     // .addToClassList(this.id)
     // .addToClassList(this.parentP5Elt.elt.classList.value)
 
-    this.p5Elt = createSVGElt()
-      .id(this.id)
+    this.p5Elt = createSVGElt().id(this.id)
       .parent(this.bleed)
       .addToClassList(this.id)
 
@@ -279,14 +277,14 @@ class Frame extends ProtoLayer {
 
     this.dropShadow1
       .insetDropShadow([
-        // insetShadow8,
-        // insetShadow7,
-        // insetShadow6,
-        // insetShadow5,
-        // insetShadow4,
-        // insetShadow3,
-        // insetShadow2,
-        // insetShadow1,
+        insetShadow8,
+        insetShadow7,
+        insetShadow6,
+        insetShadow5,
+        insetShadow4,
+        insetShadow3,
+        insetShadow2,
+        insetShadow1,
         // insetShadow0,
         // insetShadow01,
         shadow8,
@@ -297,13 +295,13 @@ class Frame extends ProtoLayer {
         shadow3,
         shadow2,
         shadow1,
-        shadow0,
-        shadow01,
+        // shadow0,
+        // shadow01,
       ])
     // .applyFilterToElement(this.testCircle2)
 
     this.dropShadow2
-      .outsetDropShadow([
+      .insetDropShadow([
         shadow8,
         shadow7,
         shadow6,
@@ -319,30 +317,18 @@ class Frame extends ProtoLayer {
     // .applyFilterToElement(this.testCircle2)
 
     this.dropShadow3
-    // .combinedDropShadow([
-    //   // insetShadow8,
-    //   // insetShadow7,
-    //   // insetShadow6,
-    //   // insetShadow5,
-    //   insetShadow4,
-    //   insetShadow3,
-    //   insetShadow2,
-    //   insetShadow1,
-    //   insetShadow0,
-    //   insetShadow01,
-    //   // shadow8,
-    //   // shadow7,
-    //   // shadow6,
-    //   // shadow5,
-    //   shadow4,
-    //   shadow3,
-    //   shadow2,
-    //   shadow1,
-    //   shadow0,
-    //   shadow01,
-    //   // insetShadow0,
-    //   // insetShadow01,
-    // ])
+      .insetDropShadow([
+        // shadow8,
+        // shadow7,
+        shadow6,
+        shadow5,
+        // shadow4,
+        // shadow3,
+        // shadow2,
+        // shadow1,
+        // shadow0,
+        // shadow01,
+      ])
 
     this.testRect
       .attribute('x', `${5}`)
@@ -351,13 +337,12 @@ class Frame extends ProtoLayer {
       .attribute('height', `${190}`)
       .attribute('rx', `${15}`)
       .attribute('ry', `${15}`)
-      .attribute('fill', protoColor(230))
+      .attribute('fill', protoColor(200))
       .attribute('fill-opacity', '1')
-      // .attribute('stroke', 'blue')
-      .attribute('stroke-width', '1')
-      .attribute('stroke-linejoin', 'round')
+      // .attribute('stroke-width', '1')
+      // .attribute('stroke-linejoin', 'round')
       .parent(this.p5Elt)
-    // .applyFilter(this.dropShadow1)
+      .applyFilter(this.dropShadow1)
 
     this.testCircle1
       .attribute('cx', `${50}`)
@@ -376,16 +361,17 @@ class Frame extends ProtoLayer {
       .attribute('cy', `${100}`)
       .attribute('r', `${20}`)
       .attribute('fill', protoColor(230))
-      .attribute('fill-opacity', '.25')
+      .attribute('fill-opacity', '1')
       .attribute('stroke', protoColor(230))
-      .attribute('stroke-width', '4')
+      .attribute('stroke-opacity', '1')
+      .attribute('stroke-width', '6')
       .attribute('pathLength', '360')
       .attribute('stroke-dashoffset', '18')
       .attribute('stroke-dasharray', `${180 / 6} `)
       .attribute('stroke-linejoin', 'round')
       .attribute('stroke-linecap', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow2)
+      .applyFilter(this.dropShadow1)
 
 
     this.testCircle3
@@ -1178,6 +1164,7 @@ class Grid extends ProtoLayer {
       .attribute('y', `${0}`)
       .attribute('width', `${100}`)
       .attribute('height', `${200}`)
+      .attribute('fill-opacity', '0')
 
       // .attribute('stroke', 'red')
       // .attribute('style', 'fill : green')
