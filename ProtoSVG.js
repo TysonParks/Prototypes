@@ -351,8 +351,8 @@ p5.Element.prototype.dropShadow3 = function (shadows) {
 
 //FIXME: this function should just create the filter and return filter ID (not apply the filter)
 // NOTE: Created with GPT-4 on Mon Mar 27, 2023
-//FUNC: p5.Element extension insetDropShadow(shadows)
-p5.Element.prototype.insetDropShadow = function (shadows) {
+//FUNC: p5.Element extension dropShadow(shadows)
+p5.Element.prototype.dropShadow = function (shadows) {
   shadows = OpArray.format(shadows)
 
   //debug:
@@ -453,7 +453,7 @@ class ProtoFilter {
   //MARK: Drop Shadow methods
 
 
-  insetDropShadow(shadows) {
+  dropShadow(shadows) {
     shadows = OpArray.format(shadows)
 
     const insetShadows = shadows.filter(shadow => shadow.inset)
@@ -683,7 +683,7 @@ class ProtoFilter {
     shadows = OpArray.format(shadows)
     this.shadows = shadows
 
-    if (this.type === 'insetDropShadow') {
+    if (this.type === 'dropShadow') {
       let previousResult = 'SourceGraphic'
       let shadowIndex = 0
 

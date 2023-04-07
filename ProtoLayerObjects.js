@@ -276,7 +276,7 @@ class Frame extends ProtoLayer {
     const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: true };
 
     this.dropShadow1
-      .insetDropShadow([
+      .dropShadow([
         insetShadow8,
         insetShadow7,
         insetShadow6,
@@ -301,7 +301,7 @@ class Frame extends ProtoLayer {
     // .applyFilterToElement(this.testCircle2)
 
     this.dropShadow2
-      .insetDropShadow([
+      .dropShadow([
         shadow8,
         shadow7,
         shadow6,
@@ -317,17 +317,17 @@ class Frame extends ProtoLayer {
     // .applyFilterToElement(this.testCircle2)
 
     this.dropShadow3
-      .insetDropShadow([
-        // shadow8,
-        // shadow7,
-        shadow6,
-        shadow5,
-        // shadow4,
-        // shadow3,
-        // shadow2,
-        // shadow1,
-        // shadow0,
-        // shadow01,
+      .dropShadow([
+        // sh  insetShadow8,
+        // insetShadow7,
+        insetShadow6,
+        insetShadow5,
+        insetShadow4,
+        insetShadow3,
+        insetShadow2,
+        insetShadow1,
+        // insetShadow0,
+        // insetShadow01,
       ])
 
     this.testRect
@@ -354,7 +354,7 @@ class Frame extends ProtoLayer {
       // .attribute('stroke-width', '4')
       // .attribute('stroke-linejoin', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow2, 2)
+      .applyFilter(this.dropShadow1, 2)
 
     this.testCircle2
       .attribute('cx', `${50}`)
@@ -371,7 +371,7 @@ class Frame extends ProtoLayer {
       .attribute('stroke-linejoin', 'round')
       .attribute('stroke-linecap', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow1)
+      .applyFilter(this.dropShadow2)
 
 
     this.testCircle3
@@ -389,7 +389,7 @@ class Frame extends ProtoLayer {
       // .attribute('stroke-linejoin', 'round')
       // .attribute('stroke-linecap', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow1)
+      .applyFilter(this.dropShadow3)
 
     // console.log('circle3', this.testCircle3)
   }
