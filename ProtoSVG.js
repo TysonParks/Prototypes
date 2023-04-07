@@ -172,265 +172,6 @@ p5.Element.prototype.blur = function (radius) {
   return this
 }
 
-
-
-// NOTE: Created with GPT-4 on Tues Mar 21, 2023
-//FUNC: p5.Element extension dropShadow(dx, dy, blurRadius, spreadRadius, opacity, color, inset = false)
-// Create a dropShadow function to extend p5.Element prototype
-p5.Element.prototype.dropShadow1 = function ({ dx = 5, dy = 5, blurRadius = 10, spreadRadius = 0, opacity = 1, color = 'black', inset = false } = {}) {
-  if (this.type === 'svg') {
-    const filter = createSVGElt(SVG.filter)
-      .attribute('id', 'drop-shadow')
-
-    const gaussianBlur = createSVGElt(SVG.feGaussianBlur)
-      .attribute('in', 'SourceAlpha')
-      .attribute('stdDeviation', blurRadius)
-
-    const offset = createSVGElt(SVG.feOffset)
-      .attribute('dx', dx)
-      .attribute('dy', dy)
-
-    const componentTransfer = createSVGElt('feComponentTransfer')
-    const funcA = createSVGElt('feFuncA')
-      .attribute('type', 'linear')
-      .attribute('slope', opacity)
-    componentTransfer.child(funcA)
-
-    const flood = createSVGElt(SVG.feFlood)
-      .attribute('flood-color', color)
-      .attribute('result', 'color')
-
-    const composite = createSVGElt(SVG.feComposite)
-      .attribute('in', 'color')
-      .attribute('in2', 'blurOut')
-      .attribute('operator', 'in')
-      .attribute('result', 'shadow')
-
-    const morphology = createSVGElt('feMorphology')
-      .attribute('in', 'SourceAlpha')
-      .attribute('operator', spreadRadius >= 0 ? 'dilate' : 'erode')
-      .attribute('radius', Math.abs(spreadRadius))
-      .attribute('result', 'spreadOut')
-    gaussianBlur.attribute('in', 'spreadOut')
-
-    filter.child(morphology)
-    filter.child(gaussianBlur)
-    filter.child(offset)
-    filter.child(componentTransfer)
-    filter.child(flood)
-    filter.child(composite)
-
-    const defs = this.elt.querySelector(SVG.defs) || createSVGElt(SVG.defs).elt
-    defs.appendChild(filter.elt)
-    this.elt.insertBefore(defs, this.elt.firstChild)
-
-    this.elt.style.filter = 'url(#drop-shadow)'
-    if (inset) {
-      this.elt.style.overflow = 'hidden'
-    }
-  } else {
-    console.warn('The dropShadow function can only be applied to SVG elements.')
-  }
-
-  return this
-}
-
-
-let filterCounter = 0
-
-
-//FIXME: this function should just create the filter and return filter ID (not apply the filter)
-// NOTE: Created with GPT-4 on Sun Mar 26, 2023
-//FUNC: p5.Element extension dropShadow3(shadows)
-p5.Element.prototype.dropShadow3 = function (shadows) {
-  //NOTE: This block is good to stay
-  shadows = OpArray.format(shadows)
-
-  //debug:
-  console.log("Applying drop shadow to:", this)
-
-  //FIXME: use store protocol instead
-  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9) // modify this line
-  filterCounter++
-
-  //NOTE: This block is good to stay
-  const filter = createSVGElt('filter').attribute('id', id)
-  const defs = createSVGElt('defs')
-  const feMerge = createSVGElt('feMerge')
-  let previousResult = 'SourceGraphic'
-
-
-  //FIXME: migrate padding calculation to it's own function that can be applied to the filter element
-  //FIXME: this function should be inside the 'applyFilter' or 'useFilter' func, not this filter creation step
-  //FIXME: fix the padding calc function, it does not work properly
-  const xPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
-  const yPadding = Math.max(...shadows.map(shadow => shadow.blur * 3))
-
-  const viewBoxConstraints = shadows.reduce((constraints, shadow) => {
-    const blurPadding = shadow.blur * 3
-    return {
-      minX: Math.min(constraints.minX, -blurPadding + shadow.dx),
-      maxX: Math.max(constraints.maxX, blurPadding + shadow.dx),
-      minY: Math.min(constraints.minY, -blurPadding + shadow.dy),
-      maxY: Math.max(constraints.maxY, blurPadding + shadow.dy),
-    }
-  }, { minX: 0, maxX: 0, minY: 0, maxY: 0 })
-
-  filter
-    .attribute('x', `${viewBoxConstraints.minX - 10}%`)
-    .attribute('y', `${viewBoxConstraints.minY - 10}%`)
-    .attribute('width', `${200 + viewBoxConstraints.maxX - viewBoxConstraints.minX}%`)
-    .attribute('height', `${200 + viewBoxConstraints.maxY - viewBoxConstraints.minY}%`)
-    .attribute('viewBox', `${viewBoxConstraints.minX - xPadding} ${viewBoxConstraints.minY - yPadding} ${100 + viewBoxConstraints.maxX - viewBoxConstraints.minX + xPadding * 2} ${100 + viewBoxConstraints.maxY - viewBoxConstraints.minY + yPadding * 2}`)
-    .attribute('stroke', 'red')
-
-
-  //NOTE: This block is good to stay
-  for (const shadow of shadows) {
-    const { dx, dy, blur, color, inset } = shadow
-
-    createSVGElt('feGaussianBlur')
-      .attribute('in', 'SourceAlpha')
-      .attribute('stdDeviation', blur)
-      .attribute('result', `blur-${color}`)
-      .parent(filter)
-    createSVGElt('feOffset')
-      .attribute('in', `blur-${color}`)
-      .attribute('dx', inset ? -dx : dx)
-      .attribute('dy', inset ? -dy : dy)
-      .attribute('result', `offset-${color}`)
-      .parent(filter)
-    createSVGElt('feFlood')
-      .attribute('flood-color', color)
-      .attribute('flood-opacity', 1)
-      .attribute('result', `flood-${color}`)
-      .parent(filter)
-    // console.log(`flood-${color}:`, color)
-    createSVGElt('feComposite')
-      .attribute('in', `flood-${color}`)
-      .attribute('in2', `offset-${color}`)
-      .attribute('operator', 'in')
-      .attribute('result', `composite-${color}`)
-      .parent(filter)
-
-    createSVGElt('feBlend')
-      .attribute('in', `composite-${color}`)
-      .attribute('in2', previousResult)
-      .attribute('mode', 'normal')
-      .attribute('result', `blend-${color}`)
-      .parent(filter)
-
-    previousResult = `blend-${color}`
-  }
-
-  createSVGElt('feBlend')
-    .attribute('in', 'SourceGraphic')
-    .attribute('in2', previousResult)
-    .attribute('mode', 'normal')
-    .attribute('result', 'finalResult')
-    .parent(filter)
-
-  createSVGElt('feMergeNode')
-    .attribute('in', 'finalResult')
-    .parent(feMerge)
-
-  filter.child(feMerge)
-  defs.child(filter)
-
-
-  //FIXME: migrate to function for applying effects or just dropShadows?
-  const parentSVG = this.elt.ownerSVGElement
-
-  const g = createSVGElt('g')
-    .attribute('filter', `url(#${id})`)
-    .parent(parentSVG)
-  this.parent(g)
-  g.child(defs)
-  return this
-}
-
-//FIXME: this function should just create the filter and return filter ID (not apply the filter)
-// NOTE: Created with GPT-4 on Mon Mar 27, 2023
-//FUNC: p5.Element extension dropShadow(shadows)
-p5.Element.prototype.dropShadow = function (shadows) {
-  shadows = OpArray.format(shadows)
-
-  //debug:
-  // console.log("Applying drop shadow to:", this)
-
-  //FIXME: use store protocol instead
-  const id = 'dropshadow-' + filterCounter + '-' + Math.random().toString(36).substr(2, 9)
-  filterCounter++
-
-  //NOTE: This block is good to stay
-  const defs = createSVGElt('defs')
-  const filter = createSVGElt('filter').attribute('id', id)
-  let previousResult = 'SourceGraphic'
-
-  //NOTE: This block is good to stay
-  for (const shadow of shadows) {
-    const { dx, dy, blur, color, inset } = shadow
-    const shadowID = `shadow-${Math.random().toString(36).substr(2, 9)}`
-
-    createSVGElt('feOffset')
-      .attribute('dx', dx)
-      .attribute('dy', dy)
-      .parent(filter)
-
-    createSVGElt('feGaussianBlur')
-      .attribute('stdDeviation', blur)
-      .attribute('result', 'offset-blur')
-      .parent(filter)
-
-    createSVGElt('feComposite')
-      .attribute('operator', 'out')
-      .attribute('in', previousResult)
-      .attribute('in2', 'offset-blur')
-      .attribute('result', 'inverse')
-      .parent(filter)
-
-    createSVGElt('feFlood')
-      .attribute('flood-color', color)
-      .attribute('flood-opacity', 1)
-      .attribute('result', 'color')
-      .parent(filter)
-
-    createSVGElt('feComposite')
-      .attribute('operator', 'in')
-      .attribute('in', 'color')
-      .attribute('in2', 'inverse')
-      .attribute('result', shadowID)
-      .parent(filter)
-
-    createSVGElt('feComposite')
-      .attribute('operator', 'over')
-      .attribute('in', shadowID)
-      .attribute('in2', previousResult)
-      .attribute('result', `merged-${shadowID}`)
-      .parent(filter)
-
-    previousResult = `merged-${shadowID}`;
-  }
-
-  createSVGElt('feMergeNode')
-    .attribute('in', previousResult)
-    .parent(filter)
-
-  defs.child(filter)
-
-
-  //FIXME: migrate to function for applying effects or just dropShadows?
-  console.log("SVG variable: ", svg)
-  const parentSVG = this.elt.ownerSVGElement
-
-  const g = createSVGElt('g')
-    .attribute('filter', `url(#${id})`)
-    .parent(parentSVG)
-  this.parent(g)
-  g.child(defs)
-  return this
-}
-
 function createFilter() {
   return new ProtoFilter()
 }
@@ -440,9 +181,6 @@ class ProtoFilter {
   filter
   defs
   type
-  needsPadding
-  padding
-  // filterWrapper
 
   constructor() {
     this.needsPadding = false
@@ -463,10 +201,6 @@ class ProtoFilter {
     this.type = 'dropShadow'
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
-    // .attribute('x', `100%`)
-    // .attribute('y', `-100%`)
-    // .attribute('width', `300%`)
-    // .attribute('height', `300%`)
 
     let previousResult = 'SourceGraphic'
     let insetResult = 'SourceGraphic'
@@ -566,7 +300,7 @@ class ProtoFilter {
   }
 
   //MARK: Utility methods
-  applyFilterToElement(element, scale = 2) {
+  applyFilterToElement(element, scale = 2, time = 0) {
     if (!this.type) { return this }
 
     const anchor = (scale - 1) * -50
@@ -588,45 +322,7 @@ class ProtoFilter {
   }
 
   updateFilter(shadows, scale = 2) {
-    shadows = OpArray.format(shadows)
-    this.shadows = shadows
 
-    if (this.type === 'dropShadow') {
-      let previousResult = 'SourceGraphic'
-      let shadowIndex = 0
-
-      for (const shadow of shadows) {
-        const { dx, dy, blur, color, inset } = shadow
-
-        const feOffset = this.filter.elt.children[shadowIndex * 6]
-        const feGaussianBlur = this.filter.elt.children[shadowIndex * 6 + 1]
-        const feFlood = this.filter.elt.children[shadowIndex * 6 + 4]
-
-        feOffset.setAttribute('dx', inset ? -dx * scale : dx * scale)
-        feOffset.setAttribute('dy', inset ? -dy * scale : dy * scale)
-        feGaussianBlur.setAttribute('stdDeviation', blur * scale)
-        feFlood.setAttribute('flood-color', color)
-
-        shadowIndex++
-      }
-    } else if (this.type === 'outsetDropShadow') {
-      let shadowIndex = 0
-
-      for (const shadow of shadows) {
-        const { dx, dy, blur, color, inset } = shadow
-
-        const feGaussianBlur = this.filter.elt.children[shadowIndex * 5]
-        const feOffset = this.filter.elt.children[shadowIndex * 5 + 1]
-        const feFlood = this.filter.elt.children[shadowIndex * 5 + 2]
-
-        feGaussianBlur.setAttribute('stdDeviation', blur)
-        feOffset.setAttribute('dx', inset ? -dx : dx)
-        feOffset.setAttribute('dy', inset ? -dy : dy)
-        feFlood.setAttribute('flood-color', color)
-
-        shadowIndex++
-      }
-    }
   }
 
   //MARK: Setup methods
