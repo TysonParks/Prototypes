@@ -629,48 +629,6 @@ class ProtoFilter {
     }
   }
 
-  //MARK: padding methods
-  calculatePadding(shadows, scale) {
-    let minX = 0
-    let minY = 0
-    let maxX = 0
-    let maxY = 0
-
-    shadows.forEach((shadow) => {
-      const offsetX = shadow.dx * scale
-      const offsetY = shadow.dy * scale
-      const blurRadius = shadow.blur * scale
-
-      const left = offsetX - blurRadius
-      const right = offsetX + blurRadius
-      const top = offsetY - blurRadius
-      const bottom = offsetY + blurRadius
-
-      minX = Math.min(minX, left)
-      minY = Math.min(minY, top)
-      maxX = Math.max(maxX, right)
-      maxY = Math.max(maxY, bottom)
-    })
-
-    return {
-      minX: Math.ceil(Math.abs(minX) * scale),
-      minY: Math.ceil(Math.abs(minY) * scale),
-      maxX: Math.ceil(Math.abs(maxX) * scale),
-      maxY: Math.ceil(Math.abs(maxY) * scale),
-    }
-  }
-
-  applyPadding(element, padding) {
-    const { minX, minY, maxX, maxY } = padding
-
-    element
-      .attribute("x", `${-minX}%`)
-      .attribute("y", `${-minY}%`)
-      .attribute("width", `${100 + maxX + minX}%`)
-      .attribute("height", `${100 + maxY + minY}%`)
-
-  }
-
   //MARK: Setup methods
   finishSetup(store) {
     this.storeObject(store) // this function assigns an id, a uid, and stores the instance
