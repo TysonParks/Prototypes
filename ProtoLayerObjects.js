@@ -337,12 +337,12 @@ class Frame extends ProtoLayer {
       .attribute('height', `${190}`)
       .attribute('rx', `${15}`)
       .attribute('ry', `${15}`)
-      .attribute('fill', protoColor(200))
+      .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
       // .attribute('stroke-width', '1')
       // .attribute('stroke-linejoin', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow1)
+      .applyFilter(this.dropShadow3)
 
     this.testCircle1
       .attribute('cx', `${50}`)
