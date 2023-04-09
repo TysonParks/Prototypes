@@ -9,23 +9,20 @@
 
 // CLASS: ProtoLayer
 class ProtoLayer {
-  // #uid
-  // id
-  // store
-  // layers = []
-  parent
   p5Elt
+  parent
   parentP5Elt
+  parentSVGElt
   insetAmount = 1
 
-  constructor(parent) {
+  constructor(parent, parentSVG) {
     if (parent instanceof ProtoLayer) {
       this.parent = parent
       this.parentP5Elt = parent.p5Elt
     }
     else if (parent instanceof p5.Element) { this.parentP5Elt = parent }
     else { console.error('parent is not valid') }
-    // this.#assignUID()
+    if (parentSVG) { this.parentSVGElt = parentSVG }
     this.assignUID()
   }
 
@@ -36,7 +33,16 @@ class ProtoLayer {
 
   get testLook() { return Look.test(this.size, 'frame') }
 
-  get boundsRect() { return this.parent.insetBoundsRect }
+  get boundsRect() {
+    return this.parent.insetBoundsRect
+    return DOMRect.fromRect(
+      {
+        x: this.insetAnchor.x,
+        y: this.insetAnchor.y,
+        width: this.insetSize.x,
+        height: this.insetSize.y,
+      })
+  }
   // get boundsRect() { return this.parentP5Elt.elt.getBoundingClientRect() }
   get anchor() { return vert(this.boundsRect.x, this.boundsRect.y) }
   get size() { return vert(this.boundsRect.width, this.boundsRect.height) }
@@ -149,11 +155,14 @@ class Frame extends ProtoLayer {
     super(parentP5Elt)
     this.finishSetup(S.Frame)
   }
-  get parentBoundsRect() { return this.parentP5Elt.elt.getBoundingClientRect() }
-  get parentSize() { return vert(this.parentBoundsRect.width, this.parentBoundsRect.height) }
+  // get parentBoundsRect() { return this.parentP5Elt.elt.getBoundingClientRect() }
+  // get parentSize() { return vert(this.parentBoundsRect.width, this.parentBoundsRect.height) }
 
-  get size() { return frameSize }
-  get anchor() { return Vertex.sub(this.parentSize, this.size).div(2) }
+  // get size() { return frameSize }
+  // get anchor() { return Vertex.sub(this.parentSize, this.size).div(2) }
+
+  get anchor() { return vert(0, 0) }
+  get size() { return vert(100, 200) }
   get boundsRect() {
     return DOMRect.fromRect(
       {
@@ -164,6 +173,8 @@ class Frame extends ProtoLayer {
       })
   }
 
+  get cornerRadius() { return 10 }
+
   get testLook() { return Look.test(this.size, 'frame') }
 
   // MARK: Setup Methods
@@ -172,49 +183,37 @@ class Frame extends ProtoLayer {
 
     this.bleed = createSVGElt().id('bleed')
       .parent(this.parentP5Elt)
+      .attribute(SVG.viewBox, `-5 -10 110 220`)
+      .attribute('preserveAspectRatio', 'xMidyMid')
+      .attribute('width', `${frameSize.x}`)
+      .attribute('height', `${frameSize.y}`)
+      .style(CS.border, '1px dashed blue')
     // .addToClassList(this.id)
     // .addToClassList(this.parentP5Elt.elt.classList.value)
+    this.parentSVGElt = this.bleed
 
     this.p5Elt = createSVGElt().id(this.id)
-      .parent(this.bleed)
+      .parent(this.parentSVGElt)
       .addToClassList(this.id)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
 
     this.frameRect = createSVGElt('rect').id('frameRect')
       .parent(this.p5Elt)
       .addToClassList(this.id)
 
-    this.testElementsSetup()
+    // this.testElementsSetup()
   }
 
   drawElement(look = this.testLook) {
-    this.bleed
-      .look(look)
-      .attribute(SVG.viewBox, `-5 -10 110 220`)
-      .attribute('preserveAspectRatio', 'xMidyMid')
-      .attribute('width', `${this.size.x}`)
-      .attribute('height', `${this.size.y}`)
-      .style(CS.border, '1px dashed blue')
-
-    this.p5Elt
-      .attribute('x', `${0}`)
-      .attribute('y', `${0}`)
-      .attribute('width', `${100}`)
-      .attribute('height', `${200}`)
-      .attribute('rx', `${20}`)
-      .attribute('ry', `${20}`)
-
     this.frameRect
-      .attribute('x', `${0}`)
-      .attribute('y', `${0}`)
-      .attribute('width', `${100}`)
-      .attribute('height', `${200}`)
-      .attribute('rx', `${20}`)
-      .attribute('ry', `${20}`)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+      .attribute('rx', `${this.cornerRadius}`)
+      .attribute('ry', `${this.cornerRadius}`)
       .attribute(`fill`, ` ${protoColor(230)}`)
-      .attribute('fill-opacity', '1')
+    // .attribute('fill-opacity', '1')
 
 
-    this.testElementsDraw()
+    // this.testElementsDraw()
   }
 
   testElementsSetup() {
@@ -331,12 +330,12 @@ class Frame extends ProtoLayer {
       ])
 
     this.testRect
-      .attribute('x', `${5}`)
-      .attribute('y', `${5}`)
-      .attribute('width', `${90}`)
-      .attribute('height', `${190}`)
-      .attribute('rx', `${15}`)
-      .attribute('ry', `${15}`)
+      .attribute('x', `${2}`)
+      .attribute('y', `${2}`)
+      .attribute('width', `${96}`)
+      .attribute('height', `${196}`)
+      .attribute('rx', `${18}`)
+      .attribute('ry', `${18}`)
       .attribute('fill', protoColor(230))
       .attribute('fill-opacity', '1')
       // .attribute('stroke-width', '1')
@@ -389,9 +388,17 @@ class Frame extends ProtoLayer {
       // .attribute('stroke-linejoin', 'round')
       // .attribute('stroke-linecap', 'round')
       .parent(this.p5Elt)
-      .applyFilter(this.dropShadow3)
+    // .applyFilter(this.dropShadow3, 3)
+    // .applyFilter(this.dropShadow1, 3, 4)
 
     // console.log('circle3', this.testCircle3)
+    this.testCircle3
+      .applyFilter(this.dropShadow2, 3)
+    // console.log('circle3', this.testCircle3)
+    // this.testCircle3
+    // .applyFilter(this.dropShadow3, 3, 3000)
+
+
   }
   // #endregion
 }
@@ -1130,8 +1137,7 @@ class Grid extends ProtoLayer {
   // #region Setup Methods
   assignElement() {
     // if (this.parentIsBody) {
-    this.p5Elt = createSVGElt()
-      .id(this.id)
+    this.p5Elt = createSVGElt().id(this.id)
       .parent(this.parentP5Elt)
       .addToClassList(this.id)
       .addToClassList(this.parentP5Elt.elt.classList.value)
@@ -1164,18 +1170,13 @@ class Grid extends ProtoLayer {
       .attribute('y', `${0}`)
       .attribute('width', `${100}`)
       .attribute('height', `${200}`)
+      .attribute('rx', `${20}`)
+      .attribute('ry', `${20}`)
       .attribute('fill-opacity', '0')
-
+      // .attribute('fill', 'cyan')
       // .attribute('stroke', 'red')
-      // .attribute('style', 'fill : green')
-      // .style('fill', 'orange')
-      // .style('border-radius', '20px')
-      // .style('stroke', 'green')
-      // .style('stroke-width', '2')
-      // .attribute('stroke-width', '0.25')
-      // .style(CS.border, 'dashed red')
-      // .style('border', 'dashed red')
-      // .style(CS.border, '1px dashed blue')
+      // .attribute('stroke-width', '2')
+
 
       .parent(this.p5Elt)
 
