@@ -5,9 +5,11 @@ p5.prototype.createElementNS = function (namespaceURI, qualifiedName) {
 }
 
 //FUNC: p5 extension createSVGElt(qualifiedName)
-p5.prototype.createSVGElt = function (qualifiedName = 'svg') {
-  let elt = document.createElementNS(SVG.xmlns, qualifiedName)
-  return addElement(elt, this)
+p5.prototype.createSVGElt = function (qualifiedName = 'svg', layout) {
+  const elt = document.createElementNS(SVG.xmlns, qualifiedName)
+  const p5Element = addElement(elt, this)
+  if (layout) { p5Element.layout(layout) }
+  return p5Element
 }
 
 //FUNC: p5 extension createSVG(width, height)
@@ -17,7 +19,7 @@ p5.prototype.createSVG = function (width, height) {
     .attribute(SVG.height, `${height}`)
 }
 
-//FUNC: p5.Element extension attributeNS(nameSpaceURI, attr, value)
+//FUNC: p5.Element extension addToClassList(newClass)
 p5.Element.prototype.addToClassList = function (newClass) {
   // print(`addToClassList():`)
   // print(newClass)
@@ -42,6 +44,22 @@ p5.Element.prototype.addToClassList = function (newClass) {
   return this
 }
 
+//FUNC: p5.Element extension addToClassList(newClass)
+p5.Element.prototype.layout = function (x, y, width, height) {
+  if (arguments.length === 1) {
+    x = x.x
+    y = x.y
+    width = x.width
+    height = x.height
+  }
+  this
+    .attribute('x', x)
+    .attribute('y', y)
+    .attribute('width', width)
+    .attribute('height', height)
+  return this
+}
+
 // MARK: p5.Element extension 'type' property
 Object.defineProperty(p5.Element.prototype, 'type', {
   get: function () {
@@ -54,6 +72,14 @@ Object.defineProperty(p5.Element.prototype, 'type', {
     }
   }
 })
+
+Object.defineProperty(p5.Element.prototype, 'p5Parent', {
+  get: function () {
+    const parentHTMLElement = this.parent()
+    return parentHTMLElement ? select('#' + parentHTMLElement.id) : null
+  }
+})
+
 
 
 //FUNC: p5.Element extension attributeNS(nameSpaceURI, attr, value)
@@ -303,8 +329,8 @@ class ProtoFilter {
   applyFilterToElement(element, scale = 2, time = 0) {
     if (!this.type) { return this }
 
-    const anchor = (scale - 1) * -50
-    const size = scale * 100
+    const anchor = (scale - 1) * -50;
+    const size = scale * 100;
     this.filter
       .attribute("x", `${anchor}%`)
       .attribute("y", `${anchor}%`)
@@ -312,18 +338,43 @@ class ProtoFilter {
       .attribute("height", `${size}%`);
 
     const parentSVG = element.elt.ownerSVGElement;
-    const g = createSVGElt("g")
-      .attribute("filter", `url(#${this.id})`)
-      .parent(parentSVG);
-    element.parent(g);
-    g.child(this.defs);
+    const filterUrl = `url(#${this.id})`;
 
-    return this;
+    let newGroup = parentSVG.querySelector(`g[filter="${filterUrl}"][id^="${this.id}-"]`);
+    if (!newGroup) {
+      newGroup = createSVGElt("g")
+        .id(`${this.id}-${element.id()}`)
+        .attribute("filter", filterUrl)
+        .parent(parentSVG);
+      newGroup.child(this.defs);
+    }
+
+    if (time > 0) {
+      const oldGroup = element.p5Parent;
+      if (oldGroup !== newGroup) {
+        crossfadeElements(oldGroup, newGroup, time, () => {
+          element.parent(newGroup);
+          if (oldGroup.childElementCount === 0) {
+            oldGroup.remove();
+          }
+        });
+      }
+    } else {
+      element.parent(newGroup);
+      const oldGroup = element.p5Parent;
+      if (oldGroup.childElementCount === 0) {
+        oldGroup.remove();
+      }
+    }
   }
 
-  updateFilter(shadows, scale = 2) {
+
+
+
+  updateFilter(shadows, scale = 2, time = 0) {
 
   }
+
 
   //MARK: Setup methods
   finishSetup(store) {
@@ -335,7 +386,34 @@ Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides 
 
 
 //FUNC: p5.Element extension applyFilter(filterInstance, scale = 1)
-p5.Element.prototype.applyFilter = function (filterInstance, scale = 2) {
-  filterInstance.applyFilterToElement(this, scale)
+p5.Element.prototype.applyFilter = function (filterInstance, scale = 2, time = 0) {
+  filterInstance.applyFilterToElement(this, scale, time)
   return this
 }
+
+//FUNC: p5.Element extension applyFilter(filterInstance, scale = 1)
+p5.prototype.crossfadeElements = async function (fromElement, toElement, duration, onComplete) {
+  console.log('fromElement', fromElement)
+  console.log('toElement', toElement)
+  const startTime = performance.now();
+  const fromElementOpacity = parseFloat(fromElement.attribute("opacity") || "1");
+  const toElementOpacity = parseFloat(toElement.attribute("opacity") || "1");
+
+  const step = (timestamp) => {
+    const elapsed = timestamp - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    fromElement.attribute("opacity", fromElementOpacity * (1 - progress));
+    toElement.attribute("opacity", toElementOpacity * progress);
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      if (onComplete) {
+        onComplete();
+      }
+    }
+  };
+
+  requestAnimationFrame(step);
+};
