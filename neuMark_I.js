@@ -324,13 +324,13 @@ class ProtoColor extends p5.Color {
     return cols
   }
 
-  static randomHighHue() {
-    let hue = floor(R.random_num(0, 255))
+  static randomHighHue(isSeeded = false) {
+    let hue = floor(isSeeded ? R.random_num(0, 255) : random(255))
     return protoColor(`hsb(${hue}, 100%, 100%)`)
   }
 
-  static randomShadHue() {
-    let hue = floor(R.random_num(0, 255))
+  static randomShadHue(isSeeded = false) {
+    let hue = floor(isSeeded ? R.random_num(0, 255) : random(255))
     return protoColor(`hsb(${hue}, 100%, 50%)`)
   }
 
