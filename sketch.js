@@ -175,23 +175,27 @@ function setupBackground() {
 }
 
 // MARK: Testing Functions
-
+// FUNC: gridTests2()
 function gridTests2() {
-  let gridX = R.random_int(2, 10)
-  gridX = 4
-  grid = new Grid({ parent: F, gridSize: { x: gridX, y: gridX * 2 } })
   F.inset(0.9)
-  grid.inset(0.9)
+  let gridX = R.random_int(2, 10)
+  gridX = 3
+  grid = new Grid(F, { x: gridX, y: gridX * 2 })
+
+  // grid.inset(0.9)
+
+  console.log('parentID', F.parentID)
 
   console.log('all layers', S.allLayers)
   // print('all layers:')
   // print(S.allLayers)
 }
 
+// FUNC: gridTests()
 function gridTests() {
   let gridX = R.random_int(2, 10)
   gridX = 4
-  grid = new Grid({ parent: F, gridSize: { x: gridX, y: gridX * 2 } })
+  grid = new Grid({ protoParent: F, gridSize: { x: gridX, y: gridX * 2 } })
   F.inset(0.9)
   grid.inset(0.9)
 
