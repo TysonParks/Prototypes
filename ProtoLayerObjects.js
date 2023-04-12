@@ -33,16 +33,7 @@ class ProtoLayer {
   get testLook() { return Look.test(this.size, 'frame') }
   get testColor() { return protoColor(0, 230, 230, 1) }
 
-  get boundsRect() {
-    return this.protoParent?.insetBoundsRect
-    // return DOMRect.fromRect(
-    //   {
-    //     x: this.insetAnchor.x,
-    //     y: this.insetAnchor.y,
-    //     width: this.insetSize.x,
-    //     height: this.insetSize.y,
-    //   })
-  }
+  get boundsRect() { return this.protoParent?.insetBoundsRect }
 
   get anchor() { return vert(this.boundsRect.x, this.boundsRect.y) }
   get size() { return vert(this.boundsRect.width, this.boundsRect.height) }
@@ -98,27 +89,18 @@ class ProtoLayer {
   }
 
   assignElement() {
-    // print(`id (${this.id}) is a string: ${typeof this.id === 'string'}`)
-    // this.svgElt = createDiv(TestMode ? this.id : '')
-    //   .id(this.id)
-    //   .parent(this.svgParent)
-    //   .addToClassList(this.id)
-    //   .addToClassList(this.svgParent.elt.classList.value)
-
     this.svgElt = createSVGElt().id(this.id)
       .parent(this.svgParent)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
       .attribute(SVG.viewBox, `${this.anchor.x - 5} ${this.anchor.y - 5} ${this.size.x + 10} ${this.size.y + 10}`)
-    // .attribute(SVG.viewBox, `0% 0% 100% 100%`)
 
     this.rect = createSVGElt('rect').id(`${this.id}-frontRect`)
       .parent(this.svgElt)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
-    // .attribute(SVG.viewBox, `${this.anchor.x} ${this.anchor.y} ${this.size.x} ${this.size.y}`)
   }
 
   drawElement(look = this.testLook) {
@@ -141,20 +123,8 @@ class ProtoLayer {
       .attribute('ry', `${3}`)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
 
-    // .size(this.insetSize.x, this.insetSize.y)
-    // .position(this.insetAnchor.x, this.insetAnchor.y)
-    if (this.taken) {
-      this.svgElt
-        .look(Look.testCell(testingControls.testColors ? this.color : '#0000'))
-    }
-    if (this.available) {
-      this.svgElt
-        .look(Look.blankTestCell())
-    }
     // if (this.islandID) { this.svgElt.look(Look.testCell(this.color)) }
   }
-
-  // #assignUID() { this.#uid = R.random_hash() }
 
   resize() { this.drawElement() }
   // #endregion
@@ -182,11 +152,6 @@ class Frame extends ProtoLayer {
     super(svgParent)
     this.finishSetup(S.Frame)
   }
-  // get parentBoundsRect() { return this.svgParent.elt.getBoundingClientRect() }
-  // get parentSize() { return vert(this.parentBoundsRect.width, this.parentBoundsRect.height) }
-
-  // get size() { return frameSize }
-  // get anchor() { return Vertex.sub(this.parentSize, this.size).div(2) }
 
   get anchor() { return vert(0, 0) }
   get size() { return vert(100, 200) }
@@ -208,12 +173,6 @@ class Frame extends ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   assignElement() {
-    // console.log('boundsRect', this.boundsRect)
-    // console.log('insetBoundsRect', this.insetBoundsRect)
-
-    // console.log('insetAnchor', this.insetAnchor)
-    // console.log('insetSize', this.insetSize)
-
     this.bleed = createSVGElt().id('bleed')
       .parent(this.svgParent)
       .attribute(SVG.viewBox, `-5 -10 110 220`)
@@ -733,7 +692,6 @@ class Grid extends ProtoLayer {
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'grid') }
   get testColor() { return protoColor(0, 230, 0, 90) }
-  // get boundsRect() { return this.protoParent.insetBoundsRect }
 
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
   get cells() { return this.cellRows.flat() }
@@ -1160,15 +1118,7 @@ class Grid extends ProtoLayer {
     this.updateCells({ groupID: group.id })
   }
 
-  // assignIsland(selection, island, group) {
-  //   if (!island) { island = new Island({ protoParent: this.protoParent, grid: this, group: group }) }
-  //   island.cells = selection
-  //   this.islands.push(island)
-  //   this.updateCells()
-  // }
-
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
-  //FIXME: if groupID or islandID is given, only update cells in that group or island
   updateCells({ groupID, islandID } = {}) {
     let groups, islands
 
@@ -1180,21 +1130,6 @@ class Grid extends ProtoLayer {
     else { islands = this.islands }
     // console.log('islands', islands)
     islands.forEach(island => this.updateIsland(island))
-
-
-    // TODO: Test updateIsland before deleting this
-    // if (!islandID) {
-    //   // print(this.islands)
-    //   this.islands.forEach(island => {
-    //     island.cells.forEach(cell => {
-    //       let thisCell = this.cells[cell.index]
-    //       if (thisCell) {
-    //         thisCell.islandIDs.add(island.id)
-    //         thisCell.color = island.color
-    //       }
-    //     })
-    //   })
-    // }
   }
 
   updateGroup(group) {
@@ -1215,8 +1150,6 @@ class Grid extends ProtoLayer {
       }
     })
   }
-
-
   // #endregion
 
   // MARK: Setup Methods
@@ -1400,7 +1333,6 @@ class Cell extends ProtoLayer {
     this.available = available
     this.color = color
     this.finishSetup(S.Cells)
-    // print(this.id)
   }
 
   // MARK: Computed Properties
@@ -1408,7 +1340,6 @@ class Cell extends ProtoLayer {
   get boundsRect() { }
   get anchor() { return this.grid.cellAnchor(this.coords.x, this.coords.y) }
   get size() { return this.grid.cellSize }
-  // get insetSize() { return Vertex.sub(this.size, vert(this.insetAmount, this.insetAmount)) }
 
   get testLook() {
     // return Look.neuShade()
@@ -1810,7 +1741,7 @@ class Shape extends ProtoLayer {
 
     path
       .attribute('pathLength', 'length')
-      .attribute('stroke-dasharray', `15 ${length / 1 - 15}`)
+      .attribute('stroke-dasharray', `25 ${length / 2 - 25}`)
     // .attribute('stroke-linecap', 'round')
     // .attribute('overflow', 'hidden')
     // .attribute('width', `${this.cellBounds.size.x}`)
@@ -1854,23 +1785,6 @@ class Shape extends ProtoLayer {
     else { this.testVerts.forEach(e => e.hide()) }
 
   }
-
-  //NOTE: DELETE
-  // drawElement(look = this.testLook) {
-  //   this.svgElt
-  //     .look(look)
-  //     .size(this.insetSize.x, this.insetSize.y)
-  //     .position(this.insetAnchor.x, this.insetAnchor.y)
-  //   if (this.taken) {
-  //     this.svgElt
-  //       .look(Look.testCell(testingControls.testColors ? this.color : '#0000'))
-  //   }
-  //   if (this.available) {
-  //     this.svgElt
-  //       .look(Look.blankTestCell())
-  //   }
-
-
 }
 
 
