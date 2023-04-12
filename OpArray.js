@@ -3,8 +3,10 @@
 
 
 // CLASS: Array
+// PROTOTYPE: Array extension last() function
 Array.prototype.last = function () { return this.at(-1) }
 
+// PROTOTYPE: Array extension 'lastIndex' property
 Object.defineProperty(Array.prototype, 'lastIndex', {
   get: function () {
     return this.length - 1
