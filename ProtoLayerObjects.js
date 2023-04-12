@@ -99,12 +99,16 @@ class ProtoLayer {
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
       .attribute(SVG.viewBox, `${this.anchor.x - 5} ${this.anchor.y - 5} ${this.size.x + 10} ${this.size.y + 10}`)
+    // .label('test', 'red', Direction.Up)
 
     this.rect = createSVGElt('rect').id(`${this.id}-frontRect`)
       .parent(this.svgElt)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+    // .label('test', 'red', Direction.None)
+
+
   }
   //METH: 
   drawElement(look = this.testLook) {
@@ -113,18 +117,22 @@ class ProtoLayer {
       .attribute(SVG.viewBox, `${this.anchor.x} ${this.anchor.y} ${this.size.x} ${this.size.y}`)
 
     this.rect
-      // .look(look)
-      .attribute('fill', this.testColor)
-      .attribute('fill-opacity', '1')
-      .attribute('stroke', 'magenta')
-      .attribute('stroke-opacity', '1')
-      .attribute('stroke-width', '.5')
+      .svgLook(SVGLook.testStroke())
+
+      // .attribute('fill', this.testColor)
+      // .attribute('fill-opacity', '1')
+      // .attribute('stroke', 'magenta')
+      // .attribute('stroke-opacity', '1')
+      // .attribute('stroke-width', '.5')
+
       // .attribute('pathLength', '360')
       // .attribute('stroke-dasharray', `${180 / 45} `)
       // .attribute('stroke-linejoin', 'round')
       // .attribute('stroke-linecap', 'round')
-      .attribute('rx', `${3}`)
-      .attribute('ry', `${3}`)
+
+      // .attribute('rx', `${3}`)
+      // .attribute('ry', `${3}`)
+
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
 
     // if (this.islandID) { this.svgElt.look(Look.testCell(this.color)) }
@@ -1767,6 +1775,7 @@ class Shape extends ProtoLayer {
       .attribute('stroke', 'lime')
       .attribute('stroke-width', '5')
       .attribute('stroke-linecap', 'round')
+      .attribute('stroke-linejoin', 'round')
       .attribute('overflow', 'auto')
       .parent(this.svgElt)
       .addToClassList(this.id)
