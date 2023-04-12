@@ -151,8 +151,6 @@ class OpArray extends Array {
     return OpArray.from(this.kvMap(props).values())
   }
 
-
-
   equals(vals, props) {
     return this.boolOp(vals, props,
       (a, b) => a.length === b.length && a.toString() === b.toString(),
