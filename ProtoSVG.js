@@ -143,17 +143,13 @@ class SVG {
 
 }
 
-
-
-
-
 // make .attr() prototype extension that gets and sets attributes similar to p5's .style() 
 // make neuShadow equivalents for inset shadows in SVG
 // make stage for comparing shadows and see if svg shadows are deal-breaker for neumorphism
 // optimize rendering by creating methods to aggregate some groups of shapes to the same svg 'layer' 
 
 
-
+//FUNC: addElement(elt, pInst, media) allows for the creation of p5.Elements without using instance mode
 function addElement(elt, pInst, media) {
   const node = pInst._userNode ? pInst._userNode : document.body
   // print(`node:`)
@@ -214,9 +210,7 @@ class ProtoFilter {
     // console.log('filter init', this)
   }
 
-  //MARK: Drop Shadow methods
-
-
+  //MARK: Drop Shadow method
   dropShadow(shadows) {
     shadows = OpArray.format(shadows)
 
