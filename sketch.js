@@ -177,7 +177,7 @@ function setupBackground() {
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
-  // F.inset(.95)
+  F.inset(.95)
   let gridX = R.random_int(2, 10)
   // gridX = 5
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
