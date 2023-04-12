@@ -110,16 +110,22 @@ class ProtoLayer {
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
-      .attribute(SVG.viewBox, `${this.anchor.x} ${this.anchor.y} ${this.size.x} ${this.size.y}`)
+      .attribute(SVG.viewBox, `${this.anchor.x - 5} ${this.anchor.y - 5} ${this.size.x + 10} ${this.size.y + 10}`)
+    // .attribute(SVG.viewBox, `0% 0% 100% 100%`)
 
     this.rect = createSVGElt('rect').id(`${this.id}-frontRect`)
       .parent(this.svgElt)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+    // .attribute(SVG.viewBox, `${this.anchor.x} ${this.anchor.y} ${this.size.x} ${this.size.y}`)
   }
 
   drawElement(look = this.testLook) {
+    this.svgElt
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+      .attribute(SVG.viewBox, `${this.anchor.x} ${this.anchor.y} ${this.size.x} ${this.size.y}`)
+
     this.rect
       // .look(look)
       .attribute('fill', this.testColor)
@@ -127,12 +133,12 @@ class ProtoLayer {
       .attribute('stroke', 'magenta')
       .attribute('stroke-opacity', '1')
       .attribute('stroke-width', '.5')
-      .attribute('pathLength', '360')
-      .attribute('stroke-dasharray', `${180 / 45} `)
-      .attribute('stroke-linejoin', 'round')
-      .attribute('stroke-linecap', 'round')
-      .attribute('rx', `${10}`)
-      .attribute('ry', `${10}`)
+      // .attribute('pathLength', '360')
+      // .attribute('stroke-dasharray', `${180 / 45} `)
+      // .attribute('stroke-linejoin', 'round')
+      // .attribute('stroke-linecap', 'round')
+      .attribute('rx', `${3}`)
+      .attribute('ry', `${3}`)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
 
     // .size(this.insetSize.x, this.insetSize.y)
@@ -197,16 +203,16 @@ class Frame extends ProtoLayer {
   get cornerRadius() { return 5 }
 
   get testLook() { return Look.test(this.size, 'frame') }
-  get testColor() { return protoColor(63, 63, 255) }
+  get testColor() { return protoColor(200, 200, 200) }
 
   // MARK: Setup Methods
   // #region Setup Methods
   assignElement() {
-    console.log('boundsRect', this.boundsRect)
-    console.log('insetBoundsRect', this.insetBoundsRect)
+    // console.log('boundsRect', this.boundsRect)
+    // console.log('insetBoundsRect', this.insetBoundsRect)
 
-    console.log('insetAnchor', this.insetAnchor)
-    console.log('insetSize', this.insetSize)
+    // console.log('insetAnchor', this.insetAnchor)
+    // console.log('insetSize', this.insetSize)
 
     this.bleed = createSVGElt().id('bleed')
       .parent(this.svgParent)
@@ -538,7 +544,7 @@ class SelectionBounds {
   get aspect() { return this.cellBoundsSize.aspect }
 
   get boundsRect() {
-    if (arguments === 0) { return this.svgParent.elt.getBoundingClientRect() }
+    // if (arguments === 0) { return this.svgParent.elt.getBoundingClientRect() }
     // const size = this.size(selection)
     const offset = this.anchor
     return DOMRect.fromRect(
@@ -726,7 +732,7 @@ class Grid extends ProtoLayer {
   // MARK: Computed Properties
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'grid') }
-  get testColor() { return protoColor(0, 230, 0) }
+  get testColor() { return protoColor(0, 230, 0, 90) }
   // get boundsRect() { return this.protoParent.insetBoundsRect }
 
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
@@ -758,6 +764,7 @@ class Grid extends ProtoLayer {
   }
   cellAtCoords(x, y) { if (this.coordsAreInGrid(x, y)) { return this.cellAt(this.index(x, y)) } }
   groupNamed(name) { return this.groups.find(e => e.id === name) || null }
+  islandNamed(name) { return this.islands.find(e => e.id === name) || null }
   // #endregion
   // MARK: CellIndex Methods
   // #region CellIndex Methods
@@ -973,6 +980,7 @@ class Grid extends ProtoLayer {
   //TODO: add transform functionality
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
+
   findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, direction = Direction.All, taken = true, stored = true } = {}) {
     let cells
     if (!groupID && !islandID) {
@@ -1145,10 +1153,11 @@ class Grid extends ProtoLayer {
   // MARK: General Grammar Methods
   // #region General Grammar Methods
   assign(selection, group) {
-    if (!group) { group = new CellGroup(this, this) }
+    if (!group) { group = new CellGroup(this, this.svgElt, this) }
     group.cells = selection
+    console.log('groupID', group.id)
     this.groups.push(group)
-    this.updateCells()
+    this.updateCells({ groupID: group.id })
   }
 
   // assignIsland(selection, island, group) {
@@ -1161,30 +1170,53 @@ class Grid extends ProtoLayer {
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
   //FIXME: if groupID or islandID is given, only update cells in that group or island
   updateCells({ groupID, islandID } = {}) {
-    if (!groupID) {
-      this.groups.forEach(group => {
-        group.cells.forEach(cell => {
-          let thisCell = this.cells[cell.index]
-          thisCell.groupID = group.id
-          thisCell.available = false
-          thisCell.color = group.color
-        })
-      })
-    }
+    let groups, islands
 
-    if (!islandID) {
-      // print(this.islands)
-      this.islands.forEach(island => {
-        island.cells.forEach(cell => {
-          let thisCell = this.cells[cell.index]
-          if (thisCell) {
-            thisCell.islandIDs.add(island.id)
-            thisCell.color = island.color
-          }
-        })
-      })
-    }
+    if (groupID) { groups = [this.groupNamed(groupID)] }
+    else { groups = this.groups }
+    groups.forEach(group => this.updateGroup(group))
+
+    if (islandID) { islands = [this.islandNamed(groupID)] }
+    else { islands = this.islands }
+    // console.log('islands', islands)
+    islands.forEach(island => this.updateIsland(island))
+
+
+    // TODO: Test updateIsland before deleting this
+    // if (!islandID) {
+    //   // print(this.islands)
+    //   this.islands.forEach(island => {
+    //     island.cells.forEach(cell => {
+    //       let thisCell = this.cells[cell.index]
+    //       if (thisCell) {
+    //         thisCell.islandIDs.add(island.id)
+    //         thisCell.color = island.color
+    //       }
+    //     })
+    //   })
+    // }
   }
+
+  updateGroup(group) {
+    group.cells.forEach(cell => {
+      let thisCell = this.cells[cell.index]
+      thisCell.groupID = group.id
+      thisCell.available = false
+      thisCell.color = group.color
+    })
+  }
+
+  updateIsland(island) {
+    island.cells.forEach(cell => {
+      let thisCell = this.cells[cell.index]
+      if (thisCell) {
+        thisCell.islandIDs.add(island.id)
+        thisCell.color = island.color
+      }
+    })
+  }
+
+
   // #endregion
 
   // MARK: Setup Methods
@@ -1242,8 +1274,8 @@ class CellGroup extends ProtoLayer {
   cells
   color
 
-  constructor(protoParent, grid) {
-    super(protoParent)
+  constructor(protoParent, svgParent, grid) {
+    super(protoParent, svgParent)
     this.grid = grid
     this.finishSetup(S.Groups)
     this.cells = OpArray.from(grid.cells)
@@ -1253,37 +1285,15 @@ class CellGroup extends ProtoLayer {
   // MARK: Computed Properties
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'group') }
+  get testColor() { return protoColor(255, 127, 0, 1) }
 
-  // get boundsRect() { return this.protoParent.boundsRect }
+  get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
+  get boundsRect() { return this.cellBounds.boundsRect }
 
   get cellsByIndex() { return this.cells.sort((a, b) => a.index - b.index) }
   // #endregion
   // MARK: Grid Properties
   // #region Grid Properties
-  get xValues() { return this.grid.xValues(this.cells) }
-  get yValues() { return this.grid.xValues(this.cells) }
-
-  get xMin() { return this.grid.xMin(this.cells) }
-  get xMax() { return this.grid.xMax(this.cells) }
-  get yMin() { return this.grid.yMin(this.cells) }
-  get yMax() { return this.grid.yMax(this.cells) }
-
-  get cellBounds() { return this.grid.cellBounds(this.cells) }
-  get cellBoundsWidth() { return this.grid.cellBoundsWidth(this.cells) }
-  get cellBoundsHeight() { return this.grid.cellBoundsHeight(this.cells) }
-
-  get topRowCells() { return this.grid.topRowCells(this.cells) }
-  get rightColCells() { return this.grid.rightColCells(this.cells) }
-  get bottomRowCells() { return this.grid.bottomRowCells(this.cells) }
-  get leftColCells() { return this.grid.leftColCells(this.cells) }
-  get boundsCells() {
-    return {
-      top: this.topRowCells,
-      right: this.rightColCells,
-      bottom: this.bottomRowCells,
-      left: this.leftColCells,
-    }
-  }
 
   get availableCells() { return this.grid.availableCells }
   get validNeighbors() { return this.grid.validNeighbors({ selection: this.cells }) }
@@ -1293,7 +1303,6 @@ class CellGroup extends ProtoLayer {
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, groupID: this.id })
   }
-
 
   // #endregion
   // MARK: Geometry Methods
@@ -1441,7 +1450,30 @@ class Cell extends ProtoLayer {
   }
   // #endregion
 
+  drawElement(look = this.testLook) {
+    this.svgElt
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+      .attribute(SVG.viewBox, `${this.anchor.x} ${this.anchor.y} ${this.size.x} ${this.size.y}`)
 
+    this.rect
+      .attribute('rx', `${3}`)
+      .attribute('ry', `${3}`)
+      .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+
+    // super(this.drawElement(look))
+    if (this.taken) {
+      // this.insetAmount = 0.9
+      this.rect
+        .attribute('fill', 'purple')
+        .attribute('fill-opacity', '0.25')
+    }
+    if (this.available) {
+      // this.insetAmount = 0.5
+      this.rect
+        .attribute('fill', 'orange')
+        .attribute('fill-opacity', '0.25')
+    }
+  }
 }
 
 // CLASS: Island
@@ -1470,6 +1502,7 @@ class Island extends ProtoLayer {
   // MARK: Computed Properties
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'island') }
+  get testColor() { return protoColor(255, 230, 0, 1) }
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.groupID, islandID: this.id }) }
   get cellAnchor() { return this.cellBounds.cellAnchor }
@@ -1537,6 +1570,7 @@ class Island extends ProtoLayer {
     let thisShape = new Shape({
       subShapes: subShapes,
       protoParent: this,
+      svgParent: this.svgParent,
       island: this
     })
     this.shape = thisShape
@@ -1684,13 +1718,13 @@ class Island extends ProtoLayer {
   }
   // #endregion
 
-  drawElement(look = this.testLook) {
-    this.svgElt
-      .style(CS.overflow, 'visible')
-      .look(look)
-      .size(this.insetSize.x, this.insetSize.y)
-      .position(this.insetAnchor.x, this.insetAnchor.y)
-  }
+  // drawElement(look = this.testLook) {
+  //   this.svgElt
+  //     .style(CS.overflow, 'visible')
+  //     .look(look)
+  //     .size(this.insetSize.x, this.insetSize.y)
+  //     .position(this.insetAnchor.x, this.insetAnchor.y)
+  // }
 }
 
 // CLASS: Shape
@@ -1714,7 +1748,7 @@ class Shape extends ProtoLayer {
   get testLook() { return Look.test(this.size, 'shape') }
 
   get cellBounds() { return this.island.cellBounds }
-  get boundsRect() { return this.island.boundsRect }
+  // get boundsRect() { return this.island.boundsRect }
 
   // get size() { return this.cellBounds.size }
 
@@ -1745,24 +1779,38 @@ class Shape extends ProtoLayer {
 
   assignID() { this.id = this.store.add(this) }
   assignElement() {
-    this.svgElt = createSVG(this.insetSize.x, this.insetSize.y)
-      .html(TestMode ? this.id : '')
-      .id(this.id)
+    this.svgElt = createSVGElt().id(this.id)
       .parent(this.svgParent)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
+      .layout(this.anchor.x - 5, this.anchor.y - 5, this.size.x + 10, this.size.y + 10)
+      .attribute(SVG.viewBox, `${this.anchor.x - 5} ${this.anchor.y - 5} ${this.size.x + 10} ${this.size.y + 10}`)
+    // .html(TestMode ? this.id : '')
   }
 
 
 
   drawElement(look = this.testLook) {
-    let path = createSVGElt('path')
+    const path = createSVGElt('path')
+
+
     path
       .attribute('d', this.svg)
-      .attribute('fill', '#0002')
-      .attribute('stroke', 'red')
-    // .attribute('stroke-width', '1')
-    // .attribute('stroke-dasharray', '10 20 30 20')
+      .attribute('fill', '#0000')
+      .attribute('stroke', 'lime')
+      .attribute('stroke-width', '5')
+      .attribute('stroke-linecap', 'round')
+      .attribute('overflow', 'auto')
+      .parent(this.svgElt)
+      .addToClassList(this.id)
+      .addToClassList(this.svgParent.elt.classList.value)
+      .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+
+    const length = path.elt.getTotalLength()
+
+    path
+      .attribute('pathLength', 'length')
+      .attribute('stroke-dasharray', `15 ${length / 1 - 15}`)
     // .attribute('stroke-linecap', 'round')
     // .attribute('overflow', 'hidden')
     // .attribute('width', `${this.cellBounds.size.x}`)
@@ -1775,21 +1823,18 @@ class Shape extends ProtoLayer {
     // let newOffset = this.protoParent.size.sub(this.cellBounds.size)
     // print(this.protoParent.size.sub(this.cellBounds.size))
 
+    // console.log('length', path.elt.getTotalLength())
+
     this.svgElt
-      .child(path)
-      // .look(look)
-      // .look(Look.islandShape(this.svgPath, this.testColor))
-      // .position(this.insetAnchor.x, this.insetAnchor.y)
-      .position(0 - this.cellBounds.anchor.x, 0 - this.cellBounds.anchor.y, 'absolute')
-      // .attribute('style', 'position: absolute')
-      // .position(this.insetAnchor.x, this.insetAnchor.y)
-      // .attribute(SVG.viewBox, `-29, -13, ${this.cellBounds.size.x + 58}, ${this.cellBounds.size.y + 26}`)
-      .attribute(
-        SVG.viewBox,
-        `${0}, ${0}, ${this.cellBounds.size.x + this.cellBounds.anchor.x}, ${this.cellBounds.size.y + this.cellBounds.anchor.y}`)
+      // .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+
+      // .position(0 - this.cellBounds.anchor.x, 0 - this.cellBounds.anchor.y, 'absolute')
+      // .attribute(
+      //   SVG.viewBox,
+      //   `${0}, ${0}, ${this.cellBounds.size.x + this.cellBounds.anchor.x}, ${this.cellBounds.size.y + this.cellBounds.anchor.y}`)
       .attribute('enable-background', 'accumulate')
 
-    this.testDrawVerts()
+    // this.testDrawVerts()
     // print(this)
     // print(this.size)
     // print(this.insetSize)
