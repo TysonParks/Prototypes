@@ -1,10 +1,10 @@
-//FUNC: p5 extension createElementNS(namespaceURI, qualifiedName)
+//PROTOTYPE: p5 extension createElementNS(namespaceURI, qualifiedName)
 p5.prototype.createElementNS = function (namespaceURI, qualifiedName) {
   let elt = document.createElementNS(namespaceURI, qualifiedName)
   return addElement(elt, this)
 }
 
-//FUNC: p5 extension createSVGElt(qualifiedName)
+//PROTOTYPE: p5 extension createSVGElt(qualifiedName)
 p5.prototype.createSVGElt = function (qualifiedName = 'svg', layout) {
   const elt = document.createElementNS(SVG.xmlns, qualifiedName)
   const p5Element = addElement(elt, this)
@@ -12,14 +12,14 @@ p5.prototype.createSVGElt = function (qualifiedName = 'svg', layout) {
   return p5Element
 }
 
-//FUNC: p5 extension createSVG(width, height)
+//PROTOTYPE: p5 extension createSVG(width, height)
 p5.prototype.createSVG = function (width, height) {
   return svg = createSVGElt()
     .attribute(SVG.width, `${width}`)
     .attribute(SVG.height, `${height}`)
 }
 
-//FUNC: p5.Element extension addToClassList(newClass)
+//PROTOTYPE: p5.Element extension addToClassList(newClass)
 p5.Element.prototype.addToClassList = function (newClass) {
   // print(`addToClassList():`)
   // print(newClass)
@@ -44,7 +44,7 @@ p5.Element.prototype.addToClassList = function (newClass) {
   return this
 }
 
-//FUNC: p5.Element extension addToClassList(newClass)
+//PROTOTYPE: p5.Element extension addToClassList(newClass)
 p5.Element.prototype.layout = function (x, y, width, height) {
   if (arguments.length === 1) {
     x = x.x
@@ -60,7 +60,7 @@ p5.Element.prototype.layout = function (x, y, width, height) {
   return this
 }
 
-// MARK: p5.Element extension 'type' property
+// PROTOTYPE: p5.Element extension 'type' property
 Object.defineProperty(p5.Element.prototype, 'type', {
   get: function () {
     if (this.elt instanceof HTMLElement) {
@@ -73,6 +73,7 @@ Object.defineProperty(p5.Element.prototype, 'type', {
   }
 })
 
+// PROTOTYPE: p5.Element extension 'p5Parent' property
 Object.defineProperty(p5.Element.prototype, 'p5Parent', {
   get: function () {
     const parentHTMLElement = this.parent()
@@ -82,7 +83,7 @@ Object.defineProperty(p5.Element.prototype, 'p5Parent', {
 
 
 
-//FUNC: p5.Element extension attributeNS(nameSpaceURI, attr, value)
+//PROTOTYPE: p5.Element extension attributeNS(nameSpaceURI, attr, value)
 p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
   //handling for checkboxes and radios to ensure options get
   //attributes not divs
@@ -167,7 +168,7 @@ function addElement(elt, pInst, media) {
 }
 
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
-//FUNC: p5.Element extension blur(radius)
+//PROTOTYPE: p5.Element extension blur(radius)
 p5.Element.prototype.blur = function (radius) {
   const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
   const [x, y, width, height] = viewBox
@@ -379,13 +380,13 @@ class ProtoFilter {
 Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides store,ID, and UID functionality
 
 
-//FUNC: p5.Element extension applyFilter(filterInstance, scale = 1)
+//PROTOTYPE: p5.Element extension applyFilter(filterInstance, scale = 1)
 p5.Element.prototype.applyFilter = function (filterInstance, scale = 2, time = 0) {
   filterInstance.applyFilterToElement(this, scale, time)
   return this
 }
 
-//FUNC: p5.Element extension applyFilter(filterInstance, scale = 1)
+//PROTOTYPE: p5.Element extension applyFilter(filterInstance, scale = 1)
 p5.prototype.crossfadeElements = async function (fromElement, toElement, duration, onComplete) {
   console.log('fromElement', fromElement)
   console.log('toElement', toElement)
