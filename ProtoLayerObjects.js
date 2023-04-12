@@ -72,8 +72,11 @@ class ProtoLayer {
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
+  //METH: 
   corner(direction) { return this.corners[direction.name] }
+  //METH: 
   side(direction) { return this.sides[direction.name] || "invalid" }
+  //METH: 
   anchorFor(size) {
     return Vertex.div(size, -2)
       .add(this.center)
@@ -82,12 +85,13 @@ class ProtoLayer {
   // #endregion
   // MARK: Setup Methods
   // #region Setup Methods
+  //METH: 
   finishSetup(store) {
     this.storeObject(store)
     this.assignElement()
     this.drawElement()
   }
-
+  //METH: 
   assignElement() {
     this.svgElt = createSVGElt().id(this.id)
       .parent(this.svgParent)
@@ -102,7 +106,7 @@ class ProtoLayer {
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
   }
-
+  //METH: 
   drawElement(look = this.testLook) {
     this.svgElt
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
@@ -125,11 +129,12 @@ class ProtoLayer {
 
     // if (this.islandID) { this.svgElt.look(Look.testCell(this.color)) }
   }
-
+  //METH: 
   resize() { this.drawElement() }
   // #endregion
   // MARK: Layer Grammar Methods
   // #region LayerGrammar Methods
+  //METH: 
   inset(amount) {
     this.insetAmount = amount
     this.drawElement()
@@ -138,6 +143,7 @@ class ProtoLayer {
 
   // #endregion
   // MARK: Static Methods
+  //METH: 
   static equal(a, b) { return a.uid === b.uid }
 }
 
@@ -172,6 +178,7 @@ class Frame extends ProtoLayer {
 
   // MARK: Setup Methods
   // #region Setup Methods
+  //METH: 
   assignElement() {
     this.bleed = createSVGElt().id('bleed')
       .parent(this.svgParent)
@@ -203,7 +210,7 @@ class Frame extends ProtoLayer {
 
     // this.testElementsSetup()
   }
-
+  //METH: 
   drawElement(look = this.testLook) {
     this.bleed
       .attribute('width', `${frameSize.x}`)
@@ -233,7 +240,7 @@ class Frame extends ProtoLayer {
 
     // this.testElementsDraw()
   }
-
+  //METH: 
   testElementsSetup() {
     this.testRect = createSVGElt('rect').id('testRect')
     this.testCircle1 = createSVGElt('circle').id('testCircle1')
@@ -244,7 +251,7 @@ class Frame extends ProtoLayer {
     this.dropShadow2 = createFilter()
     this.dropShadow3 = createFilter()
   }
-
+  //METH: 
   testElementsDraw() {
     //COLORIZED
     // const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: false };
@@ -519,6 +526,7 @@ class SelectionBounds {
   get centroid() { return Vertex.mult(this.cellsCentroid, this.cellSize) }
 
   // TODO: try adding selection and bounds parameters and then feeding them transformed matrices
+  //METH: 
   innerCellIslands({ taken = true, stored = false, direction = Direction.Horizontal } = {}) {
     return this.grid.findIslands({
       selection: taken ? this.selection : this.availableCells,
@@ -538,7 +546,7 @@ class SelectionBounds {
     return this.innerCellIslands({ taken: this.isMostlyAvailable, stored: false, direction: Direction.Vertical })
   }
 
-  // MARK: Encoder methods
+  // MARK: Encoder properties 
   // #region Encoder methods
   //NOTE:https://pressbooks.library.upei.ca/statics/chapter/centre-of-mass-composite-shapes/
   get centerOfMass() {
@@ -595,6 +603,33 @@ class SelectionBounds {
 
   get encoderCells() { return this.grid.cellRowsRotated(this.boundCellRows, this.encoderRotDegrees) }
 
+  get encodingCosts() {
+    return vert(
+      this.encodingCellCount - this.encodingWeight('horizontal'),
+      this.encodingCellCount - this.encodingWeight('vertical')
+    )
+  }
+
+  get encodingEfficiency() {
+    return min(this.encodingCosts.x, this.encodingCosts.y) / (this.cellBoundsCount * 2)
+  }
+
+  get encodingCellCount() { return this.isMostlyTaken ? this.availableCount : this.selectionCount }
+
+  get encodedShape() {
+    let cells
+    if (this.isMostlyTaken) { cells = this.availableCells }
+    else { cells = this.selection }
+
+    // const horCellLines = this.innerCellIslands()
+    const horCellLines = this.horCellIslands
+    // print(horCellLines)
+    const vertCellLines = this.vertCellIslands
+    // print(vertCellLines)
+  }
+
+  // MARK: Encoder methods 
+  //METH: 
   encodingWeight(direction) {
     if (this.isFull) { return 0 }
     let name
@@ -645,31 +680,6 @@ class SelectionBounds {
     // print(``)
     return islandSavings - skips
   }
-
-  get encodingCosts() {
-    return vert(
-      this.encodingCellCount - this.encodingWeight('horizontal'),
-      this.encodingCellCount - this.encodingWeight('vertical')
-    )
-  }
-
-  get encodingEfficiency() {
-    return min(this.encodingCosts.x, this.encodingCosts.y) / (this.cellBoundsCount * 2)
-  }
-
-  get encodingCellCount() { return this.isMostlyTaken ? this.availableCount : this.selectionCount }
-
-  get encodedShape() {
-    let cells
-    if (this.isMostlyTaken) { cells = this.availableCells }
-    else { cells = this.selection }
-
-    // const horCellLines = this.innerCellIslands()
-    const horCellLines = this.horCellIslands
-    // print(horCellLines)
-    const vertCellLines = this.vertCellIslands
-    // print(vertCellLines)
-  }
   // #endregion
 }
 
@@ -703,13 +713,17 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
+  //METH: 
   cellAnchor(x, y) { return Vertex.mult(this.cellSize, vert(x, y)).add(this.insetAnchor) }
-
+  //METH: 
   index(x, y) { return gridPointIndex(x, y, this.gridSize.x) }
+  //METH: 
   coords(index) { return gridCoords(index, this.gridSize.x) }
+  //METH: 
   coordsAreInBounds(x, y, bounds = this.cellBounds()) {
     return bounds.xCellMin <= x && x <= bounds.xCellMax && bounds.yCellMin <= y && y <= bounds.yCellMax
   }
+  //METH: 
   coordsAreInGrid(x, y) {
     // print('coordsAreInGrid x')
     // print(x)
@@ -720,19 +734,27 @@ class Grid extends ProtoLayer {
     // print(result)
     return result
   }
+  //METH: 
   cellAtCoords(x, y) { if (this.coordsAreInGrid(x, y)) { return this.cellAt(this.index(x, y)) } }
+  //METH: 
   groupNamed(name) { return this.groups.find(e => e.id === name) || null }
+  //METH: 
   islandNamed(name) { return this.islands.find(e => e.id === name) || null }
   // #endregion
   // MARK: CellIndex Methods
   // #region CellIndex Methods
+  //METH: 
   cellAt(cellIndex) { return this.cells.find(e => e.index === cellIndex) }
-
+  //METH: 
   rowContaining(cellIndex) { return this.cellRows[this.coords(cellIndex).y] }
+  //METH: 
   columnContaining(cellIndex) { return this.cellColumns[this.coords(cellIndex).x] }
+  //METH: 
   rowContains(rowIndex, cellIndex) { return this.coords(cellIndex).y === rowIndex }
+  //METH: 
   columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }
 
+  //METH: 
   cellSegmentBetween(indexA, indexB) {
     const indices = [indexA, indexB].sort((a, b) => a - b)
     // print(indices)
@@ -768,7 +790,7 @@ class Grid extends ProtoLayer {
       return seg
     }
   }
-
+  //METH: 
   cellSpanRowsBetween(indexA, indexB) {
     const indices = [indexA, indexB].sort((a, b) => a - b)
     // print(indices)
@@ -784,9 +806,9 @@ class Grid extends ProtoLayer {
     }
     return rows
   }
-
+  //METH: 
   cellSpanBetween(indexA, indexB) { return this.cellSpanRowsBetween(indexA, indexB).flat() }
-
+  //METH: 
   neighbor(cellIndex, direction) {
     // print('')
     // print(cellIndex)
@@ -796,14 +818,15 @@ class Grid extends ProtoLayer {
       return this.cells.find(e => e.coords.equals(coords))
     } else { return }
   }
-
+  //METH: 
   neighborIsAvailable(cellIndex, direction) {
     let neighbor = this.neighbor(cellIndex, direction)
     if (neighbor) { return neighbor.available }
     return false
   }
+  //METH: 
   neighborIsTaken(cellIndex, direction) { return !this.neighborIsAvailable(cellIndex, direction) }
-
+  //METH: 
   neighborIsInIsland(cellIndex, direction, islandID) {
     // print('neighborIsInIsland')
     // print(cellIndex)
@@ -813,13 +836,13 @@ class Grid extends ProtoLayer {
     if (neighbor) { return neighbor.islandIDs.has(islandID) }
     return false
   }
-
+  //METH: 
   neighborIsInGroup(cellIndex, direction, groupID) {
     let neighbor = this.neighbor(cellIndex, direction)
     if (neighbor) { return neighbor.groupID === groupID }
     return false
   }
-
+  //METH: 
   exposedDirections({ cellIndex, groupID, islandID } = {}) {
     // print('exposedDirections')
     // print(cellIndex)
@@ -836,7 +859,7 @@ class Grid extends ProtoLayer {
     }
     return Direction.All.directions.filter(e => !this.neighborIsAvailable(cellIndex, e))
   }
-
+  //METH: 
   //TODO: add sort??
   exposedSides({ cellIndex, groupID, islandID } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID })
@@ -844,6 +867,7 @@ class Grid extends ProtoLayer {
       .map(f => this.cellAt(cellIndex).side(f))
 
   }
+  //METH: 
   //TODO: add sort??
   exposedCorners({ cellIndex, groupID, islandID } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID })
@@ -851,7 +875,7 @@ class Grid extends ProtoLayer {
       .map(f => this.cellAt(cellIndex).corner(f))
     // .sort((a, b) => a.y - b.y || a.x - b.x)
   }
-
+  //METH: 
   cellIsIsolated({ cellIndex, groupID, islandID, directions = Direction.Cardinal.directions } = {}) {
     // print('cellIsIsolated')
     // print(cellIndex)
@@ -867,7 +891,7 @@ class Grid extends ProtoLayer {
     // print(result)
     return result
   }
-
+  //METH: 
   vertNormals({ cellIndex, groupID, islandID, directions = Direction.Ordinal.directions } = {}) {
     return directions.map(e => {
       const adj = OpArray.from(e.adjacents)
@@ -891,18 +915,20 @@ class Grid extends ProtoLayer {
       return e
     })
   }
-
+  //METH: 
   neighbors(cellIndex) { return Direction.All.directions.map(e => this.neighbor(cellIndex, e)) }
+  //METH: 
   availableNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(e => e.available) }
+  //METH: 
   takenNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(e => e.taken) }
   // #endregion
   // MARK: Selection Methods
   // #region Selection Methods
-
+  //METH: 
   cellBounds({ selection = this.cells, groupID, islandID } = {}) {
     return new SelectionBounds({ selection: selection, grid: this, groupID: groupID, islandID: islandID })
   }
-
+  //METH: 
   validNeighbors({ selection = this.cells, bounds = this.cellBounds(), directions = Direction.All.directions } = {}) {
     // print('validNeighbors selection')
     // print(selection)
@@ -917,19 +943,19 @@ class Grid extends ProtoLayer {
     // print(cells)
     return cells
   }
-
+  //METH: 
   allExposedSides({ selection, groupID, islandID } = {}) {
     return selection
       .flatMap(e => this.exposedSides({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
       .sort((a, b) => a.verts.start.y - b.verts.start.y || a.verts.start.x - b.verts.start.x) // sort by y, x 
   }
-
+  //METH: 
   allExposedCorners({ selection, groupID, islandID } = {}) {
     return selection
       .flatMap(e => this.exposedCorners({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
       .sort((a, b) => a.y - b.y || a.x - b.x) // sort by y, x 
   }
-
+  //METH: 
   allVertNormals({ selection, groupID, islandID } = {}) {
     return selection
       .flatMap(e => this.vertNormals({ cellIndex: e, groupID: groupID, islandID: islandID }))
@@ -938,7 +964,7 @@ class Grid extends ProtoLayer {
   //TODO: add transform functionality
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
-
+  //METH: findIslands()
   findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, direction = Direction.All, taken = true, stored = true } = {}) {
     let cells
     if (!groupID && !islandID) {
@@ -1032,14 +1058,14 @@ class Grid extends ProtoLayer {
     // }
   }
   // #endregion
-  // TODO: deprecate
-  // drawCellsAsDivs() { return this.cells.map(e => { return e.drawCellAsDiv(Look.testCell()) }) }
 
   // MARK: Setup Methods
   // #region Setup Methods
+  //METH:
   cellRowsRotated(selection = this.cellRows, degree = 90) { return selection.rotated2D(normalizeDegree(degree)) }
+  //METH:
   cellRowsFlipped(selection = this.cellRows, direction = "negOrdinal") { return selection.flipped2D(direction) }
-
+  //METH:
   #createRowsArray() {
     let size = this.gridSize
     let rows = new OpArray(size.y)
@@ -1060,11 +1086,11 @@ class Grid extends ProtoLayer {
     }
     return OpArray.from(rows)
   }
-
   // #endregion
 
   // MARK: Grid Grammar Ops
   // #region Grid Grammar Ops
+  //METH:
   insetCells(amount, groupID) {
     let cells
     // print(this.cells.map(e => e.groupID))
@@ -1073,6 +1099,7 @@ class Grid extends ProtoLayer {
     // print(cells)
     cells.forEach(e => e.inset(amount))
   }
+  //METH:
   randomComb({
     keepRange = range(2, 7),
     dropRange = range(2, 7),
@@ -1081,27 +1108,27 @@ class Grid extends ProtoLayer {
     let selection = this.availableCells.randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
     this.assign(selection)
   }
-
+  //METH:
   comb({ keep = 2, drop = 1, start = 0 } = {}) {
     this.randomComb({ keepRange: range(keep, keep), dropRange: range(drop, drop), start: start })
   }
-
+  //METH:
   randGroup(amount) {
     let selection = this.availableCells.randReduce(amount)
     this.assign(selection)
   }
-
+  //METH:
   groupAvail() {
     let selection = this.availableCells
     this.assign(selection)
   }
-
+  //METH:
   outlineGroup(num) {
     // let selection = this.validNeighbors(this.groups[num].cells)
     let selection = this.groups[num].validNeighbors
     this.assign(selection)
   }
-
+  //METH:
   outlineTaken(direction = Direction.All) {
     let selection = this.validNeighbors({ selection: this.takenCells, directions: direction.directions })
     this.assign(selection)
@@ -1110,6 +1137,7 @@ class Grid extends ProtoLayer {
 
   // MARK: General Grammar Methods
   // #region General Grammar Methods
+  //METH:
   assign(selection, group) {
     if (!group) { group = new CellGroup(this, this.svgElt, this) }
     group.cells = selection
@@ -1117,7 +1145,7 @@ class Grid extends ProtoLayer {
     this.groups.push(group)
     this.updateCells({ groupID: group.id })
   }
-
+  //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
   updateCells({ groupID, islandID } = {}) {
     let groups, islands
@@ -1131,7 +1159,7 @@ class Grid extends ProtoLayer {
     // console.log('islands', islands)
     islands.forEach(island => this.updateIsland(island))
   }
-
+  //METH:
   updateGroup(group) {
     group.cells.forEach(cell => {
       let thisCell = this.cells[cell.index]
@@ -1140,7 +1168,7 @@ class Grid extends ProtoLayer {
       thisCell.color = group.color
     })
   }
-
+  //METH:
   updateIsland(island) {
     island.cells.forEach(cell => {
       let thisCell = this.cells[cell.index]
@@ -1152,6 +1180,7 @@ class Grid extends ProtoLayer {
   }
   // #endregion
 
+  // FIXME: DEPRECATE!!!
   // MARK: Setup Methods
   // #region Setup Methods
   // assignElement() {
@@ -1163,7 +1192,7 @@ class Grid extends ProtoLayer {
   //   //   document.body.appendChild(this.svgElt.elt)
   //   // }
   // }
-
+  //METH:
   // drawElement(look = this.testLook) {
   // this.svgElt
   // .look(look)
@@ -1180,7 +1209,7 @@ class Grid extends ProtoLayer {
 
   // this.testElements()
   // }
-
+  //METH:
   testElements() {
     let gridRect = createSVGElt('rect').id('gridRect')
       // .attribute(SVG.viewBox, `0 0 100 200`)
@@ -1241,14 +1270,16 @@ class CellGroup extends ProtoLayer {
   // MARK: Geometry Methods
   // #region Geometry Methods
   //TODO: migrate these methods to cell, grid, or maybe even ProtoLayer???
+  //METH:
   exposedDirections(cellIndex) { return this.grid.exposedDirections({ cellIndex: cellIndex, groupID: this.id }) }
+  //METH:
   exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, groupID: this.id }) }
+  //METH:
   exposedCorners(cellIndex) { return this.grid.exposedCorners({ cellIndex: cellIndex, groupID: this.id }) }
+  //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
     this.grid.cellIsIsolated({ cellIndex: cellIndex, groupID: this.id, directions: directions })
   }
-
-
   // #endregion
   // MARK: Grammar Methods
   // TODO: Review these methods... probably most need migrated!
@@ -1353,6 +1384,7 @@ class Cell extends ProtoLayer {
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
+  //METH:
   neighborCoords(direction) {
     // print('neighborCoords direction')
     // print(direction)
@@ -1363,6 +1395,7 @@ class Cell extends ProtoLayer {
     // print(result)
     return result
   }
+  //METH:
   allNeighborsCoords(directions = Direction.All.directions) {
     // print('allNeighborsCoords directions')
     // print(directions)
@@ -1371,6 +1404,7 @@ class Cell extends ProtoLayer {
     // print(result)
     return result
   }
+  //METH:
   validNeighborsCoords(directions = Direction.All.directions, bounds = this.grid.cellBounds,) {
     // print('validNeighborCoords directions')
     // print(directions)
@@ -1380,7 +1414,7 @@ class Cell extends ProtoLayer {
     return result
   }
   // #endregion
-
+  //METH:
   drawElement(look = this.testLook) {
     this.svgElt
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
@@ -1483,6 +1517,7 @@ class Island extends ProtoLayer {
   // MARK: Methods
   // #region Methods
   // TODO: finish fixing final bugs
+  //METH:
   createShape() {
     let segments = OpArray.format(this.exposedSegments)
     let subShapes = new OpArray
@@ -1636,19 +1671,18 @@ class Island extends ProtoLayer {
     // print(`END Shape Test`)
 
   }
-
-
+  //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
     return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, directions: directions })
   }
-
+  //METH:
   exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, islandID: this.id }) }
-
+  //METH:
   assignNormals() {
 
   }
   // #endregion
-
+  //METH:
   // drawElement(look = this.testLook) {
   //   this.svgElt
   //     .style(CS.overflow, 'visible')
@@ -1692,6 +1726,8 @@ class Shape extends ProtoLayer {
   get svgPath() { return `path('${this.svg.join(' ')}')` }
   get extractedVerts() { return extractVerts(this.svg) }
 
+  // MARK: methods
+  //METH:
   createTurns(segments) {
     print('segments')
     print(segments)
@@ -1707,8 +1743,9 @@ class Shape extends ProtoLayer {
     })
     return turns
   }
-
+  //METH:
   assignID() { this.id = this.store.add(this) }
+  //METH:
   assignElement() {
     this.svgElt = createSVGElt().id(this.id)
       .parent(this.svgParent)
@@ -1719,8 +1756,7 @@ class Shape extends ProtoLayer {
     // .html(TestMode ? this.id : '')
   }
 
-
-
+  //METH:
   drawElement(look = this.testLook) {
     const path = createSVGElt('path')
 
@@ -1770,7 +1806,7 @@ class Shape extends ProtoLayer {
     // print(this.size)
     // print(this.insetSize)
   }
-
+  //METH:
   testDrawVerts() {
     if (!this.testVerts) {
       this.testVerts = drawPointsAtVerts({
@@ -1783,9 +1819,12 @@ class Shape extends ProtoLayer {
 
     if (testingControls.shapeVerts) { this.testVerts.forEach(e => e.show()) }
     else { this.testVerts.forEach(e => e.hide()) }
-
   }
 }
+
+
+
+
 
 
 
