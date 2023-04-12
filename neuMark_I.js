@@ -49,21 +49,81 @@ p5.Element.prototype.look = function (look = Look.testGrid, html) {
   return this
 }
 
-// PROTOTYPE: p5.Element.prototype.look()
-p5.Element.prototype.SVGlook = function (svgLook) {
+
+
+// PROTOTYPE: p5.Element.prototype.label(text, color, direction)
+p5.Element.prototype.label = function (text, color, direction) {
+  const labelText = createSVGElt("text");
+  labelText.html(text);
+  labelText.style("fill", color);
+
+  const parentBBox = this.elt.getBBox();
+
+  const xFactor = direction.isNone ? 0.5 : Math.cos(direction.angle);
+  const yFactor = direction.isNone ? 0.5 : Math.sin(direction.angle);
+
+  const x = parentBBox.x + (parentBBox.width * (xFactor + 1)) / 2;
+  const y = parentBBox.y + (parentBBox.height * (yFactor + 1)) / 2;
+
+  labelText.attribute("x", x);
+  labelText.attribute("y", y);
+  labelText.attribute("text-anchor", "middle");
+  labelText.attribute("dominant-baseline", "central");
+
+  this.child(labelText);
+  return this;
+}
+
+// PROTOTYPE: p5.Element.prototype.SVGlook()
+p5.Element.prototype.svgLook = function (svgLook) {
   if (svgLook instanceof Array) {
-    const lookOp = OpArray.from(svgLook).compacted
+    let lookOp = OpArray.from(svgLook).compacted
+    if (svgLook[0][0] instanceof Array) {
+      lookOp = lookOp.reduce((acc, val) => acc.concat(val), [])
+    }
     lookOp.forEach(e => this.attribute(e[0], e[1]))
   }
   return this
 }
 
 
-
 // CLASS: SVGLook
 class SVGLook {
-  static testOutline(color, width) { }
-  static neuShade() { }
+  static testStroke(color = ProtoColor.randomHighHue(), opacity = 1, radius = 5) {
+    return [
+      ['stroke', color],
+      ['stroke-opacity', `${opacity}`],
+      ['stroke-width', '.5'],
+      // ['pathLength', '360'],
+      ['stroke-dasharray', `0 2`],
+      ['stroke-linecap', 'round'],
+      ['stroke-linejoin', 'round'],
+      ['rx', `${radius}`],
+      ['ry', `${radius}`],
+      ['fill-opacity', '0'],
+    ]
+  }
+
+  static testFill(color = ProtoColor.randomHighHue(), opacity = 1) {
+    return [
+      ['fill', color],
+      ['fill-opacity', `${opacity}`],
+    ]
+  }
+
+  static test(strokeColor, fillColor, opacity = .5, radius = 5) {
+    return [SVGLook.testStroke(strokeColor, 1, radius), SVGLook.testFill(fillColor, `${opacity}`)]
+  }
+
+  static neuShade({
+    baseCol = protoColor(230),
+    vector = globalShadowVector(),
+    start = globalControls.start,
+    spread = globalControls.spread,
+    inset = globalControls.inset,
+  } = {}) {
+
+  }
   static blackAndWhite() { }
 }
 
