@@ -49,6 +49,25 @@ p5.Element.prototype.look = function (look = Look.testGrid, html) {
   return this
 }
 
+// PROTOTYPE: p5.Element.prototype.look()
+p5.Element.prototype.SVGlook = function (svgLook) {
+  if (svgLook instanceof Array) {
+    const lookOp = OpArray.from(svgLook).compacted
+    lookOp.forEach(e => this.attribute(e[0], e[1]))
+  }
+  return this
+}
+
+
+
+// CLASS: SVGLook
+class SVGLook {
+  static testOutline(color, width) { }
+  static neuShade() { }
+  static blackAndWhite() { }
+}
+
+
 // CLASS: Look
 class Look {
 
