@@ -177,12 +177,41 @@ function setupBackground() {
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
-  F.inset(0.9)
+  // F.inset(.95)
   let gridX = R.random_int(2, 10)
-  gridX = 3
+  // gridX = 5
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
+  // grid = new Grid(F, { x: 1, y: 2 })
 
-  // grid.inset(0.9)
+  grid.inset(0.9)
+  grid.insetCells(0.4)
+
+  // let grid2 = new Grid(grid.cells[0], { x: 2, y: 2 })
+  // grid2.insetCells(0.9)
+
+  // let grid3 = new Grid(grid.cells[1], { x: 3, y: 1 })
+  // grid3.insetCells(0.7)
+
+  // let grid4 = new Grid(grid3.cells[1], { x: 1, y: 4 })
+  // grid4.insetCells(0.5)
+
+  // grid.randGroup(0.5)
+  grid.randomComb()
+  // grid.outlineTaken(Direction.Right)
+
+  console.log('group01', grid.groups[0])
+  console.log('group01-cells', grid.groups[0].cells.map(e => e.id))
+  console.log('group01-cellBounds', grid.groups[0].cellBounds)
+  // grid.outlineTaken(Direction.All)
+  // grid.groups[0].inset(0.9)
+
+  grid.findIslands({
+    selection: grid.cells,
+    // groupID: 'grp000',
+    direction: Direction.Cardinal,
+  })
+
+  grid.islands.forEach(e => e.createShape())
 
   console.log('parentID', F.parentID)
 
