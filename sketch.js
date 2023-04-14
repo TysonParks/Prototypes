@@ -69,16 +69,16 @@ function setup() {
 
   // setInterval(displayFrameRate, 100)
 
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
+  redrawAll()
+  redrawAll()
+  redrawAll()
+  redrawAll()
+  redrawAll()
+  redrawAll()
+  redrawAll()
+  redrawAll()
+  redrawAll()
+  redrawAll()
 }
 
 // MARK: DRAWING FUNCS
@@ -209,9 +209,9 @@ function gridTests2() {
   // grid.randomComb()
   // grid.outlineTaken(Direction.Right)
 
-  console.log('group01', grid.groups[0])
-  console.log('group01-cells', grid.groups[0].cells.map(e => e.id))
-  console.log('group01-cellBounds', grid.groups[0].cellBounds)
+  // console.log('group01', grid.groups[0])
+  // console.log('group01-cells', grid.groups[0].cells.map(e => e.id))
+  // console.log('group01-cellBounds', grid.groups[0].cellBounds)
   // grid.outlineTaken(Direction.All)
   // grid.groups[0].inset(0.9)
 
