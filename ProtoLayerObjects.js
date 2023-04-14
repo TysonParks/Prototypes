@@ -26,12 +26,27 @@ class ProtoLayer {
     this.assignUID()
   }
 
+  // MARK: View Properties
+  // #region View Properties
+  get padding() { return 5 }
+
+  get testLook() { return SVGLook.test() }
+  get blackLook() { }
+  get protoLook() { return SVGLook.clear }
+  get testColor() { return protoColor(0, 230, 230, 1) }
+
+  get look() {
+    const clear = SVGLook.clear
+    const stroke = testingControls.borders ? SVGLook.testStroke() : []
+    const fill = testingControls.testColors ? SVGLook.testFill() : []
+    const black = testingControls.blackMode ? SVGLook.blackAndWhite : []
+
+    return [clear, stroke, fill, black]
+  }
+  // #endregion
   // MARK: Computed Properties
   // #region Computed Properties
   get parentID() { return this.protoParent?.id ?? this.svgParent.id() }
-
-  get testLook() { return Look.test(this.size, 'frame') }
-  get testColor() { return protoColor(0, 230, 230, 1) }
 
   get boundsRect() { return this.protoParent?.insetBoundsRect }
 
@@ -97,8 +112,9 @@ class ProtoLayer {
       .parent(this.svgParent)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
-      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
-      .attribute(SVG.viewBox, `${this.anchor.x - 5} ${this.anchor.y - 5} ${this.size.x + 10} ${this.size.y + 10}`)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
+      .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
+
     // .label('test', 'red', Direction.Up)
 
     this.rect = createSVGElt('rect').id(`${this.id}-frontRect`)
@@ -108,31 +124,15 @@ class ProtoLayer {
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
     // .label('test', 'red', Direction.None)
 
-
   }
   //METH: 
-  drawElement(look = this.testLook) {
+  drawElement() {
     this.svgElt
-      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
-      .attribute(SVG.viewBox, `${this.anchor.x} ${this.anchor.y} ${this.size.x} ${this.size.y}`)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
+      .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
 
     this.rect
-      .svgLook(SVGLook.testStroke())
-
-      // .attribute('fill', this.testColor)
-      // .attribute('fill-opacity', '1')
-      // .attribute('stroke', 'magenta')
-      // .attribute('stroke-opacity', '1')
-      // .attribute('stroke-width', '.5')
-
-      // .attribute('pathLength', '360')
-      // .attribute('stroke-dasharray', `${180 / 45} `)
-      // .attribute('stroke-linejoin', 'round')
-      // .attribute('stroke-linecap', 'round')
-
-      // .attribute('rx', `${3}`)
-      // .attribute('ry', `${3}`)
-
+      .svgLook(this.look)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
 
     // if (this.islandID) { this.svgElt.look(Look.testCell(this.color)) }
@@ -181,8 +181,15 @@ class Frame extends ProtoLayer {
 
   get cornerRadius() { return 5 }
 
+  get look() { return SVGLook.clear }
   get testLook() { return Look.test(this.size, 'frame') }
   get testColor() { return protoColor(200, 200, 200) }
+  get bleedLook() {
+    return [
+      [CS.border, testingControls.borders ? '1px dashed orange' : 'none'],
+      [CS.borderRadius, testingControls.borders ? '50px' : '0px']
+    ]
+  }
 
   // MARK: Setup Methods
   // #region Setup Methods
@@ -190,61 +197,38 @@ class Frame extends ProtoLayer {
   assignElement() {
     this.bleed = createSVGElt().id('bleed')
       .parent(this.svgParent)
-      .attribute(SVG.viewBox, `-5 -10 110 220`)
+      .viewBox(-5, -10, 110, 220)
       .attribute('preserveAspectRatio', 'xMidyMid')
       .attribute('width', `${frameSize.x}`)
       .attribute('height', `${frameSize.y}`)
-      .style(CS.border, '1px dashed blue')
-    // .style(CS.borderRadius, '50px')
-    // .addToClassList(this.id)
-    // .addToClassList(this.svgParent.elt.classList.value)
 
-    this.svgElt = createSVGElt().id(this.id)
+    super.assignElement()
+
+    this.svgElt
       .parent(this.bleed)
-      .attribute(SVG.viewBox, `0 0 100 200`)
-      .addToClassList(this.id)
-      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
 
     this.frameRect = createSVGElt('rect').id(`${this.id}-backRect`)
       .parent(this.svgElt)
       .addToClassList(this.id)
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
 
-    this.rect = createSVGElt('rect').id(`${this.id}-frontRect`)
-      .parent(this.svgElt)
-      .addToClassList(this.id)
-      .addToClassList(this.svgParent.elt.classList.value)
-      .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
-
     // this.testElementsSetup()
   }
   //METH: 
-  drawElement(look = this.testLook) {
+  drawElement() {
     this.bleed
       .attribute('width', `${frameSize.x}`)
       .attribute('height', `${frameSize.y}`)
+      .look(this.bleedLook)
+
+    super.drawElement()
 
     this.frameRect
-      // .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
       .attribute('rx', `${this.cornerRadius}`)
       .attribute('ry', `${this.cornerRadius}`)
-      .attribute(`fill`, protoColor(63, 63, 255))
+      .attribute(`fill`, protoColor(230))
       .attribute('fill-opacity', '1')
-
-    this.rect
-      // .look(look)
-      .attribute('fill', this.testColor)
-      .attribute('fill-opacity', '1')
-      .attribute('stroke', 'magenta')
-      .attribute('stroke-opacity', '1')
-      .attribute('stroke-width', '.5')
-      .attribute('pathLength', '360')
-      .attribute('stroke-dasharray', `${180 / 45} `)
-      .attribute('stroke-linejoin', 'round')
-      .attribute('stroke-linecap', 'round')
-      .attribute('rx', `${10}`)
-      .attribute('ry', `${10}`)
-      .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
 
     // this.testElementsDraw()
   }
@@ -1066,7 +1050,6 @@ class Grid extends ProtoLayer {
     // }
   }
   // #endregion
-
   // MARK: Setup Methods
   // #region Setup Methods
   //METH:
@@ -1095,7 +1078,6 @@ class Grid extends ProtoLayer {
     return OpArray.from(rows)
   }
   // #endregion
-
   // MARK: Grid Grammar Ops
   // #region Grid Grammar Ops
   //METH:
@@ -1142,7 +1124,6 @@ class Grid extends ProtoLayer {
     this.assign(selection)
   }
   // #endregion
-
   // MARK: General Grammar Methods
   // #region General Grammar Methods
   //METH:
@@ -1185,55 +1166,6 @@ class Grid extends ProtoLayer {
         thisCell.color = island.color
       }
     })
-  }
-  // #endregion
-
-  // FIXME: DEPRECATE!!!
-  // MARK: Setup Methods
-  // #region Setup Methods
-  // assignElement() {
-  //   // if (this.parentIsBody) {
-  //   this.svgElt = createSVGElt().id(this.id)
-  //     .parent(this.svgParent)
-  //     .addToClassList(this.id)
-  //     .addToClassList(this.svgParent.elt.classList.value)
-  //   //   document.body.appendChild(this.svgElt.elt)
-  //   // }
-  // }
-  //METH:
-  // drawElement(look = this.testLook) {
-  // this.svgElt
-  // .look(look)
-  // .attribute(SVG.viewBox, `0 0 100 200`)
-  // .attribute('preserveAspectRatio', 'xMidyMid')
-  // .attribute('x', `${0}`)
-  // .attribute('y', `${0}`)
-  // .attribute('width', `${100}`)
-  // .attribute('height', `${200}`)
-  // .attribute('fill', 'red')
-  // .attribute('stroke', 'blue')
-  // .attribute('style', 'fill : green')
-  // .style(CS.border, '1px dashed blue')
-
-  // this.testElements()
-  // }
-  //METH:
-  testElements() {
-    let gridRect = createSVGElt('rect').id('gridRect')
-      // .attribute(SVG.viewBox, `0 0 100 200`)
-      .attribute('preserveAspectRatio', 'xMidyMid')
-      .attribute('x', `${0}`)
-      .attribute('y', `${0}`)
-      .attribute('width', `${100}`)
-      .attribute('height', `${200}`)
-      .attribute('rx', `${30}`)
-      .attribute('ry', `${30}`)
-      .attribute('fill-opacity', '.5')
-      .attribute('fill', 'cyan')
-      .attribute('stroke', 'red')
-      // .attribute('stroke-width', '.5')
-      .attribute('stroke-opacity', '.5')
-      .parent(this.svgElt)
   }
   // #endregion
 }
@@ -1380,6 +1312,15 @@ class Cell extends ProtoLayer {
   get anchor() { return this.grid.cellAnchor(this.coords.x, this.coords.y) }
   get size() { return this.grid.cellSize }
 
+  get look() {
+    const clear = SVGLook.clear
+    const stroke = testingControls.borders ? SVGLook.testStroke() : []
+    const fill = testingControls.testColors ? SVGLook.testFill() : []
+    const black = testingControls.blackMode ? SVGLook.blackAndWhite : []
+
+    return [clear, stroke, fill, black]
+  }
+
   get testLook() {
     // return Look.neuShade()
     return Look.test(this.size, 'cell')
@@ -1422,16 +1363,15 @@ class Cell extends ProtoLayer {
     return result
   }
   // #endregion
+  // MARK: Setup Methods
   //METH:
-  drawElement(look = this.testLook) {
-    this.svgElt
-      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
-      .attribute(SVG.viewBox, `${this.anchor.x} ${this.anchor.y} ${this.size.x} ${this.size.y}`)
+  drawElement() {
+    super.drawElement()
 
     this.rect
       .attribute('rx', `${3}`)
       .attribute('ry', `${3}`)
-      .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+
 
     // super(this.drawElement(look))
     if (this.taken) {
@@ -1446,6 +1386,9 @@ class Cell extends ProtoLayer {
         .attribute('fill', 'orange')
         .attribute('fill-opacity', '0.25')
     }
+
+    this.rect
+      .svgLook(this.look)
   }
 }
 
@@ -1759,8 +1702,12 @@ class Shape extends ProtoLayer {
       .parent(this.svgParent)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
-      .layout(this.anchor.x - 5, this.anchor.y - 5, this.size.x + 10, this.size.y + 10)
-      .attribute(SVG.viewBox, `${this.anchor.x - 5} ${this.anchor.y - 5} ${this.size.x + 10} ${this.size.y + 10}`)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
+      .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
+    // .layout(this.anchor.x - 5, this.anchor.y - 5, this.size.x + 10, this.size.y + 10)
+    // .viewBox(this.anchor.x - 5, this.anchor.y - 5, this.size.x + 10, this.size.y + 10)
+    // .layout(this.anchor.x - 10, this.anchor.y - 10, this.size.x + 20, this.size.y + 20)
+    // .viewBox(this.anchor.x - 10, this.anchor.y - 10, this.size.x + 20, this.size.y + 20)
     // .html(TestMode ? this.id : '')
   }
 
@@ -1769,11 +1716,16 @@ class Shape extends ProtoLayer {
     const path = createSVGElt('path')
 
 
+
     path
       .attribute('d', this.svg)
-      .attribute('fill', '#0000')
-      .attribute('stroke', 'lime')
-      .attribute('stroke-width', '5')
+      // .attribute('fill', '#0001')
+      .attribute('fill', ProtoColor.randomHighHue())
+      .attribute('fill-opacity', '0.2')
+      // .attribute('stroke', ProtoColor.randomHighHue())
+      .attribute('stroke', 'black')
+      .attribute('stroke-opacity', '1')
+      // .attribute('stroke-width', `${R.random_num(.01, 2)}`)
       .attribute('stroke-linecap', 'round')
       .attribute('stroke-linejoin', 'round')
       .attribute('overflow', 'auto')
@@ -1783,10 +1735,17 @@ class Shape extends ProtoLayer {
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
 
     const length = path.elt.getTotalLength()
+    const dashLength = R.random_int(0, 20)
+    const dashWidth = (20 - dashLength) / 4
+    const loopCount = R.random_int(0, 10)
+    // const loopCount = 10
+    const offset = R.random_num(0, 5)
 
     path
       .attribute('pathLength', 'length')
-      .attribute('stroke-dasharray', `25 ${length / 2 - 25}`)
+      .attribute('stroke-dasharray', `${dashLength} ${length / loopCount - dashLength}`)
+      .attribute('stroke-width', `${dashWidth}`)
+      .attribute('stroke-dashoffset', `${offset}`)
     // .attribute('stroke-linecap', 'round')
     // .attribute('overflow', 'hidden')
     // .attribute('width', `${this.cellBounds.size.x}`)
@@ -1802,12 +1761,8 @@ class Shape extends ProtoLayer {
     // console.log('length', path.elt.getTotalLength())
 
     this.svgElt
-      // .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
-
-      // .position(0 - this.cellBounds.anchor.x, 0 - this.cellBounds.anchor.y, 'absolute')
-      // .attribute(
-      //   SVG.viewBox,
-      //   `${0}, ${0}, ${this.cellBounds.size.x + this.cellBounds.anchor.x}, ${this.cellBounds.size.y + this.cellBounds.anchor.y}`)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
+      .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
       .attribute('enable-background', 'accumulate')
 
     // this.testDrawVerts()
