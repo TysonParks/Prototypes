@@ -1130,7 +1130,7 @@ class Grid extends ProtoLayer {
   assign(selection, group) {
     if (!group) { group = new CellGroup(this, this.svgElt, this) }
     group.cells = selection
-    console.log('groupID', group.id)
+    // console.log('groupID', group.id)
     this.groups.push(group)
     this.updateCells({ groupID: group.id })
   }
@@ -1565,12 +1565,15 @@ class Island extends ProtoLayer {
             // print(next)
             if (next.length === 0) {
               // print('next is empty')
-              if (current.endPoint.equals(subShape[0].startPoint)) {
+              if (current.endPoint.equals(subShape[0].startPoint, 4)) {
                 // print('SUBSHAPE COMPLETE!')
                 subShape.push(current)
                 return
+              } else {
+                console.log('current.endPoint', current.endPoint)
+                console.log('subShape[0].startPoint', subShape[0].startPoint)
+                console.error('cannot continue segmentShape')
               }
-              else { console.error('cannot continue segmentShape') }
             }
             if (next.length === 1) { nextSeg = next[0] }
             // else { console.error('unexpected single segment') }
@@ -1672,9 +1675,15 @@ class Shape extends ProtoLayer {
   get grid() { return this.island.grid }
 
   get turns() { return this.subShapes.map(e => this.createTurns(e)) }
-  get svg() { return this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e })) }
+  get svg() {
+    let result = this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e }))
+    if (result instanceof Array) {
+      result = result.join(' ')
+    }
+    return result
+  }
   // get svg() { return ProtoSVG.segsToSVG({ segments: this.subShapes[0] }) }
-  get svgPath() { return `path('${this.svg.join(' ')}')` }
+  get svgPath() { return `path('${this.svg}')` }
   get extractedVerts() { return extractVerts(this.svg) }
 
   // MARK: methods
@@ -1716,6 +1725,9 @@ class Shape extends ProtoLayer {
     const path = createSVGElt('path')
 
 
+    // console.log('svg', this.svg)
+    // console.log('svgPath', this.svgPath)
+    // print(this.svgPath)
 
     path
       .attribute('d', this.svg)
