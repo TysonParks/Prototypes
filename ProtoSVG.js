@@ -44,8 +44,8 @@ p5.Element.prototype.addToClassList = function (newClass) {
   return this
 }
 
-//PROTOTYPE: p5.Element extension addToClassList(newClass)
-p5.Element.prototype.layout = function (x, y, width, height) {
+//PROTOTYPE: p5.Element extension layout(x, y, width, height)
+p5.Element.prototype.layout = function (x, y, width, height, padding = 0) {
   if (arguments.length === 1) {
     x = x.x
     y = x.y
@@ -53,10 +53,21 @@ p5.Element.prototype.layout = function (x, y, width, height) {
     height = x.height
   }
   this
-    .attribute('x', x)
-    .attribute('y', y)
-    .attribute('width', width)
-    .attribute('height', height)
+    .attribute('x', x - padding)
+    .attribute('y', y - padding)
+    .attribute('width', width + padding * 2)
+    .attribute('height', height + padding * 2)
+  return this
+}
+//PROTOTYPE: p5.Element extension viewBox(x, y, width, height)
+p5.Element.prototype.viewBox = function (x, y, width, height, padding = 0) {
+  if (arguments.length === 1) {
+    x = x.x
+    y = x.y
+    width = x.width
+    height = x.height
+  }
+  this.attribute('viewBox', `${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`)
   return this
 }
 
