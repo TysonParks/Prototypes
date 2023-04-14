@@ -22,6 +22,48 @@ class ProtoSVG {
 
     return lSegmentPathToRoundedSVGPath({ segments: segments })
   }
+
+  static createSVGMarkup(svgElement) {
+    const serializer = new XMLSerializer();
+    const svgMarkup = serializer.serializeToString(svgElement);
+    return svgMarkup;
+  }
+
+  static exportSVG(svgMarkup, fileName) {
+    const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  static exportPNG(svgMarkup, fileName, width, height) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    const img = new Image();
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgMarkup);
+
+    img.onload = function () {
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(function (blob) {
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.click();
+
+        URL.revokeObjectURL(url);
+      });
+    };
+  }
 }
 
 class VertPath {
