@@ -104,15 +104,26 @@ class SVGLook {
     ]
   }
 
-  static testFill(color = ProtoColor.randomHighHue(), opacity = 1) {
+  static testFill(color = ProtoColor.randomHighHue(), opacity = .5, radius = 5) {
     return [
       ['fill', color],
       ['fill-opacity', `${opacity}`],
+      ['rx', `${radius}`],
+      ['ry', `${radius}`],
     ]
   }
 
   static test(strokeColor, fillColor, opacity = .5, radius = 5) {
-    return [SVGLook.testStroke(strokeColor, 1, radius), SVGLook.testFill(fillColor, `${opacity}`)]
+    return [...SVGLook.testStroke(strokeColor, 1, radius), ...SVGLook.testFill(fillColor, `${opacity}`)]
+  }
+
+  static blackAndWhite() { }
+
+  static get clear() {
+    return [
+      ['fill-opacity', `0`],
+      ['stroke-opacity', `0`],
+    ]
   }
 
   static neuShade({
@@ -124,7 +135,16 @@ class SVGLook {
   } = {}) {
 
   }
-  static blackAndWhite() { }
+  static get blackAndWhite() {
+    return SVGLook.clear
+  }
+
+  static get clear() {
+    return [
+      ['fill-opacity', `0`],
+      ['stroke-opacity', `0`],
+    ]
+  }
 }
 
 
