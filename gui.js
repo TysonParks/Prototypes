@@ -4,7 +4,7 @@ let testingControls = {
   hashNumber: 0,
   lastHash: false,
   labels: true,
-  borders: true,
+  borders: false,
   testColors: false,
   shapeVerts: true,
   blackMode: false,
