@@ -160,6 +160,7 @@ Object.assign(ProtoLayer.prototype, identifiableStored)
 // CLASS: Frame
 class Frame extends ProtoLayer {
   bleed
+  bleedRect
   frameRect
 
   constructor(svgParent) {
@@ -178,6 +179,7 @@ class Frame extends ProtoLayer {
         height: this.size.y,
       })
   }
+  get svgMarkup() { return ProtoSVG.createSVGMarkup(this.bleed.elt) }
 
   get cornerRadius() { return 5 }
 
@@ -201,6 +203,17 @@ class Frame extends ProtoLayer {
       .attribute('preserveAspectRatio', 'xMidyMid')
       .attribute('width', `${frameSize.x}`)
       .attribute('height', `${frameSize.y}`)
+      .look([
+        [CS.border, testingControls.borders ? '1px dashed orange' : 'none'],
+        [CS.borderRadius, testingControls.borders ? '50px' : '0px']
+      ])
+
+    this.bleedRect = createSVGElt('rect').id(`${this.id}-bleedRect`)
+      .parent(this.bleed)
+      .layout(-15, -10, 130, 220)
+
+    console.log(this.bleed.attribute('viewBox'))
+    // console.log(this.bleed.attribute('viewBox'))
 
     super.assignElement()
 
@@ -219,7 +232,13 @@ class Frame extends ProtoLayer {
     this.bleed
       .attribute('width', `${frameSize.x}`)
       .attribute('height', `${frameSize.y}`)
-      .look(this.bleedLook)
+
+    this.bleedRect
+      // .layout(-10, -10, 120, 220)
+      .attribute('fill', 'black')
+
+
+
 
     super.drawElement()
 
@@ -716,16 +735,7 @@ class Grid extends ProtoLayer {
     return bounds.xCellMin <= x && x <= bounds.xCellMax && bounds.yCellMin <= y && y <= bounds.yCellMax
   }
   //METH: 
-  coordsAreInGrid(x, y) {
-    // print('coordsAreInGrid x')
-    // print(x)
-    // print('coordsAreInGrid y')
-    // print(y)
-    let result = x >= 0 && x < this.gridSize.x && y >= 0 && y < this.gridSize.y
-    // print('coordsAreInGrid result')
-    // print(result)
-    return result
-  }
+  coordsAreInGrid(x, y) { return x >= 0 && x < this.gridSize.x && y >= 0 && y < this.gridSize.y }
   //METH: 
   cellAtCoords(x, y) { if (this.coordsAreInGrid(x, y)) { return this.cellAt(this.index(x, y)) } }
   //METH: 
@@ -745,7 +755,6 @@ class Grid extends ProtoLayer {
   rowContains(rowIndex, cellIndex) { return this.coords(cellIndex).y === rowIndex }
   //METH: 
   columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }
-
   //METH: 
   cellSegmentBetween(indexA, indexB) {
     const indices = [indexA, indexB].sort((a, b) => a - b)
@@ -1713,21 +1722,12 @@ class Shape extends ProtoLayer {
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
       .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
-    // .layout(this.anchor.x - 5, this.anchor.y - 5, this.size.x + 10, this.size.y + 10)
-    // .viewBox(this.anchor.x - 5, this.anchor.y - 5, this.size.x + 10, this.size.y + 10)
-    // .layout(this.anchor.x - 10, this.anchor.y - 10, this.size.x + 20, this.size.y + 20)
-    // .viewBox(this.anchor.x - 10, this.anchor.y - 10, this.size.x + 20, this.size.y + 20)
-    // .html(TestMode ? this.id : '')
+
   }
 
   //METH:
-  drawElement(look = this.testLook) {
+  drawElement() {
     const path = createSVGElt('path')
-
-
-    // console.log('svg', this.svg)
-    // console.log('svgPath', this.svgPath)
-    // print(this.svgPath)
 
     path
       .attribute('d', this.svg)
@@ -1751,7 +1751,7 @@ class Shape extends ProtoLayer {
     const dashWidth = (20 - dashLength) / 4
     const loopCount = R.random_int(0, 10)
     // const loopCount = 10
-    const offset = R.random_num(0, 5)
+    const offset = R.random_num(0, 10)
 
     path
       .attribute('pathLength', 'length')
