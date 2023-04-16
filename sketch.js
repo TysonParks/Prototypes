@@ -69,16 +69,16 @@ function setup() {
 
   // setInterval(displayFrameRate, 100)
 
-  redrawAll()
-  redrawAll()
-  redrawAll()
-  redrawAll()
-  redrawAll()
-  redrawAll()
-  redrawAll()
-  redrawAll()
-  redrawAll()
-  redrawAll()
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
 }
 
 // MARK: DRAWING FUNCS
@@ -132,7 +132,7 @@ function sizeFrame() {
   // const height = 2 * floor(windowHeight / 2)
   // const width = 2 * floor(height / 4)
   frameSize = vert(width, height)
-  // print(frameSize)
+  print(frameSize)
 }
 
 // FUNC: wix() : returns pixel value of a wixel count
@@ -188,7 +188,7 @@ function setupBackground() {
 // FUNC: gridTests2()
 function gridTests2() {
   // F.inset(.95)
-  let gridX = R.random_int(1, 10)
+  let gridX = R.random_int(1, 8)
   // gridX = 5
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
   // grid = new Grid(F, { x: 1, y: 2 })
@@ -218,12 +218,21 @@ function gridTests2() {
   grid.findIslands({
     selection: grid.cells,
     // groupID: 'grp000',
-    direction: Direction.All,
+    direction: Direction.Cardinal,
   })
 
   grid.islands.forEach(e => e.createShape())
 
-  console.log('parentID', F.parentID)
+  // redrawAll()
+  // redrawAll()
+  // redrawAll()
+
+  // console.log('svgMarkup', F.svgMarkup)
+  // print(F.svgMarkup)
+  // const scaler = 2
+  // ProtoSVG.exportPNG(F.svgMarkup, 'testPrototype00.png', 1000 * scaler, 1800 * scaler)
+
+  // ProtoSVG.exportSVG(F.svgMarkup, 'testPrototype.svg')
 
   console.log('all layers', S.allLayers)
   // print('all layers:')
