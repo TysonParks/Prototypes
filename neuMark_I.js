@@ -43,14 +43,27 @@ class CS {
 p5.Element.prototype.look = function (look = Look.testGrid, html) {
   if (look instanceof Array) {
     const lookOp = OpArray.from(look).compacted
+    if (look[0][0] instanceof Array) {
+      lookOp = lookOp.reduce((acc, val) => acc.concat(val), [])
+    }
     lookOp.forEach(e => this.style(e[0], e[1]))
   }
   if (html) { this.html(html) }
   return this
 }
 
-
-
+// PROTOTYPE: p5.Element.prototype.SVGlook()
+p5.Element.prototype.svgLook = function (svgLook) {
+  if (svgLook instanceof Array) {
+    let lookOp = OpArray.from(svgLook).compacted
+    if (svgLook[0][0] instanceof Array) {
+      lookOp = lookOp.reduce((acc, val) => acc.concat(val), [])
+    }
+    lookOp.forEach(e => this.attribute(e[0], e[1]))
+  }
+  return this
+}
+//FIXME: Never got this one properly working, maybe should do it with CSS anyway?
 // PROTOTYPE: p5.Element.prototype.label(text, color, direction)
 p5.Element.prototype.label = function (text, color, direction) {
   const labelText = createSVGElt("text");
@@ -72,18 +85,6 @@ p5.Element.prototype.label = function (text, color, direction) {
 
   this.child(labelText);
   return this;
-}
-
-// PROTOTYPE: p5.Element.prototype.SVGlook()
-p5.Element.prototype.svgLook = function (svgLook) {
-  if (svgLook instanceof Array) {
-    let lookOp = OpArray.from(svgLook).compacted
-    if (svgLook[0][0] instanceof Array) {
-      lookOp = lookOp.reduce((acc, val) => acc.concat(val), [])
-    }
-    lookOp.forEach(e => this.attribute(e[0], e[1]))
-  }
-  return this
 }
 
 
