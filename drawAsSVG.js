@@ -6,6 +6,7 @@
 
 //CLASS: ProtoSVG
 class ProtoSVG {
+  //METH:
   static segsToSVG(
     { segments,
       refine = true,
@@ -23,44 +24,56 @@ class ProtoSVG {
     return lSegmentPathToRoundedSVGPath({ segments: segments })
   }
 
+  // MARK: File export methods
+  // NOTE: Made with GPT-4 on April 14, 2023
+  //METH:
   static createSVGMarkup(svgElement) {
-    const serializer = new XMLSerializer();
-    const svgMarkup = serializer.serializeToString(svgElement);
-    return svgMarkup;
+    const serializer = new XMLSerializer()
+    const svgMarkup = serializer.serializeToString(svgElement)
+    return svgMarkup
   }
-
+  //METH:
   static exportSVG(svgMarkup, fileName) {
-    const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob([svgMarkup], { type: 'image/svg+xmlcharset=utf-8' })
+    const url = URL.createObjectURL(blob)
 
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    link.click()
 
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url)
   }
-
+  //METH:
   static exportPNG(svgMarkup, fileName, width, height) {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
+    // console.log("Starting exportPNG() function...")
 
-    const img = new Image();
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgMarkup);
+    const canvas = document.createElement("canvas")
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext("2d")
+
+    const img = new Image()
+    const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" })
+    const svgUrl = URL.createObjectURL(svgBlob)
+    img.src = svgUrl
 
     img.onload = function () {
-      ctx.drawImage(img, 0, 0, width, height);
+      console.log("Image loaded...")
+      ctx.drawImage(img, 0, 0, width, height)
       canvas.toBlob(function (blob) {
-        const url = URL.createObjectURL(blob);
+        // console.log("Blob created...")
+        const url = URL.createObjectURL(blob)
 
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.click();
+        const link = document.createElement("a")
+        link.href = url
+        link.download = fileName
+        link.click()
+        // console.log("Link clicked...")
 
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url) // Revoke the Blob URL for the PNG
+        URL.revokeObjectURL(svgUrl) // Revoke the Blob URL for the SVG
+        console.log(`PNG saved`)
       });
     };
   }
