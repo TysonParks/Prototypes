@@ -101,3 +101,47 @@ function createGUI() {
   // curveShapeGUI.open()
   curveShapeGUI.add(testCurveShapeControls, 'drawPoints').onChange(drawObjects)
 }
+
+// MARK: Keyboard UI
+//NOTE: Create with GPT-4 on April 15,2023
+//FUNC: keyPressed() p5js overload for PNG saving
+function keyPressed() {
+  if (key === 's') {
+    const scaler = 2
+    const rez = vert(1000, 1800).mult(scaler)
+    const rezString = `${rez.x}x${rez.y}`
+    const date = getCurrentDateString()
+    const time = getCurrentTime()
+    const hash = tokenData.hash
+    const name = `Prototype-${date}-${rezString}-${hash}.png`
+
+    ProtoSVG.exportPNG(F.svgMarkup, name, rez.x, rez.y)
+  }
+}
+//NOTE: Create with GPT-4 on April 15,2023
+//FUNC: getCurrentDateString()
+function getCurrentDateString() {
+  const currentDate = new Date();
+  const year = currentDate.getFullYear();
+  const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+  const day = String(currentDate.getDate()).padStart(2, '0');
+  return `${year}.${month}.${day}`;
+}
+//NOTE: Create with GPT-4 on April 15,2023
+//FUNC: getCurrentTime24HrFormat()
+function getCurrentTime(format24Hr = false) {
+  const now = new Date();
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  let amPm = '';
+
+  if (!format24Hr) {
+    amPm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+  }
+
+  hours = String(hours).padStart(2, '0');
+
+  return `${hours}.${minutes}.${seconds}${amPm ? '' + amPm : ''}`;
+}
