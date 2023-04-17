@@ -195,7 +195,8 @@ function gridTests2() {
   // grid = new Grid(F, { x: 1, y: 2 })
 
   grid.inset(0.9)
-  grid.insetCells(.5)
+  // grid.insetCells(.5)
+  // grid.insetCells(.8, 'grp000')
 
   // let grid2 = new Grid(grid.cells[0], { x: 2, y: 2 })
   // grid2.insetCells(0.9)
@@ -209,6 +210,7 @@ function gridTests2() {
   grid.randGroup(0.1)
   // grid.randomComb()
   grid.outlineTaken(Direction.All)
+  grid.insetCells(0.6, 'grp001')
 
   // console.log('group01', grid.groups[0])
   // console.log('group01-cells', grid.groups[0].cells.map(e => e.id))
