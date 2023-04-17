@@ -283,3 +283,46 @@ class OpArray extends Array {
     return this
   }
 }
+
+//MARK: Object prototype extentions
+// NOTE: Made with GPT-4 April 17,2023
+// if (!Object.prototype.map) {
+//   Object.defineProperty(Object.prototype, 'map', {
+//     value: function (callback, thisArg) {
+//       const result = {}
+//       for (const key in this) {
+//         if (this.hasOwnProperty(key)) {
+//           result[key] = callback.call(thisArg, this[key], key, this)
+//         }
+//       }
+//       return result
+//     },
+//     enumerable: false
+//   })
+// }
+
+Object.prototype.map = function (callback) {
+  const result = {};
+
+  for (const key in this) {
+    if (this.hasOwnProperty(key)) {
+      const mappedValue = callback(this[key], key, this);
+      result[key] = mappedValue;
+    }
+  }
+
+  return result;
+}
+
+function objectMap(obj, callback) {
+  const result = {};
+
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      const mappedValue = callback(obj[key], key, obj);
+      result[key] = mappedValue;
+    }
+  }
+
+  return result;
+}
