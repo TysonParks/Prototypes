@@ -1106,9 +1106,7 @@ class Grid extends ProtoLayer {
   inset(amount) {
     super.inset(amount)
     this.setFrameRadii()
-
     this.updateCells()
-    // this.drawElement()
   }
   // #endregion
   // MARK: Grid Grammar Ops
@@ -1117,9 +1115,16 @@ class Grid extends ProtoLayer {
   insetCells(amount, groupID) {
     let cells
     // print(this.cells.map(e => e.groupID))
-    if (groupID) { cells = this.cells.filter(e => e.groupID === groupID) }
-    else { cells = this.cells }
-    // print(cells)
+    if (groupID) {
+      const group = this.groupNamed(groupID)
+      if (group) {
+        cells = group.cells
+      } else {
+        console.error(`no group named ${groupID}`)
+        console.log(`current groups:`, this.groups)
+      }
+    } else { cells = this.cells }
+    console.log(`${groupID} cells`, cells)
     cells.forEach(e => e.inset(amount))
   }
   //METH:
