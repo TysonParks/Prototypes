@@ -90,6 +90,19 @@ p5.Element.prototype.label = function (text, color, direction) {
 
 // CLASS: SVGLook
 class SVGLook {
+
+  static get blackAndWhite() {
+    return SVGLook.clear
+  }
+
+  static get clear() {
+    return [
+      ['fill-opacity', `0`],
+      ['stroke-opacity', `0`],
+    ]
+  }
+  //MARK: Methods
+  //METH:  
   static testStroke(color = ProtoColor.randomHighHue(), opacity = 1, radius = 5) {
     return [
       ['stroke', color],
@@ -104,7 +117,7 @@ class SVGLook {
       ['fill-opacity', '0'],
     ]
   }
-
+  //METH:
   static testFill(color = ProtoColor.randomHighHue(), opacity = .5, radius = 5) {
     return [
       ['fill', color],
@@ -113,7 +126,7 @@ class SVGLook {
       ['ry', `${radius}`],
     ]
   }
-
+  //METH:
   static test(strokeColor, fillColor, opacity = .5, radius = 5) {
     return [...SVGLook.testStroke(strokeColor, 1, radius), ...SVGLook.testFill(fillColor, `${opacity}`)]
   }
@@ -126,7 +139,7 @@ class SVGLook {
       ['stroke-opacity', `0`],
     ]
   }
-
+  //METH:
   static neuShade({
     baseCol = protoColor(230),
     vector = globalShadowVector(),
@@ -136,14 +149,28 @@ class SVGLook {
   } = {}) {
 
   }
-  static get blackAndWhite() {
-    return SVGLook.clear
-  }
 
-  static get clear() {
+
+  //METH:
+  static trendyCactus(path) {
+    const length = path.elt.getTotalLength()
+    const dashLength = R.random_int(0, 20)
+    const dashWidth = (20 - dashLength) / 4
+    const loopCount = R.random_int(0, 10)
+    // const loopCount = 10
+    const offset = R.random_num(0, 10)
     return [
-      ['fill-opacity', `0`],
-      ['stroke-opacity', `0`],
+      ['fill', ProtoColor.randomHighHue()],
+      ['fill-opacity', '0.2'],
+      ['stroke', 'black'],
+      ['stroke-opacity', '1'],
+      ['stroke-linecap', 'round'],
+      ['stroke-linejoin', 'round'],
+      ['overflow', 'auto'],
+      ['pathLength', 'length'],
+      ['stroke-dasharray', `${dashLength} ${length / loopCount - dashLength}`],
+      ['stroke-width', `${dashWidth}`],
+      ['stroke-dashoffset', `${offset}`],
     ]
   }
 }
@@ -296,7 +323,7 @@ class Shade {
   }
 
   //Drop-Shadow 
-  static dropShadSVG(x, y, blurRad = 0, col = color(0)) {
+  static dropShadSVG(x, y, blurRad = 0, col = protoColor(230)) {
 
   }
 
