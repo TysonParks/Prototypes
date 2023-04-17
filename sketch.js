@@ -191,10 +191,11 @@ function gridTests2() {
   let gridX = R.random_int(1, 8)
   // gridX = 5
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
+  console.log('Grid:', gridX)
   // grid = new Grid(F, { x: 1, y: 2 })
 
-  grid.inset(0.8)
-  grid.insetCells(0.4)
+  grid.inset(0.9)
+  grid.insetCells(.5)
 
   // let grid2 = new Grid(grid.cells[0], { x: 2, y: 2 })
   // grid2.insetCells(0.9)
@@ -205,9 +206,9 @@ function gridTests2() {
   // let grid4 = new Grid(grid3.cells[1], { x: 1, y: 4 })
   // grid4.insetCells(0.5)
 
-  grid.randGroup(0.5)
+  grid.randGroup(0.1)
   // grid.randomComb()
-  // grid.outlineTaken(Direction.Right)
+  grid.outlineTaken(Direction.All)
 
   // console.log('group01', grid.groups[0])
   // console.log('group01-cells', grid.groups[0].cells.map(e => e.id))
@@ -218,7 +219,7 @@ function gridTests2() {
   grid.findIslands({
     selection: grid.cells,
     // groupID: 'grp000',
-    direction: Direction.Cardinal,
+    direction: Direction.All,
   })
 
   grid.islands.forEach(e => e.createShape())
@@ -235,6 +236,7 @@ function gridTests2() {
   // ProtoSVG.exportSVG(F.svgMarkup, 'testPrototype.svg')
 
   console.log('all layers', S.allLayers)
+  console.log('gridBounds', grid.gridCellBounds.cornerCellCenters)
   // print('all layers:')
   // print(S.allLayers)
 }
