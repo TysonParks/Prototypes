@@ -162,6 +162,7 @@ class Frame extends ProtoLayer {
   bleed
   bleedRect
   frameRect
+  cornerRadius = 5
 
   constructor(svgParent) {
     super(svgParent)
@@ -181,8 +182,6 @@ class Frame extends ProtoLayer {
   }
   get svgMarkup() { return ProtoSVG.createSVGMarkup(this.bleed.elt) }
 
-  get cornerRadius() { return 5 }
-
   get look() { return SVGLook.clear }
   get testLook() { return Look.test(this.size, 'frame') }
   get testColor() { return protoColor(200, 200, 200) }
@@ -191,6 +190,16 @@ class Frame extends ProtoLayer {
       [CS.border, testingControls.borders ? '1px dashed orange' : 'none'],
       [CS.borderRadius, testingControls.borders ? '50px' : '0px']
     ]
+  }
+
+  // MARK: Frame modifiers
+  //METH:
+  setCornerRadii(corners, padding) {
+    console.log('topLeft:', corners.topLeft.x)
+    console.log('padSize:', padding.x)
+    this.cornerRadius = corners.topLeft.x + padding.x
+    console.log('cornerRadius', this.cornerRadius)
+    this.drawElement()
   }
 
   // MARK: Setup Methods
@@ -494,6 +503,8 @@ class SelectionBounds {
       botLeft: vert(this.xCellMin, this.yCellMax),
     }
   }
+  get cornerCells() { return this.cornerCellVerts.map(v => this.grid.cellAtCoords(v.x, v.y)) }
+  get cornerCellCenters() { return this.cornerCells.map(v => v.center) }
 
   get cellAnchor() { return this.cornerCellVerts.topLeft }
   get spanCellVerts() { return segment(this.cornerCellVerts.topLeft, this.cornerCellVerts.botRight) }
@@ -503,7 +514,6 @@ class SelectionBounds {
     const e = this.grid.index(a.x, a.y)
     const f = this.grid.index(b.x, b.y)
     return [e, f]
-    return
   }
 
   get cellBoundsWidth() { return this.xCellMax - this.xCellMin + 1 }
@@ -707,6 +717,7 @@ class Grid extends ProtoLayer {
     this.gridSize = gridSize
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
+    this.setFrameRadii()
   }
 
   // MARK: Computed Properties
@@ -714,6 +725,7 @@ class Grid extends ProtoLayer {
   get testLook() { return Look.test(this.size, 'grid') }
   get testColor() { return protoColor(0, 230, 0, 90) }
 
+  get gridCellBounds() { return this.cellBounds() }
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
   get cells() { return this.cellRows.flat() }
   get cellColumns() { return this.cellRowsFlipped() }
@@ -1086,6 +1098,18 @@ class Grid extends ProtoLayer {
     }
     return OpArray.from(rows)
   }
+  //METH:
+  setFrameRadii() {
+    F.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize)
+  }
+  //METH:
+  inset(amount) {
+    super.inset(amount)
+    this.setFrameRadii()
+
+    this.updateCells()
+    // this.drawElement()
+  }
   // #endregion
   // MARK: Grid Grammar Ops
   // #region Grid Grammar Ops
@@ -1146,6 +1170,14 @@ class Grid extends ProtoLayer {
   //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
   updateCells({ groupID, islandID } = {}) {
+    // console.log('upDateCells called')
+    // console.log('groupID', groupID)
+    // console.log('islandID', islandID)
+    if (arguments.length === 0) {
+      // console.log('zeroArgs')
+      this.cells.forEach(cell => cell.drawElement())
+    }
+
     let groups, islands
 
     if (groupID) { groups = [this.groupNamed(groupID)] }
@@ -1156,6 +1188,7 @@ class Grid extends ProtoLayer {
     else { islands = this.islands }
     // console.log('islands', islands)
     islands.forEach(island => this.updateIsland(island))
+
   }
   //METH:
   updateGroup(group) {
@@ -1164,6 +1197,7 @@ class Grid extends ProtoLayer {
       thisCell.groupID = group.id
       thisCell.available = false
       thisCell.color = group.color
+      thisCell.drawElement()
     })
   }
   //METH:
@@ -1173,6 +1207,7 @@ class Grid extends ProtoLayer {
       if (thisCell) {
         thisCell.islandIDs.add(island.id)
         thisCell.color = island.color
+        thisCell.drawElement()
       }
     })
   }
@@ -1378,8 +1413,8 @@ class Cell extends ProtoLayer {
     super.drawElement()
 
     this.rect
-      .attribute('rx', `${3}`)
-      .attribute('ry', `${3}`)
+      .attribute('rx', `${10}`)
+      .attribute('ry', `${10}`)
 
 
     // super(this.drawElement(look))
@@ -1387,17 +1422,17 @@ class Cell extends ProtoLayer {
       // this.insetAmount = 0.9
       this.rect
         .attribute('fill', 'purple')
-        .attribute('fill-opacity', '0.25')
+        .attribute('fill-opacity', '.25')
     }
     if (this.available) {
       // this.insetAmount = 0.5
       this.rect
         .attribute('fill', 'orange')
-        .attribute('fill-opacity', '0.25')
+        .attribute('fill-opacity', '.25')
     }
 
     this.rect
-      .svgLook(this.look)
+    // .svgLook(this.look)
   }
 }
 
@@ -1731,46 +1766,11 @@ class Shape extends ProtoLayer {
 
     path
       .attribute('d', this.svg)
-      // .attribute('fill', '#0001')
-      .attribute('fill', ProtoColor.randomHighHue())
-      .attribute('fill-opacity', '0.2')
-      // .attribute('stroke', ProtoColor.randomHighHue())
-      .attribute('stroke', 'black')
-      .attribute('stroke-opacity', '1')
-      // .attribute('stroke-width', `${R.random_num(.01, 2)}`)
-      .attribute('stroke-linecap', 'round')
-      .attribute('stroke-linejoin', 'round')
-      .attribute('overflow', 'auto')
       .parent(this.svgElt)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
-
-    const length = path.elt.getTotalLength()
-    const dashLength = R.random_int(0, 20)
-    const dashWidth = (20 - dashLength) / 4
-    const loopCount = R.random_int(0, 10)
-    // const loopCount = 10
-    const offset = R.random_num(0, 10)
-
-    path
-      .attribute('pathLength', 'length')
-      .attribute('stroke-dasharray', `${dashLength} ${length / loopCount - dashLength}`)
-      .attribute('stroke-width', `${dashWidth}`)
-      .attribute('stroke-dashoffset', `${offset}`)
-    // .attribute('stroke-linecap', 'round')
-    // .attribute('overflow', 'hidden')
-    // .attribute('width', `${this.cellBounds.size.x}`)
-    // .attribute('height', `${this.cellBounds.size.y}`)
-    // .attribute('style', `position: absolute; width: 100%; height: 100%`)
-    // .position(0, 0)
-    // .position(0 - this.cellBounds.anchor.x, 0 - this.cellBounds.anchor.y, 'absolute')
-    // .position(this.insetAnchor.x, this.insetAnchor.y)
-
-    // let newOffset = this.protoParent.size.sub(this.cellBounds.size)
-    // print(this.protoParent.size.sub(this.cellBounds.size))
-
-    // console.log('length', path.elt.getTotalLength())
+    // .svgLook(SVGLook.trendyCactus(path))
 
     this.svgElt
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
