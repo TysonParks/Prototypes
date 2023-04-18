@@ -169,6 +169,16 @@ class Frame extends ProtoLayer {
     this.finishSetup(S.Frame)
   }
 
+  get look() { return SVGLook.clear }
+  get testLook() { return Look.test(this.size, 'frame') }
+  get testColor() { return protoColor(200, 200, 200) }
+  get bleedLook() {
+    return [
+      [CS.border, testingControls.borders ? '1px dashed orange' : 'none'],
+      [CS.borderRadius, testingControls.borders ? '50px' : '0px']
+    ]
+  }
+
   get anchor() { return vert(0, 0) }
   get size() { return vert(100, 200) }
   get boundsRect() {
@@ -180,24 +190,19 @@ class Frame extends ProtoLayer {
         height: this.size.y,
       })
   }
-  get svgMarkup() { return ProtoSVG.createSVGMarkup(this.bleed.elt) }
-
-  get look() { return SVGLook.clear }
-  get testLook() { return Look.test(this.size, 'frame') }
-  get testColor() { return protoColor(200, 200, 200) }
-  get bleedLook() {
-    return [
-      [CS.border, testingControls.borders ? '1px dashed orange' : 'none'],
-      [CS.borderRadius, testingControls.borders ? '50px' : '0px']
-    ]
+  get pixToUserUnits() {
+    const ctm = this.svgElt.elt.getScreenCTM()
+    return ctm.a
   }
+  get svgMarkup() { return ProtoSVG.createSVGMarkup(this.bleed.elt) }
 
   // MARK: Frame modifiers
   //METH:
   setCornerRadii(corners, padding) {
     console.log('topLeft:', corners.topLeft.x)
-    console.log('padSize:', padding.x)
-    this.cornerRadius = corners.topLeft.x + padding.x
+    console.log('padding:', padding.x)
+    const radius = corners.topLeft.x + padding.x
+    this.cornerRadius = min(radius, 50)
     console.log('cornerRadius', this.cornerRadius)
     this.drawElement()
   }
