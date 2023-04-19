@@ -195,7 +195,7 @@ function gridTests2() {
   // grid = new Grid(F, { x: 1, y: 2 })
 
   grid.inset(0.9)
-  // grid.insetCells(.5)
+  grid.insetCells(.5)
   // grid.insetCells(.8, 'grp000')
 
   // let grid2 = new Grid(grid.cells[0], { x: 2, y: 2 })
@@ -210,7 +210,22 @@ function gridTests2() {
   grid.randGroup(0.1)
   // grid.randomComb()
   grid.outlineTaken(Direction.All)
-  grid.insetCells(0.6, 'grp001')
+  grid.insetCells(0.9, 'grp001')
+  grid.insetCells(0.9, 'grp000')
+
+
+  const testShadeCSS = Shade.neuBoxShadFactory()
+  const testShadeSVG = Shade.neuShadeSVGFactory({ pixToUserUnits: F.pixToUserUnits })
+  console.log('testShadeCSS', testShadeCSS)
+  console.log('testShadeSVG', testShadeSVG)
+  // console.log('pixToUserUnits', F.pixToUserUnits)
+  console.log('createSlices', createSlices(1, 64, 0.5))
+  console.log('cleanSlices', cleanSlices(1, 30, 0.5))
+  console.log('exponentialSlices', exponentialSlices(0.5, 2.35, 2))
+
+  const testArray = [1, 2, 3, 4]
+  console.log(testArray.last())
+
 
   // console.log('group01', grid.groups[0])
   // console.log('group01-cells', grid.groups[0].cells.map(e => e.id))
@@ -221,7 +236,7 @@ function gridTests2() {
   grid.findIslands({
     selection: grid.cells,
     // groupID: 'grp000',
-    direction: Direction.All,
+    direction: Direction.Cardinal,
   })
 
   grid.islands.forEach(e => e.createShape())
