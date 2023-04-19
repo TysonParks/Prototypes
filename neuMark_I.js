@@ -323,9 +323,32 @@ class Shade {
   }
 
   //Drop-Shadow 
-  static dropShadSVG(x, y, blurRad = 0, col = protoColor(230)) {
-
+  static dropShadSVG({ x, y, blurRad = 0, spreadRad = 0, col = protoColor(230), inset = false } = {}) {
+    return { dx: x, dy: y, blur: blurRad, color: col, inset: inset }
   }
+
+  static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
+    const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: blurRad, col: highCol, inset: inset })
+    const shadow = this.dropShadSVG({ x: vector.x, y: vector.y, blurRad: 2 * blurRad, col: shadCol, inset: inset })
+    return [shadow, highlight]
+  }
+
+  static neuShadeSVGFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, spread = 16, inset = false, pixToUserUnits = 1 } = {}) {
+    // console.log('neuSVG')
+    // console.log(baseCol, vector, start, spread, inset)
+    const offset = vector.mag() / sqrt(2)
+    const cols = baseCol.highShadSpread(spread)
+    // console.log(offset, cols)
+    let neuShades = cleanSlices(start, offset, globalControls.shadQuality)
+    console.log('neuShades', neuShades)
+    neuShades = neuShades
+      .map(e => e / pixToUserUnits)
+      .map(sliceOffset => this.neuShadeSVG(vector.setMag(sliceOffset), 2 * sliceOffset, cols[0], cols[1], inset))
+      .flat()
+    return neuShades
+  }
+
+
 
   // Box-Shadow CSS
   static boxShadCSS(x, y, blurRad = 0, spreadRad = 0, col = color(0), inset = false) {
@@ -355,12 +378,14 @@ class Shade {
   }
 
   // Neumorphic Box Shadow Factory - create a shadow and highlight stack
-  static neuBoxShadFactory(baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, spread = 16, inset = false) {
+  static neuBoxShadFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, spread = 16, inset = false } = {}) {
+    // console.log('neuCSS')
+    // console.log(baseCol, vector, start, spread, inset)
     let offset = vector.mag() / sqrt(2)
-    // print(`offset: ${offset}`)
     let cols = baseCol.highShadSpread(spread)
+    // console.log(offset, cols)
     let neuShads = cleanSlices(start, offset, globalControls.shadQuality)
-    // print(neuShads.map(e => e.toFixed(2))) 
+    print(neuShads.map(e => e.toFixed(2)))
     neuShads = neuShads.map(sliceOffset => this.neuBoxShadCSS(vector.setMag(sliceOffset), 2 * sliceOffset, cols[0], cols[1], inset))
     return neuShads
   }
@@ -481,15 +506,42 @@ function sliceExpSeries(min, max) {
 }
 
 // FUNC: createSlices()
+// function createSlices(min, max, factor = 0.5) {
+//   // console.log('createSlices()', min, max, factor)
+//   if (max < min) {
+//     return [min]
+//   } else {
+//     const slice = createSlices(min, max * factor, factor)
+//     slice.push(max)
+//     // print(slice)
+//     return OpArray.from(slice)
+//   }
+// }
+
+// FUNC: createSlices()
+//NOTE: created with GPT-4 April 18,2023
 function createSlices(min, max, factor = 0.5) {
-  if (max < min) {
-    return [min]
-  } else {
-    const slice = createSlices(min, max * factor, factor)
-    slice.push(max)
-    // print(slice)
-    return OpArray.from(slice)
+  const slice = []
+
+  function helper(min, max, factor) {
+    if (max >= min) {
+      helper(min, max * factor, factor)
+      slice.push(max)
+    }
   }
+
+  helper(min, max, factor)
+  return OpArray.from(slice)
+}
+// FUNC: exponentialSlices()
+function exponentialSlices(min, max, amount) {
+  if (amount < 3) { return OpArray.from([min, max]) }
+  const range = max - min
+  const multipliers = createSlices(1, pow(2, amount - 1)).map(e => e - 1)
+  const last = multipliers.last()
+  // console.log(multipliers)
+  // console.log(last)
+  return multipliers.map(e => min + e * (range / last))
 }
 
 // FUNC: cleanSlices()
