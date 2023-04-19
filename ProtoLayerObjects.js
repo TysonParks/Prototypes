@@ -1432,13 +1432,13 @@ class Cell extends ProtoLayer {
       // this.insetAmount = 0.9
       this.rect
         .attribute('fill', 'purple')
-        .attribute('fill-opacity', '.25')
+        .attribute('fill-opacity', '0')
     }
     if (this.available) {
       // this.insetAmount = 0.5
       this.rect
         .attribute('fill', 'orange')
-        .attribute('fill-opacity', '.25')
+        .attribute('fill-opacity', '1')
     }
 
     this.rect

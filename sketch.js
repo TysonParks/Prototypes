@@ -236,7 +236,7 @@ function gridTests2() {
   grid.findIslands({
     selection: grid.cells,
     // groupID: 'grp000',
-    direction: Direction.Cardinal,
+    direction: Direction.All,
   })
 
   grid.islands.forEach(e => e.createShape())
