@@ -4,7 +4,9 @@
 
 // CLASS: Array
 // PROTOTYPE: Array extension last() function
-Array.prototype.last = function () { return this.at(-1) }
+Array.prototype.last = function () {
+  return this[this.lastIndex]
+}
 
 // PROTOTYPE: Array extension 'lastIndex' property
 Object.defineProperty(Array.prototype, 'lastIndex', {
