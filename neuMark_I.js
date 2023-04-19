@@ -314,25 +314,25 @@ p5.Element.prototype.boxShadow = function (value) {
 
 // CLASS: Shade
 class Shade {
-
+  //METH:
   //shadowVector: create vector from Angle + Offset
   static shadVect(angle = 45, offset = 8) { return createVector(1, 0).rotate(angle).mult(offset) }
   static maxComponent(vector = this.shadVect()) {
     return vector.y
     // return max(this.x, this.y)
   }
-
+  //METH:
   //Drop-Shadow 
   static dropShadSVG({ x, y, blurRad = 0, spreadRad = 0, col = protoColor(230), inset = false } = {}) {
     return { dx: x, dy: y, blur: blurRad, color: col, inset: inset }
   }
-
+  //METH:
   static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
     const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: blurRad, col: highCol, inset: inset })
     const shadow = this.dropShadSVG({ x: vector.x, y: vector.y, blurRad: 2 * blurRad, col: shadCol, inset: inset })
     return [shadow, highlight]
   }
-
+  //METH:
   static neuShadeSVGFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, spread = 16, inset = false, pixToUserUnits = 1 } = {}) {
     // console.log('neuSVG')
     // console.log(baseCol, vector, start, spread, inset)
@@ -347,10 +347,7 @@ class Shade {
       .flat()
     return neuShades
   }
-
-
-
-  // Box-Shadow CSS
+  //METH: Box-Shadow CSS
   static boxShadCSS(x, y, blurRad = 0, spreadRad = 0, col = color(0), inset = false) {
     let color = col.toString('#rrggbb')
     if (inset === true) {
@@ -361,23 +358,19 @@ class Shade {
       return `${x}px ${y}px ${blurRad}px ${spreadRad}px ${color}`
     }
   }
-
-  // Text-Shadow CSS
+  //METH: Text-Shadow CSS
   static textShadCSS(x, y, blurRad = 0, col = color(0)) { return this.boxShadCSS(x, y, blurRad, col) }
-
-  // Drop-Shadow CSS
+  //METH: Drop-Shadow CSS
   static dropShadCSS(x, y, blurRad = 0, col = color(0)) {
     return `drop-shadow(${this.boxShadCSS(x, y, blurRad, col)})`
   }
-
-  //Neumorphic Box-Shadow CSS - create highlight shadow pair code for CSS
+  //METH: Neumorphic Box-Shadow CSS - create highlight shadow pair code for CSS
   static neuBoxShadCSS(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
     let highlightCSS = this.boxShadCSS(-vector.x, -vector.y, blurRad, 0, highCol, inset)
     let shadowCSS = this.boxShadCSS(vector.x, vector.y, blurRad, 0, shadCol, inset)
     return `${shadowCSS}, ${highlightCSS}`
   }
-
-  // Neumorphic Box Shadow Factory - create a shadow and highlight stack
+  //METH: Neumorphic Box Shadow Factory - create a shadow and highlight stack
   static neuBoxShadFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, spread = 16, inset = false } = {}) {
     // console.log('neuCSS')
     // console.log(baseCol, vector, start, spread, inset)
@@ -389,33 +382,7 @@ class Shade {
     neuShads = neuShads.map(sliceOffset => this.neuBoxShadCSS(vector.setMag(sliceOffset), 2 * sliceOffset, cols[0], cols[1], inset))
     return neuShads
   }
-
-
 }
-
-
-//TODO: DEPRECATE
-//MARK: OLD "offset" VARIANTS
-// #region OLD "offset" VARIANTS
-// FUNC: neuDropShadowFactory()
-//Neumorphic Box-Shadow CSS - create highlight shadow pair code for CSS
-function neuBxShCSS(offset, blurRad, hiCol, shCol, inset = false) {
-  let hiCSS = boxShadowCSS(-offset, -offset, blurRad, 0, hiCol, inset)
-  let shCSS = boxShadowCSS(offset, offset, blurRad, 0, shCol, inset)
-  return join([shCSS, hiCSS], CS.comma)
-}
-
-// FUNC: neuBxShFX()
-// Neumorphic Box Shadow Factory - create a shadow and highlight stack
-function neuBxShFX(baseCol, offset, start = 0.5, spread = 10, inset = false) {
-  let cols = hiShSpreadfromCol(spread, baseCol);
-  let neuShads = sliceExpSeries(start, offset)
-    .map(offset => neuBxShCSS(offset, offset * 2, cols[0], cols[1]))
-  // print(neuShads)
-  return neuShads
-}
-//#endregion
-//#endregion
 
 // TODO: can these functions be generalized into Classes? Or extensions on a Color class?
 // MARK: ProtoColor 
@@ -488,6 +455,7 @@ class ProtoColor extends p5.Color {
 
 }
 
+//TODO: DEPRECATE
 // FUNC: sliceExpSeries()
 function sliceExpSeries(min, max) {
   let startIndex = expSeries.findIndex(e => e >= min)
@@ -497,26 +465,8 @@ function sliceExpSeries(min, max) {
   let scaledLastValue = maxInterval[1] * scalar
   let series = expSeries.slice(startIndex, endIndex)
     .map(e => e * scalar)
-  // print(`min: ${min}, max: ${max}`)
-  // print(`start: ${startIndex}, end: ${endIndex}`)
-  // print(`scalar: ${scalar}, maxInterval: ${maxInterval}`)
-  // print(expSeries.slice(startIndex, endIndex))
-  // print(`series: ${series}`)
   return series
 }
-
-// FUNC: createSlices()
-// function createSlices(min, max, factor = 0.5) {
-//   // console.log('createSlices()', min, max, factor)
-//   if (max < min) {
-//     return [min]
-//   } else {
-//     const slice = createSlices(min, max * factor, factor)
-//     slice.push(max)
-//     // print(slice)
-//     return OpArray.from(slice)
-//   }
-// }
 
 // FUNC: createSlices()
 //NOTE: created with GPT-4 April 18,2023
@@ -539,24 +489,12 @@ function exponentialSlices(min, max, amount) {
   const range = max - min
   const multipliers = createSlices(1, pow(2, amount - 1)).map(e => e - 1)
   const last = multipliers.last()
-  // console.log(multipliers)
-  // console.log(last)
   return multipliers.map(e => min + e * (range / last))
 }
-
 // FUNC: cleanSlices()
 function cleanSlices(min, max, factor = 0.5) {
   return createSlices(min, max, factor)
     .map(e => round(e))
     .unique()
 }
-
-// TODO: Probably DEPRECATE??
-// String Formatting FUNCS
-function cuddle(a, b) {
-  return join([a, b], "")
-}
-
-function px(number) { return `${number}px` }
-function percent(number) { return `${number}%` }
 
