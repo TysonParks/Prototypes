@@ -45,13 +45,14 @@ class ProtoSVG {
     URL.revokeObjectURL(url)
   }
   //METH:
-  static exportPNG(svgMarkup, fileName, width, height) {
+  static exportPNG(svgMarkup, fileName, width, height, scale = 2) {
     // console.log("Starting exportPNG() function...")
 
     const canvas = document.createElement("canvas")
-    canvas.width = width
-    canvas.height = height
+    canvas.width = width * scale
+    canvas.height = height * scale
     const ctx = canvas.getContext("2d")
+    ctx.scale(scale, scale)
 
     const img = new Image()
     const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" })
@@ -59,7 +60,7 @@ class ProtoSVG {
     img.src = svgUrl
 
     img.onload = function () {
-      console.log("Image loaded...")
+      // console.log("Image loaded...")
       ctx.drawImage(img, 0, 0, width, height)
       canvas.toBlob(function (blob) {
         // console.log("Blob created...")
