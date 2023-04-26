@@ -266,6 +266,7 @@ class Frame extends ProtoLayer {
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
       .attribute('rx', `${this.cornerRadius}`)
       .attribute('ry', `${this.cornerRadius}`)
+      // .attribute('fill', ProtoColor.randomHighHue().setSaturation(50))
       .attribute(`fill`, protoColor(230))
       .attribute('fill-opacity', '1')
 
@@ -985,6 +986,9 @@ class Grid extends ProtoLayer {
       .flatMap(e => this.vertNormals({ cellIndex: e, groupID: groupID, islandID: islandID }))
     // .sort()
   }
+  // #endregion
+  // MARK: findIslands Method
+  // #region findIslands Method
   //TODO: add transform functionality
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
@@ -1798,8 +1802,8 @@ class Shape extends ProtoLayer {
 
     if (S.Effects.db[0][1]) {
       let maxWidthDivisor = 4
-      // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
-      let strokeMaskWidth = R.random_num(2, this.grid.cellSize.x / maxWidthDivisor)
+      if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
+      let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
 
       path
         .attribute('fill', protoColor(230))
@@ -1807,8 +1811,8 @@ class Shape extends ProtoLayer {
         // .attribute('stroke', protoColor(230))
         // .attribute('stroke-opacity', 1)
         // .attribute('stroke-width', '7')
-        // .attribute('fill', protoColor(255))
-        // .applyStrokeMask('black', strokeMaskWidth)
+        .attribute('fill', protoColor(255))
+        .applyStrokeMask('black', strokeMaskWidth)
         // .applyStrokeMask(protoColor(128), strokeMaskWidth)
         .applyFilter(S.Effects.db[0][1], 3)
     }
