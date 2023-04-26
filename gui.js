@@ -107,15 +107,16 @@ function createGUI() {
 //FUNC: keyPressed() p5js overload for PNG saving
 function keyPressed() {
   if (key === 's') {
-    const scaler = 2
-    const rez = vert(1000, 1800).mult(scaler)
-    const rezString = `${rez.x}x${rez.y}`
+    const scale = 2
+    const rez = vert(1000, 1800)
+    const scaledRez = rez.mult(scale)
+    const rezString = `${scaledRez.x}x${scaledRez.y}`
     const date = getCurrentDateString()
     const time = getCurrentTime()
     const hash = tokenData.hash
     const name = `Prototype-${date}-${rezString}-${hash}.png`
 
-    ProtoSVG.exportPNG(F.svgMarkup, name, rez.x, rez.y)
+    ProtoSVG.exportPNG(F.svgMarkup, name, rez.x, rez.y, scale)
   }
 }
 //NOTE: Create with GPT-4 on April 15,2023
