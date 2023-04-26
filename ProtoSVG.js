@@ -234,12 +234,18 @@ class ProtoFilter {
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
 
+    createSVGElt("feFlood")
+      .attribute("flood-color", "transparent")
+      .attribute("flood-opacity", 0)
+      .attribute("result", "transparentInput")
+      .parent(this.filter)
+
     let previousResult = 'SourceGraphic'
-    let insetResult = 'SourceGraphic'
+    let insetResult = 'transparentInput'
     let outsetResult = 'SourceGraphic'
 
     // INSET
-    function buildFilter(shadows, filter, inset) {
+    function buildFilter(shadows, filter, inset, clearInset = false) {
       for (const shadow of shadows) {
         const { dx, dy, blur, color } = shadow
         const resultId = `shadow-${inset ? "inset" : "outset"}-${Math.random()
@@ -269,7 +275,9 @@ class ProtoFilter {
           //3B feComposite - MASK IN
           createSVGElt('feComposite')
             .attribute('operator', 'out')
-            .attribute('in', insetResult)
+            .attribute('in', 'SourceAlpha')
+            // .attribute('in2', insetResult)
+            // .attribute('in', insetResult)
             .attribute('in2', 'offset-blur')
             .attribute('result', 'mask')
             .parent(filter)
@@ -306,6 +314,8 @@ class ProtoFilter {
 
     if (insetShadows.length > 0) {
       buildFilter(insetShadows, this.filter, true)
+    } else {
+      insetResult = 'SourceAlpha'
     }
 
     if (outsetShadows.length > 0) {
@@ -313,14 +323,25 @@ class ProtoFilter {
       // this.needsPadding = true
       // this.padding = this.calculatePadding(outsetShadows)
       createSVGElt('feComposite')
-        .attribute('operator', 'over')
-        .attribute('in', insetResult)
-        .attribute('in2', outsetResult)
+        .attribute('operator', 'out')
+        .attribute('in', outsetResult)
+        .attribute('in2', insetResult)
         .attribute('result', 'finalResult')
         .parent(this.filter)
 
       previousResult = 'finalResult'
     }
+
+    // if (outsetShadows.length > 0 && insetShadows.length > 0) {
+    //   createSVGElt('feComposite')
+    //     .attribute('operator', 'over')
+    //     .attribute('in', insetResult)
+    //     .attribute('in2', outsetResult)
+    //     .attribute('result', 'finalResult')
+    //     .parent(this.filter)
+
+    //   previousResult = 'finalResult'
+    // }
 
     createSVGElt('feMergeNode')
       .attribute('in', previousResult)
@@ -397,29 +418,88 @@ p5.Element.prototype.applyFilter = function (filterInstance, scale = 2, time = 0
   return this
 }
 
-//PROTOTYPE: p5.Element extension applyFilter(filterInstance, scale = 1)
+//PROTOTYPE: p5.Element extension crossfadeElements(fromElement, toElement, duration, onComplete)
 p5.prototype.crossfadeElements = async function (fromElement, toElement, duration, onComplete) {
   console.log('fromElement', fromElement)
   console.log('toElement', toElement)
-  const startTime = performance.now();
-  const fromElementOpacity = parseFloat(fromElement.attribute("opacity") || "1");
-  const toElementOpacity = parseFloat(toElement.attribute("opacity") || "1");
+  const startTime = performance.now()
+  const fromElementOpacity = parseFloat(fromElement.attribute("opacity") || "1")
+  const toElementOpacity = parseFloat(toElement.attribute("opacity") || "1")
 
   const step = (timestamp) => {
-    const elapsed = timestamp - startTime;
-    const progress = Math.min(elapsed / duration, 1);
+    const elapsed = timestamp - startTime
+    const progress = Math.min(elapsed / duration, 1)
 
-    fromElement.attribute("opacity", fromElementOpacity * (1 - progress));
-    toElement.attribute("opacity", toElementOpacity * progress);
+    fromElement.attribute("opacity", fromElementOpacity * (1 - progress))
+    toElement.attribute("opacity", toElementOpacity * progress)
 
     if (progress < 1) {
-      requestAnimationFrame(step);
+      requestAnimationFrame(step)
     } else {
       if (onComplete) {
-        onComplete();
+        onComplete()
       }
     }
-  };
+  }
 
-  requestAnimationFrame(step);
-};
+  requestAnimationFrame(step)
+}
+
+
+
+// CLASS: StrokeMaskFilter
+class StrokeMaskFilter extends ProtoFilter {
+  constructor() {
+    super()
+    this.type = "strokeMask"
+  }
+
+  // MARK: Stroke Mask method
+  strokeMask(color = "black", width = 10) {
+    this.color = color
+    this.width = width
+
+    this.defs = createSVGElt("defs")
+    this.mask = createSVGElt("mask").id(this.id)
+    this.defs.child(this.mask)
+
+    return this
+  }
+
+  applyFilterToElement(element) {
+    if (!this.type) {
+      return this
+    }
+
+    const parentSVG = element.elt.ownerSVGElement
+
+    // Remove previous mask if exists
+    const previousMask = parentSVG.querySelector(`mask[id="${this.id}"]`)
+    if (previousMask) {
+      previousMask.remove()
+    }
+
+    // Clone the element and append to mask
+    const maskContent = element.elt.cloneNode(true)
+    maskContent.setAttribute("id", `mask-content-${this.id}`)
+    maskContent.setAttribute("stroke", this.color)
+    maskContent.setAttribute("stroke-width", this.width)
+    this.mask.child(new p5.Element(maskContent))
+
+    // Set mask attribute on the element
+    element.attribute("mask", `url(#${this.id})`)
+
+    // Add defs to the parentSVG
+    parentSVG.appendChild(this.defs.elt)
+
+    return this
+  }
+}
+
+// PROTOTYPE: p5.Element extension applyStrokeMask(color, width)
+p5.Element.prototype.applyStrokeMask = function (color, width) {
+  const strokeMaskFilter = new StrokeMaskFilter().strokeMask(color, width)
+  strokeMaskFilter.applyFilterToElement(this)
+  return this
+}
+
