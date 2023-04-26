@@ -14,6 +14,7 @@ class ProtoLayer {
   protoParent // ProtoLayer
   svgParent // 'SVG' p5.Element
   insetAmount = 1
+  filter
 
   constructor(protoParent, svgParent) {
     if (protoParent instanceof ProtoLayer) {
@@ -34,6 +35,7 @@ class ProtoLayer {
   get blackLook() { }
   get protoLook() { return SVGLook.clear }
   get testColor() { return protoColor(0, 230, 230, 1) }
+
 
   get look() {
     const clear = SVGLook.clear
@@ -148,7 +150,11 @@ class ProtoLayer {
     this.drawElement()
     // redrawAll()
   }
-
+  //METH: 
+  setFilter(filter) {
+    this.filter = filter
+    this.drawElement()
+  }
   // #endregion
   // MARK: Static Methods
   //METH: 
@@ -226,7 +232,7 @@ class Frame extends ProtoLayer {
       .parent(this.bleed)
       .layout(-15, -10, 130, 220)
 
-    console.log(this.bleed.attribute('viewBox'))
+    // console.log(this.bleed.attribute('viewBox'))
     // console.log(this.bleed.attribute('viewBox'))
 
     super.assignElement()
@@ -1092,7 +1098,7 @@ class Grid extends ProtoLayer {
         let index = this.index(i, j)
         row[i] = new Cell({
           protoParent: this,
-          // svgParent: this.svgParent,
+          svgParent: this.svgParent,
           grid: this,
           index: index,
           coords: vert(i, j),
@@ -1125,11 +1131,11 @@ class Grid extends ProtoLayer {
       if (group) {
         cells = group.cells
       } else {
-        console.error(`no group named ${groupID}`)
-        console.log(`current groups:`, this.groups)
+        // console.error(`no group named ${groupID}`)
+        // console.log(`current groups:`, this.groups)
       }
     } else { cells = this.cells }
-    console.log(`${groupID} cells`, cells)
+    // console.log(`${groupID} cells`, cells)
     cells.forEach(e => e.inset(amount))
   }
   //METH:
@@ -1430,15 +1436,24 @@ class Cell extends ProtoLayer {
     // super(this.drawElement(look))
     if (this.taken) {
       // this.insetAmount = 0.9
+      let maxWidthDivisor = 8
+      // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
+      let strokeMaskWidth = R.random_num(4, this.grid.cellSize.x / maxWidthDivisor)
       this.rect
-        .attribute('fill', 'purple')
+        // .attribute('fill', 'purple')
         .attribute('fill-opacity', '0')
+        .attribute('fill', protoColor(230))
+      // .applyStrokeMask('black', 20)
+      // .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
     }
     if (this.available) {
       // this.insetAmount = 0.5
       this.rect
-        .attribute('fill', 'orange')
-        .attribute('fill-opacity', '1')
+        // .attribute('fill', 'orange')
+        .attribute('fill-opacity', '0')
+        .attribute('fill', protoColor(230))
+        // .applyStrokeMask('black', 10)
+        .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
     }
 
     this.rect
@@ -1780,6 +1795,23 @@ class Shape extends ProtoLayer {
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+
+    if (S.Effects.db[0][1]) {
+      let maxWidthDivisor = 4
+      // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
+      let strokeMaskWidth = R.random_num(2, this.grid.cellSize.x / maxWidthDivisor)
+
+      path
+        .attribute('fill', protoColor(230))
+        .attribute('fill-opacity', 1)
+        // .attribute('stroke', protoColor(230))
+        // .attribute('stroke-opacity', 1)
+        // .attribute('stroke-width', '7')
+        // .attribute('fill', protoColor(255))
+        // .applyStrokeMask('black', strokeMaskWidth)
+        // .applyStrokeMask(protoColor(128), strokeMaskWidth)
+        .applyFilter(S.Effects.db[0][1], 3)
+    }
     // .svgLook(SVGLook.trendyCactus(path))
 
     this.svgElt
