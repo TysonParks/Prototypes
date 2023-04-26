@@ -329,22 +329,23 @@ class Shade {
   //METH:
   static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
     const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: blurRad, col: highCol, inset: inset })
-    const shadow = this.dropShadSVG({ x: vector.x, y: vector.y, blurRad: 2 * blurRad, col: shadCol, inset: inset })
+    const shadow = this.dropShadSVG({ x: vector.x, y: vector.y, blurRad: blurRad, col: shadCol, inset: inset })
     return [shadow, highlight]
   }
   //METH:
-  static neuShadeSVGFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, spread = 16, inset = false, pixToUserUnits = 1 } = {}) {
+  static neuShadeSVGFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, colSpread = 16, inset = false, pixToUserUnits = 1 } = {}) {
     // console.log('neuSVG')
-    // console.log(baseCol, vector, start, spread, inset)
+    // console.log(baseCol, vector, start, colSpread, inset)
     const offset = vector.mag() / sqrt(2)
-    const cols = baseCol.highShadSpread(spread)
+    const cols = baseCol.highShadSpread(colSpread)
     // console.log(offset, cols)
     let neuShades = cleanSlices(start, offset, globalControls.shadQuality)
-    console.log('neuShades', neuShades)
+    console.log('slices', neuShades)
     neuShades = neuShades
       .map(e => e / pixToUserUnits)
-      .map(sliceOffset => this.neuShadeSVG(vector.setMag(sliceOffset), 2 * sliceOffset, cols[0], cols[1], inset))
+      .map(sliceOffset => this.neuShadeSVG(vector.setMag(sliceOffset), 2 * sliceOffset / sqrt(2), cols[0], cols[1], inset))
       .flat()
+    console.log('neuShades', neuShades)
     return neuShades
   }
   //METH: Box-Shadow CSS
@@ -427,7 +428,7 @@ class ProtoColor extends p5.Color {
 
     const high = [h, s, constrain(b + spread, 0, 100)]
     const shad = [this.complementHue, s, constrain(b - 2 * spread, 0, 100)]
-
+    // console.log('cols:', high, shad)
     let cols = [high, shad]
       .map(hsb => `hsb(${hsb[0]}, ${hsb[1]}%, ${hsb[2]}%)`)
       .map(dscrpt => color(dscrpt))
@@ -436,7 +437,7 @@ class ProtoColor extends p5.Color {
 
   highShadSpread(spread = 16) {
     let b = this.brightness
-    let bPair = [round(b + spread), round(b - 2 * spread)]
+    let bPair = [round(b + spread), round(b - 3 * spread)]
     let cols = bPair
       .map(b => `hsb(${this.hue}, ${this.saturation}%, ${b}%)`)
       .map(dscrpt => color(dscrpt))
