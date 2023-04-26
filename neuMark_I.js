@@ -414,12 +414,21 @@ class ProtoColor extends p5.Color {
   get saturation() { return this._getSaturation() }
   get brightness() { return this._getBrightness() }
   get lightness() { return this._getLightness() }
+  get hsb() {
+    return {
+      h: this.hue,
+      s: this.saturation,
+      b: this.brightness,
+    }
+  }
 
   get complement() {
     return protoColor(`hsba(${this.complementHue}, ${this.saturation}%, ${this.brightness}%, ${this.alpha})`)
   }
 
   get complementHue() { return (this.hue + 180 % 360) }
+
+  setSaturation(sat) { return protoColor(`hsba(${this.hue}, ${sat}%, ${this.brightness}%, ${this.alpha})`) }
 
   highShadComplementSpread(spread = 16) {
     const h = this.hue
