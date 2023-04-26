@@ -187,15 +187,24 @@ function setupBackground() {
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
+  const shadeStack0 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), start: .5, colSpread: 25, inset: false, pixToUserUnits: F.pixToUserUnits })
+  const shader0 = createFilter().dropShadow(shadeStack0)
+
+  const shadeStack1 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), start: 1, colSpread: 25, inset: false, pixToUserUnits: F.pixToUserUnits })
+  const shader1 = createFilter().dropShadow(shadeStack1)
+  console.log('shadeStack1', shadeStack1)
+
+
   // F.inset(.95)
-  let gridX = R.random_int(1, 8)
-  // gridX = 5
+  let gridX = R.random_int(2, 6)
+  gridX = 10
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
   console.log('Grid:', gridX)
   // grid = new Grid(F, { x: 1, y: 2 })
 
-  grid.inset(0.9)
-  grid.insetCells(.5)
+  // grid.inset(R.random_num(0.7, 0.95))
+  grid.inset(.8)
+  grid.insetCells(R.random_num(0.1, .4))
   // grid.insetCells(.8, 'grp000')
 
   // let grid2 = new Grid(grid.cells[0], { x: 2, y: 2 })
@@ -207,24 +216,27 @@ function gridTests2() {
   // let grid4 = new Grid(grid3.cells[1], { x: 1, y: 4 })
   // grid4.insetCells(0.5)
 
-  grid.randGroup(0.1)
+  grid.randGroup(0.025)
   // grid.randomComb()
   grid.outlineTaken(Direction.All)
-  grid.insetCells(0.9, 'grp001')
-  grid.insetCells(0.9, 'grp000')
+  grid.randGroup(0.05)
+  grid.outlineTaken(Direction.Up)
+  grid.randGroup(0.1)
+  // grid.insetCells(0.9, 'grp001')
+  // grid.insetCells(0.9, 'grp000')
 
 
-  const testShadeCSS = Shade.neuBoxShadFactory()
-  const testShadeSVG = Shade.neuShadeSVGFactory({ pixToUserUnits: F.pixToUserUnits })
-  console.log('testShadeCSS', testShadeCSS)
-  console.log('testShadeSVG', testShadeSVG)
+  // const testShadeCSS = Shade.neuBoxShadFactory()
+  // const testShadeSVG = Shade.neuShadeSVGFactory({ pixToUserUnits: F.pixToUserUnits })
+  // console.log('testShadeCSS', testShadeCSS)
+  // console.log('testShadeSVG', testShadeSVG)
   // console.log('pixToUserUnits', F.pixToUserUnits)
-  console.log('createSlices', createSlices(1, 64, 0.5))
-  console.log('cleanSlices', cleanSlices(1, 30, 0.5))
-  console.log('exponentialSlices', exponentialSlices(0.5, 2.35, 2))
+  // console.log('createSlices', createSlices(1, 64, 0.5))
+  // console.log('cleanSlices', cleanSlices(1, 30, 0.5))
+  // console.log('exponentialSlices', exponentialSlices(0.5, 2.35, 2))
 
-  const testArray = [1, 2, 3, 4]
-  console.log(testArray.last())
+  // const testArray = [1, 2, 3, 4]
+  // console.log(testArray.last())
 
 
   // console.log('group01', grid.groups[0])
@@ -240,6 +252,9 @@ function gridTests2() {
   })
 
   grid.islands.forEach(e => e.createShape())
+
+  console.log('Effect0', S.Effects.db[0][1])
+  console.log('Effect1', S.Effects.db[1][1])
 
   // redrawAll()
   // redrawAll()
