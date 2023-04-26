@@ -223,13 +223,14 @@ class ProtoFilter {
   }
 
   //MARK: Drop Shadow method
-  dropShadow(shadows) {
+  dropShadow(shadows, clearInset = true) {
     shadows = OpArray.format(shadows)
 
     const insetShadows = shadows.filter(shadow => shadow.inset)
     const outsetShadows = shadows.filter(shadow => !shadow.inset)
     this.shadows = outsetShadows
 
+    // this.clearInset = clearInset
     this.type = 'dropShadow'
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
@@ -241,11 +242,11 @@ class ProtoFilter {
       .parent(this.filter)
 
     let previousResult = 'SourceGraphic'
-    let insetResult = 'transparentInput'
+    let insetResult = clearInset ? 'transparentInput' : 'SourceGraphic'
     let outsetResult = 'SourceGraphic'
 
     // INSET
-    function buildFilter(shadows, filter, inset, clearInset = false) {
+    function buildFilter(shadows, filter, inset, clearInset) {
       for (const shadow of shadows) {
         const { dx, dy, blur, color } = shadow
         const resultId = `shadow-${inset ? "inset" : "outset"}-${Math.random()
@@ -275,7 +276,7 @@ class ProtoFilter {
           //3B feComposite - MASK IN
           createSVGElt('feComposite')
             .attribute('operator', 'out')
-            .attribute('in', 'SourceAlpha')
+            .attribute('in', clearInset ? 'SourceAlpha' : insetResult) // might need to option insetResult here
             // .attribute('in2', insetResult)
             // .attribute('in', insetResult)
             .attribute('in2', 'offset-blur')
@@ -313,35 +314,33 @@ class ProtoFilter {
     }
 
     if (insetShadows.length > 0) {
-      buildFilter(insetShadows, this.filter, true)
-    } else {
-      insetResult = 'SourceAlpha'
+      buildFilter(insetShadows, this.filter, true, clearInset)
+
     }
+    else { if (clearInset) { insetResult = 'SourceAlpha' } }
 
     if (outsetShadows.length > 0) {
-      buildFilter(outsetShadows, this.filter, false)
-      // this.needsPadding = true
-      // this.padding = this.calculatePadding(outsetShadows)
-      createSVGElt('feComposite')
-        .attribute('operator', 'out')
-        .attribute('in', outsetResult)
-        .attribute('in2', insetResult)
-        .attribute('result', 'finalResult')
-        .parent(this.filter)
+      buildFilter(outsetShadows, this.filter, false, clearInset)
+      if (clearInset) {
+        createSVGElt('feComposite')
+          .attribute('operator', 'out')
+          .attribute('in', outsetResult)
+          .attribute('in2', insetResult)
+          .attribute('result', 'finalResult')
+          .parent(this.filter)
+      } else {
+        createSVGElt('feComposite')
+          .attribute('operator', 'over')
+          .attribute('in', insetResult)
+          .attribute('in2', outsetResult)
+          .attribute('result', 'finalResult')
+          .parent(this.filter)
+      }
+
+
 
       previousResult = 'finalResult'
     }
-
-    // if (outsetShadows.length > 0 && insetShadows.length > 0) {
-    //   createSVGElt('feComposite')
-    //     .attribute('operator', 'over')
-    //     .attribute('in', insetResult)
-    //     .attribute('in2', outsetResult)
-    //     .attribute('result', 'finalResult')
-    //     .parent(this.filter)
-
-    //   previousResult = 'finalResult'
-    // }
 
     createSVGElt('feMergeNode')
       .attribute('in', previousResult)
