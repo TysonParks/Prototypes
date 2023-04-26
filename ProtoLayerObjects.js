@@ -995,16 +995,19 @@ class Grid extends ProtoLayer {
   //METH: findIslands()
   findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, direction = Direction.All, taken = true, stored = true } = {}) {
     let cells
-    if (!groupID && !islandID) {
+    if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
       else { cells = this.availableCells }
     }
-    else {
+    if (!selection) {
+      if (groupID) { cells = this.groupNamed(groupID).cells }
+      if (islandID) { cells = this.islandNamed(islandID).cells }
+    } else {
       cells = OpArray.from(selection)
     }
     let tempIslands = new OpArray
     // print('findIsland cells')
-    // print(cells)
+    console.log('cells', cells.map(e => e.id))
     // print('islandID')
     // print(`Island islandID: ${islandID}`)
 
