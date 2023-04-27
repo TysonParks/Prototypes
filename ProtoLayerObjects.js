@@ -14,7 +14,7 @@ class ProtoLayer {
   protoParent // ProtoLayer
   svgParent // 'SVG' p5.Element
   insetAmount = 1
-  filter
+  _filter
 
   constructor(protoParent, svgParent) {
     if (protoParent instanceof ProtoLayer) {
@@ -44,6 +44,14 @@ class ProtoLayer {
     const black = testingControls.blackMode ? SVGLook.blackAndWhite : []
 
     return [clear, stroke, fill, black]
+  }
+
+  get filter() {
+    if (this._filter) { return this._filter }
+    else {
+      console.log(`${this.id} protoParent:`, this.protoParent)
+      return this.protoParent.filter
+    }
   }
   // #endregion
   // MARK: Computed Properties
@@ -152,7 +160,7 @@ class ProtoLayer {
   }
   //METH: 
   setFilter(filter) {
-    this.filter = filter
+    this._filter = filter
     this.drawElement()
   }
   // #endregion
@@ -1025,7 +1033,8 @@ class Grid extends ProtoLayer {
 
       let island = new Island({
         cells: islanders,
-        protoParent: this.protoParent,
+        protoParent: groupID ? this.groupNamed(groupID) : this,
+        svgParent: this.protoParent.svgElt,
         grid: this,
         groupID: groupID,
         parentIslandID: islandID,
@@ -1795,7 +1804,7 @@ class Shape extends ProtoLayer {
   //METH:
   drawElement() {
     const path = createSVGElt('path')
-
+    console.log(this.filter.id)
     path
       .attribute('d', this.svg)
       .parent(this.svgElt)
@@ -1807,6 +1816,7 @@ class Shape extends ProtoLayer {
       let maxWidthDivisor = 4
       if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
       let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
+      // strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
 
       path
         .attribute('fill', protoColor(230))
@@ -1817,7 +1827,8 @@ class Shape extends ProtoLayer {
         .attribute('fill', protoColor(255))
         .applyStrokeMask('black', strokeMaskWidth)
         // .applyStrokeMask(protoColor(128), strokeMaskWidth)
-        .applyFilter(S.Effects.db[0][1], 3)
+        // .applyFilter(S.Effects.db[0][1], 3)
+        .applyFilter(this.filter)
     }
     // .svgLook(SVGLook.trendyCactus(path))
 
