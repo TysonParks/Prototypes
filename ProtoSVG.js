@@ -413,7 +413,7 @@ Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides 
 
 //PROTOTYPE: p5.Element extension applyFilter(filterInstance, scale = 1)
 p5.Element.prototype.applyFilter = function (filterInstance, scale = 2, time = 0) {
-  filterInstance.applyFilterToElement(this, scale, time)
+  if (filterInstance) { filterInstance.applyFilterToElement(this, scale, time) }
   return this
 }
 
