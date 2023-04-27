@@ -187,18 +187,19 @@ function setupBackground() {
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
-  const shadeStack0 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), start: .5, colSpread: 25, inset: true, pixToUserUnits: F.pixToUserUnits })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), start: .5, colSpread: 25, inset: false, pixToUserUnits: F.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), start: 1, colSpread: 25, inset: false, pixToUserUnits: F.pixToUserUnits })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), start: 1, colSpread: 25, inset: true, pixToUserUnits: F.pixToUserUnits })
   const shader1 = createFilter().dropShadow(shadeStack1)
   console.log('shadeStack1', shadeStack1)
 
 
   // F.inset(.95)
-  let gridX = R.random_int(2, 8)
+  let gridX = R.random_int(2, 10)
   // gridX = 10
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
+  grid.setFilter(shader0)
   console.log('Grid:', gridX)
   // grid = new Grid(F, { x: 1, y: 2 })
 
@@ -216,10 +217,13 @@ function gridTests2() {
   // let grid4 = new Grid(grid3.cells[1], { x: 1, y: 4 })
   // grid4.insetCells(0.5)
 
-  grid.randGroup(0.5)
+  // grid.randGroup(0.5)
   // grid.randomComb()
-  // grid.randGroup(0.025)
-  // grid.outlineTaken(Direction.All)
+  grid.randGroup(0.3)
+  grid.groupNamed('grp000').setFilter(shader0)
+  grid.outlineTaken(Direction.All)
+  grid.groupNamed('grp001').setFilter(shader1)
+  // grid.outlineTaken(Direction.Left)
   // grid.randGroup(0.05)
   // grid.outlineTaken(Direction.Up)
   // grid.randGroup(0.2)
@@ -247,17 +251,27 @@ function gridTests2() {
   // grid.groups[0].inset(0.9)
 
   grid.findIslands({
-    selection: grid.cells,
-    // groupID: 'grp000',
+    groupID: 'grp000',
+    direction: Direction.Cardinal,
+  })
+
+
+  grid.findIslands({
+    groupID: 'grp001',
     direction: Direction.All,
   })
 
-  grid.findIslands({
-    selection: grid.cells,
-    // groupID: 'grp000',
-    direction: Direction.Cardinal,
-    taken: false,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp002',
+  //   direction: Direction.Cardinal,
+  // })
+
+
+
+  // grid.findIslands({
+  //   direction: Direction.Cardinal,
+  //   taken: false,
+  // })
 
   grid.islands.forEach(e => e.createShape())
 
