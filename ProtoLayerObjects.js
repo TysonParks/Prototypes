@@ -49,7 +49,7 @@ class ProtoLayer {
   get filter() {
     if (this._filter) { return this._filter }
     else {
-      console.log(`${this.id} protoParent:`, this.protoParent)
+      // console.log(`${this.id} protoParent:`, this.protoParent)
       return this.protoParent.filter
     }
   }
@@ -274,7 +274,7 @@ class Frame extends ProtoLayer {
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
       .attribute('rx', `${this.cornerRadius}`)
       .attribute('ry', `${this.cornerRadius}`)
-      // .attribute('fill', ProtoColor.randomHighHue().setSaturation(50))
+      // .attribute('fill', ProtoColor.randomHighHue().setSaturation(10))
       .attribute(`fill`, protoColor(230))
       .attribute('fill-opacity', '1')
 
@@ -1008,11 +1008,12 @@ class Grid extends ProtoLayer {
       else { cells = this.availableCells }
     }
     if (!selection) {
-      if (groupID) { cells = this.groupNamed(groupID).cells }
-      if (islandID) { cells = this.islandNamed(islandID).cells }
+      if (groupID) { cells = this.groupNamed(groupID)?.cells || OpArray.empty }
+      if (islandID) { cells = this.islandNamed(islandID)?.cells || OpArray.empty }
     } else {
       cells = OpArray.from(selection)
     }
+    if (cells.isEmpty) { return }
     let tempIslands = new OpArray
     // print('findIsland cells')
     console.log('cells', cells.map(e => e.id))
@@ -1185,6 +1186,7 @@ class Grid extends ProtoLayer {
   }
   //METH:
   outlineTaken(direction = Direction.All) {
+    console.log(`outline taken`)
     let selection = this.validNeighbors({ selection: this.takenCells, directions: direction.directions })
     this.assign(selection)
   }
@@ -1193,6 +1195,7 @@ class Grid extends ProtoLayer {
   // #region General Grammar Methods
   //METH:
   assign(selection, group) {
+    if (selection.isEmpty) { return }
     if (!group) { group = new CellGroup(this, this.svgElt, this) }
     group.cells = selection
     // console.log('groupID', group.id)
@@ -1804,7 +1807,7 @@ class Shape extends ProtoLayer {
   //METH:
   drawElement() {
     const path = createSVGElt('path')
-    console.log(this.filter.id)
+    // console.log(this.filter.id)
     path
       .attribute('d', this.svg)
       .parent(this.svgElt)
