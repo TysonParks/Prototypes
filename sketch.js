@@ -187,17 +187,21 @@ function setupBackground() {
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
-  const shadeStack0 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), start: .5, colSpread: 25, inset: false, pixToUserUnits: F.pixToUserUnits })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), mag: 4, start: .5, colSpread: 25, inset: true, pixToUserUnits: F.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), start: 1, colSpread: 25, inset: true, pixToUserUnits: F.pixToUserUnits })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), mag: 4, start: .5, colSpread: 25, inset: false, pixToUserUnits: F.pixToUserUnits })
   const shader1 = createFilter().dropShadow(shadeStack1)
   console.log('shadeStack1', shadeStack1)
 
+  const shadeStack2 = Shade.neuShadeSVGFactory({ baseCol: protoColor(230), mag: -4, start: .5, colSpread: 25, inset: true, pixToUserUnits: F.pixToUserUnits })
+  const shader2 = createFilter().dropShadow(shadeStack2)
+  console.log('shadeStack2', shadeStack2)
+
 
   // F.inset(.95)
-  let gridX = R.random_int(2, 10)
-  // gridX = 10
+  let gridX = R.random_int(1, 5)
+  gridX = 1
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
   grid.setFilter(shader0)
   console.log('Grid:', gridX)
@@ -218,12 +222,43 @@ function gridTests2() {
   // grid4.insetCells(0.5)
 
   // grid.randGroup(0.5)
-  // grid.randomComb()
-  grid.randGroup(0.3)
+  // grid.randGroup(0.1)
+
+  grid.randomComb({
+    keepRange: range(1, 4),
+    dropRange: range(1, 15),
+    start: 0
+  })
   grid.groupNamed('grp000').setFilter(shader0)
-  grid.outlineTaken(Direction.All)
-  grid.groupNamed('grp001').setFilter(shader1)
-  // grid.outlineTaken(Direction.Left)
+  grid.findIslands({
+    groupID: 'grp000',
+    direction: Direction.Cardinal,
+  })
+
+  // if (!grid.isFull) {
+  // console.log('grid has space!')
+  grid.outlineTaken(Direction.Horizontal)
+  // if (grid.groupNamed('grp001')) {
+  // console.log(grid.groupNamed('grp001'))
+  grid.groupNamed('grp001')?.setFilter(shader1)
+  grid.findIslands({
+    groupID: 'grp001',
+    direction: Direction.All,
+  })
+  // }
+  // } else { console.log('grid is full!') }
+
+  grid.outlineTaken(Direction.Ordinal)
+  grid.groupNamed('grp002')?.setFilter(shader2)
+  grid.findIslands({
+    groupID: 'grp002',
+    direction: Direction.Cardinal,
+  })
+  // grid.outlineTaken(Direction.All)
+  // grid.groupNamed('grp002').setFilter(shader1)
+  // grid.outlineTaken(Direction.All)
+  // grid.groupNamed('grp002').setFilter(shader0)
+  // // grid.outlineTaken(Direction.Left)
   // grid.randGroup(0.05)
   // grid.outlineTaken(Direction.Up)
   // grid.randGroup(0.2)
@@ -250,21 +285,12 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All)
   // grid.groups[0].inset(0.9)
 
-  grid.findIslands({
-    groupID: 'grp000',
-    direction: Direction.Cardinal,
-  })
 
 
-  grid.findIslands({
-    groupID: 'grp001',
-    direction: Direction.All,
-  })
 
-  // grid.findIslands({
-  //   groupID: 'grp002',
-  //   direction: Direction.Cardinal,
-  // })
+
+
+
 
 
 
