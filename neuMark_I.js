@@ -316,7 +316,7 @@ p5.Element.prototype.boxShadow = function (value) {
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = 45, offset = 8) { return createVector(1, 0).rotate(angle).mult(offset) }
+  static shadVect(angle = 45, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
   static maxComponent(vector = this.shadVect()) {
     return vector.y
     // return max(this.x, this.y)
@@ -328,18 +328,20 @@ class Shade {
   }
   //METH:
   static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
-    const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: blurRad, col: highCol, inset: inset })
-    const shadow = this.dropShadSVG({ x: vector.x, y: vector.y, blurRad: blurRad, col: shadCol, inset: inset })
+    const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: 2 * blurRad, col: highCol, inset: inset })
+    const shadow = this.dropShadSVG({ x: 2 * vector.x, y: 2 * vector.y, blurRad: blurRad, col: shadCol, inset: inset })
     return [shadow, highlight]
   }
   //METH:
-  static neuShadeSVGFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, colSpread = 16, inset = false, pixToUserUnits = 1 } = {}) {
+  static neuShadeSVGFactory({ baseCol = protoColor(230), vector = this.shadVect(), mag, start = 0.5, colSpread = 16, inset = false, pixToUserUnits = 1 } = {}) {
     // console.log('neuSVG')
     // console.log(baseCol, vector, start, colSpread, inset)
-    const offset = vector.mag() / sqrt(2)
+    if (!mag) { mag = vector.mag() }
+    inset = mag > 0 ? false : true
+    // const offset = mag / sqrt(2)
     const cols = baseCol.highShadSpread(colSpread)
-    // console.log(offset, cols)
-    let neuShades = cleanSlices(start, offset, globalControls.shadQuality)
+    console.log('cols', cols)
+    let neuShades = cleanSlices(start, mag, globalControls.shadQuality)
     console.log('slices', neuShades)
     neuShades = neuShades
       .map(e => e / pixToUserUnits)
