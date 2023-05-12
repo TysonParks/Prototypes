@@ -530,7 +530,6 @@ class Segment {
     return this.pointOnsegment(midPoint + lerp * (1 - midPoint))
   }
 
-  // TODO: remove print statements
   #assignVerts(start, end, args) {
     if (args.length === 1) {
       if (start instanceof Array) {
