@@ -328,26 +328,36 @@ class Shade {
   }
   //METH:
   static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
+    // console.log('components', vector.x, vector.y, blurRad)
     const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: 2 * blurRad, col: highCol, inset: inset })
-    const shadow = this.dropShadSVG({ x: 2 * vector.x, y: 2 * vector.y, blurRad: blurRad, col: shadCol, inset: inset })
+    const shadow = this.dropShadSVG({ x: 1 * vector.x, y: 1 * vector.y, blurRad: 1 * blurRad, col: shadCol, inset: inset })
     return [shadow, highlight]
+    // return [highlight, shadow]
   }
   //METH:
-  static neuShadeSVGFactory({ baseCol = protoColor(230), vector = this.shadVect(), mag, start = 0.5, colSpread = 16, inset = false, pixToUserUnits = 1 } = {}) {
-    // console.log('neuSVG')
-    // console.log(baseCol, vector, start, colSpread, inset)
+  static neuShadeSVGFactory({
+    baseCol = protoColor(230),
+    vector = this.shadVect(),
+    mag,
+    start = 0.5,
+    colSpread = 25,
+    // inset = false,
+    pixToUserUnits = 1 } = {}
+  ) {
     if (!mag) { mag = vector.mag() }
-    inset = mag > 0 ? false : true
+    const inset = mag > 0 ? false : true
+    mag = abs(mag)
+    // console.log('inset', inset)
     // const offset = mag / sqrt(2)
     const cols = baseCol.highShadSpread(colSpread)
-    console.log('cols', cols)
+    // console.log('cols', cols)
     let neuShades = cleanSlices(start, mag, globalControls.shadQuality)
     console.log('slices', neuShades)
     neuShades = neuShades
       .map(e => e / pixToUserUnits)
-      .map(sliceOffset => this.neuShadeSVG(vector.setMag(sliceOffset), 2 * sliceOffset / sqrt(2), cols[0], cols[1], inset))
+      .map(sliceOffset => this.neuShadeSVG(vector.setMag(sliceOffset), sliceOffset / sqrt(2), cols[0], cols[1], inset))
       .flat()
-    console.log('neuShades', neuShades)
+    // console.log('neuShades', neuShades)
     return neuShades
   }
   //METH: Box-Shadow CSS
