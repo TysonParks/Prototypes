@@ -163,6 +163,9 @@ class ProtoLayer {
     this._filter = filter
     this.drawElement()
   }
+  drawChildElements() {
+
+  }
   // #endregion
   // MARK: Static Methods
   //METH: 
@@ -1816,10 +1819,10 @@ class Shape extends ProtoLayer {
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
 
     if (S.Effects.db[0][1]) {
-      let maxWidthDivisor = 4
-      if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
+      let maxWidthDivisor = 5
+      // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.25 }
       let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
-      // strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
+      strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
 
       path
         .attribute('fill', protoColor(230))
@@ -1829,7 +1832,7 @@ class Shape extends ProtoLayer {
         // .attribute('stroke-width', '7')
         .attribute('fill', protoColor(255))
         .applyStrokeMask('black', strokeMaskWidth)
-        // .applyStrokeMask(protoColor(128), strokeMaskWidth)
+        .applyStrokeMask(protoColor(128), strokeMaskWidth)
         // .applyFilter(S.Effects.db[0][1], 3)
         .applyFilter(this.filter)
     }
