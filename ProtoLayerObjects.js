@@ -13,10 +13,10 @@ class ProtoLayer {
   rect // 'rect' p5.Element
   protoParent // ProtoLayer
   svgParent // 'SVG' p5.Element
-  insetAmount = 1
+  _insetAmount
   _filter
 
-  constructor(protoParent, svgParent) {
+  constructor({ protoParent, svgParent } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
       this.svgParent = protoParent.svgElt
@@ -29,7 +29,7 @@ class ProtoLayer {
 
   // MARK: View Properties
   // #region View Properties
-  get padding() { return 5 }
+  get padding() { return 20 }
 
   get testLook() { return SVGLook.test() }
   get blackLook() { }
@@ -44,6 +44,11 @@ class ProtoLayer {
     const black = testingControls.blackMode ? SVGLook.blackAndWhite : []
 
     return [clear, stroke, fill, black]
+  }
+
+  get insetAmount() {
+    if (this._insetAmount) { return this._insetAmount }
+    else { return this.protoParent.insetAmount }
   }
 
   get filter() {
@@ -154,7 +159,7 @@ class ProtoLayer {
   // #region LayerGrammar Methods
   //METH: 
   inset(amount) {
-    this.insetAmount = amount
+    this._insetAmount = amount
     this.drawElement()
     // redrawAll()
   }
@@ -182,7 +187,8 @@ class Frame extends ProtoLayer {
   cornerRadius = 5
 
   constructor(svgParent) {
-    super(svgParent)
+    super({ protoParent: svgParent })
+    this._insetAmount = 1
     this.finishSetup(S.Frame)
   }
 
@@ -735,7 +741,7 @@ class Grid extends ProtoLayer {
   islands = new OpArray
 
   constructor(protoParent, gridSize) {
-    super(protoParent)
+    super({ protoParent: protoParent })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this.finishSetup(S.Grids)
@@ -1259,7 +1265,7 @@ class CellGroup extends ProtoLayer {
   color
 
   constructor(protoParent, svgParent, grid) {
-    super(protoParent, svgParent)
+    super({ protoParent: protoParent, svgParent: svgParent })
     this.grid = grid
     this.finishSetup(S.Groups)
     this.cells = OpArray.from(grid.cells)
@@ -1378,7 +1384,7 @@ class Cell extends ProtoLayer {
   color
 
   constructor({ protoParent, svgParent, grid, index, coords, available = true, color = '888' } = {}) {
-    super(protoParent, svgParent)
+    super({ protoParent: protoParent, svgParent: svgParent })
     if (!(coords instanceof Vertex)) { coords = vert(coords) }
     this.grid = grid
     this.index = index
@@ -1474,8 +1480,8 @@ class Cell extends ProtoLayer {
         // .attribute('fill', 'orange')
         .attribute('fill-opacity', '0')
         .attribute('fill', protoColor(230))
-        // .applyStrokeMask('black', 10)
-        .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
+      // .applyStrokeMask('black', 10)
+      // .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
     }
 
     this.rect
@@ -1493,7 +1499,7 @@ class Island extends ProtoLayer {
   direction
   color
   constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true } = {}) {
-    super(protoParent, svgParent)
+    super({ protoParent: protoParent, svgParent: svgParent })
     this.cells = cells
     this.grid = grid
     this.groupID = groupID
@@ -1748,7 +1754,7 @@ class Shape extends ProtoLayer {
   testColor
 
   constructor({ subShapes, protoParent, svgParent, island } = {}) {
-    super(protoParent, svgParent)
+    super({ protoParent: protoParent, svgParent: svgParent })
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
@@ -1819,7 +1825,7 @@ class Shape extends ProtoLayer {
       .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
 
     if (S.Effects.db[0][1]) {
-      let maxWidthDivisor = 5
+      let maxWidthDivisor = 20
       // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.25 }
       let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
       strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
@@ -1832,9 +1838,9 @@ class Shape extends ProtoLayer {
         // .attribute('stroke-width', '7')
         .attribute('fill', protoColor(255))
         .applyStrokeMask('black', strokeMaskWidth)
-        .applyStrokeMask(protoColor(128), strokeMaskWidth)
+        // .applyStrokeMask(protoColor(128), strokeMaskWidth)
         // .applyFilter(S.Effects.db[0][1], 3)
-        .applyFilter(this.filter)
+        .applyFilter(this.filter, 3)
     }
     // .svgLook(SVGLook.trendyCactus(path))
 
