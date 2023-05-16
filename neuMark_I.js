@@ -329,7 +329,7 @@ class Shade {
   //METH:
   static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
     // console.log('components', vector.x, vector.y, blurRad)
-    const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: 2 * blurRad, col: highCol, inset: inset })
+    const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: 1 * blurRad, col: highCol, inset: inset })
     const shadow = this.dropShadSVG({ x: 1 * vector.x, y: 1 * vector.y, blurRad: 1 * blurRad, col: shadCol, inset: inset })
     return [shadow, highlight]
     // return [highlight, shadow]
@@ -341,7 +341,6 @@ class Shade {
     mag,
     start = 0.5,
     colSpread = 25,
-    // inset = false,
     pixToUserUnits = 1 } = {}
   ) {
     if (!mag) { mag = vector.mag() }
@@ -353,6 +352,8 @@ class Shade {
     // console.log('cols', cols)
     let neuShades = cleanSlices(start, mag, globalControls.shadQuality)
     console.log('slices', neuShades)
+
+
     neuShades = neuShades
       .map(e => e / pixToUserUnits)
       .map(sliceOffset => this.neuShadeSVG(vector.setMag(sliceOffset), sliceOffset / sqrt(2), cols[0], cols[1], inset))
@@ -458,7 +459,7 @@ class ProtoColor extends p5.Color {
 
   highShadSpread(spread = 16) {
     let b = this.brightness
-    let bPair = [round(b + spread), round(b - 3 * spread)]
+    let bPair = [round(b + spread), round(b - 1.3 * spread)]
     let cols = bPair
       .map(b => `hsb(${this.hue}, ${this.saturation}%, ${b}%)`)
       .map(dscrpt => color(dscrpt))
