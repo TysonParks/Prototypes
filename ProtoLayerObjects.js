@@ -15,8 +15,10 @@ class ProtoLayer {
   svgParent // 'SVG' p5.Element
   _insetAmount
   _filter
+  drawSVG
+  drawRect
 
-  constructor({ protoParent, svgParent } = {}) {
+  constructor({ protoParent, svgParent, inset, filter, drawSVG = true, drawRect = true } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
       this.svgParent = protoParent.svgElt
@@ -24,6 +26,10 @@ class ProtoLayer {
     else if (protoParent instanceof p5.Element) { this.svgParent = protoParent }
     else { console.error('protoParent is not valid') }
     if (svgParent) { this.svgParent = svgParent }
+    this._insetAmount = inset
+    this._filter = filter
+    this.drawSVG = drawSVG
+    this.drawRect = drawRect
     this.assignUID()
   }
 
@@ -123,33 +129,40 @@ class ProtoLayer {
   }
   //METH: 
   assignElement() {
-    this.svgElt = createSVGElt().id(this.id)
-      .parent(this.svgParent)
-      .addToClassList(this.id)
-      .addToClassList(this.svgParent.elt.classList.value)
-      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
-      .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
+    if (this.drawSVG) {
+      this.svgElt = createSVGElt().id(this.id)
+        .parent(this.svgParent)
+        .addToClassList(this.id)
+        .addToClassList(this.svgParent.elt.classList.value)
+        .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
+        .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
 
-    // .label('test', 'red', Direction.Up)
+      // .label('test', 'red', Direction.Up)
+    }
 
-    this.rect = createSVGElt('rect').id(`${this.id}-frontRect`)
-      .parent(this.svgElt)
-      .addToClassList(this.id)
-      .addToClassList(this.svgParent.elt.classList.value)
-      .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
-    // .label('test', 'red', Direction.None)
+    if (this.drawRect) {
+      this.rect = createSVGElt('rect').id(`${this.id}-frontRect`)
+        .parent(this.svgElt)
+        .addToClassList(this.id)
+        .addToClassList(this.svgParent.elt.classList.value)
+        .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+      // .label('test', 'red', Direction.None)
+    }
+
 
   }
   //METH: 
   drawElement() {
-    this.svgElt
-      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
-      .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
-
-    this.rect
-      .svgLook(this.look)
-      .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
-
+    if (this.drawSVG) {
+      this.svgElt
+        .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
+        .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
+    }
+    if (this.drawRect) {
+      this.rect
+        .svgLook(this.look)
+        .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+    }
     // if (this.islandID) { this.svgElt.look(Look.testCell(this.color)) }
   }
   //METH: 
@@ -187,8 +200,7 @@ class Frame extends ProtoLayer {
   cornerRadius = 5
 
   constructor(svgParent) {
-    super({ protoParent: svgParent })
-    this._insetAmount = 1
+    super({ protoParent: svgParent, inset: 1, drawRect: false })
     this.finishSetup(S.Frame)
   }
 
@@ -273,9 +285,6 @@ class Frame extends ProtoLayer {
     this.bleedRect
       // .layout(-10, -10, 120, 220)
       .attribute('fill', 'black')
-
-
-
 
     super.drawElement()
 
@@ -740,8 +749,8 @@ class Grid extends ProtoLayer {
   groups = new OpArray
   islands = new OpArray
 
-  constructor(protoParent, gridSize) {
-    super({ protoParent: protoParent })
+  constructor(protoParent, gridSize, inset) {
+    super({ protoParent: protoParent, inset: inset, drawRect: false })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this.finishSetup(S.Grids)
@@ -1010,7 +1019,7 @@ class Grid extends ProtoLayer {
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
   //METH: findIslands()
-  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, direction = Direction.All, taken = true, stored = true } = {}) {
+  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, direction = Direction.All, taken = true, stored = true, inset = 1 } = {}) {
     let cells
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
@@ -1040,17 +1049,20 @@ class Grid extends ProtoLayer {
       // print(islanders)
       // print(`cells`)
       // print(cells)
+      console.log('island inset', inset)
 
       let island = new Island({
         cells: islanders,
         protoParent: groupID ? this.groupNamed(groupID) : this,
         svgParent: this.protoParent.svgElt,
+        inset: inset,
         grid: this,
         groupID: groupID,
         parentIslandID: islandID,
         direction: direction,
         stored: stored,
       })
+      console.log('this island inset', island.insetAmount)
       // island.createShape()
       if (stored) {
         // print(island)
@@ -1104,6 +1116,8 @@ class Grid extends ProtoLayer {
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) { this.updateCells() }
     // else { 
+
+    tempIslands.forEach(e => e.createShape())
     return tempIslands
     // }
   }
@@ -1265,7 +1279,7 @@ class CellGroup extends ProtoLayer {
   color
 
   constructor(protoParent, svgParent, grid) {
-    super({ protoParent: protoParent, svgParent: svgParent })
+    super({ protoParent: protoParent, svgParent: svgParent, drawSVG: false, drawRect: false })
     this.grid = grid
     this.finishSetup(S.Groups)
     this.cells = OpArray.from(grid.cells)
@@ -1384,7 +1398,7 @@ class Cell extends ProtoLayer {
   color
 
   constructor({ protoParent, svgParent, grid, index, coords, available = true, color = '888' } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent })
+    super({ protoParent: protoParent, svgParent: svgParent, drawSVG: false, drawRect: false })
     if (!(coords instanceof Vertex)) { coords = vert(coords) }
     this.grid = grid
     this.index = index
@@ -1455,37 +1469,38 @@ class Cell extends ProtoLayer {
   //METH:
   drawElement() {
     super.drawElement()
-
-    this.rect
-      .attribute('rx', `${10}`)
-      .attribute('ry', `${10}`)
-
-
-    // super(this.drawElement(look))
-    if (this.taken) {
-      // this.insetAmount = 0.9
-      let maxWidthDivisor = 8
-      // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
-      let strokeMaskWidth = R.random_num(4, this.grid.cellSize.x / maxWidthDivisor)
+    if (this.drawRect) {
       this.rect
-        // .attribute('fill', 'purple')
-        .attribute('fill-opacity', '0')
-        .attribute('fill', protoColor(230))
-      // .applyStrokeMask('black', 20)
-      // .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
-    }
-    if (this.available) {
-      // this.insetAmount = 0.5
-      this.rect
-        // .attribute('fill', 'orange')
-        .attribute('fill-opacity', '0')
-        .attribute('fill', protoColor(230))
-      // .applyStrokeMask('black', 10)
-      // .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
-    }
+        .attribute('rx', `${10}`)
+        .attribute('ry', `${10}`)
 
-    this.rect
-    // .svgLook(this.look)
+
+      // super(this.drawElement(look))
+      if (this.taken) {
+        // this.insetAmount = 0.9
+        let maxWidthDivisor = 8
+        // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
+        let strokeMaskWidth = R.random_num(4, this.grid.cellSize.x / maxWidthDivisor)
+        this.rect
+          // .attribute('fill', 'purple')
+          .attribute('fill-opacity', '0')
+          .attribute('fill', protoColor(230))
+        // .applyStrokeMask('black', 20)
+        // .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
+      }
+      if (this.available) {
+        // this.insetAmount = 0.5
+        this.rect
+          // .attribute('fill', 'orange')
+          .attribute('fill-opacity', '0')
+          .attribute('fill', protoColor(230))
+        // .applyStrokeMask('black', 10)
+        // .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
+      }
+
+      this.rect
+      // .svgLook(this.look)
+    }
   }
 }
 
@@ -1498,8 +1513,8 @@ class Island extends ProtoLayer {
   shape
   direction
   color
-  constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent })
+  constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, inset = 1 } = {}) {
+    super({ protoParent: protoParent, svgParent: svgParent, inset: inset, drawRect: false })
     this.cells = cells
     this.grid = grid
     this.groupID = groupID
@@ -1507,10 +1522,8 @@ class Island extends ProtoLayer {
     this.parentIslandID = parentIslandID
     if (stored) { this.finishSetup(S.Islands) }
     // else { this.finishSetup() }
-    // this.createShape()
     this.color = R.random_hash(3, '#')
-    // print(this)
-
+    // this.createShape()
   }
   // MARK: Computed Properties
   // #region Computed Properties
@@ -1526,6 +1539,9 @@ class Island extends ProtoLayer {
 
   // get cellBoundsWidth() { return this.grid.cellBoundsWidth(this.cells) }
   // get cellBoundsHeight() { return this.grid.cellBoundsHeight(this.cells) }
+
+  get insetAnchor() { return this.anchor }
+  get insetSize() { return this.size }
 
   get boundsRect() { return this.cellBounds.boundsRect }
 
@@ -1566,7 +1582,7 @@ class Island extends ProtoLayer {
   // #region Methods
   // TODO: finish fixing final bugs
   //METH:
-  createShape() {
+  createShape(inset) {
     let segments = OpArray.format(this.exposedSegments)
     let subShapes = new OpArray
     // let thisShape = new Shape({ protoParent: this.protoParent, island: this })
@@ -1585,7 +1601,8 @@ class Island extends ProtoLayer {
       subShapes: subShapes,
       protoParent: this,
       svgParent: this.svgParent,
-      island: this
+      island: this,
+      inset: inset
     })
     this.shape = thisShape
     // thisShape.subShapes = subShapes
@@ -1647,13 +1664,13 @@ class Island extends ProtoLayer {
             // print(`@ subShape Iter = ${subShapeIter}`)
             let current = fillstack.pop()
             let nextSeg
-            // print('pre-next endPoint')
-            // print(current.endPoint)
+            // console.log('current', current)
+            // console.log('pre-next endPoint', current.endPoint)
             // print('pre-next subShape')
             // print(subShape.idMap)
             // print('pre-next segments')
             // print(segments.idMap)
-            // print(segments)
+            // console.log('segments', segments)
             //find next segments (could be 2 if allowing ordinal island connections)
             let next = segments
               .filter(s => current.endPoint.equals(s.startPoint, 4))
@@ -1753,8 +1770,8 @@ class Shape extends ProtoLayer {
   testVerts
   testColor
 
-  constructor({ subShapes, protoParent, svgParent, island } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent })
+  constructor({ subShapes, protoParent, svgParent, island, inset } = {}) {
+    super({ protoParent: protoParent, svgParent: svgParent, inset: inset })
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
@@ -1822,13 +1839,17 @@ class Shape extends ProtoLayer {
       .parent(this.svgElt)
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
-      .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
 
     if (S.Effects.db[0][1]) {
       let maxWidthDivisor = 20
       // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.25 }
       let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
       strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
+
+      strokeMaskWidth = 1 * (1 - this.insetAmount) * this.grid.cellSize.x
+      console.log('strokeMaskWidth', strokeMaskWidth)
+      console.log('cellSize', this.grid.cellSize.x)
 
       path
         .attribute('fill', protoColor(230))
@@ -1840,7 +1861,7 @@ class Shape extends ProtoLayer {
         .applyStrokeMask('black', strokeMaskWidth)
         // .applyStrokeMask(protoColor(128), strokeMaskWidth)
         // .applyFilter(S.Effects.db[0][1], 3)
-        .applyFilter(this.filter, 3)
+        .applyFilter(this.filter, 2)
     }
     // .svgLook(SVGLook.trendyCactus(path))
 
