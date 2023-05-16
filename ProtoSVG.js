@@ -352,7 +352,7 @@ class ProtoFilter {
   }
 
   //MARK: Utility methods
-  applyFilterToElement(element, scale = 2, time = 0) {
+  applyFilterToElement(element, scale = 3, time = 0) {
     if (!this.type) { return this }
 
     const anchor = (scale - 1) * -50;
@@ -397,7 +397,7 @@ class ProtoFilter {
 
 
 
-  updateFilter(shadows, scale = 2, time = 0) {
+  updateFilter(shadows, scale = 3, time = 0) {
 
   }
 
@@ -412,7 +412,7 @@ Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides 
 
 
 //PROTOTYPE: p5.Element extension applyFilter(filterInstance, scale = 1)
-p5.Element.prototype.applyFilter = function (filterInstance, scale = 2, time = 0) {
+p5.Element.prototype.applyFilter = function (filterInstance, scale = 3, time = 0) {
   if (filterInstance) { filterInstance.applyFilterToElement(this, scale, time) }
   return this
 }
