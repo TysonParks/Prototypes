@@ -188,7 +188,7 @@ function setupBackground() {
 // FUNC: gridTests2()
 function gridTests2() {
   // F.inset(.95)
-  let gridX = R.random_int(2, 6)
+  let gridX = R.random_int(3, 8)
   // gridX = 2
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
   // grid = new Grid(F, { x: 8, y: 12 })
@@ -231,8 +231,8 @@ function gridTests2() {
   // grid.randGroup(0.3)
 
   grid.randomComb({
-    keepRange: range(1, 4),
-    dropRange: range(8, 16),
+    keepRange: range(1, 3),
+    dropRange: range(8, 20),
     start: 0
   })
 
@@ -242,10 +242,11 @@ function gridTests2() {
   //   taken: true,
   // })
 
-  grid.outlineTaken(Direction.Cardinal)
+  grid.outlineTaken(Direction.All)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp001',
+    inset: 0.95,
     direction: Direction.Cardinal,
     taken: true,
   })
@@ -254,6 +255,7 @@ function gridTests2() {
   // grid.groupNamed('grp002')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp002',
+    inset: 0.95,
     direction: Direction.All,
     taken: false,
   })
@@ -261,7 +263,8 @@ function gridTests2() {
   grid.groupNamed('grp000').setFilter(shader2)
   grid.groupNamed('grp001')?.setFilter(shader1)
 
-  console.log('children', grid.groupNamed('grp000').svgElt.child())
+  console.log('group', grid.groupNamed('grp000'))
+  console.log('children', grid.groupNamed('grp000').svgElt?.child())
 
   // grid.outlineTaken(Direction.All)
   // grid.groupNamed('grp002').setFilter(shader1)
@@ -308,7 +311,7 @@ function gridTests2() {
   //   taken: false,
   // })
 
-  grid.islands.forEach(e => e.createShape())
+  // grid.islands.forEach(e => e.createShape(0.8))
 
   console.log('Effect0', S.Effects.db[0][1])
   console.log('Effect1', S.Effects.db[1][1])
