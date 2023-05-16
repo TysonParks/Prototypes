@@ -187,9 +187,26 @@ function setupBackground() {
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: 6, start: .5, pixToUserUnits: F.pixToUserUnits })
+  // F.inset(.95)
+  let gridX = R.random_int(2, 6)
+  // gridX = 2
+  grid = new Grid(F, { x: gridX, y: gridX * 2 })
+  // grid = new Grid(F, { x: 8, y: 12 })
+  grid.inset(R.random_num(0.7, 0.95))
+  // grid.inset(.8)
+  grid.insetCells(R.random_num(0.1, .4))
+  // grid.insetCells(.8, 'grp000')
+
+  console.log('Grid:', gridX)
+
+  const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
+  console.log('minCellSize', minCellSize)
+  //inset: maxShadow <= min(cellSize.x, cellsize.y)
+  //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
+
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: -minCellSize * 2, start: .5, pixToUserUnits: F.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
-  // console.log('shadeStack0', shadeStack0)
+  console.log('shadeStack0', shadeStack0)
 
   const shadeStack1 = Shade.neuShadeSVGFactory({ mag: -16, start: .5, pixToUserUnits: F.pixToUserUnits })
   const shader1 = createFilter().dropShadow(shadeStack1)
@@ -199,20 +216,7 @@ function gridTests2() {
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
-
-  // F.inset(.95)
-  let gridX = R.random_int(2, 10)
-  // gridX = 1
-  grid = new Grid(F, { x: gridX, y: gridX * 2 })
-  console.log('Grid:', gridX)
   grid.setFilter(shader0)
-
-  // grid = new Grid(F, { x: 1, y: 2 })
-
-  grid.inset(R.random_num(0.7, 0.95))
-  // grid.inset(.8)
-  grid.insetCells(R.random_num(0.1, .4))
-  // grid.insetCells(.8, 'grp000')
 
   // let grid2 = new Grid(grid.cells[0], { x: 2, y: 2 })
   // grid2.insetCells(0.9)
@@ -238,11 +242,11 @@ function gridTests2() {
   //   taken: true,
   // })
 
-  grid.outlineTaken(Direction.Down)
+  grid.outlineTaken(Direction.Cardinal)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp001',
-    direction: Direction.All,
+    direction: Direction.Cardinal,
     taken: true,
   })
 
@@ -250,7 +254,7 @@ function gridTests2() {
   // grid.groupNamed('grp002')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp002',
-    direction: Direction.Cardinal,
+    direction: Direction.All,
     taken: false,
   })
 
