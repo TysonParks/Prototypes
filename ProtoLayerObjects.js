@@ -750,7 +750,7 @@ class Grid extends ProtoLayer {
   islands = new OpArray
 
   constructor(protoParent, gridSize, inset) {
-    super({ protoParent: protoParent, inset: inset, drawRect: false })
+    super({ protoParent: protoParent, inset: inset, drawRect: false, drawSVG: false })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this.finishSetup(S.Grids)
@@ -1049,7 +1049,7 @@ class Grid extends ProtoLayer {
       // print(islanders)
       // print(`cells`)
       // print(cells)
-      console.log('island inset', inset)
+      // console.log('island inset', inset)
 
       let island = new Island({
         cells: islanders,
@@ -1062,7 +1062,7 @@ class Grid extends ProtoLayer {
         direction: direction,
         stored: stored,
       })
-      console.log('this island inset', island.insetAmount)
+      // console.log('this island inset', island.insetAmount)
       // island.createShape()
       if (stored) {
         // print(island)
@@ -1514,7 +1514,7 @@ class Island extends ProtoLayer {
   direction
   color
   constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, inset = 1 } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent, inset: inset, drawRect: false })
+    super({ protoParent: protoParent, svgParent: svgParent, inset: inset, drawRect: false, drawSVG: false })
     this.cells = cells
     this.grid = grid
     this.groupID = groupID
@@ -1789,6 +1789,7 @@ class Shape extends ProtoLayer {
   get grid() { return this.island.grid }
 
   get turns() { return this.subShapes.map(e => this.createTurns(e)) }
+  get parts() { return this.subShapes.map(e => this.createParts(e)) }
   get svg() {
     let result = this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e }))
     if (result instanceof Array) {
@@ -1803,11 +1804,10 @@ class Shape extends ProtoLayer {
   // MARK: methods
   //METH:
   createTurns(segments) {
-    print('segments')
-    print(segments)
+
+    // console.log('segments', segments)
     let segs = OpArray.from(segments)
-    print('segs')
-    print(segs)
+    // console.log('segs', segs)
     let turns = new OpArray
     let prev = segs.last()
     segs.forEach((e, i) => {
@@ -1816,6 +1816,35 @@ class Shape extends ProtoLayer {
       prev = e
     })
     return turns
+  }
+
+  createParts(segments) {
+    const turns = this.createTurns(segments)
+    let prevTurn = turns.last()
+    let parts = new OpArray
+    turns.forEach((e, i) => {
+      const part = EdgePart.from([prevTurn, e])
+      parts.push(part)
+      prevTurn = e
+
+    })
+
+
+    // let segs = OpArray.from(segments)
+    // let prevSeg = segs.last()
+    // let prevTurn
+    // let parts = new OpArray
+    // segs.forEach((e, i) => {
+    //   const newTurn = prevSeg.direction.turnTo(e.direction)
+    //   if (prevTurn) {
+    //     const part = EdgePart.from([prevTurn, newTurn])
+    //     parts.push(part)
+    //   }
+    //   prevTurn = newTurn
+    //   prevSeg = e
+    // })
+    // console.log('parts', parts)
+    return parts
   }
   //METH:
   assignID() { this.id = this.store.add(this) }
