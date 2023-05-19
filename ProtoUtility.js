@@ -146,7 +146,7 @@ class Direction {
 
   turnTo(direction) {
     if (this.isSingle && direction.isSingle) {
-      print('valid candidates')
+      // print('valid candidates')
       if (direction.equals(this.toLeft)) { return Turn.L }
       if (direction.equals(this)) { return Turn.S }
       if (direction.equals(this.toRight)) { return Turn.R }
@@ -292,22 +292,38 @@ class EdgePart {
   static CSO = new EdgePart('CSO')     // SR              --> 'Corner Start Outside'
   static CEI = new EdgePart('CEI')     // LS              --> 'Corner End Inside'
   static CEO = new EdgePart('CEO')     // RS              --> 'Corner End Outside'
-  static StI = new EdgePart('SI')       // RL              --> 'Step Start'
-  static StO = new EdgePart('SO')       // LR              --> 'Step Out'
+  static StI = new EdgePart('SI')      // RL              --> 'Step In'
+  static StO = new EdgePart('SO')      // LR              --> 'Step Out'
   static UI = new EdgePart('UI')       // LL              --> 'U-Turn Inside'
   static UO = new EdgePart('UO')       // RR              --> 'U-Turn Outside'
 
-  static from(turns) { return this.#fromTurns(turns) }
-
+  static from(turns) { return this.fromTurns(turns) }
+  value
   name
 
   constructor(value) {
+    this.value = value
     this.name = this.#getName(value)
   }
 
-  #getName(value) { return 'unnamed' }
+  #getName(value) {
+    return this.#turnNames[value]
+    return 'unnamed'
+  }
 
-  #turnPatterns = {
+  #turnNames = {
+    'F': 'Flat',
+    'CSI': 'Corner Start In',
+    'CSO': 'Corner Start Out',
+    'CEI': 'Corner End In',
+    'CEO': 'Corner End Out',
+    'StI': 'Step In',
+    'StO': 'Step Out',
+    'UI': 'U-Turn In',
+    'UO': 'U-Turn Out',
+  }
+
+  static turnPatterns = {
     'F': 'SS',
     'CSI': 'SL',
     'CSO': 'SR',
@@ -319,7 +335,7 @@ class EdgePart {
     'UO': 'RR',
   }
 
-  #turnInstructions = {
+  static turnInstructions = {
     'F': 'none',
     'CSI': 'SL',
     'CSO': 'SR',
@@ -331,26 +347,29 @@ class EdgePart {
     'UO': 'RR',
   }
 
-  #fromTurns(turns) {
-    if (turns.length === 2) { return from2() }
-
-    function from2() {
-      const pair = turns.map(e => e.shortName).join('')
-      const name = getKeyByValue(this.#turnPatterns, pair)
-      return new EdgePart(name)
-
-      const absSum = abs(turns[0].value + turns[1].value)
-      switch (absSum) {
-        case 0:             // LS, RS, SL, SR -> Corner
-          return EdgePart.S
-        case 1:             // LR, RL -> Step
-          return EdgePart.C
-        case 2:           // LL, RR -> U
-          return EdgePart.U
-      }
-    }
-
+  static fromTurns(turns) {
+    // console.log('turns', turns)
+    // console.log('turnPatterns', this.turnPatterns)
+    if (turns.length === 2) { return this.from2(turns) }
   }
+
+  static from2(turns) {
+    const pair = turns.map(e => e.shortName).join('')
+    // console.log('pair', pair)
+    const name = getKeyByValue(this.turnPatterns, pair)
+    return new EdgePart(name)
+
+    const absSum = abs(turns[0].value + turns[1].value)
+    switch (absSum) {
+      case 0:             // LS, RS, SL, SR -> Corner
+        return EdgePart.S
+      case 1:             // LR, RL -> Step
+        return EdgePart.C
+      case 2:           // LL, RR -> U
+        return EdgePart.U
+    }
+  }
+
 }
 
 // CLASS: Option
