@@ -1581,23 +1581,14 @@ class Island extends ProtoLayer {
 
   // MARK: Methods
   // #region Methods
-  // TODO: finish fixing final bugs
   //METH:
   createShape(inset) {
     let segments = OpArray.format(this.exposedSegments)
     let subShapes = new OpArray
-    // let thisShape = new Shape({ protoParent: this.protoParent, island: this })
     let shapeIter = 0
     let subShapeIter = 0
-    // print('*** START createShape() ***')
-    // print('START segments:')
-    // print(segments.idMap)
-    // print('thisShape')
-    // print(thisShape)
-    findShape(
-      this.direction
-      // { segments: segments, thisShape: thisShape }
-    )
+
+    findShape(this.direction)
     let thisShape = new Shape({
       subShapes: subShapes,
       protoParent: this,
@@ -1606,82 +1597,33 @@ class Island extends ProtoLayer {
       inset: inset
     })
     this.shape = thisShape
-    // thisShape.subShapes = subShapes
-    // this.shape = thisShape
-    // print(this)
 
-    //FIXME: Occasional crash with unknown issue
-    //FIXME: Frequent crash when using 'Ordinal' island generation
-    function findShape(
-      direction
-      // { segments, thisShape } = {}
-    ) {
-
+    function findShape(direction) {
       let segLength = segments.length
-      // print(`segLength: ${segLength}`)
-
-      // segments.pop()
       let subShape
-      // print('segments')
-      // print(segments)
       while (segments.length > 0) {
-        // print('$$ START findShape() $$')
         shapeIter += 1
-        // print(`$$ shape Iter = ${shapeIter}`)
         let segment = segments[0]
         subShape = new OpArray
-        // print('segment')
-        // print(segment)
         let fillstack = []
         findSubShape(segment, direction)
         console.error(`END SUBSHAPE ${shapeIter}`)
-        // print('segments')
-        // print(segments)
         segments = segments.exclude(subShape, ['id'])
-        // print('segments exclude')
-        // print(segments)
-
         subShapes.push(subShape)
-        // segments.pop()
-        // print(segments)
-
-        // print(segments)
-        // print('subShapes')
-        // print(subShapes)
-        // print('$$ END findShape() $$')
-        //TODO: Complete method based on grid.findIslands
-
 
         function findSubShape(seg, direction) {
-
           fillstack.push(seg)
 
-          while (
-            fillstack.length > 0
-            // && fillstack.length < 10
-          ) {
-            // print('@ START findSubShape() @')
+          while (fillstack.length > 0) {
             subShapeIter += 1
-            // print(`@ subShape Iter = ${subShapeIter}`)
             let current = fillstack.pop()
             let nextSeg
-            // console.log('current', current)
-            // console.log('pre-next endPoint', current.endPoint)
-            // print('pre-next subShape')
-            // print(subShape.idMap)
-            // print('pre-next segments')
-            // print(segments.idMap)
-            // console.log('segments', segments)
             //find next segments (could be 2 if allowing ordinal island connections)
             let next = segments
               .filter(s => current.endPoint.equals(s.startPoint, 4))
               .compacted
-            // print('findSubShape next:')
-            // print(next)
             if (next.length === 0) {
-              // print('next is empty')
               if (current.endPoint.equals(subShape[0].startPoint, 4)) {
-                // print('SUBSHAPE COMPLETE!')
                 subShape.push(current)
                 return
               } else {
@@ -1690,49 +1632,23 @@ class Island extends ProtoLayer {
                 console.error('cannot continue segmentShape')
               }
             }
-            if (next.length === 1) { nextSeg = next[0] }
-            // else { console.error('unexpected single segment') }
 
+            if (next.length === 1) { nextSeg = next[0] }
             if (next.length === 2) {
               console.error('next has 2 segments')
-              // let nextAngle
               let nextDirection
               if (direction.someAreOrdinal) {
-                // print('negative')
-                // nextAngle = current.angle - (PI / 2) % PI
                 nextDirection = current.direction.previous(2)
               } else {
-                // print('positive')
-                // nextAngle = (current.angle + (PI / 2)) % PI
                 nextDirection = current.direction.next(2)
               }
-              // print(next.map(e => e.angle))
-              // print(next.map(e => e.direction))
-              // print(current.angle)
-              // print(current.direction)
-              // print(nextDirection)
-              // print(current)
-              // nextSeg = next.find(e => e.angle === nextAngle)
               nextSeg = next.find(e => e.direction.equals(nextDirection))
-              // print(nextSeg)
               if (nextSeg === undefined) { console.error('unexpected 2nd segment') }
             }
-            // print('findSubShape nextSeg:')
-            // print(nextSeg)
-
 
             fillstack.push(nextSeg)
             subShape.push(current)
-            // print('findSubShape subShape')
-            // print(subShape.idMap)
-            // print('findSubShape segments')
-            // print(segments.idMap)
             segments = segments.exclude(subShape, ['id'])
-            // print('findSubShape segments exclude')
-            // print(segments.idMap)
-            // print('fillstack:')
-            // print(fillstack)
-            // print('@ END findSubShape() @')
           }
         }
       }
