@@ -218,18 +218,6 @@ function gridTests2() {
 
   grid.setFilter(shader0)
 
-  // let grid2 = new Grid(grid.cells[0], { x: 2, y: 2 })
-  // grid2.insetCells(0.9)
-
-  // let grid3 = new Grid(grid.cells[1], { x: 3, y: 1 })
-  // grid3.insetCells(0.7)
-
-  // let grid4 = new Grid(grid3.cells[1], { x: 1, y: 4 })
-  // grid4.insetCells(0.5)
-
-  // grid.randGroup(0.5)
-  // grid.randGroup(0.1)
-
   grid.randomComb({
     keepRange: range(1, 4),
     dropRange: range(6, 8),
@@ -262,26 +250,11 @@ function gridTests2() {
     taken: false,
   })
 
-  console.log('turns', grid.islands[0].shape.turns)
-  console.log('parts', grid.islands[0].shape.parts)
-
   // grid.groupNamed('grp000').setFilter(shader2)
   // grid.groupNamed('grp001')?.setFilter(shader1)
 
   console.log('group', grid.groupNamed('grp000'))
   console.log('children', grid.groupNamed('grp000').svgElt?.child())
-
-  // grid.outlineTaken(Direction.All)
-  // grid.groupNamed('grp002').setFilter(shader1)
-  // grid.outlineTaken(Direction.All)
-  // grid.groupNamed('grp002').setFilter(shader0)
-  // // grid.outlineTaken(Direction.Left)
-  // grid.randGroup(0.05)
-  // grid.outlineTaken(Direction.Up)
-  // grid.randGroup(0.2)
-  // grid.insetCells(0.9, 'grp001')
-  // grid.insetCells(0.9, 'grp000')
-
 
   // const testShadeCSS = Shade.neuBoxShadFactory()
   // const testShadeSVG = Shade.neuShadeSVGFactory({ pixToUserUnits: F.pixToUserUnits })
@@ -292,50 +265,11 @@ function gridTests2() {
   // console.log('cleanSlices', cleanSlices(1, 30, 0.5))
   // console.log('exponentialSlices', exponentialSlices(0.5, 2.35, 2))
 
-  // const testArray = [1, 2, 3, 4]
-  // console.log(testArray.last())
-
-
-  // console.log('group01', grid.groups[0])
-  // console.log('group01-cells', grid.groups[0].cells.map(e => e.id))
-  // console.log('group01-cellBounds', grid.groups[0].cellBounds)
-  // grid.outlineTaken(Direction.All)
-  // grid.groups[0].inset(0.9)
-
-
-
-
-
-
-
-
-
-
-  // grid.findIslands({
-  //   direction: Direction.Cardinal,
-  //   taken: false,
-  // })
-
-  // grid.islands.forEach(e => e.createShape(0.8))
-
   console.log('Effect0', S.Effects.db[0][1])
   console.log('Effect1', S.Effects.db[1][1])
 
-  // redrawAll()
-  // redrawAll()
-  // redrawAll()
-
-  // console.log('svgMarkup', F.svgMarkup)
-  // print(F.svgMarkup)
-  // const scaler = 2
-  // ProtoSVG.exportPNG(F.svgMarkup, 'testPrototype00.png', 1000 * scaler, 1800 * scaler)
-
-  // ProtoSVG.exportSVG(F.svgMarkup, 'testPrototype.svg')
-
   console.log('all layers', S.allLayers)
   console.log('gridBounds', grid.gridCellBounds.cornerCellCenters)
-  // print('all layers:')
-  // print(S.allLayers)
 }
 
 // FUNC: gridTests()
