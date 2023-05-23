@@ -163,7 +163,6 @@ class ProtoLayer {
         .svgLook(this.look)
         .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
     }
-    // if (this.islandID) { this.svgElt.look(Look.testCell(this.color)) }
   }
   //METH: 
   resize() { this.drawElement() }
@@ -181,6 +180,7 @@ class ProtoLayer {
     this._filter = filter
     this.drawElement()
   }
+  //TODO: implement this!
   drawChildElements() {
 
   }
