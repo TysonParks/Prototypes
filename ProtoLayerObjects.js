@@ -99,10 +99,10 @@ class ProtoLayer {
   }
   get sides() {
     return {
-      up: segment(this.corners.upLeft, this.corners.upRight),
-      right: segment(this.corners.upRight, this.corners.downRight),
-      down: segment(this.corners.downRight, this.corners.downLeft),
-      left: segment(this.corners.downLeft, this.corners.upLeft),
+      up: new ProtoSegment(this.corners.upLeft, this.corners.upRight, this.id),
+      right: new ProtoSegment(this.corners.upRight, this.corners.downRight, this.id),
+      down: new ProtoSegment(this.corners.downRight, this.corners.downLeft, this.id),
+      left: new ProtoSegment(this.corners.downLeft, this.corners.upLeft, this.id),
     }
   }
   // #endregion
@@ -1488,7 +1488,9 @@ class Island extends ProtoLayer {
         let segment = segments[0]
         subShape = new OpArray
         let fillstack = []
+
         findSubShape(segment, direction)
+
         console.error(`END SUBSHAPE ${shapeIter}`)
         segments = segments.exclude(subShape, ['id'])
         subShapes.push(subShape)
@@ -1560,10 +1562,10 @@ class Island extends ProtoLayer {
 
 // CLASS: Shape
 class Shape extends ProtoLayer {
-  // segments
-  // outerShape
   island
   subShapes
+  // turns
+  // parts
   color
   testVerts
   testColor
@@ -1573,6 +1575,9 @@ class Shape extends ProtoLayer {
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
+    this.createParts()
+    this.assignSegments()
+    // console.log('allSegments', this.allSegments)
     this.finishSetup(S.Shapes)
   }
 
@@ -1582,9 +1587,10 @@ class Shape extends ProtoLayer {
 
   get group() { return this.island.group }
   get grid() { return this.island.grid }
+  get cells() { return this.island.cells }
 
-  get turns() { return this.subShapes.map(e => this.createTurns(e)) }
-  get parts() { return this.subShapes.map(e => this.createParts(e)) }
+  get allSegments() { return this.subShapes.flat() }
+
   get svg() {
     let result = this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e }))
     if (result instanceof Array) {
@@ -1598,8 +1604,9 @@ class Shape extends ProtoLayer {
 
   // MARK: methods
   //METH:
-  createTurns(segments) {
+  #createTurns(segments) {
     let segs = OpArray.from(segments)
+    // let segs = this.allSegments
     let turns = new OpArray
     let prev = segs.last()
     segs.forEach((e, i) => {
@@ -1609,17 +1616,31 @@ class Shape extends ProtoLayer {
     })
     return turns
   }
+  //METH:
+  createParts() {
+    this.subShapes.forEach(shape => {
+      const turns = this.#createTurns(shape)
+      let prevTurn = turns.last()
+      let parts = new OpArray
 
-  createParts(segments) {
-    const turns = this.createTurns(segments)
-    let prevTurn = turns.last()
-    let parts = new OpArray
-    turns.forEach((e, i) => {
-      const part = EdgePart.from([prevTurn, e])
-      parts.push(part)
-      prevTurn = e
+      turns.forEach((turn, i) => {
+        const part = EdgePart.from([prevTurn, turn])
+        const seg = shape[i]
+        seg.taken = true
+        seg.part = part
+        seg.turns = { start: prevTurn, end: turn }
+        parts.push(part)
+        prevTurn = turn
+      })
     })
-    return parts
+  }
+  //METH:
+  assignSegments() {
+    this.cells.forEach(cell => {
+      const cellID = cell.id
+      const segs = this.allSegments.filter(s => s.parentID === cellID)
+      cell.segments = segs
+    })
   }
   //METH:
   assignElement() {
@@ -1652,9 +1673,9 @@ class Shape extends ProtoLayer {
       const posInset = this.insetAmount >= 0
       strokeMaskWidth = 1 * (posInset ? 1 - this.insetAmount : this.insetAmount) * this.grid.cellSize.x
       // strokeMaskWidth = -.6 * this.grid.cellSize.x
-      console.log('insetAmount', this.insetAmount)
-      console.log('strokeMaskWidth', strokeMaskWidth)
-      console.log('cellSize', this.grid.cellSize.x)
+      // console.log('insetAmount', this.insetAmount)
+      // console.log('strokeMaskWidth', strokeMaskWidth)
+      // console.log('cellSize', this.grid.cellSize.x)
       // const posStrokeMask = strokeMaskWidth >= 0
 
       path
