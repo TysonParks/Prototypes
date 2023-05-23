@@ -814,22 +814,14 @@ class Grid extends ProtoLayer {
     const direction = a.directionTo(b)
     if (direction === -1) { return -1 }
     if (direction.allAreCardinal) {
-      // print('direction.isCardinal')
       let seg
-      if (direction.allAreHorizontal) {
-        // print('direction.isHorizontal')
-        seg = this.cellRows[a.y]
-      }
-      if (direction.allAreVertical) {
-        // print('direction.isVertical')
-        seg = this.cellColumns[a.x]
-      }
+      if (direction.allAreHorizontal) { seg = this.cellRows[a.y] }
+      if (direction.allAreVertical) { seg = this.cellColumns[a.x] }
       const start = seg.findIndex(e => e.index === indices[0])
       const end = seg.findIndex(e => e.index === indices[1])
       return seg.slice(start, end + 1)
     }
     if (direction.allAreOrdinal) {
-      // print('direction.isOrdinal')
       const slope = a.slopeTo(b)
       let seg = new OpArray
       let next = a
@@ -850,9 +842,6 @@ class Grid extends ProtoLayer {
     let rows = new OpArray
     for (let i = a.y; i <= b.y; i++) {
       const seg = this.cellSegmentBetween(this.index(a.x, i), this.index(b.x, i))
-      // print(this.index(a.x, i), this.index(b.x, i))
-      // print(i)
-      // print(seg)
       rows.push(seg)
     }
     return rows
@@ -861,9 +850,6 @@ class Grid extends ProtoLayer {
   cellSpanBetween(indexA, indexB) { return this.cellSpanRowsBetween(indexA, indexB).flat() }
   //METH: 
   neighbor(cellIndex, direction) {
-    // print('')
-    // print(cellIndex)
-    // print(direction)
     let coords = this.cellAt(cellIndex).neighborCoords(direction)
     if (this.coordsAreInGrid(coords.x, coords.y)) {
       return this.cells.find(e => e.coords.equals(coords))
@@ -879,10 +865,6 @@ class Grid extends ProtoLayer {
   neighborIsTaken(cellIndex, direction) { return !this.neighborIsAvailable(cellIndex, direction) }
   //METH: 
   neighborIsInIsland(cellIndex, direction, islandID) {
-    // print('neighborIsInIsland')
-    // print(cellIndex)
-    // print(direction)
-    // print(islandID)
     let neighbor = this.neighbor(cellIndex, direction)
     if (neighbor) { return neighbor.islandIDs.has(islandID) }
     return false
@@ -895,18 +877,11 @@ class Grid extends ProtoLayer {
   }
   //METH: 
   exposedDirections({ cellIndex, groupID, islandID } = {}) {
-    // print('exposedDirections')
-    // print(cellIndex)
-    // print(groupID)
-    // print(islandID)
     if (groupID) {
       return Direction.All.directions.filter(e => !this.neighborIsInGroup(cellIndex, e, groupID))
     }
     if (islandID) {
-      // print('trying islandID')
-      let result = Direction.All.directions.filter(e => !this.neighborIsInIsland(cellIndex, e, islandID))
-      // print(result)
-      return result
+      return Direction.All.directions.filter(e => !this.neighborIsInIsland(cellIndex, e, islandID))
     }
     return Direction.All.directions.filter(e => !this.neighborIsAvailable(cellIndex, e))
   }
@@ -928,19 +903,7 @@ class Grid extends ProtoLayer {
   }
   //METH: 
   cellIsIsolated({ cellIndex, groupID, islandID, directions = Direction.Cardinal.directions } = {}) {
-    // print('cellIsIsolated')
-    // print(cellIndex)
-    // print(groupID)
-    // print(islandID)
-    // print('directions')
-    // print(directions)
-
-    const result = this.exposedDirections({ cellIndex, groupID, islandID })
-      // .map(e => e.value)
-      .includesMany(directions, ['value'])
-    // print('result')
-    // print(result)
-    return result
+    return this.exposedDirections({ cellIndex, groupID, islandID }).includesMany(directions, ['value'])
   }
   //METH: 
   vertNormals({ cellIndex, groupID, islandID, directions = Direction.Ordinal.directions } = {}) {
@@ -949,10 +912,6 @@ class Grid extends ProtoLayer {
       const exposed = OpArray.from(this.exposedDirections({ cellIndex: cellIndex, groupID: groupID, islandID: islandID }))
       const exposedAdj = adj.intersect(exposed, ['value'])
       const exposedDirect = exposed.some(f => f.value === e.value)
-      // print(adj)
-      // print(exposed)
-      // print(exposedAdj)
-      // print(exposedDirect)
 
       if (exposedDirect) {
         if (exposedAdj.length === 1) { return exposedAdj[0] }
@@ -981,17 +940,11 @@ class Grid extends ProtoLayer {
   }
   //METH: 
   validNeighbors({ selection = this.cells, bounds = this.cellBounds(), directions = Direction.All.directions } = {}) {
-    // print('validNeighbors selection')
-    // print(selection)
-    // print('validNeighbors directions')
-    // print(directions)
     let cells = OpArray.from(new Set(selection.flatMap(e => e.validNeighborsCoords(directions, bounds))))
       .unique(['x', 'y']) // unique based upon x and y values
       .sort((a, b) => a.y - b.y || a.x - b.x) // sort by y then x values
       .map(e => this.cellAtCoords(e.x, e.y)) // map to cells
       .exclude(selection, ['x', 'y']) // exclude objects with same x and y values
-    // print('validNeighbors cells')
-    // print(cells)
     return cells
   }
   //METH: 
@@ -1033,10 +986,7 @@ class Grid extends ProtoLayer {
     }
     if (cells.isEmpty) { return }
     let tempIslands = new OpArray
-    // print('findIsland cells')
-    console.log('cells', cells.map(e => e.id))
-    // print('islandID')
-    // print(`Island islandID: ${islandID}`)
+    // console.log('cells', cells.map(e => e.id))
 
     while (cells.length > 0) {
       let cell = cells[0]
@@ -1045,11 +995,6 @@ class Grid extends ProtoLayer {
       findIslanders({ cell: cell, grid: this, bounds: bounds, directions: direction.directions, groupID: groupID, islandID: islandID, taken: taken })
       cells = cells.exclude(islanders, ['id'])
       islanders.forEach(e => e.islandChecked = false)
-      // print(`islanders`)
-      // print(islanders)
-      // print(`cells`)
-      // print(cells)
-      // console.log('island inset', inset)
 
       let island = new Island({
         cells: islanders,
@@ -1062,12 +1007,7 @@ class Grid extends ProtoLayer {
         direction: direction,
         stored: stored,
       })
-      // console.log('this island inset', island.insetAmount)
-      // island.createShape()
-      if (stored) {
-        // print(island)
-        this.islands.push(island)
-      }
+      if (stored) { this.islands.push(island) }
       // else { 
       tempIslands.push(island)
       // }
@@ -1075,32 +1015,21 @@ class Grid extends ProtoLayer {
       //NOTE: Non-recursive flood-fill implementation from: https://codeguppy.com/blog/flood-fill/index.html
       function findIslanders({ cell, grid, bounds: bounds, directions, groupID, islandID, taken } = {}) {
         fillstack.push(cell)
-        // print('fillstack 1st')
-        // print(fillstack)
 
         while (fillstack.length > 0) {
           let current = fillstack.pop()
-          // print('current')
-          // print(current)
-          // print('fillstack 2nd')
-          // print(fillstack)
           if (current.islandChecked) { continue }
           let neighbors = grid.validNeighbors({ selection: [current], bounds: bounds, directions: directions })
             .filter(e => !e.islandChecked)
-          // print('neighbors')
-          // print(neighbors)
-          // print(taken, islandID)
           if (taken) {
             if (groupID) { neighbors = neighbors.filter(e => e.groupID === groupID) }
             if (islandID) { neighbors = neighbors.filter(e => e.islandIDs.has(islandID)) }
             else { neighbors = neighbors.filter(e => e.taken) }
           } else {
-            // print(`neighbor islandID: ${islandID}`)
             if (groupID) { neighbors = neighbors.filter(e => e.groupID !== groupID) }
             if (islandID) { neighbors = neighbors.filter(e => !(e.islandIDs.has(islandID))) }
             else { neighbors = neighbors.filter(e => e.available) }
           }
-          // print(neighbors)
 
           neighbors.forEach(e => fillstack.push(e))
           current.islandChecked = true
@@ -1108,8 +1037,6 @@ class Grid extends ProtoLayer {
           islanders = islanders
             .unique(['id'])
             .sort((a, b) => a.y - b.y || a.x - b.x) // sort by y then x values
-          // print('islanders')
-          // print(islanders)
         }
       }
     }
@@ -1165,7 +1092,6 @@ class Grid extends ProtoLayer {
   //METH:
   insetCells(amount, groupID) {
     let cells
-    // print(this.cells.map(e => e.groupID))
     if (groupID) {
       const group = this.groupNamed(groupID)
       if (group) {
@@ -1175,7 +1101,6 @@ class Grid extends ProtoLayer {
         // console.log(`current groups:`, this.groups)
       }
     } else { cells = this.cells }
-    // console.log(`${groupID} cells`, cells)
     cells.forEach(e => e.inset(amount))
   }
   //METH:
@@ -1203,13 +1128,12 @@ class Grid extends ProtoLayer {
   }
   //METH:
   outlineGroup(num) {
-    // let selection = this.validNeighbors(this.groups[num].cells)
     let selection = this.groups[num].validNeighbors
     this.assign(selection)
   }
   //METH:
   outlineTaken(direction = Direction.All) {
-    console.log(`outline taken`)
+    // console.log(`outline taken`)
     let selection = this.validNeighbors({ selection: this.takenCells, directions: direction.directions })
     this.assign(selection)
   }
@@ -1228,14 +1152,9 @@ class Grid extends ProtoLayer {
   //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
   updateCells({ groupID, islandID } = {}) {
-    // console.log('upDateCells called')
-    // console.log('groupID', groupID)
-    // console.log('islandID', islandID)
     if (arguments.length === 0) {
-      // console.log('zeroArgs')
       this.cells.forEach(cell => cell.drawElement())
     }
-
     let groups, islands
 
     if (groupID) { groups = [this.groupNamed(groupID)] }
@@ -1244,9 +1163,7 @@ class Grid extends ProtoLayer {
 
     if (islandID) { islands = [this.islandNamed(groupID)] }
     else { islands = this.islands }
-    // console.log('islands', islands)
     islands.forEach(island => this.updateIsland(island))
-
   }
   //METH:
   updateGroup(group) {
