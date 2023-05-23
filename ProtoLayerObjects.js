@@ -1422,13 +1422,6 @@ class Island extends ProtoLayer {
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.groupID, islandID: this.id }) }
   get cellAnchor() { return this.cellBounds.cellAnchor }
-  // get cellBoundsSize() { return this.grid.cellBoundsSize(this.cells) }
-  // get boundsSize() { return this.grid.boundsSize(this.cells) }
-
-  // get size() { return this.boundsSize }
-
-  // get cellBoundsWidth() { return this.grid.cellBoundsWidth(this.cells) }
-  // get cellBoundsHeight() { return this.grid.cellBoundsHeight(this.cells) }
 
   get insetAnchor() { return this.anchor }
   get insetSize() { return this.size }
@@ -1543,7 +1536,6 @@ class Island extends ProtoLayer {
       }
     }
     // print(`END Shape Test`)
-
   }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
