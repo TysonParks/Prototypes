@@ -242,7 +242,7 @@ function gridTests2() {
   //   taken: true,
   // })
 
-  grid.outlineTaken(Direction.Vertical)
+  grid.outlineTaken(Direction.Up)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp001',
