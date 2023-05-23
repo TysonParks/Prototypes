@@ -122,7 +122,7 @@ function windowResized() {
 function redrawAll() {
   print('REDRAW ALL called')
   BG.size(windowWidth, windowHeight)
-  S.allLayers.forEach(e => e.resize())
+  // S.allLayers.forEach(e => e.resize())
 }
 
 // FUNC: sizeFrame()
@@ -230,7 +230,7 @@ function gridTests2() {
   //   taken: true,
   // })
 
-  grid.outlineTaken(Direction.Up)
+  // grid.outlineTaken(Direction.Up)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp001',
