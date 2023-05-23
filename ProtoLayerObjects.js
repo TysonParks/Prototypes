@@ -257,6 +257,7 @@ class Frame extends ProtoLayer {
       .parent(this.bleed)
       .layout(-15, -10, 130, 220)
 
+
     super.assignElement()
 
     this.svgElt
@@ -1258,9 +1259,6 @@ class CellGroup extends ProtoLayer {
     // }
 
   }
-  // TODO: deprecate
-  // drawCellsAsDivs() { return this.cells.map(e => { return e.drawCellAsDiv(Look.testCell()) }) }
-
 
   // TODO: migrate these methods to grid as well
   fullContractShape(distance = 1) {
