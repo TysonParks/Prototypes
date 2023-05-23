@@ -189,7 +189,6 @@ class ProtoLayer {
   //METH: 
   static equal(a, b) { return a.uid === b.uid }
 }
-
 Object.assign(ProtoLayer.prototype, identifiableStored)
 
 // CLASS: Frame
@@ -234,11 +233,8 @@ class Frame extends ProtoLayer {
   // MARK: Frame modifiers
   //METH:
   setCornerRadii(corners, padding) {
-    // console.log('topLeft:', corners.topLeft.x)
-    // console.log('padding:', padding.x)
     const radius = corners.topLeft.x + padding.x
     this.cornerRadius = min(radius, 50)
-    // console.log('cornerRadius', this.cornerRadius)
     this.drawElement()
   }
 
@@ -260,9 +256,6 @@ class Frame extends ProtoLayer {
     this.bleedRect = createSVGElt('rect').id(`${this.id}-bleedRect`)
       .parent(this.bleed)
       .layout(-15, -10, 130, 220)
-
-    // console.log(this.bleed.attribute('viewBox'))
-    // console.log(this.bleed.attribute('viewBox'))
 
     super.assignElement()
 
