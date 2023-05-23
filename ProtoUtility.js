@@ -355,7 +355,6 @@ class EdgePart {
 
   static from2(turns) {
     const pair = turns.map(e => e.shortName).join('')
-    // console.log('pair', pair)
     const name = getKeyByValue(this.turnPatterns, pair)
     return new EdgePart(name)
 
