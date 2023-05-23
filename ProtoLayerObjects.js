@@ -1876,9 +1876,13 @@ class Shape extends ProtoLayer {
       let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
       strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
 
-      strokeMaskWidth = 1 * (1 - this.insetAmount) * this.grid.cellSize.x
+      const posInset = this.insetAmount >= 0
+      strokeMaskWidth = 1 * (posInset ? 1 - this.insetAmount : this.insetAmount) * this.grid.cellSize.x
+      // strokeMaskWidth = -.6 * this.grid.cellSize.x
+      console.log('insetAmount', this.insetAmount)
       console.log('strokeMaskWidth', strokeMaskWidth)
       console.log('cellSize', this.grid.cellSize.x)
+      // const posStrokeMask = strokeMaskWidth >= 0
 
       path
         .attribute('fill', protoColor(230))
@@ -1887,7 +1891,7 @@ class Shape extends ProtoLayer {
         // .attribute('stroke-opacity', 1)
         // .attribute('stroke-width', '7')
         .attribute('fill', protoColor(255))
-        .applyStrokeMask('black', strokeMaskWidth)
+        .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
         // .applyStrokeMask(protoColor(128), strokeMaskWidth)
         // .applyFilter(S.Effects.db[0][1], 3)
         .applyFilter(this.filter, 2)
