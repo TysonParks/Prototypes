@@ -489,10 +489,6 @@ class Vertex extends p5.Vector {
   }
 }
 
-// CLASS: ProtoSegment
-// class ProtoSeg 
-
-
 // CLASS: Segment 
 function segment(start, end) {
   return new Segment(start, end)
@@ -570,6 +566,17 @@ class Segment {
       this.verts = { start: vert(start), end: vert(end) }
     }
   }
+}
+
+// CLASS: ProtoSegment
+class ProtoSegment extends Segment {
+  turns
+  part
+
+  constructor(start, end) {
+    super(start, end)
+  }
+
 }
 
 
