@@ -523,6 +523,10 @@ class Segment {
   //   return segment(this.midPoint, end)
   // }
 
+  equals(segment) {
+    return this.startPoint.equals(segment.startPoint) && this.endPoint.equals(segment.endPoint)
+  }
+
   // lerp along segment 0-1, 0 = startPoint, 1 = endPoint
   pointOnsegment(lerp) {
     let newVec = p5.Vector.mult(this.lineVector, lerp)
