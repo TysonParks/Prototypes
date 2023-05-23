@@ -23,6 +23,19 @@ class ProtoSVG {
 
     return lSegmentPathToRoundedSVGPath({ segments: segments })
   }
+  // NOTE: Made with GPT-4 on May 23, 2023
+  //METH:
+  static arcControlPoints(a, b, c) {
+    const ab = Vertex.sub(b, a).normalize()
+    const bc = Vertex.sub(c, b).normalize()
+    const theta = ab.angleBetween(Vertex.mult(bc, -1))
+    const t = 4 / 3 * tan(theta / 4)
+    const p1 = a
+    const p2 = Vertex.sub(b, Vertex.mult(ab, t))
+    const p3 = Vertex.add(b, Vertex.mult(bc, t))
+    const p4 = c
+    return [p1, p2, p3, p4]
+  }
 
   // MARK: File export methods
   // NOTE: Made with GPT-4 on April 14, 2023
@@ -93,6 +106,7 @@ class SVGPath {
 }
 
 const bezCircleConst = 0.552
+const bezCircle45DegConst = 0.265
 
 // FUNC: lSegmentPathToRoundedSVGPath()
 // create SVG path from segments with points rounded using (C) bezier curves
