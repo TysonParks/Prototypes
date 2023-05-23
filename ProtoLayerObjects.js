@@ -1345,33 +1345,14 @@ class Cell extends ProtoLayer {
   // MARK: Geometry Methods
   // #region Geometry Methods
   //METH:
-  neighborCoords(direction) {
-    // print('neighborCoords direction')
-    // print(direction)
-    // print(this.coords)
-    // print(direction.moveCoord)
-    let result = Vertex.add(this.coords, direction.moveCoord)
-    // print('neighborCoords result')
-    // print(result)
-    return result
-  }
+  neighborCoords(direction) { return Vertex.add(this.coords, direction.moveCoord) }
   //METH:
   allNeighborsCoords(directions = Direction.All.directions) {
-    // print('allNeighborsCoords directions')
-    // print(directions)
-    let result = directions.map(e => this.neighborCoords(e))
-    // print('allNeighborsCoords result')
-    // print(result)
-    return result
+    return directions.map(e => this.neighborCoords(e))
   }
   //METH:
   validNeighborsCoords(directions = Direction.All.directions, bounds = this.grid.cellBounds,) {
-    // print('validNeighborCoords directions')
-    // print(directions)
-    let result = this.allNeighborsCoords(directions).filter(e => this.grid.coordsAreInBounds(e.x, e.y, bounds))
-    // print('validNeighborsCoords result')
-    // print(result)
-    return result
+    return this.allNeighborsCoords(directions).filter(e => this.grid.coordsAreInBounds(e.x, e.y, bounds))
   }
   // #endregion
   // MARK: Setup Methods
