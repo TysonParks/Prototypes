@@ -1396,6 +1396,7 @@ class Cell extends ProtoLayer {
   islandIDs = new Set()
   islandChecked = false
   color
+  segments
 
   constructor({ protoParent, svgParent, grid, index, coords, available = true, color = '888' } = {}) {
     super({ protoParent: protoParent, svgParent: svgParent, drawSVG: false, drawRect: false })
