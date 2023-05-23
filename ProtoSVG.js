@@ -456,13 +456,34 @@ class StrokeMaskFilter extends ProtoFilter {
   // MARK: Stroke Mask method
   strokeMask(color = "black", width = 10) {
     this.color = color
-    this.width = width
+    this.width = Math.abs(width)
 
     this.defs = createSVGElt("defs")
     this.mask = createSVGElt("mask").id(this.id)
     this.defs.child(this.mask)
 
+    if (width < 0) {
+      this.createExpandedStrokeMask();
+    }
+
     return this
+  }
+
+  createExpandedStrokeMask() {
+    // Create an additional mask for the stroke
+    this.strokeMask = createSVGElt("mask").id(`stroke-${this.id}`)
+    this.defs.child(this.strokeMask)
+
+    // Combine the original mask (for the shape) and the stroke mask
+    this.combinedMask = createSVGElt('feComposite')
+      .attribute('operator', 'arithmetic')
+      .attribute('k1', '1')
+      .attribute('k2', '1')
+      .attribute('k3', '1')
+      .attribute('k4', '0')
+      .attribute('in', `url(#${this.id})`)
+      .attribute('in2', `url(#stroke-${this.id})`)
+      .parent(this.mask);
   }
 
   applyFilterToElement(element) {
@@ -485,6 +506,14 @@ class StrokeMaskFilter extends ProtoFilter {
     maskContent.setAttribute("stroke-width", this.width)
     this.mask.child(new p5.Element(maskContent))
 
+    if (this.width < 0) {
+      // Clone the element and append to stroke mask
+      const strokeMaskContent = element.elt.cloneNode(true)
+      strokeMaskContent.setAttribute("id", `stroke-mask-content-${this.id}`)
+      strokeMaskContent.setAttribute("fill", this.color)
+      this.strokeMask.child(new p5.Element(strokeMaskContent))
+    }
+
     // Set mask attribute on the element
     element.attribute("mask", `url(#${this.id})`)
 
@@ -493,6 +522,8 @@ class StrokeMaskFilter extends ProtoFilter {
 
     return this
   }
+
+
 }
 
 // PROTOTYPE: p5.Element extension applyStrokeMask(color, width)
