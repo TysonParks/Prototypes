@@ -574,11 +574,14 @@ class Segment {
 
 // CLASS: ProtoSegment
 class ProtoSegment extends Segment {
+  parentID
+  taken = false
   turns
   part
 
-  constructor(start, end) {
+  constructor(start, end, parentID) {
     super(start, end)
+    this.parentID = parentID
   }
 
 }
