@@ -1579,9 +1579,6 @@ class Shape extends ProtoLayer {
   get testLook() { return Look.test(this.size, 'shape') }
 
   get cellBounds() { return this.island.cellBounds }
-  // get boundsRect() { return this.island.boundsRect }
-
-  // get size() { return this.cellBounds.size }
 
   get group() { return this.island.group }
   get grid() { return this.island.grid }
@@ -1602,10 +1599,7 @@ class Shape extends ProtoLayer {
   // MARK: methods
   //METH:
   createTurns(segments) {
-
-    // console.log('segments', segments)
     let segs = OpArray.from(segments)
-    // console.log('segs', segs)
     let turns = new OpArray
     let prev = segs.last()
     segs.forEach((e, i) => {
@@ -1624,28 +1618,9 @@ class Shape extends ProtoLayer {
       const part = EdgePart.from([prevTurn, e])
       parts.push(part)
       prevTurn = e
-
     })
-
-
-    // let segs = OpArray.from(segments)
-    // let prevSeg = segs.last()
-    // let prevTurn
-    // let parts = new OpArray
-    // segs.forEach((e, i) => {
-    //   const newTurn = prevSeg.direction.turnTo(e.direction)
-    //   if (prevTurn) {
-    //     const part = EdgePart.from([prevTurn, newTurn])
-    //     parts.push(part)
-    //   }
-    //   prevTurn = newTurn
-    //   prevSeg = e
-    // })
-    // console.log('parts', parts)
     return parts
   }
-  //METH:
-  assignID() { this.id = this.store.add(this) }
   //METH:
   assignElement() {
     this.svgElt = createSVGElt().id(this.id)
