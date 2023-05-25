@@ -1626,7 +1626,7 @@ class Shape extends ProtoLayer {
   get isLinear() { return this.island.isSingle || this.island.isHorizontal || this.island.isVertical }
   get hasSubShapes() { return this.subShapes.length > 1 }
   get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
-  get shapeCorners() { }
+  get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
 
   get allSegments() { return this.subShapes.flat() }
 
