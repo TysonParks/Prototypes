@@ -12,7 +12,7 @@ class ProtoSVG {
       refine = true,
       // cornerRadius = '16px',
       // weights = [],
-      // random = false
+      random = false,
     } = {}) {
     if (refine) {
       let verts = segmentPathToVertsPath(segments)
@@ -21,7 +21,7 @@ class ProtoSVG {
       // print(segments.map(e => e.string))
     }
 
-    return lSegmentPathToRoundedSVGPath({ segments: segments })
+    return lSegmentPathToRoundedSVGPath({ segments: segments, random: random })
   }
   // NOTE: Made with GPT-4 on May 23, 2023
   //METH:
@@ -578,12 +578,38 @@ class ProtoSegment extends Segment {
   taken = false
   turns
   part
+  assignedVerts = new OpArray
 
   constructor(start, end, parentID) {
     super(start, end)
     this.parentID = parentID
   }
 
+  get cornerVerts() {
+    let verts = new OpArray
+    if (this.turns.start !== 0) { verts.push(this.startPoint) }
+    if (this.turns.end !== 0) { verts.push(this.endPoint) }
+    return verts
+  }
+
+  assign(vert) {
+    if (vert instanceof String) {
+      vert = this.#vertNames[vert]
+    }
+    if (vert instanceof Vertex) {
+      this.assignedVerts.push(vert)
+    }
+    if (vert instanceof Array && vert[0] instanceof String) {
+      vert.forEach(v => this.assignedVerts.push(this.#vertNames[v]))
+    }
+  }
+
+  #vertNames = {
+    'start': this.startPoint,
+    'mid': this.midPoint,
+    'end': this.endPoint,
+    'three': ['start', 'mid', 'end'],
+  }
 }
 
 
