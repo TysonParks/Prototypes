@@ -1056,24 +1056,31 @@ class Grid extends ProtoLayer {
     shapes.forEach(shape => {
       const isle = shape.island
       // 1. find shapes with subshapes
-      if (shape.hasSubShapes) {
-        console.log(`shape ${shape.id} has subshapes`)
-        const subShapes = shape.subShapes.reversed
+      // if (shape.hasSubShapes) {
+      // console.log(`shape ${shape.id} has subshapes`)
+      shape.assignCornerVerts()
+      const subShapes = shape.subShapes.reversed
+      console.log(`subShapes`, subShapes)
+      subShapes.forEach((s, i) => {
+        console.log(`subShape`, s)
+        // 1 assign corner verts
 
 
-      }
+
+      })
+      // }
 
       // 1. find simplest linear shapes
-      if (shape.isLinear) {
-        console.log(`shape ${shape.id} is linear`)
+      // if (shape.isLinear) {
+      //   console.log(`shape ${shape.id} is linear`)
 
-      }
+      // }
       // console.log(`subshapes`, shape.subShapes)
 
       // 3. find shapes with u-turns
-      if (shape.hasUTurns) {
-        console.log(`shape ${shape.id} has U-Turns`)
-      }
+      // if (shape.hasUTurns) {
+      //   console.log(`shape ${shape.id} has U-Turns`)
+      // }
     })
   }
   // #endregion
@@ -1629,6 +1636,10 @@ class Shape extends ProtoLayer {
   get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
 
   get allSegments() { return this.subShapes.flat() }
+  get assignedVerts() {
+    return this.subShapes.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
+    // .flat()
+  }
 
   get svg() {
     let result = this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e }))
@@ -1692,6 +1703,9 @@ class Shape extends ProtoLayer {
       cell.segments = segs
     })
   }
+
+  //METH:
+  assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
 
   // #endregion
   // MARK: Setup Methods
