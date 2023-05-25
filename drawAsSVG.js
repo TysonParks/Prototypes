@@ -587,8 +587,9 @@ class ProtoSegment extends Segment {
 
   get cornerVerts() {
     let verts = new OpArray
-    if (this.turns.start !== 0) { verts.push(this.startPoint) }
-    if (this.turns.end !== 0) { verts.push(this.endPoint) }
+    // console.log(this.turns)
+    if (this.turns.start.value !== 0) { verts.push(this.startPoint) }
+    if (this.turns.end.value !== 0) { verts.push(this.endPoint) }
     return verts
   }
 
