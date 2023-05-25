@@ -1059,15 +1059,13 @@ class Grid extends ProtoLayer {
       // if (shape.hasSubShapes) {
       // console.log(`shape ${shape.id} has subshapes`)
       shape.assignCornerVerts()
-      const subShapes = shape.subShapes.reversed
-      console.log(`subShapes`, subShapes)
-      subShapes.forEach((s, i) => {
-        console.log(`subShape`, s)
-        // 1 assign corner verts
-
-
-
-      })
+      shape.assignUTurnVerts()
+      // const subShapes = shape.subShapes.reversed
+      // console.log(`subShapes`, subShapes)
+      // subShapes.forEach((s, i) => {
+      //   console.log(`subShape`, s)
+      //   // 1 assign corner verts
+      // })
       // }
 
       // 1. find simplest linear shapes
@@ -1706,6 +1704,21 @@ class Shape extends ProtoLayer {
 
   //METH:
   assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
+  //METH:
+  assignUTurnVerts() {
+    this.subShapes.forEach(sub => sub.forEach((seg, i) => {
+      // console.log('sub', sub)
+      // console.log('lastIndex', sub.lastIndex)
+      const loop = range(0, sub.lastIndex)
+      if (seg.isUTurn) {
+        // console.log(`uturn found!`)
+        sub[loop.cycle(i - 1)].assign('mid')
+        seg.assign('mid')
+        sub[loop.cycle(i + 1)].assign('mid')
+        // console.log('UTurn Shape', sub)
+      }
+    }))
+  }
 
   // #endregion
   // MARK: Setup Methods
