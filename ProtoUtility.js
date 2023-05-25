@@ -95,6 +95,7 @@ class Direction {
   get names() { return OpArray.from(this.vals.map(a => this.#getName(a))) }
   get value() { return this.valOp(a => a) }
   get adjacents() { return this.directOp(a => OpArray.from([a.previous(), a.next()])) }
+  get opposites() { return this.directOp(a => a.rotated(180)) }
   get moveCoord() { return this.directOp(a => this.#moveCoords[a.name]) }
   // get angle() { return this.valOp(a => ((((a * -1) - 1) % 4) + 2) * PI / 2) }
   get angle() { return this.directOp(a => this.#angles[a.name]) }
@@ -305,6 +306,8 @@ class EdgePart {
     this.value = value
     this.name = this.#getName(value)
   }
+
+  get isUTurn() { return this.value === 'UI' || this.value === 'UO' }
 
   #getName(value) {
     return this.#turnNames[value]
