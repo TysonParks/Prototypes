@@ -230,12 +230,12 @@ function gridTests2() {
   //   taken: true,
   // })
 
-  // grid.outlineTaken(Direction.Up)
+  grid.outlineTaken(Direction.Down)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp001',
     filter: shader1,
-    inset: .9,
+    inset: .95,
     direction: Direction.All,
     taken: true,
   })
@@ -245,7 +245,7 @@ function gridTests2() {
   grid.findIslands({
     // groupID: 'grp002',
     filter: shader2,
-    inset: .9,
+    inset: .95,
     direction: Direction.Cardinal,
     taken: false,
   })
@@ -269,7 +269,8 @@ function gridTests2() {
   console.log('Effect1', S.Effects.db[1][1])
 
   console.log('all layers', S.allLayers)
-  console.log('gridBounds', grid.gridCellBounds.cornerCellCenters)
+  // console.log('gridBounds', grid.gridCellBounds.cornerCellCenters)
+  grid.customizeShapes()
 }
 
 // FUNC: gridTests()
