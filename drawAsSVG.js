@@ -585,6 +585,8 @@ class ProtoSegment extends Segment {
     this.parentID = parentID
   }
 
+  get isUTurn() { return this.part.isUTurn }
+
   get cornerVerts() {
     let verts = new OpArray
     // console.log(this.turns)
@@ -598,23 +600,29 @@ class ProtoSegment extends Segment {
     if (this.turns.end.value !== 0) { this.assign(this.endPoint) }
   }
 
+  // assignUTurnVerts() {
+  //   if (this.part.isUTurn) { this}
+  // }
+
   assign(vert) {
-    if (vert instanceof String) {
+    if (typeof vert === 'string') {
+      // console.log(`assign ${vert}`)
       vert = this.#vertNames[vert]
     }
     if (vert instanceof Vertex) {
       this.assignedVerts.push(vert)
+      // console.log(`assigned ${vert}`)
     }
-    if (vert instanceof Array && vert[0] instanceof String) {
-      vert.forEach(v => this.assignedVerts.push(this.#vertNames[v]))
-    }
+    // if (vert instanceof Array && typeof vert[0] === 'string') {
+    //   vert.forEach(v => this.assignedVerts.push(this.#vertNames[v]))
+    // }
   }
 
   #vertNames = {
     'start': this.startPoint,
     'mid': this.midPoint,
     'end': this.endPoint,
-    'three': ['start', 'mid', 'end'],
+    // 'three': ['start', 'mid', 'end'],
   }
 }
 
