@@ -1043,6 +1043,40 @@ class Grid extends ProtoLayer {
     // }
   }
   // #endregion
+  // MARK: Shape Methods
+  // #region Shape Methods
+  //METH:
+  customizeShapes() {
+    let shapes = this.islands
+      .sort((a, b) => a.cells.length - b.cells.length)
+      .map(isle => isle.shape)
+    console.log('shape sizes', shapes.map(e => e.cells.length))
+    console.log('shapes', shapes)
+
+    shapes.forEach(shape => {
+      const isle = shape.island
+      // 1. find shapes with subshapes
+      if (shape.hasSubShapes) {
+        console.log(`shape ${shape.id} has subshapes`)
+        const subShapes = shape.subShapes.reversed
+
+
+      }
+
+      // 1. find simplest linear shapes
+      if (shape.isLinear) {
+        console.log(`shape ${shape.id} is linear`)
+
+      }
+      // console.log(`subshapes`, shape.subShapes)
+
+      // 3. find shapes with u-turns
+      if (shape.hasUTurns) {
+        console.log(`shape ${shape.id} has U-Turns`)
+      }
+    })
+  }
+  // #endregion
   // MARK: Setup Methods
   // #region Setup Methods
   //METH:
@@ -1564,8 +1598,8 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
-  // turns
-  // parts
+  turns
+  parts
   color
   testVerts
   testColor
@@ -1589,6 +1623,11 @@ class Shape extends ProtoLayer {
   get grid() { return this.island.grid }
   get cells() { return this.island.cells }
 
+  get isLinear() { return this.island.isSingle || this.island.isHorizontal || this.island.isVertical }
+  get hasSubShapes() { return this.subShapes.length > 1 }
+  get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
+  get shapeCorners() { }
+
   get allSegments() { return this.subShapes.flat() }
 
   get svg() {
@@ -1603,6 +1642,7 @@ class Shape extends ProtoLayer {
   get extractedVerts() { return extractVerts(this.svg) }
 
   // MARK: methods
+  // #region methods
   //METH:
   #createTurns(segments) {
     let segs = OpArray.from(segments)
@@ -1618,21 +1658,31 @@ class Shape extends ProtoLayer {
   }
   //METH:
   createParts() {
+    let turns = new OpArray
+    let parts = new OpArray
     this.subShapes.forEach(shape => {
-      const turns = this.#createTurns(shape)
-      let prevTurn = turns.last()
-      let parts = new OpArray
+      let subTurns = this.#createTurns(shape)
+      subTurns.push(subTurns[0])
+      let prevTurn
+      let subParts = new OpArray
 
-      turns.forEach((turn, i) => {
-        const part = EdgePart.from([prevTurn, turn])
-        const seg = shape[i]
-        seg.taken = true
-        seg.part = part
-        seg.turns = { start: prevTurn, end: turn }
-        parts.push(part)
+      subTurns.forEach((turn, i) => {
+        if (prevTurn) {
+          const part = EdgePart.from([prevTurn, turn])
+          const seg = shape[i - 1]
+          seg.taken = true
+          seg.part = part
+          seg.turns = { start: prevTurn, end: turn }
+          subParts.push(part)
+        }
         prevTurn = turn
       })
+      subTurns.pop()
+      turns.push(subTurns)
+      parts.push(subParts)
     })
+    this.turns = turns
+    this.parts = parts
   }
   //METH:
   assignSegments() {
@@ -1642,6 +1692,10 @@ class Shape extends ProtoLayer {
       cell.segments = segs
     })
   }
+
+  // #endregion
+  // MARK: Setup Methods
+  // #region Setup Methods
   //METH:
   assignElement() {
     this.svgElt = createSVGElt().id(this.id)
@@ -1650,7 +1704,6 @@ class Shape extends ProtoLayer {
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
       .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, 20)
-
   }
 
   //METH:
@@ -1716,6 +1769,7 @@ class Shape extends ProtoLayer {
     if (testingControls.shapeVerts) { this.testVerts.forEach(e => e.show()) }
     else { this.testVerts.forEach(e => e.hide()) }
   }
+  // #endregion
 }
 
 
