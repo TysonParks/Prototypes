@@ -499,6 +499,7 @@ class Range {
       this.end = end, this.start = start
     }
   }
+  get size() { return abs(this.end - this.start) + 1 }
 
   array(step = 1) {
     return OpArray.from({ length: (this.stop - this.start) / step + 1 }, (_, i) => this.start + (i * step))
@@ -511,6 +512,7 @@ class Range {
   normalizeSubRange(subrange) {
     return range(normalize(subrange.start, this), normalize(subrange.end, this))
   }
+  cycle(x) { return ((x - this.start) % this.size + this.size) % this.size + this.start }
 }
 
 // MARK: Helper Methods
