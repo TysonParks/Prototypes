@@ -593,6 +593,11 @@ class ProtoSegment extends Segment {
     return verts
   }
 
+  assignCornerVerts() {
+    if (this.turns.start.value !== 0) { this.assign(this.startPoint) }
+    if (this.turns.end.value !== 0) { this.assign(this.endPoint) }
+  }
+
   assign(vert) {
     if (vert instanceof String) {
       vert = this.#vertNames[vert]
