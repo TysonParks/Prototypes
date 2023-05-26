@@ -280,14 +280,14 @@ class EdgePart {
 
   static F = new EdgePart('F')         // SS              --> 'Flat'
 
-  static C = new EdgePart('C')         // LS, RS, SL, SR  --> 'Corner'
-  static S = new EdgePart('S')         // RL, LR          --> 'Step'
-  static U = new EdgePart('U')         // RR, LL          --> 'U-Turn'
+  // static C = new EdgePart('C')         // LS, RS, SL, SR  --> 'Corner'
+  // static S = new EdgePart('S')         // RL, LR          --> 'Step'
+  // static U = new EdgePart('U')         // RR, LL          --> 'U-Turn'
 
-  static CI = new EdgePart('CI')       // LS, SL          --> 'Corner Inside'
-  static CO = new EdgePart('CO')       // RS, SR          --> 'Corner Outside'
-  static CS = new EdgePart('CS')       // LS, RS          --> 'Corner Start'
-  static CE = new EdgePart('CE')       // SL, SR          --> 'Corner End'
+  // static CI = new EdgePart('CI')       // LS, SL          --> 'Corner Inside'
+  // static CO = new EdgePart('CO')       // RS, SR          --> 'Corner Outside'
+  // static CS = new EdgePart('CS')       // LS, RS          --> 'Corner Start'
+  // static CE = new EdgePart('CE')       // SL, SR          --> 'Corner End'
 
   static CSI = new EdgePart('CSI')     // SL              --> 'Corner Start Inside'
   static CSO = new EdgePart('CSO')     // SR              --> 'Corner Start Outside'
@@ -311,6 +311,9 @@ class EdgePart {
   get isUTurn() { return this.value === 'UI' || this.value === 'UO' }
   get isStep() { return this.value === 'StI' || this.value === 'StO' }
   get isCorner() { return this.value === 'CSI' || this.value === 'CSO' || this.value === 'CEI' || this.value === 'CEO' }
+
+  get isCornerStart() { return this.value === 'CSI' || this.value === 'CSO' }
+  get isCornerEnd() { return this.value === 'CEI' || this.value === 'CEO' }
 
   #getName(value) {
     return this.#turnNames[value]
