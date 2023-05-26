@@ -1707,19 +1707,29 @@ class Shape extends ProtoLayer {
   //METH:
   assignUTurnVerts() {
     this.subShapes.forEach(sub => sub.forEach((seg, i) => {
-      // console.log('sub', sub)
-      // console.log('lastIndex', sub.lastIndex)
       const loop = range(0, sub.lastIndex)
+      const prev = sub[loop.cycle(i - 1)]
+      const next = sub[loop.cycle(i + 1)]
       if (seg.isUTurn) {
-        // console.log(`uturn found!`)
-        sub[loop.cycle(i - 1)].assign('mid')
+        prev.assign('mid')
         seg.assign('mid')
-        sub[loop.cycle(i + 1)].assign('mid')
-        // console.log('UTurn Shape', sub)
+        next.assign('mid')
       }
     }))
   }
-
+  //METH:
+  assignSingleStepVerts() {
+    this.subShapes.forEach(sub => sub.forEach((seg, i) => {
+      const loop = range(0, sub.lastIndex)
+      const prev = sub[loop.cycle(i - 1)]
+      const next = sub[loop.cycle(i + 1)]
+      if (seg.isStep && prev.isCorner && next.isCorner) {
+        prev.assign('mid')
+        seg.assign('mid')
+        next.assign('mid')
+      }
+    }))
+  }
   // #endregion
   // MARK: Setup Methods
   // #region Setup Methods
