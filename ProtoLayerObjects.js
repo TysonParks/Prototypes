@@ -1052,6 +1052,7 @@ class Grid extends ProtoLayer {
       .map(isle => isle.shape)
     console.log('shape sizes', shapes.map(e => e.cells.length))
     console.log('shapes', shapes)
+    // console.log('shapes', shapes.map(e => e.assignedVerts))
 
     shapes.forEach(shape => {
       const isle = shape.island
@@ -1060,6 +1061,7 @@ class Grid extends ProtoLayer {
       // console.log(`shape ${shape.id} has subshapes`)
       shape.assignCornerVerts()
       shape.assignUTurnVerts()
+      shape.assignSingleStepVerts()
       // const subShapes = shape.subShapes.reversed
       // console.log(`subShapes`, subShapes)
       // subShapes.forEach((s, i) => {
@@ -1080,6 +1082,7 @@ class Grid extends ProtoLayer {
       //   console.log(`shape ${shape.id} has U-Turns`)
       // }
     })
+    console.log('shapes Verts', shapes.map(e => e.assignedVerts).flat())
   }
   // #endregion
   // MARK: Setup Methods
@@ -1490,16 +1493,16 @@ class Island extends ProtoLayer {
   }
   get isOrdinal() { return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index)) }
 
+  get isRectangle() { return this.boundsRect.isFull }
+  get isSquare() { return this.isRectangle && this.boundsRect.aspect.name === 'square' }
+
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
   }
-
   get exposedCorners() {
     return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
   }
   // #endregion
-
-
   // MARK: Methods
   // #region Methods
   //METH:
@@ -1701,7 +1704,9 @@ class Shape extends ProtoLayer {
       cell.segments = segs
     })
   }
-
+  // #endregion
+  // MARK: Vert Assignment Methods
+  // #region Vert Assignment Methods
   //METH:
   assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
   //METH:
@@ -1720,10 +1725,13 @@ class Shape extends ProtoLayer {
   //METH:
   assignSingleStepVerts() {
     this.subShapes.forEach(sub => sub.forEach((seg, i) => {
+      // console.log('try assignSingleStep')
       const loop = range(0, sub.lastIndex)
       const prev = sub[loop.cycle(i - 1)]
       const next = sub[loop.cycle(i + 1)]
-      if (seg.isStep && prev.isCorner && next.isCorner) {
+      // console.log([prev, seg, next].map(e => e.part.value))
+      if (seg.isStep && !prev.isStep && !next.isStep) {
+        // console.log('found single step')
         prev.assign('mid')
         seg.assign('mid')
         next.assign('mid')
