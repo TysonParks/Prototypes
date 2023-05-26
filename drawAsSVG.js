@@ -586,6 +586,9 @@ class ProtoSegment extends Segment {
   }
 
   get isUTurn() { return this.part.isUTurn }
+  get isStep() { return this.part.isStep }
+  get isFlat() { return this.part.isFlat }
+  get isCorner() { return this.part.isCorner }
 
   get cornerVerts() {
     let verts = new OpArray
