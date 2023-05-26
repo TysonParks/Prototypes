@@ -394,7 +394,7 @@ function vert(x = 0, y = 0) {
 }
 
 class Vertex extends p5.Vector {
-  normal
+  // normal
 
   constructor(x = 0, y = 0) {
     super(x, y)
@@ -496,7 +496,7 @@ function segment(start, end) {
 
 class Segment {
   verts
-  normal
+  // normal
 
   constructor(start, end) {
     this.#assignVerts(start, end, arguments)
