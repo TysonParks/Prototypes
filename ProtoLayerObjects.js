@@ -1732,29 +1732,10 @@ class Shape extends ProtoLayer {
   }
   //METH:
   assignRectangleVerts() {
-    const cornerVerts = this.assignedVerts.flat()
-    console.log('cornerVerts', cornerVerts)
-    const newSegs = vertsPathToSegmentPath({ path: cornerVerts, refine: false })
-    console.log('newSegs', newSegs)
-    const minLength = min(...newSegs.map(s => s.length))
-    let newVerts = new OpArray
-    newSegs.forEach(seg => {
-      if (seg.length === minLength) { seg.assign('mid') }
-      if (seg.length > minLength) {
-        const ratio = minLength / seg.length
-        newVerts.push(seg.scaledStartPoint(ratio))
-        newVerts.push(seg.scaledEndPoint(ratio))
-      }
-    })
-    this.subShapes.forEach(sub => sub.forEach((seg, i) => {
-      newVerts.forEach(vert => {
-        if (seg.vertIsOnLine(vert)) {
-          console.log(`YES vert (${vert.x}, ${vert.y}) is on seg ${i}`)
-          seg.assign(vert)
-        }
-        // else { console.log(`NO vert (${vert.x}, ${vert.y}) is NOT on seg ${i}`) }
-      })
-    }))
+    const aspect = this.cellBounds.aspect
+    // if 
+
+
   }
   //METH:
   assignSquareVerts() {
@@ -1763,13 +1744,14 @@ class Shape extends ProtoLayer {
     if (width % 2 === 0) {
       const offset = width / 2 - 1
       for (let i = 0; i < 4; i++) {
-        this.subShapes[0][i * width + offset].assign('end')
+        this.subShapes[0][width * i + offset].assign('end')
         this.subShapes[0][width * (i + 1) - offset - 1].assign('start')
       }
     }
     if (width % 2 === 1) {
+      const offset = (width - 1) / 2
       for (let i = 0; i < 4; i++) {
-        this.subShapes[0][width * i + (width - 1) / 2].assign('mid')
+        this.subShapes[0][width * i + offset].assign('mid')
       }
     }
   }
