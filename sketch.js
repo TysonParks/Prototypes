@@ -189,7 +189,7 @@ function setupBackground() {
 function gridTests2() {
   // F.inset(.95)
   let gridX = R.random_int(3, 8)
-  gridX = 5
+  gridX = 10
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
   // grid = new Grid(F, { x: 8, y: 12 })
   grid.inset(R.random_num(0.7, 0.95))
@@ -218,11 +218,12 @@ function gridTests2() {
 
   grid.setFilter(shader0)
 
-  grid.randomComb({
-    keepRange: range(1, 4),
-    dropRange: range(6, 8),
-    start: 0
-  })
+  grid.randGroup(0.0125)
+  // grid.randomComb({
+  //   keepRange: range(1, 4),
+  //   dropRange: range(6, 8),
+  //   start: 0
+  // })
 
   // grid.findIslands({
   //   // groupID: 'grp000',
@@ -230,12 +231,14 @@ function gridTests2() {
   //   taken: true,
   // })
 
+  grid.outlineTaken(Direction.All)
+  grid.outlineTaken(Direction.Right)
   grid.outlineTaken(Direction.Down)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp001',
     filter: shader1,
-    inset: .95,
+    inset: .9,
     direction: Direction.All,
     taken: true,
   })
@@ -245,7 +248,7 @@ function gridTests2() {
   grid.findIslands({
     // groupID: 'grp002',
     filter: shader2,
-    inset: .95,
+    inset: .9,
     direction: Direction.Cardinal,
     taken: false,
   })
