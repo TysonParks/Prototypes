@@ -307,7 +307,10 @@ class EdgePart {
     this.name = this.#getName(value)
   }
 
+  get isFlat() { return this.value === 'F' }
   get isUTurn() { return this.value === 'UI' || this.value === 'UO' }
+  get isStep() { return this.value === 'SI' || this.value === 'SO' }
+  get isCorner() { return this.value === 'CSI' || this.value === 'CSO' || this.value === 'CEI' || this.value === 'CEO' }
 
   #getName(value) {
     return this.#turnNames[value]
