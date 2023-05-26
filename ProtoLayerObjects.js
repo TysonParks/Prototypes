@@ -1082,7 +1082,8 @@ class Grid extends ProtoLayer {
       //   console.log(`shape ${shape.id} has U-Turns`)
       // }
     })
-    console.log('shapes Verts', shapes.map(e => e.assignedVerts).flat())
+    console.log('shapes verts', shapes.map(e => e.assignedVerts).flat())
+    console.log('shapes parts', shapes.map(e => e.parts).flat())
   }
   // #endregion
   // MARK: Setup Methods
@@ -1487,14 +1488,15 @@ class Island extends ProtoLayer {
   get isVertical() {
     return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Horizontal.directions))
   }
+  get isLinear() { return this.isSingle || this.isHorizontal || this.isVertical }
   get isCardinal() {
     return !this.isSingle
       && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Ordinal.directions))
   }
   get isOrdinal() { return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index)) }
 
-  get isRectangle() { return this.boundsRect.isFull }
-  get isSquare() { return this.isRectangle && this.boundsRect.aspect.name === 'square' }
+  get isRectangle() { return !this.isLinear && this.cellBounds.isFull }
+  get isSquare() { return this.isRectangle && this.cellBounds.aspect.name === 'square' }
 
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
@@ -1631,7 +1633,7 @@ class Shape extends ProtoLayer {
   get grid() { return this.island.grid }
   get cells() { return this.island.cells }
 
-  get isLinear() { return this.island.isSingle || this.island.isHorizontal || this.island.isVertical }
+  get isLinear() { return this.island.isLinear }
   get hasSubShapes() { return this.subShapes.length > 1 }
   get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
   get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
