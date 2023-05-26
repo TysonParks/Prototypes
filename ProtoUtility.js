@@ -293,8 +293,8 @@ class EdgePart {
   static CSO = new EdgePart('CSO')     // SR              --> 'Corner Start Outside'
   static CEI = new EdgePart('CEI')     // LS              --> 'Corner End Inside'
   static CEO = new EdgePart('CEO')     // RS              --> 'Corner End Outside'
-  static StI = new EdgePart('SI')      // RL              --> 'Step In'
-  static StO = new EdgePart('SO')      // LR              --> 'Step Out'
+  static StI = new EdgePart('StI')      // RL              --> 'Step In'
+  static StO = new EdgePart('StO')      // LR              --> 'Step Out'
   static UI = new EdgePart('UI')       // LL              --> 'U-Turn Inside'
   static UO = new EdgePart('UO')       // RR              --> 'U-Turn Outside'
 
@@ -309,7 +309,7 @@ class EdgePart {
 
   get isFlat() { return this.value === 'F' }
   get isUTurn() { return this.value === 'UI' || this.value === 'UO' }
-  get isStep() { return this.value === 'SI' || this.value === 'SO' }
+  get isStep() { return this.value === 'StI' || this.value === 'StO' }
   get isCorner() { return this.value === 'CSI' || this.value === 'CSO' || this.value === 'CEI' || this.value === 'CEO' }
 
   #getName(value) {
