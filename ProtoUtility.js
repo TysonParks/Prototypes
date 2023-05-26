@@ -510,6 +510,7 @@ class Range {
   array(step = 1) {
     return OpArray.from({ length: (this.stop - this.start) / step + 1 }, (_, i) => this.start + (i * step))
   }
+  forEach(callbackFn) { return this.array().forEach(callbackFn) }
   between(x) { return x >= this.start && x <= this.stop }
   convertRange(x, range2) {
     return (x - this.start) * (range2.end - range2.start) / (this.end - this.start) + range2.start
