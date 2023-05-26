@@ -1050,9 +1050,6 @@ class Grid extends ProtoLayer {
     let shapes = this.islands
       .sort((a, b) => a.cells.length - b.cells.length)
       .map(isle => isle.shape)
-    console.log('shape sizes', shapes.map(e => e.cells.length))
-    console.log('shapes', shapes)
-    // console.log('shapes', shapes.map(e => e.assignedVerts))
 
     shapes.forEach(shape => {
       const isle = shape.island
@@ -1060,28 +1057,20 @@ class Grid extends ProtoLayer {
       // if (shape.hasSubShapes) {
       // console.log(`shape ${shape.id} has subshapes`)
       shape.assignCornerVerts()
+      if (shape.island.isRectangle) {
+        if (shape.island.isSquare) {
+          console.log('found square!')
+          shape.assignSquareVerts()
+        }
+        else { shape.assignRectangleVerts() }
+        // console.log('RectangleShape:', shape.map(s => s.assignedVerts))
+        return
+      }
       shape.assignUTurnVerts()
       shape.assignSingleStepVerts()
-      // const subShapes = shape.subShapes.reversed
-      // console.log(`subShapes`, subShapes)
-      // subShapes.forEach((s, i) => {
-      //   console.log(`subShape`, s)
-      //   // 1 assign corner verts
-      // })
-      // }
-
-      // 1. find simplest linear shapes
-      // if (shape.isLinear) {
-      //   console.log(`shape ${shape.id} is linear`)
-
-      // }
-      // console.log(`subshapes`, shape.subShapes)
-
-      // 3. find shapes with u-turns
-      // if (shape.hasUTurns) {
-      //   console.log(`shape ${shape.id} has U-Turns`)
-      // }
     })
+    console.log('shape sizes', shapes.map(e => e.cells.length))
+    console.log('shapes', shapes)
     console.log('shapes verts', shapes.map(e => e.assignedVerts).flat())
     console.log('shapes parts', shapes.map(e => e.parts).flat())
   }
@@ -1732,13 +1721,57 @@ class Shape extends ProtoLayer {
       const prev = sub[loop.cycle(i - 1)]
       const next = sub[loop.cycle(i + 1)]
       // console.log([prev, seg, next].map(e => e.part.value))
-      if (seg.isStep && !prev.isStep && !next.isStep) {
+      // case covers 1 or 2 consequetive steps
+      if (seg.isStep && !next.isStep) {
         // console.log('found single step')
         prev.assign('mid')
         seg.assign('mid')
         next.assign('mid')
       }
     }))
+  }
+  //METH:
+  assignRectangleVerts() {
+    const cornerVerts = this.assignedVerts.flat()
+    console.log('cornerVerts', cornerVerts)
+    const newSegs = vertsPathToSegmentPath({ path: cornerVerts, refine: false })
+    console.log('newSegs', newSegs)
+    const minLength = min(...newSegs.map(s => s.length))
+    let newVerts = new OpArray
+    newSegs.forEach(seg => {
+      if (seg.length === minLength) { seg.assign('mid') }
+      if (seg.length > minLength) {
+        const ratio = minLength / seg.length
+        newVerts.push(seg.scaledStartPoint(ratio))
+        newVerts.push(seg.scaledEndPoint(ratio))
+      }
+    })
+    this.subShapes.forEach(sub => sub.forEach((seg, i) => {
+      newVerts.forEach(vert => {
+        if (seg.vertIsOnLine(vert)) {
+          console.log(`YES vert (${vert.x}, ${vert.y}) is on seg ${i}`)
+          seg.assign(vert)
+        }
+        // else { console.log(`NO vert (${vert.x}, ${vert.y}) is NOT on seg ${i}`) }
+      })
+    }))
+  }
+  //METH:
+  assignSquareVerts() {
+    const width = this.cellBounds.cellBoundsWidth
+    // console.log(`square width = ${width}`)
+    if (width % 2 === 0) {
+      const offset = width / 2 - 1
+      for (let i = 0; i < 4; i++) {
+        this.subShapes[0][i * width + offset].assign('end')
+        this.subShapes[0][width * (i + 1) - offset - 1].assign('start')
+      }
+    }
+    if (width % 2 === 1) {
+      for (let i = 0; i < 4; i++) {
+        this.subShapes[0][width * i + (width - 1) / 2].assign('mid')
+      }
+    }
   }
   // #endregion
   // MARK: Setup Methods
