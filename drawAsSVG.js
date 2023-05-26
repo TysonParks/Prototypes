@@ -250,15 +250,17 @@ function segmentPathToVertsPath(segmentPath) {
 // FUNC: vertsPathToSegmentPath()
 // convert array of verts to a shape path made of Segments
 function vertsPathToSegmentPath({ path = [], refine = true } = {}) {
+  // console.log('path', path)
   let vertCount = path.length
   if (vertCount < 3) { return }
   path = loopPath(path)
+  // console.log('loopedpath', path)
   let segmentPath = []
   let previousSeg = undefined
   for (let i = 0; i < vertCount; i++) {
     // let verts = [vert(path[i]), vert(path[i + 1])]
     // let segment = new Segment({ start: verts[0], end: verts[1] })
-    let seg = segment(vert(path[i]), vert(path[i + 1]))
+    let seg = protoSegment(vert(path[i]), vert(path[i + 1]))
     // print('previousSeg')
     // print(previousSeg)
     // print('seg')
@@ -266,7 +268,7 @@ function vertsPathToSegmentPath({ path = [], refine = true } = {}) {
     if (refine === true && previousSeg !== undefined && seg.angle === previousSeg.angle) {
 
       // verts = [previousSeg.verts[0], verts[1]]
-      seg = segment(previousSeg.startPoint, seg.endPoint)
+      seg = protoSegment(previousSeg.startPoint, seg.endPoint)
       segmentPath.pop()
     }                                      // combine segments with same angle
     segmentPath.push(seg)
@@ -523,6 +525,15 @@ class Segment {
   //   return segment(this.midPoint, end)
   // }
 
+  //NOTE: made with ChatGPT4.0 on May26, 2023
+  // check to see if Vertex point is on Segment line
+  vertIsOnLine(vert) {
+    // Calculate the t parameter using linear interpolation
+    const t = this.lineVector.dot(p5.Vector.sub(vert, this.startPoint)) / this.lineVector.magSq()
+    // Check if t is within the range [0, 1]
+    return t >= 0 && t <= 1
+  }
+
   equals(segment) {
     return this.startPoint.equals(segment.startPoint) && this.endPoint.equals(segment.endPoint)
   }
@@ -573,6 +584,10 @@ class Segment {
 }
 
 // CLASS: ProtoSegment
+function protoSegment(start, end) {
+  return new ProtoSegment(start, end)
+}
+
 class ProtoSegment extends Segment {
   parentID
   taken = false
@@ -614,18 +629,25 @@ class ProtoSegment extends Segment {
     }
     if (vert instanceof Vertex) {
       this.assignedVerts.push(vert)
+      this.assignedVerts = this.assignedVerts.unique('x', 'y')
       // console.log(`assigned ${vert}`)
     }
-    // if (vert instanceof Array && typeof vert[0] === 'string') {
-    //   vert.forEach(v => this.assignedVerts.push(this.#vertNames[v]))
-    // }
+    if (vert instanceof Array && typeof vert[0] === 'string') {
+      vert.forEach(v => {
+        console.log(`assigning ${v}`)
+        this.assignedVerts.push(this.#vertNames[v]
+        )
+      }
+      )
+    }
   }
 
   #vertNames = {
     'start': this.startPoint,
     'mid': this.midPoint,
     'end': this.endPoint,
-    // 'three': ['start', 'mid', 'end'],
+    'two': ['start', 'end'],
+    'three': ['start', 'mid', 'end'],
   }
 }
 
