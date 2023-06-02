@@ -186,6 +186,33 @@ function setupBackground() {
   F = new Frame(BG)
 }
 
+// FUNC: makePrototype()
+function makePrototype(features) {
+  //configure grid
+  let grid = new Grid(F, { x: features.gridX, y: features.gridY })
+  //configure base
+  let baseShader
+  if (features.base === 'None') {
+    grid.inset(R.random_num(0.9, 0.95))
+  } else {
+    grid.inset(R.random_num(0.7, 0.9))
+    let baseShadeStack
+    if (features.base === 'additive') {
+      baseShadeStack = Shade.neuShadeSVGFactory(
+        { mag: -minCellSize * 3, start: .5, pixToUserUnits: F.pixToUserUnits })
+    } else {
+      baseShadeStack = Shade.neuShadeSVGFactory(
+        { mag: -minCellSize * 3, start: .5, pixToUserUnits: F.pixToUserUnits })
+    }
+    baseShader = createFilter().dropShadow(baseShadeStack)
+  }
+  // configure shaders
+  // configure groups
+  // configure islands
+
+}
+
+
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
