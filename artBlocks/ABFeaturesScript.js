@@ -23,7 +23,97 @@
 
 // FUNC: calculateFeatures
 function calculateFeatures(token = tokenData) {
-  // Options
+  // Action
+
+
+
+  //MARK: Options
+  // cut layering options
+  const cutOptions = [
+    ['additive single', 0.2],
+    ['subtractive single', 0.2],
+    ['additive and subtractive', 0.2],
+    ['additive pyramidal', 0.2],
+    ['subtractive pyramidal', 0.2],
+  ]
+  // how densely the grid is filled with shapes
+  const densityOptions = [
+    ['so lonely', 0.1],
+    ['some availability', 0.15],
+    ['at capacity', 0.75],
+  ]
+  // depth of cutouts
+  const depthOptions = [
+    ['puddle', 0.05],
+    ['kiddie', 0.15],
+    ['backyard', 0.25],
+    ['olympic', 0.35],
+    ['dynamic', 0.2],
+  ]
+  // x cell width of grid
+  const gridXOptions = [
+    ['None', 0.0],
+    ['10', 0.025],
+    ['9', 0.05],
+    ['8', 0.05],
+    ['7', 0.1],
+    ['6', 0.2],
+    ['5', 0.2],
+    ['4', 0.2],
+    ['3', 0.1],
+    ['2', 0.05],
+    ['1', 0.025],
+  ]
+  // y cell height of grid
+  const gridYOptions = [
+    ['2x', 0.8],
+    ['stretch Horizontal', 0.1],
+    ['stretch Vertical', 0.1],
+  ]
+  // amount of groups to create
+  const groupCountOptions = [
+    ['2', 0.4],
+    ['3', 0.3],
+    ['4', 0.2],
+    ['5', 0.1],
+  ]
+  // height of addons
+  const heightOptions = [
+    ['plate', 0.2],
+    ['curb', 0.35],
+    ['loading dock', 0.35],
+    ['roof drop', 0.1],
+  ]
+  // inset options
+  const insetRatioOptions = [
+    ['1:1', 0.4],
+    ['2:1', 0.3],
+    ['3:1', 0.2],
+    ['5:1', 0.1],
+  ]
+  // lucky numbers trigger special shape instructions
+  const luckyNumberOptions = [
+    ['7', 0.75],
+    ['13', 0.75],
+    ['23', 0.75],
+    ['69', 0.1],
+    ['420', 0.15],
+  ]
+  // shape interpretor version
+  const shapeInterpeterOptions = [
+    ['v0', 0.025],
+    ['v1', 0.375],
+    ['v2', 0.6],
+  ]
+  // block wraps to design
+  const shrinkWrapOptions = [
+    ['true', 0.2],
+    ['false', 0.8],
+  ]
+  //
+
+
+
   const protoStyleOptions = [
     ['Grid', 0.3],
     ['Stacks', 0.2],
@@ -31,22 +121,16 @@ function calculateFeatures(token = tokenData) {
     ['Object', 0.1],
     ['Stripes', 0.1],
   ]
+
   const stripeStyleOptions = [
     ['None', 0.0],
     ['Vertical', 0.4],
     ['Horizontal', 0.6],
   ]
-  const gridStyleOptions = [
-    ['None', 0.0],
-    ['5x10', 0.2],
-    ['4x8', 0.2],
-    ['3x6', 0.2],
-    ['2x4', 0.2],
-    ['8x8', 0.2],
-    ['6x6', 0.2],
-    ['5x5', 0.2],
-    ['4x4', 0.2],
-  ]
+
+
+
+
   const complexStyleOptions = [
     ['None', 0.0],
     ['Vertical Dyad', 0.3],
@@ -65,44 +149,8 @@ function calculateFeatures(token = tokenData) {
     ['Glide Reflection', 0.2],
   ]
 
-  const roundingStyleOptions = [
-    ['Monad', 0.2],
-    ['Dyad', 0.2],
-    ['Triad', 0.2],
-    ['Quad', 0.2],
-    ['Hexad', 0.2],
-    ['Octad', 0.2],
-  ]
-  const animStyleOptions = [
-    ['None', 0.0],
-    ['Rotate Light', 0.2],
-    ['Rotate Hue', 0.2],
-    ['Bounce', 0.2],
-  ]
-  const interactionStyleOptions = [
-    ['None', 0.0],
-    ['Trigger', 0.2],
-    ['Mix', 0.2],
-    ['Switch', 0.2],
-  ]
-  const lightStyleOptions = [
-    ['Monochrome', 0.2],
-    ['Chromatic', 0.2],
-    ['Fake Chroma', 0.2],
-    ['Hot', 0.2],
-  ]
-  const materialOptions = [
-    ['White Paper', 0.2],
-    ['Gray Paper', 0.2],
-    ['Gradient Paper', 0.2],
-    ['Black Plastic', 0.2],
-  ]
-  const troubleStyleOptions = [
-    ['TRS', 0.2],
-    ['Blurred', 0.2],
-    ['Print Alignment', 0.2],
-    ['None', 0.0],
-  ]
+
+
 
   // Enums
   let protoStyle,
@@ -199,3 +247,46 @@ function calculateFeatures(token = tokenData) {
 // class FeatureImplementation(feature) {
 
 // }
+
+//MARK: UNUSED FEATURES
+
+function unusedFeatures() {
+  const animStyleOptions = [
+    ['None', 0.0],
+    ['Rotate Light', 0.2],
+    ['Rotate Hue', 0.2],
+    ['Bounce', 0.2],
+  ]
+  const interactionStyleOptions = [
+    ['None', 0.0],
+    ['Trigger', 0.2],
+    ['Mix', 0.2],
+    ['Switch', 0.2],
+  ]
+  const lightStyleOptions = [
+    ['Monochrome', 0.2],
+    ['Chromatic', 0.2],
+    ['Fake Chroma', 0.2],
+    ['Hot', 0.2],
+  ]
+  const materialOptions = [
+    ['White Paper', 0.2],
+    ['Gray Paper', 0.2],
+    ['Gradient Paper', 0.2],
+    ['Black Plastic', 0.2],
+  ]
+  const troubleStyleOptions = [
+    ['TRS', 0.2],
+    ['Blurred', 0.2],
+    ['Print Alignment', 0.2],
+    ['None', 0.0],
+  ]
+  const roundingStyleOptions = [
+    ['Monad', 0.2],
+    ['Dyad', 0.2],
+    ['Triad', 0.2],
+    ['Quad', 0.2],
+    ['Hexad', 0.2],
+    ['Octad', 0.2],
+  ]
+}
