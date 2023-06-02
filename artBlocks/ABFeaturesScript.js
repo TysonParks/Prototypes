@@ -33,14 +33,14 @@ function calculateFeatures(token = tokenData) {
 
   function calculateAll() {
     // initFeatures()
-    features = new Features()
+    features = new FeatureSet()
     console.log('features', features)
     calcFeatures()
     return
   }
 
 
-  class Features {
+  class FeatureSet {
     base = new EnumFeature('Base', this.baseOptions)
     cutLayering = new EnumFeature('Cut Layering', this.cutLayeringOptions)
     density = new EnumFeature('Density', this.densityOptions)
