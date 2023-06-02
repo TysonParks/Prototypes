@@ -188,10 +188,10 @@ function setupBackground() {
 // FUNC: gridTests2()
 function gridTests2() {
   // F.inset(.95)
-  let gridX = R.random_int(3, 8)
-  gridX = 10
+  let gridX = R.random_int(6, 10)
+  gridX = 8
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
-  // grid = new Grid(F, { x: 8, y: 12 })
+  // grid = new Grid(F, { x: 8, y: 14 })
   grid.inset(R.random_num(0.7, 0.95))
   // grid.inset(.8)
   grid.insetCells(R.random_num(0.1, .4))
@@ -204,7 +204,7 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: -minCellSize * 2, start: .5, pixToUserUnits: F.pixToUserUnits })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: -minCellSize * 3, start: .5, pixToUserUnits: F.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
   console.log('shadeStack0', shadeStack0)
 
@@ -218,7 +218,7 @@ function gridTests2() {
 
   grid.setFilter(shader0)
 
-  grid.randGroup(0.0125)
+  grid.randGroup(0.02)
   // grid.randomComb({
   //   keepRange: range(1, 4),
   //   dropRange: range(6, 8),
@@ -233,7 +233,7 @@ function gridTests2() {
 
   grid.outlineTaken(Direction.All)
   grid.outlineTaken(Direction.Right)
-  grid.outlineTaken(Direction.Down)
+  grid.outlineTaken(Direction.Vertical)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp001',
