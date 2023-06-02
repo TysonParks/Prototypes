@@ -25,167 +25,160 @@
 function calculateFeatures(token = tokenData) {
   // Action
 
-
-
-  //MARK: Options
-  // cut layering options
-  const cutOptions = [
-    ['additive single', 0.2],
-    ['subtractive single', 0.2],
-    ['additive and subtractive', 0.2],
-    ['additive pyramidal', 0.2],
-    ['subtractive pyramidal', 0.2],
-  ]
-  // how densely the grid is filled with shapes
-  const densityOptions = [
-    ['so lonely', 0.1],
-    ['some availability', 0.15],
-    ['at capacity', 0.75],
-  ]
-  // depth of cutouts
-  const depthOptions = [
-    ['puddle', 0.05],
-    ['kiddie', 0.15],
-    ['backyard', 0.25],
-    ['olympic', 0.35],
-    ['dynamic', 0.2],
-  ]
-  // x cell width of grid
-  const gridXOptions = [
-    ['None', 0.0],
-    ['10', 0.025],
-    ['9', 0.05],
-    ['8', 0.05],
-    ['7', 0.1],
-    ['6', 0.2],
-    ['5', 0.2],
-    ['4', 0.2],
-    ['3', 0.1],
-    ['2', 0.05],
-    ['1', 0.025],
-  ]
-  // y cell height of grid
-  const gridYOptions = [
-    ['2x', 0.8],
-    ['stretch Horizontal', 0.1],
-    ['stretch Vertical', 0.1],
-  ]
-  // amount of groups to create
-  const groupCountOptions = [
-    ['2', 0.4],
-    ['3', 0.3],
-    ['4', 0.2],
-    ['5', 0.1],
-  ]
-  // height of addons
-  const heightOptions = [
-    ['plate', 0.2],
-    ['curb', 0.35],
-    ['loading dock', 0.35],
-    ['roof drop', 0.1],
-  ]
-  // inset options
-  const insetRatioOptions = [
-    ['1:1', 0.4],
-    ['2:1', 0.3],
-    ['3:1', 0.2],
-    ['5:1', 0.1],
-  ]
-  // lucky numbers trigger special shape instructions
-  const luckyNumberOptions = [
-    ['7', 0.75],
-    ['13', 0.75],
-    ['23', 0.75],
-    ['69', 0.1],
-    ['420', 0.15],
-  ]
-  // shape interpretor version
-  const shapeInterpeterOptions = [
-    ['v0', 0.025],
-    ['v1', 0.375],
-    ['v2', 0.6],
-  ]
-  // block wraps to design
-  const shrinkWrapOptions = [
-    ['true', 0.2],
-    ['false', 0.8],
-  ]
-  //
-
-
-
-  const protoStyleOptions = [
-    ['Grid', 0.3],
-    ['Stacks', 0.2],
-    ['Complex', 0.3],
-    ['Object', 0.1],
-    ['Stripes', 0.1],
-  ]
-
-  const stripeStyleOptions = [
-    ['None', 0.0],
-    ['Vertical', 0.4],
-    ['Horizontal', 0.6],
-  ]
-
-
-
-
-  const complexStyleOptions = [
-    ['None', 0.0],
-    ['Vertical Dyad', 0.3],
-    ['Vertical Triad', 0.45],
-    ['Horizontal Dyad', 0.25],
-  ]
-
-  const symmetryStyleOptions = [
-    ['None', 0.0],
-    ['Circular', 0.2],
-    ['Harmonic', 0.2],
-    ['Fibonacci', 0.2],
-    ['Palindromic Reflectional', 0.2],
-    ['Flipped', 0.2],
-    ['Radial', 0.2],
-    ['Glide Reflection', 0.2],
-  ]
-
-
-
-
-  // Enums
-  let protoStyle,
-    stripeStyle,
-    gridStyle,
-    complexStyle,
-    roundingStyle,
-    animStyle,
-    lightStyle,
-    material,
-    troubleStyle
-
-  function initFeatures() {
-    protoStyle = new EnumFeature("Prototype Style", protoStyleOptions)
-    stripeStyle = new EnumFeature("Stripe Style", stripeStyleOptions)
-    gridStyle = new EnumFeature("Grid Style", gridStyleOptions)
-    complexStyle = new EnumFeature("Complex Style", complexStyleOptions)
-
-    roundingStyle = new EnumFeature("Rounding Style", roundingStyleOptions)
-    animStyle = new EnumFeature("Animation Style", animStyleOptions)
-    lightStyle = new EnumFeature("Lighting Style", lightStyleOptions)
-    material = new EnumFeature("Material", materialOptions)
-    troubleStyle = new EnumFeature("Trouble Style", troubleStyleOptions)
-  }
+  let features
 
   function calcFeatures() {
 
   }
 
   function calculateAll() {
-    initFeatures()
+    // initFeatures()
+    features = new Features()
+    console.log('features', features)
     calcFeatures()
-    return troubleStyle.none()
+    return
   }
 
+
+  class Features {
+    base = new EnumFeature('Base', this.baseOptions)
+    cutLayering = new EnumFeature('Cut Layering', this.cutLayeringOptions)
+    density = new EnumFeature('Density', this.densityOptions)
+    depth = new EnumFeature('Depth', this.depthOptions)
+    gridX = new EnumFeature('GridX', this.gridXOptions)
+    gridY = new EnumFeature('GridY', this.gridYOptions)
+    groupCount = new EnumFeature('Group Count', this.groupCountOptions)
+    height = new EnumFeature('Height', this.heightOptions)
+    insetRatio = new EnumFeature('Inset Ratio', this.insetRatioOptions)
+    luckyNumber = new EnumFeature('Lucky Number', this.luckyNumberOptions)
+    shapeInterpeter = new EnumFeature('Shape Interpeter', this.shapeInterpeterOptions)
+    shrinkWrap = new EnumFeature('Shrinkwrap', this.shrinkWrapOptions)
+
+    constructor() { }
+
+    //MARK: Options
+    // #region Options
+    // base is layer framing the grid
+    baseOptions = [
+      ['none', 0.4],
+      ['additive', 0.35],
+      ['subtractive', 0.25],
+    ]
+    // cut layering options
+    cutLayeringOptions = [
+      ['single additive', 0.25],
+      ['single subtractive', 0.25],
+      ['additive and subtractive', 0.2],
+      ['additive pyramidal', 0.1],
+      ['subtractive pyramidal', 0.1],
+      ['additive and subtractive pyramidal', 0.1],
+    ]
+    // how densely the grid is filled with shapes
+    densityOptions = [
+      ['so lonely', 0.1],
+      ['some availability', 0.15],
+      ['at capacity', 0.75],
+    ]
+    // depth of cutouts
+    depthOptions = [
+      ['puddle', 0.05],
+      ['kiddie', 0.15],
+      ['backyard', 0.25],
+      ['olympic', 0.35],
+      ['dynamic', 0.2],
+    ]
+    // x cell width of grid
+    gridXOptions = [
+      ['10', 0.025],
+      ['9', 0.05],
+      ['8', 0.05],
+      ['7', 0.1],
+      ['6', 0.2],
+      ['5', 0.2],
+      ['4', 0.2],
+      ['3', 0.1],
+      ['2', 0.05],
+      ['1', 0.025],
+    ]
+    // y cell height of grid
+    gridYOptions = [
+      ['2x', 0.8],
+      ['stretch Horizontal', 0.1],
+      ['stretch Vertical', 0.1],
+    ]
+    // amount of groups to create
+    groupCountOptions = [
+      ['2', 0.4],
+      ['3', 0.3],
+      ['4', 0.2],
+      ['5', 0.1],
+    ]
+    // height of addons
+    heightOptions = [
+      ['plate', 0.2],
+      ['curb', 0.35],
+      ['loading dock', 0.35],
+      ['roof drop', 0.1],
+    ]
+    // inset options
+    insetRatioOptions = [
+      ['1:1', 0.4],
+      ['2:1', 0.3],
+      ['3:1', 0.2],
+      ['5:1', 0.1],
+    ]
+    // lucky numbers trigger special shape instructions
+    luckyNumberOptions = [
+      ['7', 0.75],
+      ['13', 0.75],
+      ['23', 0.75],
+      ['69', 0.1],
+      ['420', 0.15],
+    ]
+    // shape interpretor version
+    shapeInterpeterOptions = [
+      ['v0', 0.025],
+      ['v1', 0.375],
+      ['v2', 0.6],
+    ]
+    // block wraps to design
+    shrinkWrapOptions = [
+      ['true', 0.2],
+      ['false', 0.8],
+    ]
+    //
+
+
+
+
+    stripeStyleOptions = [
+      ['None', 0.0],
+      ['Vertical', 0.4],
+      ['Horizontal', 0.6],
+    ]
+
+
+
+
+    complexStyleOptions = [
+      ['None', 0.0],
+      ['Vertical Dyad', 0.3],
+      ['Vertical Triad', 0.45],
+      ['Horizontal Dyad', 0.25],
+    ]
+
+    symmetryStyleOptions = [
+      ['None', 0.0],
+      ['Circular', 0.2],
+      ['Harmonic', 0.2],
+      ['Fibonacci', 0.2],
+      ['Palindromic Reflectional', 0.2],
+      ['Flipped', 0.2],
+      ['Radial', 0.2],
+      ['Glide Reflection', 0.2],
+    ]
+    // #endregion
+  }
 
   // TODO: this could probably be refined with new understanding of ENUMS in js
   // ENUM: EnumFeature 
@@ -251,6 +244,14 @@ function calculateFeatures(token = tokenData) {
 //MARK: UNUSED FEATURES
 
 function unusedFeatures() {
+
+  const protoStyleOptions = [
+    ['Grid', 0.3],
+    ['Stacks', 0.2],
+    ['Complex', 0.3],
+    ['Object', 0.1],
+    ['Stripes', 0.1],
+  ]
   const animStyleOptions = [
     ['None', 0.0],
     ['Rotate Light', 0.2],
