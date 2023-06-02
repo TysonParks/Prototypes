@@ -1053,17 +1053,11 @@ class Grid extends ProtoLayer {
 
     shapes.forEach(shape => {
       const isle = shape.island
-      // 1. find shapes with subshapes
-      // if (shape.hasSubShapes) {
-      // console.log(`shape ${shape.id} has subshapes`)
+
       shape.assignCornerVerts()
-      if (shape.island.isRectangle) {
-        if (shape.island.isSquare) {
-          console.log('found square!')
-          shape.assignSquareVerts()
-        }
-        else { shape.assignRectangleVerts() }
-        // console.log('RectangleShape:', shape.map(s => s.assignedVerts))
+      if (isle.isRectangle) {
+        shape.assignRectangleVerts()
+        console.log('Neighbor Segs', shape.cells.map(cell => cell.neighborSegments))
         return
       }
       shape.assignUTurnVerts()
@@ -1373,6 +1367,12 @@ class Cell extends ProtoLayer {
   get x() { return this.coords.x }
   get y() { return this.coords.y }
   get taken() { return !this.available }
+
+  get cardinalNeighbors() { return this.allNeighborsCoords(Direction.Cardinal.directions) }
+  get neighborSegments() {
+    const cell = this.grid.neighbor(this.index, Direction.Right)
+    return cell?.segments
+  }
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
@@ -1385,6 +1385,12 @@ class Cell extends ProtoLayer {
   //METH:
   validNeighborsCoords(directions = Direction.All.directions, bounds = this.grid.cellBounds,) {
     return this.allNeighborsCoords(directions).filter(e => this.grid.coordsAreInBounds(e.x, e.y, bounds))
+  }
+  //METH:
+  neighborSegment(direction) {
+    const cell = this.grid.neighbor(this.index, direction)
+    const side = cell.sides[direction.opposites.names]
+    return cell.segments.filter(seg => seg.equals(side))
   }
   // #endregion
   // MARK: Setup Methods
@@ -1732,29 +1738,50 @@ class Shape extends ProtoLayer {
   }
   //METH:
   assignRectangleVerts() {
-    const aspect = this.cellBounds.aspect
-    // if 
+    const bounds = this.cellBounds
+    const aspect = bounds.aspect
+    const width = bounds.cellBoundsWidth
+    const height = bounds.cellBoundsHeight
+    let offsetLength, length, offset
+    let prevLength = 0
 
+    if (aspect.value === 2) { offsetLength = height } // landscape
+    else { offsetLength = width } // square/portrait
 
+    for (let i = 0; i < 4; i++) {
+      if (i % 2 === 0) { length = width } // top/bottom 
+      else { length = height } // left/right
+
+      if (offsetLength % 2 === 0) { // even number of cells
+        offset = offsetLength / 2 - 1
+        this.subShapes[0][prevLength + offset].assign('end')
+        this.subShapes[0][prevLength + length - offset - 1].assign('start')
+      } else { // odd number of cells
+        offset = (offsetLength - 1) / 2
+        this.subShapes[0][prevLength + offset].assign('mid')
+        this.subShapes[0][prevLength + length - offset - 1].assign('mid')
+      }
+      prevLength += length
+    }
   }
   //METH:
-  assignSquareVerts() {
-    const width = this.cellBounds.cellBoundsWidth
-    // console.log(`square width = ${width}`)
-    if (width % 2 === 0) {
-      const offset = width / 2 - 1
-      for (let i = 0; i < 4; i++) {
-        this.subShapes[0][width * i + offset].assign('end')
-        this.subShapes[0][width * (i + 1) - offset - 1].assign('start')
-      }
-    }
-    if (width % 2 === 1) {
-      const offset = (width - 1) / 2
-      for (let i = 0; i < 4; i++) {
-        this.subShapes[0][width * i + offset].assign('mid')
-      }
-    }
-  }
+  // assignSquareVerts() {
+  //   const width = this.cellBounds.cellBoundsWidth
+  //   // console.log(`square width = ${width}`)
+  //   if (width % 2 === 0) {
+  //     const offset = width / 2 - 1
+  //     for (let i = 0; i < 4; i++) {
+  //       this.subShapes[0][width * i + offset].assign('end')
+  //       this.subShapes[0][width * (i + 1) - offset - 1].assign('start')
+  //     }
+  //   }
+  //   if (width % 2 === 1) {
+  //     const offset = (width - 1) / 2
+  //     for (let i = 0; i < 4; i++) {
+  //       this.subShapes[0][width * i + offset].assign('mid')
+  //     }
+  //   }
+  // }
   // #endregion
   // MARK: Setup Methods
   // #region Setup Methods
