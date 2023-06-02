@@ -1,5 +1,5 @@
 /*
-Troubled Prototypes
+Prototypes
 Bored UI Buttons Club by Tyson Parks, 2021
 */
 
@@ -52,6 +52,8 @@ function setup() {
   createGUI()
 
   // MARK: grid Test
+  const features = calculateFeatures(tokenData)
+  // console.log('features', features)
   // gridTests()
   gridTests2()
 
