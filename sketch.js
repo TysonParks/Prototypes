@@ -190,6 +190,7 @@ function setupBackground() {
 function makePrototype(features) {
   //configure grid
   let grid = new Grid(F, { x: features.gridX, y: features.gridY })
+  const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
   //configure base
   let baseShader
   if (features.base === 'None') {
@@ -199,13 +200,16 @@ function makePrototype(features) {
     let baseShadeStack
     if (features.base === 'additive') {
       baseShadeStack = Shade.neuShadeSVGFactory(
-        { mag: -minCellSize * 3, start: .5, pixToUserUnits: F.pixToUserUnits })
+        { mag: R.random_num(0.5, 2), start: .5, pixToUserUnits: F.pixToUserUnits })
     } else {
       baseShadeStack = Shade.neuShadeSVGFactory(
-        { mag: -minCellSize * 3, start: .5, pixToUserUnits: F.pixToUserUnits })
+        { mag: grid.gridCellBounds.size.x * 0.5, start: .5, pixToUserUnits: F.pixToUserUnits })
     }
     baseShader = createFilter().dropShadow(baseShadeStack)
+    grid.setFilter(baseShader)
   }
+
+
   // configure shaders
   // configure groups
   // configure islands
@@ -246,6 +250,7 @@ function gridTests2() {
   // console.log('shadeStack2', shadeStack2)
 
   grid.setFilter(shader0)
+  console.log(grid.filter)
 
   grid.randGroup(0.02)
   // grid.randomComb({
@@ -260,9 +265,9 @@ function gridTests2() {
   //   taken: true,
   // })
 
-  grid.outlineTaken(Direction.All)
-  grid.outlineTaken(Direction.Right)
-  grid.outlineTaken(Direction.Vertical)
+  grid.outlineTaken(Direction.All, false)
+  grid.outlineTaken(Direction.Right, false)
+  grid.outlineTaken(Direction.Vertical, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
     // groupID: 'grp001',
@@ -282,9 +287,11 @@ function gridTests2() {
     taken: false,
   })
 
-  // grid.groupNamed('grp000').setFilter(shader2)
+  grid.groupNamed('grp000').setFilter(shader2)
+  grid.groupNamed('grp000').inset(0.7)
   // grid.groupNamed('grp001')?.setFilter(shader1)
 
+  console.log('shape0', grid.islands[0].shape)
   console.log('group', grid.groupNamed('grp000'))
   console.log('children', grid.groupNamed('grp000').svgElt?.child())
 
