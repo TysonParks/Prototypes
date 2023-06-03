@@ -59,10 +59,7 @@ class ProtoLayer {
 
   get filter() {
     if (this._filter) { return this._filter }
-    else {
-      // console.log(`${this.id} protoParent:`, this.protoParent)
-      return this.protoParent.filter
-    }
+    if (this.protoParent?.filter) { return this.protoParent.filter }
   }
   // #endregion
   // MARK: Computed Properties
@@ -136,7 +133,6 @@ class ProtoLayer {
         .addToClassList(this.svgParent.elt.classList.value)
         .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
         .viewBox(this.anchor.x, this.anchor.y, this.size.x, this.size.y, this.padding)
-
       // .label('test', 'red', Direction.Up)
     }
 
@@ -148,8 +144,6 @@ class ProtoLayer {
         .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
       // .label('test', 'red', Direction.None)
     }
-
-
   }
   //METH: 
   drawElement() {
@@ -162,6 +156,10 @@ class ProtoLayer {
       this.rect
         .svgLook(this.look)
         .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+
+      if (this.filter) {
+        this.rect.applyFilter(this.filter, 2)
+      }
     }
   }
   //METH: 
@@ -235,6 +233,7 @@ class Frame extends ProtoLayer {
   setCornerRadii(corners, padding) {
     const radius = corners.topLeft.x + padding.x
     this.cornerRadius = min(radius, 50)
+    // this.cornerRadius = 50
     this.drawElement()
   }
 
@@ -289,6 +288,7 @@ class Frame extends ProtoLayer {
       // .attribute('fill', ProtoColor.randomHighHue().setSaturation(10))
       .attribute(`fill`, protoColor(230))
       .attribute('fill-opacity', '1')
+    // .applyFilter(this.filter, 2)
 
     // this.testElementsDraw()
   }
@@ -744,7 +744,7 @@ class Grid extends ProtoLayer {
   islands = new OpArray
 
   constructor(protoParent, gridSize, inset) {
-    super({ protoParent: protoParent, inset: inset, drawRect: false, drawSVG: false })
+    super({ protoParent: protoParent, inset: inset, drawRect: true, drawSVG: true })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this.finishSetup(S.Grids)
@@ -764,6 +764,12 @@ class Grid extends ProtoLayer {
   get availableCells() { return this.cells.filter(e => e.available) }
   get takenCells() { return this.cells.filter(e => e.taken) }
   get isFull() { return this.availableCells.length === 0 }
+  get biggestGroup() {
+    return this.groups.reduce((max, grp) => {
+      if (grp.cells.length > max.cells.length) { return grp }
+      else { return max }
+    })
+  }
   // get islands() { return this.findIslands({ selection: this.cells }) }
   // #endregion
   // MARK: Geometry Methods
@@ -1129,7 +1135,7 @@ class Grid extends ProtoLayer {
     dropRange = range(2, 7),
     start = 0
   } = {}) {
-    let selection = this.availableCells.randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
+    const selection = this.availableCells.randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
     this.assign(selection)
   }
   //METH:
@@ -1138,24 +1144,26 @@ class Grid extends ProtoLayer {
   }
   //METH:
   randGroup(amount) {
-    let selection = this.availableCells.randReduce(amount)
+    const selection = this.availableCells.randReduce(amount)
     this.assign(selection)
   }
   //METH:
   groupAvail() {
-    let selection = this.availableCells
+    const selection = this.availableCells
     this.assign(selection)
   }
   //METH:
   outlineGroup(num) {
-    let selection = this.groups[num].validNeighbors
+    const selection = this.groups[num].validNeighbors
     this.assign(selection)
   }
   //METH:
-  outlineTaken(direction = Direction.All) {
+  outlineTaken(direction = Direction.All, newGroup = true) {
     // console.log(`outline taken`)
-    let selection = this.validNeighbors({ selection: this.takenCells, directions: direction.directions })
-    this.assign(selection)
+    const selection = this.validNeighbors({ selection: this.takenCells, directions: direction.directions })
+    let group
+    if (newGroup === false) { group = this.biggestGroup }
+    this.assign(selection, group)
   }
   // #endregion
   // MARK: General Grammar Methods
@@ -1164,7 +1172,12 @@ class Grid extends ProtoLayer {
   assign(selection, group) {
     if (selection.isEmpty) { return }
     if (!group) { group = new CellGroup(this, this.svgElt, this) }
-    group.cells = selection
+    // console.log('selection', selection)
+    // console.log('group cells', group.cells)
+    group.cells = group.cells.union(selection, ['id'])
+    // console.log('group cells union', group.cells)
+    // group.cells = selection
+    // console.log('group cells selection', group.cells)
     // console.log('groupID', group.id)
     this.groups.push(group)
     this.updateCells({ groupID: group.id })
@@ -1187,8 +1200,10 @@ class Grid extends ProtoLayer {
   }
   //METH:
   updateGroup(group) {
+    // console.log('group', group)
     group.cells.forEach(cell => {
       let thisCell = this.cells[cell.index]
+      // console.log('thisCell', thisCell.id)
       thisCell.groupID = group.id
       thisCell.available = false
       thisCell.color = group.color
@@ -1212,14 +1227,13 @@ class Grid extends ProtoLayer {
 // CLASS: CellGroup
 class CellGroup extends ProtoLayer {
   grid
-  cells
+  cells = new OpArray
   color
 
   constructor(protoParent, svgParent, grid) {
     super({ protoParent: protoParent, svgParent: svgParent, drawSVG: false, drawRect: false })
     this.grid = grid
     this.finishSetup(S.Groups)
-    this.cells = OpArray.from(grid.cells)
     this.color = R.random_hash(3, '#')
   }
 
