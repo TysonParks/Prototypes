@@ -201,7 +201,7 @@ class OpArray extends Array {
     let a, b, kv, res
     if (isObjectArray) {
       kv = this.kvObj(vals, props)
-      // print(kv)
+      // console.log('kv', kv)
       a = kv.aKeys
       b = kv.bKeys
     } else {
