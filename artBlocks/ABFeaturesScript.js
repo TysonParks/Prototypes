@@ -41,52 +41,86 @@ function calculateFeatures(token = tokenData) {
 
 
   class FeatureSet {
-    gridX = new EnumFeature('GridX', this.gridXOptions)
-    cellAspect = new EnumFeature('Cell Aspect', this.cellAspectOptions)
-
-    base = new EnumFeature('Base', this.baseOptions)
-
-    layering = new EnumFeature('Layering', this.layeringOptions)
-    extraGroups = new EnumFeature('Extra Groups', this.extraGroupsOptions)
-    layerDepth = new EnumFeature('Layer Depth', this.depthOptions)
-    layerHeight = new EnumFeature('Layer Height', this.heightOptions)
-
-    density = new EnumFeature('Density', this.densityOptions)
-
-    variableInset = new EnumFeature('Variable Inset', this.variableInsetOptions)
-    insetRatio = new EnumFeature('Inset Ratio', this.insetRatioOptions)
-
-    luckyNumber = new EnumFeature('Lucky Number', this.luckyNumberOptions)
-
-    shapeInterpeter = new EnumFeature('Shape Interpeter', this.shapeInterpeterOptions)
-    shrinkWrap = new EnumFeature('Shrinkwrap', this.shrinkWrapOptions)
-
-
+    // MARK: Random Instance
     r
+
+    // MARK: EnumFeatures 
+    gridXEnum = new EnumFeature('GridX', this.gridXOptions)
+    cellAspectEnum = new EnumFeature('Cell Aspect', this.cellAspectOptions)
+
+    baseEnum = new EnumFeature('Base', this.baseOptions)
+
+    layeringEnum = new EnumFeature('Layering', this.layeringOptions)
+    extraGroupsEnum = new EnumFeature('Extra Groups', this.extraGroupsOptions)
+
+    additiveStyleEnum = new EnumFeature('Additive Style', this.additiveStyleOptions)
+    subtractiveStyleEnum = new EnumFeature('Subtractive Style', this.subtractiveStyleOptions)
+
+    layerDepthEnum = new EnumFeature('Layer Depth', this.depthOptions)
+    layerHeightEnum = new EnumFeature('Layer Height', this.heightOptions)
+
+    densityEnum = new EnumFeature('Density', this.densityOptions)
+
+    variableInsetEnum = new EnumFeature('Variable Inset', this.variableInsetOptions)
+    insetRatioEnum = new EnumFeature('Inset Ratio', this.insetRatioOptions)
+
+    luckyNumberEnum = new EnumFeature('Lucky Number', this.luckyNumberOptions)
+
+    shapeInterpeterEnum = new EnumFeature('Shape Interpeter', this.shapeInterpeterOptions)
+    shrinkWrapEnum = new EnumFeature('Shrinkwrap', this.shrinkWrapOptions)
+
+    // MARK: Calculated Feature Properties
+    x
+    y
+    cellAspect
+    base
+    layerCounts
+    density
 
     constructor(randomInstance) { this.r = randomInstance }
 
-    getfeatures() {
-      const r = this.r
+    // MARK: Methods
+    // #region Methods
+    //METH:
+    get publicFeatures() {
       const features = {
-        x: this.gridX.feature(r),
-        y: this.gridY.feature(r),
-        cellAspect: this.cellAspect.feature(r),
+        grid: `${this.x} x ${this.y}`,
+        cellAspect: this.cellAspect,
+        base: this.base,
+        additiveLayers: this.layerCounts.adds,
+        subtractiveLayers: this.layerCounts.subs,
+        density: this.density,
+
       }
       return features
     }
 
-    #calcFeatures() {
-      const r = this.r
-      this._x = parseInt(this.gridX.feature(r))
-      this._cellAspect = this.cellAspect.feature(r)
-      this._y = this.#calcGrid(r)
-      this._base = this.base.feature(r)
-      this._layering = this.cutLayering.feature(r)
+    get privateFeatures() {
+      return {
+        x: this.x,
+        y: this.y,
+        cellAspect: this.cellAspect,
+        base: this.base,
+        layerCounts: this.layerCounts,
+        density: this.density,
+      }
     }
 
-    #calcGrid(r) {
-      const x = this._x
+    //METH:
+    #calcFeatures() {
+      const r = this.r
+      this.x = parseInt(this.gridXEnum.feature(r))
+      this.cellAspect = this.cellAspectEnum.feature(r)
+      this.y = this.#calcY(r)
+      this.base = this.#calcBase(r)
+      this.layerCounts = this.#calcLayerCounts(r)
+      this.layers = this.#calcLayers(r)
+      this.density = this.densityEnum.feature(r)
+
+    }
+    //METH:
+    #calcY(r) {
+      const x = this.x
       let y
       switch (this._cellAspect) {
         case 'Square':
@@ -96,11 +130,54 @@ function calculateFeatures(token = tokenData) {
         case 'Wide':
           y = r.random_int(x / 2, x)
       }
+      return y
     }
+    //METH:
+    #calcBase(r) {
+      const base = this.baseEnum.feature(r)
+      switch (base) {
+        case 'None':
+          return 'None'
+        case 'Additive':
+          const addStyle = this.additiveStyle.feature(r)
+          return `${addStyle}-add`
+        case 'Subtractive':
+          const subStyle = this.subtractiveStyle.feature(r)
+          return `${subStyle}-sub`
+      }
+    }
+    //METH:
+    #calcLayerCounts(r) {
+      let adds, subs
+      const layering = this.layeringEnum.feature(r)
+      const extraGroups = this.extraGroupsEnum.feature(r)
+      if (layering.includes('Additive')) { adds = 1 }
+      if (layering.includes('Subtractive')) { subs = 1 }
+      if (extraGroups !== 'None') {
+        const extra = parseInt(extraGroups)
+        if (adds && subs) {
+          for (i = 0; i < extra; i++) {
+            if (r.random_bool(.5)) { adds += 1 }
+            else { subs += 1 }
+          }
+        }
+        if (adds) { adds += extra }
+        if (subs) { subs += extra }
+      }
+      return {
+        'adds': adds,
+        'subs': subs,
+      }
+    }
+    //METH:
+    #calcLayers(r) {
 
-    //MARK: Options
-    // #region Options
-    // x cell width of grid
+    }
+    // #endregion
+
+    //MARK: Feature Options
+    // #region Feature Options
+    //Public: x cell width of grid
     gridXOptions = [
       ['10', 0.025],
       ['9', 0.05],
@@ -113,35 +190,29 @@ function calculateFeatures(token = tokenData) {
       ['2', 0.05],
       ['1', 0.025],
     ]
-    // y cell height of grid
+    // Public: y cell height of grid
     cellAspectOptions = [
-      ['square', 0.8],
-      ['tall', 0.1],
-      ['wide', 0.1],
+      ['Square', 0.8],
+      ['Tall', 0.1],
+      ['Wide', 0.1],
     ]
-    // base is layer framing the grid
+    // Public: (TRANSLATED) base is layer framing the grid
     baseOptions = [
       ['None', 0.4],
       ['Additive', 0.35],
       ['Subtractive', 0.25],
     ]
 
-    // cut layering options
+    // Private: layering options
     layeringOptions = [
-      ['Single additive', 0.25],
-      ['Single subtractive', 0.25],
-      ['Additive and Subtractive', 0.2],
+      ['Additive', 0.2],
+      ['Subtractive', 0.25],
+      ['Additive and Subtractive', 0.25],
       ['Additive Pyramidal', 0.1],
       ['Subtractive Pyramidal', 0.1],
       ['Additive and Subtractive Pyramidal', 0.1],
     ]
-    // how densely the grid is filled with shapes
-    densityOptions = [
-      ['So Lonely', 0.1],
-      ['Some Availability', 0.15],
-      ['At Capacity', 0.75],
-    ]
-    // amount of extra groups to create
+    // Private: amount of extra groups to create
     extraGroupsOptions = [
       ['None', 0.5],
       ['1', 0.35],
@@ -149,30 +220,21 @@ function calculateFeatures(token = tokenData) {
       ['3', 0.025],
     ]
 
-    // depth of cutouts
-    depthOptions = [
-      ['Puddle', 0.05],
-      ['Kiddie', 0.15],
-      ['Backyard', 0.25],
-      ['Olympic', 0.35],
-      ['Dynamic', 0.2],
-    ]
-    // height of addons
-    heightOptions = [
-      ['Plate', 0.2],
-      ['Curb', 0.35],
-      ['Loading Dock', 0.35],
-      ['Roof Drop', 0.1],
+    // Public: how densely the grid is filled with shapes
+    densityOptions = [
+      ['So Lonely', 0.1],
+      ['Some Availability', 0.15],
+      ['At Capacity', 0.75],
     ]
 
-    // inset options
+    // Public: inset options
     insetRatioOptions = [
       ['1:1', 0.4],
       ['2:1', 0.3],
       ['3:1', 0.2],
       ['5:1', 0.1],
     ]
-    // lucky numbers trigger special shape instructions
+    // Public: lucky numbers trigger special shape instructions
     luckyNumberOptions = [
       ['7', 0.75],
       ['13', 0.75],
@@ -180,23 +242,54 @@ function calculateFeatures(token = tokenData) {
       ['69', 0.1],
       ['420', 0.15],
     ]
-    // shape interpretor version
+    // Public: shape interpretor version
     shapeInterpeterOptions = [
       ['v0', 0.025],
       ['v1', 0.375],
       ['v2', 0.6],
     ]
-    // block wraps to design
+    // Public: block wraps to design
     shrinkWrapOptions = [
       ['True', 0.2],
       ['False', 0.8],
     ]
-    // 
+    // Public:  
     variableInsetOptions = [
       ['None', 0.8],
       ['Unhinged', 0.05],
       ['Lively', 0.05],
       ['Tame', 0.8],
+    ]
+
+    // Private: (INSTANCE USE) style of additive cut
+    additiveStyleOptions = [
+      ['j', 0.2],
+      ['i', 0.2],
+      ['v', 0.3],
+      ['r', 0.3],
+    ]
+    // Private: (INSTANCE USE) style of subtractive cut
+    subtractiveStyleOptions = [
+      ['j', 0.5],
+      ['i', 0.15],
+      ['v', 0.3],
+      ['r', 0.05],
+    ]
+    // Private: (INSTANCE USE) depth of cutouts
+    depthOptions = [
+      ['Puddle', 0.05],
+      ['Kiddie Pool', 0.15],
+      ['Backyard Pool', 0.25],
+      ['Olympic Pool', 0.35],
+      ['Dynamic', 0.2],
+    ]
+    // Private: (INSTANCE USE) height of addons
+    heightOptions = [
+      ['Plate', 0.15],
+      ['Curb', 0.2],
+      ['Bench', 0.25]
+      ['Loading Dock', 0.35],
+      ['Roof Drop', 0.05],
     ]
 
 
@@ -278,23 +371,25 @@ function calculateFeatures(token = tokenData) {
     }
   }
 
-  // helper methods
+  // MARK: Helper Methods
+  // #region Helper Methods
   function between(x, range = [0, 1]) { return x >= range[0] && x <= range[1] }
   function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
   function normalize(value, range) { return convertRange(value, range, [0, 1]) }
-  function normalizeSubRange(subrange, range) {
-    return [normalize(subrange[0], range), normalize(subrange[1], range)]
-  }
+  function normalizeSubRange(subrange, range) { return [normalize(subrange[0], range), normalize(subrange[1], range)] }
+  // #endregion
 
   return calculateAll()
 }
 
-// class FeatureImplementation(feature) {
 
-// }
+
+
+
+
+
 
 //MARK: UNUSED FEATURES
-
 function unusedFeatures() {
 
   const protoStyleOptions = [
