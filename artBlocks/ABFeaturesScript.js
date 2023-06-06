@@ -48,7 +48,7 @@ function calculateFeatures(token = tokenData) {
     gridXEnum = new EnumFeature('GridX', this.gridXOptions)
     cellAspectEnum = new EnumFeature('Cell Aspect', this.cellAspectOptions)
 
-    baseEnum = new EnumFeature('Base', this.baseOptions)
+    baseLayerEnum = new EnumFeature('Base Layer', this.baseLayerOptions)
 
     layeringEnum = new EnumFeature('Layering', this.layeringOptions)
     extraGroupsEnum = new EnumFeature('Extra Groups', this.extraGroupsOptions)
@@ -73,8 +73,9 @@ function calculateFeatures(token = tokenData) {
     x
     y
     cellAspect
-    base
+    baseLayer
     layerCounts
+    layers = []
     density
 
     constructor(randomInstance) { this.r = randomInstance }
@@ -83,16 +84,15 @@ function calculateFeatures(token = tokenData) {
     // #region Methods
     //METH:
     get publicFeatures() {
-      const features = {
+      return {
         grid: `${this.x} x ${this.y}`,
         cellAspect: this.cellAspect,
-        base: this.base,
+        baseLayer: this.baseLayer,
         additiveLayers: this.layerCounts.adds,
         subtractiveLayers: this.layerCounts.subs,
         density: this.density,
 
       }
-      return features
     }
 
     get privateFeatures() {
@@ -100,9 +100,10 @@ function calculateFeatures(token = tokenData) {
         x: this.x,
         y: this.y,
         cellAspect: this.cellAspect,
-        base: this.base,
+        baseLayer: this.baseLayer,
         layerCounts: this.layerCounts,
         density: this.density,
+        layers: this.layers,
       }
     }
 
@@ -112,7 +113,7 @@ function calculateFeatures(token = tokenData) {
       this.x = parseInt(this.gridXEnum.feature(r))
       this.cellAspect = this.cellAspectEnum.feature(r)
       this.y = this.#calcY(r)
-      this.base = this.#calcBase(r)
+      this.baseLayer = this.#calcBaseLayer(r)
       this.layerCounts = this.#calcLayerCounts(r)
       this.layers = this.#calcLayers(r)
       this.density = this.densityEnum.feature(r)
@@ -133,17 +134,15 @@ function calculateFeatures(token = tokenData) {
       return y
     }
     //METH:
-    #calcBase(r) {
+    #calcBaseLayer(r) {
       const base = this.baseEnum.feature(r)
       switch (base) {
         case 'None':
           return 'None'
         case 'Additive':
-          const addStyle = this.additiveStyle.feature(r)
-          return `${addStyle}-add`
+          return this.#calcLayer(r, true)
         case 'Subtractive':
-          const subStyle = this.subtractiveStyle.feature(r)
-          return `${subStyle}-sub`
+          return this.#calcLayer(r, false)
       }
     }
     //METH:
@@ -171,8 +170,24 @@ function calculateFeatures(token = tokenData) {
     }
     //METH:
     #calcLayers(r) {
-
+      let layers = []
+      const adds = this.layerCounts.adds
+      const subs = this.layerCounts.subs
+      for (i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true)) }
+      for (i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false)) }
+      return layers
     }
+    //METH:
+    #calcLayer(r, additive) {
+      const styleEnum = additive ? this.additiveStyleEnum : this.subtractiveStyleEnum
+      const lengthEnum = additive ? this.layerHeightEnum : this.layerDepthEnum
+      return {
+        'type': additive ? "Additive" : "Subtractive",
+        style: styleEnum.feature(r),
+        length: lengthEnum.feature(r),
+      }
+    }
+    //METH:
     // #endregion
 
     //MARK: Feature Options
@@ -197,7 +212,7 @@ function calculateFeatures(token = tokenData) {
       ['Wide', 0.1],
     ]
     // Public: (TRANSLATED) base is layer framing the grid
-    baseOptions = [
+    baseLayerOptions = [
       ['None', 0.4],
       ['Additive', 0.35],
       ['Subtractive', 0.25],
@@ -275,15 +290,7 @@ function calculateFeatures(token = tokenData) {
       ['v', 0.3],
       ['r', 0.05],
     ]
-    // Private: (INSTANCE USE) depth of cutouts
-    depthOptions = [
-      ['Puddle', 0.05],
-      ['Kiddie Pool', 0.15],
-      ['Backyard Pool', 0.25],
-      ['Olympic Pool', 0.35],
-      ['Dynamic', 0.2],
-    ]
-    // Private: (INSTANCE USE) height of addons
+    // Private: (INSTANCE USE) (additive) height of addons
     heightOptions = [
       ['Plate', 0.15],
       ['Curb', 0.2],
@@ -291,6 +298,15 @@ function calculateFeatures(token = tokenData) {
       ['Loading Dock', 0.35],
       ['Roof Drop', 0.05],
     ]
+    // Private: (INSTANCE USE) (subtractive) depth of cutouts
+    depthOptions = [
+      ['Puddle', 0.05],
+      ['Kiddie Pool', 0.15],
+      ['Backyard Pool', 0.25],
+      ['Olympic Pool', 0.35],
+      ['Dynamic', 0.2],
+    ]
+
 
 
 
