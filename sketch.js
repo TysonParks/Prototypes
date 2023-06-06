@@ -187,18 +187,18 @@ function setupBackground() {
 }
 
 // FUNC: makePrototype()
-function makePrototype(features) {
+function makePrototype(feats) {
   //configure grid
-  let grid = new Grid(F, { x: features.gridX, y: features.gridY })
+  let grid = new Grid(F, { x: feats.gridX, y: feats.gridY })
   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
   //configure base
   let baseShader
-  if (features.base === 'None') {
+  if (feats.base === 'None') {
     grid.inset(R.random_num(0.9, 0.95))
   } else {
     grid.inset(R.random_num(0.7, 0.9))
     let baseShadeStack
-    if (features.base === 'additive') {
+    if (feats.base === 'additive') {
       baseShadeStack = Shade.neuShadeSVGFactory(
         { mag: R.random_num(0.5, 2), start: .5, pixToUserUnits: F.pixToUserUnits })
     } else {
@@ -208,9 +208,22 @@ function makePrototype(features) {
     baseShader = createFilter().dropShadow(baseShadeStack)
     grid.setFilter(baseShader)
   }
-
-
   // configure shaders
+  let shaders = new OpArray
+  let adds, subs
+  if (feats.layering.includes('Additive')) { adds = 1 }
+  if (feats.layering.includes('Subtractive')) { subs = 1 }
+  if (feats.extraGroups !== 'None') {
+    const extra = parseInt(feats.extraGroups)
+    if (adds > 0 && subs > 0) {
+      for (i = 0; i < extra; i++) {
+        if (R.random_bool(.5)) { adds += 1 }
+        else { subs += 1 }
+      }
+    }
+  }
+
+  // configure grouping methods
   // configure groups
   // configure islands
 
@@ -221,8 +234,8 @@ function makePrototype(features) {
 // FUNC: gridTests2()
 function gridTests2() {
   // F.inset(.95)
-  let gridX = R.random_int(6, 10)
-  gridX = 8
+  let gridX = R.random_int(2, 8)
+  // gridX = 8
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
   // grid = new Grid(F, { x: 8, y: 14 })
   grid.inset(R.random_num(0.7, 0.95))
@@ -237,7 +250,7 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: -minCellSize * 3, start: .5, pixToUserUnits: F.pixToUserUnits })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: -minCellSize * 2, start: .5, pixToUserUnits: F.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
   console.log('shadeStack0', shadeStack0)
 
@@ -252,7 +265,7 @@ function gridTests2() {
   grid.setFilter(shader0)
   console.log(grid.filter)
 
-  grid.randGroup(0.02)
+  grid.randGroup(0.04)
   // grid.randomComb({
   //   keepRange: range(1, 4),
   //   dropRange: range(6, 8),
@@ -266,16 +279,34 @@ function gridTests2() {
   // })
 
   grid.outlineTaken(Direction.All, false)
-  grid.outlineTaken(Direction.Right, false)
-  grid.outlineTaken(Direction.Vertical, true)
+  grid.outlineTaken(Direction.Up, false)
+  grid.outlineTaken(Direction.All, true)
+  // grid.outlineTaken(Direction.All, true)
+  // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   grid.findIslands({
-    // groupID: 'grp001',
+    groupID: 'grp000',
     filter: shader1,
     inset: .9,
     direction: Direction.All,
     taken: true,
   })
+  grid.findIslands({
+    groupID: 'grp001',
+    filter: shader1,
+    inset: .9,
+    direction: Direction.Cardinal,
+    taken: true,
+  })
+  // grid.findIslands({
+  //   groupID: 'grp002',
+  //   filter: shader1,
+  //   inset: .0001,
+  //   direction: Direction.Cardinal,
+  //   taken: true,
+  // })
+
+
 
   // grid.outlineTaken(Direction.Ordinal)
   // grid.groupNamed('grp002')?.setFilter(shader2)
