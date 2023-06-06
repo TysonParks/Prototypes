@@ -1,0 +1,22 @@
+[
+  {
+    "type": "number",
+    "name": "sampleNumber",
+    "max": 10,
+    "min": 0,
+    "step": 1
+  },
+  {
+    "type": "enum",
+    "name": "sampleEnum",
+    "options": [
+      "Option 1",
+      "Option 2",
+      "Option 3"
+    ]
+  },
+  {
+    "type": "boolean",
+    "name": "sampleBoolean"
+  }
+]
