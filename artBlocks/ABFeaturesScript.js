@@ -51,7 +51,7 @@ function calculateFeatures(token = tokenData) {
     baseLayerEnum = new EnumFeature('Base Layer', this.baseLayerOptions)
 
     layeringEnum = new EnumFeature('Layering', this.layeringOptions)
-    extraGroupsEnum = new EnumFeature('Extra Groups', this.extraGroupsOptions)
+    extraLayersEnum = new EnumFeature('Extra Layers', this.extraLayersOptions)
 
     additiveStyleEnum = new EnumFeature('Additive Style', this.additiveStyleOptions)
     subtractiveStyleEnum = new EnumFeature('Subtractive Style', this.subtractiveStyleOptions)
@@ -60,6 +60,7 @@ function calculateFeatures(token = tokenData) {
     layerHeightEnum = new EnumFeature('Layer Height', this.heightOptions)
 
     densityEnum = new EnumFeature('Density', this.densityOptions)
+    pyramidalEnum = new EnumFeature('Pyramidal', this.pyramidalOptions)
 
     variableInsetEnum = new EnumFeature('Variable Inset', this.variableInsetOptions)
     insetRatioEnum = new EnumFeature('Inset Ratio', this.insetRatioOptions)
@@ -80,9 +81,8 @@ function calculateFeatures(token = tokenData) {
 
     constructor(randomInstance) { this.r = randomInstance }
 
-    // MARK: Methods
-    // #region Methods
-    //METH:
+    // MARK: Calculated Properties
+    // #region Calculated Properties
     get publicFeatures() {
       return {
         grid: `${this.x} x ${this.y}`,
@@ -94,7 +94,6 @@ function calculateFeatures(token = tokenData) {
 
       }
     }
-
     get privateFeatures() {
       return {
         x: this.x,
@@ -106,7 +105,10 @@ function calculateFeatures(token = tokenData) {
         layers: this.layers,
       }
     }
+    // #endregion
 
+    // MARK: Methods
+    // #region Methods
     //METH:
     #calcFeatures() {
       const r = this.r
@@ -188,6 +190,10 @@ function calculateFeatures(token = tokenData) {
       }
     }
     //METH:
+    #describeLayer(layer) {
+      const length = layer.type === "Additive" ? "high" : "deep"
+      return `${layer.length} ${length} ${layer.style}-style`
+    }
     // #endregion
 
     //MARK: Feature Options
@@ -220,15 +226,17 @@ function calculateFeatures(token = tokenData) {
 
     // Private: layering options
     layeringOptions = [
-      ['Additive', 0.2],
-      ['Subtractive', 0.25],
-      ['Additive and Subtractive', 0.25],
-      ['Additive Pyramidal', 0.1],
-      ['Subtractive Pyramidal', 0.1],
-      ['Additive and Subtractive Pyramidal', 0.1],
+      ['Additive', 0.15],
+      ['Subtractive', 0.3],
+      ['Additive and Subtractive', 0.45],
+    ]
+    // Private: pyramidal options
+    pyramidalOptions = [
+      ['True', 0.3],
+      ['False', 0.7],
     ]
     // Private: amount of extra groups to create
-    extraGroupsOptions = [
+    extraLayersOptions = [
       ['None', 0.5],
       ['1', 0.35],
       ['2', 0.125],
