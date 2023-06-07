@@ -85,7 +85,9 @@ function calculateFeatures(token = tokenData) {
     // #region Calculated Properties
     get publicFeatures() {
       return {
-        grid: `${this.x} x ${this.y}`,
+        // grid: `${this.x} x ${this.y}`,
+        cellColumns: this.x,
+        cellRows: this.y,
         cellAspect: this.cellAspect,
         baseLayer: this.baseLayer,
         additiveLayers: this.layerCounts.adds,
