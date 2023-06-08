@@ -33,7 +33,7 @@ function calculateFeatures(token = tokenData) {
 
   function calculateAll() {
     // initFeatures()
-    features = new FeatureSet()
+    features = new FeatureSet(R)
     console.log('features', features)
     calcFeatures()
     return
@@ -45,30 +45,30 @@ function calculateFeatures(token = tokenData) {
     r
 
     // MARK: EnumFeatures 
-    gridXEnum = new EnumFeature('GridX', this.gridXOptions)
-    cellAspectEnum = new EnumFeature('Cell Aspect', this.cellAspectOptions)
+    // gridXEnum = new EnumFeature('GridX', this.gridXOptions)
+    // cellAspectEnum = new EnumFeature('Cell Aspect', this.cellAspectOptions)
 
-    baseLayerEnum = new EnumFeature('Base Layer', this.baseLayerOptions)
+    // baseLayerEnum = new EnumFeature('Base Layer', this.baseLayerOptions)
 
-    layeringEnum = new EnumFeature('Layering', this.layeringOptions)
-    extraLayersEnum = new EnumFeature('Extra Layers', this.extraLayersOptions)
+    // layeringEnum = new EnumFeature('Layering', this.layeringOptions)
+    // extraLayersEnum = new EnumFeature('Extra Layers', this.extraLayersOptions)
 
-    additiveStyleEnum = new EnumFeature('Additive Style', this.additiveStyleOptions)
-    subtractiveStyleEnum = new EnumFeature('Subtractive Style', this.subtractiveStyleOptions)
+    // additiveStyleEnum = new EnumFeature('Additive Style', this.additiveStyleOptions)
+    // subtractiveStyleEnum = new EnumFeature('Subtractive Style', this.subtractiveStyleOptions)
 
-    layerDepthEnum = new EnumFeature('Layer Depth', this.depthOptions)
-    layerHeightEnum = new EnumFeature('Layer Height', this.heightOptions)
+    // layerDepthEnum = new EnumFeature('Layer Depth', this.depthOptions)
+    // layerHeightEnum = new EnumFeature('Layer Height', this.heightOptions)
 
-    densityEnum = new EnumFeature('Density', this.densityOptions)
-    pyramidalEnum = new EnumFeature('Pyramidal', this.pyramidalOptions)
+    // densityEnum = new EnumFeature('Density', this.densityOptions)
+    // pyramidalEnum = new EnumFeature('Pyramidal', this.pyramidalOptions)
 
-    variableInsetEnum = new EnumFeature('Variable Inset', this.variableInsetOptions)
-    insetRatioEnum = new EnumFeature('Inset Ratio', this.insetRatioOptions)
+    // variableInsetEnum = new EnumFeature('Variable Inset', this.variableInsetOptions)
+    // insetRatioEnum = new EnumFeature('Inset Ratio', this.insetRatioOptions)
 
-    luckyNumberEnum = new EnumFeature('Lucky Number', this.luckyNumberOptions)
+    // luckyNumberEnum = new EnumFeature('Lucky Number', this.luckyNumberOptions)
 
-    shapeInterpeterEnum = new EnumFeature('Shape Interpeter', this.shapeInterpeterOptions)
-    shrinkWrapEnum = new EnumFeature('Shrinkwrap', this.shrinkWrapOptions)
+    // shapeInterpeterEnum = new EnumFeature('Shape Interpeter', this.shapeInterpeterOptions)
+    // shrinkWrapEnum = new EnumFeature('Shrinkwrap', this.shrinkWrapOptions)
 
     // MARK: Calculated Feature Properties
     x
@@ -79,7 +79,13 @@ function calculateFeatures(token = tokenData) {
     layers = []
     density
 
-    constructor(randomInstance) { this.r = randomInstance }
+    constructor(randomInstance) {
+      this.r = randomInstance
+      this.#initFeatureSets()
+      this.#calcFeatures()
+    }
+
+
 
     // MARK: Calculated Properties
     // #region Calculated Properties
@@ -139,7 +145,7 @@ function calculateFeatures(token = tokenData) {
     }
     //METH:
     #calcBaseLayer(r) {
-      const base = this.baseEnum.feature(r)
+      const base = this.baseLayerEnum.feature(r)
       switch (base) {
         case 'None':
           return 'None'
@@ -153,7 +159,7 @@ function calculateFeatures(token = tokenData) {
     #calcLayerCounts(r) {
       let adds, subs
       const layering = this.layeringEnum.feature(r)
-      const extraGroups = this.extraGroupsEnum.feature(r)
+      const extraGroups = this.extraLayersEnum.feature(r)
       if (layering.includes('Additive')) { adds = 1 }
       if (layering.includes('Subtractive')) { subs = 1 }
       if (extraGroups !== 'None') {
@@ -177,8 +183,8 @@ function calculateFeatures(token = tokenData) {
       let layers = []
       const adds = this.layerCounts.adds
       const subs = this.layerCounts.subs
-      for (i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true)) }
-      for (i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false)) }
+      for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true)) }
+      for (let i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false)) }
       return layers
     }
     //METH:
@@ -195,6 +201,33 @@ function calculateFeatures(token = tokenData) {
     #describeLayer(layer) {
       const length = layer.type === "Additive" ? "high" : "deep"
       return `${layer.length} ${length} ${layer.style}-style`
+    }
+    //METH:
+    #initFeatureSets() {
+      this.gridXEnum = new EnumFeature('GridX', this.gridXOptions)
+      this.cellAspectEnum = new EnumFeature('Cell Aspect', this.cellAspectOptions)
+
+      this.baseLayerEnum = new EnumFeature('Base Layer', this.baseLayerOptions)
+
+      this.layeringEnum = new EnumFeature('Layering', this.layeringOptions)
+      this.extraLayersEnum = new EnumFeature('Extra Layers', this.extraLayersOptions)
+
+      this.additiveStyleEnum = new EnumFeature('Additive Style', this.additiveStyleOptions)
+      this.subtractiveStyleEnum = new EnumFeature('Subtractive Style', this.subtractiveStyleOptions)
+
+      this.layerDepthEnum = new EnumFeature('Layer Depth', this.depthOptions)
+      this.layerHeightEnum = new EnumFeature('Layer Height', this.heightOptions)
+
+      this.densityEnum = new EnumFeature('Density', this.densityOptions)
+      this.pyramidalEnum = new EnumFeature('Pyramidal', this.pyramidalOptions)
+
+      this.variableInsetEnum = new EnumFeature('Variable Inset', this.variableInsetOptions)
+      this.insetRatioEnum = new EnumFeature('Inset Ratio', this.insetRatioOptions)
+
+      this.luckyNumberEnum = new EnumFeature('Lucky Number', this.luckyNumberOptions)
+
+      this.shapeInterpeterEnum = new EnumFeature('Shape Interpeter', this.shapeInterpeterOptions)
+      this.shrinkWrapEnum = new EnumFeature('Shrinkwrap', this.shrinkWrapOptions)
     }
     // #endregion
 
@@ -304,7 +337,7 @@ function calculateFeatures(token = tokenData) {
     heightOptions = [
       ['Plate', 0.15],
       ['Curb', 0.2],
-      ['Bench', 0.25]
+      ['Bench', 0.25],
       ['Loading Dock', 0.35],
       ['Roof Drop', 0.05],
     ]
@@ -376,12 +409,20 @@ function calculateFeatures(token = tokenData) {
     }
 
     // private methods
-    #getFeature(index) { return [this.#category, this.#options[index][0]] }
+    #getFeature(index) {
+      // console.log(this.#category)
+      // console.log(this.#options)
+      return [this.#category, this.#options[index][0]]
+    }
     #getFeatureIndex(weight) { return this.#weightedOptions.findIndex(e => between(weight, e[1])) }
     #totalWeight() {
-      return this.#options
+      console.log(this.#category)
+      // console.log(this.#options)
+      const weight = this.#options
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
+      console.log(`total weight:`, weight)
+      return weight
     }
     #weighOptions() {
       let p = []
