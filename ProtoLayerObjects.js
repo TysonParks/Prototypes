@@ -1153,9 +1153,40 @@ class Grid extends ProtoLayer {
     this.assign(selection)
   }
   //METH:
-  outlineGroup(num) {
-    const selection = this.groups[num].validNeighbors
-    this.assign(selection)
+  outline({ selection, groupID, islandID, direction = Direction.All, newGroup = true } = {}) {
+    if ((selection && groupID) || (selection && islandID) || (groupID && islandID)) {
+      console.error('Grid.outline can only use one selection method')
+      return
+    }
+    let group
+    if (groupID) {
+      group = this.groupNamed(groupID)
+      selection = group.cells
+    }
+    if (islandID) {
+      const island = this.islandNamed(islandID)
+      if (island) {
+        group = this.groupNamed(island.groupID)
+        selection = island.cells
+      }
+    }
+    if (selection.length > 0) {
+      const outline = this.validNeighbors({ selection: selection, directions: direction.directions })
+        .filter(cell => cell.available)
+      if (newGroup === true) { group = undefined }
+      this.assign(outline, group)
+    }
+  }
+  //METH:
+  outlineGroup(groupID, direction = Direction.All, newGroup = true) {
+    let group = this.groupNamed(groupID)
+    if (group) {
+      // const selection = this.groups[num].validNeighbors
+      const selection = this.validNeighbors({ selection: group.cells, directions: direction.directions })
+        .filter(cell => cell.available)
+      if (newGroup === true) { group = undefined }
+      this.assign(selection, group)
+    }
   }
   //METH:
   outlineTaken(direction = Direction.All, newGroup = true) {
