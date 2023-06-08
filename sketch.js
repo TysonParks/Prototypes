@@ -234,7 +234,7 @@ function makePrototype(feats) {
 // FUNC: gridTests2()
 function gridTests2() {
   // F.inset(.95)
-  let gridX = R.random_int(2, 8)
+  let gridX = R.random_int(4, 8)
   // gridX = 8
   grid = new Grid(F, { x: gridX, y: gridX * 2 })
   // grid = new Grid(F, { x: 8, y: 14 })
@@ -265,7 +265,7 @@ function gridTests2() {
   grid.setFilter(shader0)
   console.log(grid.filter)
 
-  grid.randGroup(0.04)
+  grid.randGroup(0.05)
   // grid.randomComb({
   //   keepRange: range(1, 4),
   //   dropRange: range(6, 8),
@@ -279,37 +279,50 @@ function gridTests2() {
   // })
 
   grid.outlineTaken(Direction.All, false)
-  grid.outlineTaken(Direction.Up, false)
+  // grid.outlineTaken(Direction.Up, false)
+  grid.outlineTaken(Direction.Ordinal, true)
+  grid.outlineTaken(Direction.Down, true)
   grid.outlineTaken(Direction.All, true)
-  // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
+
   grid.findIslands({
     groupID: 'grp000',
     filter: shader1,
-    inset: .9,
+    inset: .95,
     direction: Direction.All,
     taken: true,
   })
+
   grid.findIslands({
     groupID: 'grp001',
     filter: shader1,
-    inset: .9,
+    inset: .95,
     direction: Direction.Cardinal,
     taken: true,
   })
-  // grid.findIslands({
-  //   groupID: 'grp002',
-  //   filter: shader1,
-  //   inset: .0001,
-  //   direction: Direction.Cardinal,
-  //   taken: true,
-  // })
+
+  grid.findIslands({
+    groupID: 'grp002',
+    filter: shader1,
+    inset: .95,
+    direction: Direction.Cardinal,
+    taken: true,
+  })
+
+  grid.findIslands({
+    groupID: 'grp003',
+    filter: shader1,
+    inset: .95,
+    direction: Direction.Cardinal,
+    taken: true,
+  })
 
 
 
   // grid.outlineTaken(Direction.Ordinal)
   // grid.groupNamed('grp002')?.setFilter(shader2)
+
   grid.findIslands({
     // groupID: 'grp002',
     filter: shader2,
