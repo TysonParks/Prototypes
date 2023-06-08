@@ -283,19 +283,20 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All, true)
   grid.outlineGroup('grp000', Direction.All, false)
   grid.outline({ groupID: 'grp000', direction: Direction.All, newGroup: true })
+  grid.outlineTaken(Direction.All, 'grp001')
 
   // grid.outlineTaken(Direction.Down, true)
   // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
-  // grid.findIslands({
-  //   groupID: 'grp000',
-  //   filter: shader1,
-  //   inset: .95,
-  //   direction: Direction.Cardinal,
-  //   taken: true,
-  // })
+  grid.findIslands({
+    groupID: 'grp000',
+    filter: shader1,
+    inset: .95,
+    direction: Direction.Cardinal,
+    taken: true,
+  })
 
   grid.findIslands({
     groupID: 'grp001',
