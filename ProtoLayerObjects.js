@@ -1179,22 +1179,11 @@ class Grid extends ProtoLayer {
   }
   //METH:
   outlineGroup(groupID, direction = Direction.All, newGroup = true) {
-    let group = this.groupNamed(groupID)
-    if (group) {
-      // const selection = this.groups[num].validNeighbors
-      const selection = this.validNeighbors({ selection: group.cells, directions: direction.directions })
-        .filter(cell => cell.available)
-      if (newGroup === true) { group = undefined }
-      this.assign(selection, group)
-    }
+    return this.outline({ groupID, direction, newGroup })
   }
   //METH:
   outlineTaken(direction = Direction.All, newGroup = true) {
-    // console.log(`outline taken`)
-    const selection = this.validNeighbors({ selection: this.takenCells, directions: direction.directions })
-    let group
-    if (newGroup === false) { group = this.biggestGroup }
-    this.assign(selection, group)
+    return this.outline({ selection: this.takenCells, direction, newGroup })
   }
   // #endregion
   // MARK: General Grammar Methods
