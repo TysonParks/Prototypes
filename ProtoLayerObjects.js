@@ -1113,8 +1113,8 @@ class Grid extends ProtoLayer {
     this.updateCells()
   }
   // #endregion
-  // MARK: Grid Grammar Ops
-  // #region Grid Grammar Ops
+  // MARK: Cell Grammar Ops
+  // #region Cell Grammar Ops
   //METH:
   insetCells(amount, groupID) {
     let cells
@@ -1129,6 +1129,9 @@ class Grid extends ProtoLayer {
     } else { cells = this.cells }
     cells.forEach(e => e.inset(amount))
   }
+  // #endregion
+  // MARK: Grammar Generators
+  // #region Grammar Generators
   //METH:
   randomComb({
     keepRange = range(2, 7),
@@ -1143,15 +1146,12 @@ class Grid extends ProtoLayer {
     this.randomComb({ keepRange: range(keep, keep), dropRange: range(drop, drop), start: start })
   }
   //METH:
-  randGroup(amount) {
-    const selection = this.availableCells.randReduce(amount)
-    this.assign(selection)
-  }
+  randGroup(amount) { this.assign(this.availableCells.randReduce(amount)) }
   //METH:
-  groupAvail() {
-    const selection = this.availableCells
-    this.assign(selection)
-  }
+  groupAvail() { this.assign(this.availableCells) }
+  // #endregion
+  // MARK: Grammar Modifiers
+  // #region Grammar Modifiers
   //METH:
   outline({ selection, groupID, islandID, direction = Direction.All, newGroup = true } = {}) {
     if ((selection && groupID) || (selection && islandID) || (groupID && islandID)) {
@@ -1159,6 +1159,7 @@ class Grid extends ProtoLayer {
       return
     }
     let group
+    if (selection && newGroup === false) { group = this.biggestGroup }
     if (groupID) {
       group = this.groupNamed(groupID)
       selection = group.cells
@@ -1174,6 +1175,7 @@ class Grid extends ProtoLayer {
       const outline = this.validNeighbors({ selection: selection, directions: direction.directions })
         .filter(cell => cell.available)
       if (newGroup === true) { group = undefined }
+      if (typeof newGroup === 'string') { group = this.groupNamed(newGroup) }
       this.assign(outline, group)
     }
   }
@@ -1186,8 +1188,8 @@ class Grid extends ProtoLayer {
     return this.outline({ selection: this.takenCells, direction, newGroup })
   }
   // #endregion
-  // MARK: General Grammar Methods
-  // #region General Grammar Methods
+  // MARK: Grammar Assignment Methods
+  // #region Grammar Methods
   //METH:
   assign(selection, group) {
     if (selection.isEmpty) { return }
