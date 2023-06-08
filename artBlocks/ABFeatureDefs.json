@@ -50,8 +50,19 @@
     ]
   },
   {
+    "type": "enum",
+    "name": "Unique Layer Styles",
+    "options": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ]
+  },
+  {
     "type": "boolean",
-    "name": "Pyramidal"
+    "name": "Pyramidal Layers"
   },
   {
     "type": "enum",
@@ -86,17 +97,6 @@
   },
   {
     "type": "enum",
-    "name": "Lucky Numbers",
-    "options": [
-      "7",
-      "13",
-      "23",
-      "69",
-      "420"
-    ]
-  },
-  {
-    "type": "enum",
     "name": "Shape Interprator",
     "options": [
       "v0",
@@ -106,7 +106,7 @@
   },
   {
     "type": "enum",
-    "name": "Different Cut Styles",
+    "name": "Unique Cut Styles",
     "options": [
       "1",
       "2",
@@ -133,5 +133,5 @@
   {
     "type": "boolean",
     "name": "r-Style Cutting"
-  },
+  }
 ]
