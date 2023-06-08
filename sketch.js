@@ -278,45 +278,48 @@ function gridTests2() {
   //   taken: true,
   // })
 
-  grid.outlineTaken(Direction.All, false)
+  // grid.outlineTaken(Direction.All, false)
   // grid.outlineTaken(Direction.Up, false)
-  grid.outlineTaken(Direction.Ordinal, true)
-  grid.outlineTaken(Direction.Down, true)
-  grid.outlineTaken(Direction.All, true)
+  // grid.outlineTaken(Direction.All, true)
+  grid.outlineGroup('grp000', Direction.All, false)
+  grid.outline({ groupID: 'grp000', direction: Direction.All, newGroup: true })
+
+  // grid.outlineTaken(Direction.Down, true)
+  // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   inset: .95,
+  //   direction: Direction.Cardinal,
+  //   taken: true,
+  // })
+
   grid.findIslands({
-    groupID: 'grp000',
+    groupID: 'grp001',
     filter: shader1,
     inset: .95,
     direction: Direction.All,
     taken: true,
   })
 
-  grid.findIslands({
-    groupID: 'grp001',
-    filter: shader1,
-    inset: .95,
-    direction: Direction.Cardinal,
-    taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp002',
+  //   filter: shader1,
+  //   inset: .95,
+  //   direction: Direction.Cardinal,
+  //   taken: true,
+  // })
 
-  grid.findIslands({
-    groupID: 'grp002',
-    filter: shader1,
-    inset: .95,
-    direction: Direction.Cardinal,
-    taken: true,
-  })
-
-  grid.findIslands({
-    groupID: 'grp003',
-    filter: shader1,
-    inset: .95,
-    direction: Direction.Cardinal,
-    taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp003',
+  //   filter: shader1,
+  //   inset: .95,
+  //   direction: Direction.Cardinal,
+  //   taken: true,
+  // })
 
 
 
