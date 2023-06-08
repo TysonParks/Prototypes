@@ -416,12 +416,12 @@ function calculateFeatures(token = tokenData) {
     }
     #getFeatureIndex(weight) { return this.#weightedOptions.findIndex(e => between(weight, e[1])) }
     #totalWeight() {
-      console.log(this.#category)
+      // console.log(this.#category)
       // console.log(this.#options)
       const weight = this.#options
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
-      console.log(`total weight:`, weight)
+      // console.log(`total weight:`, weight)
       return weight
     }
     #weighOptions() {
