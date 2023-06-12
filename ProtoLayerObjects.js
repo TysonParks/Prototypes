@@ -1078,9 +1078,9 @@ class Grid extends ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   //METH:
-  cellRowsRotated(selection = this.cellRows, degree = 90) { return selection.rotated2D(normalizeDegree(degree)) }
+  cellRowsRotated(degree = 90, selection = this.cellRows) { return selection.rotated2D(normalizeDegree(degree)) }
   //METH:
-  cellRowsFlipped(selection = this.cellRows, direction = "negOrdinal") { return selection.flipped2D(direction) }
+  cellRowsFlipped(direction = "negOrdinal", selection = this.cellRows) { return selection.flipped2D(direction) }
   //METH:
   #createRowsArray() {
     let size = this.gridSize
@@ -1134,16 +1134,18 @@ class Grid extends ProtoLayer {
   // #region Grammar Generators
   //METH:
   randomComb({
+    selection = this.availableCells,
     keepRange = range(2, 7),
     dropRange = range(2, 7),
     start = 0
   } = {}) {
-    const selection = this.availableCells.randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
-    this.assign(selection)
+    const reduced = selection
+      .randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
+    this.assign(reduced)
   }
   //METH:
-  comb({ keep = 2, drop = 1, start = 0 } = {}) {
-    this.randomComb({ keepRange: range(keep, keep), dropRange: range(drop, drop), start: start })
+  comb({ selection = this.availableCells, keep = 2, drop = 1, start = 0 } = {}) {
+    this.randomComb({ selection: selection, keepRange: range(keep, keep), dropRange: range(drop, drop), start: start })
   }
   //METH:
   randGroup(amount) { this.assign(this.availableCells.randReduce(amount)) }
@@ -1222,8 +1224,9 @@ class Grid extends ProtoLayer {
   }
   //METH:
   updateGroup(group) {
-    // console.log('group', group)
+    console.log('group', group)
     group.cells.forEach(cell => {
+      // console.log('this Cell', cell)
       let thisCell = this.cells[cell.index]
       // console.log('thisCell', thisCell.id)
       thisCell.groupID = group.id
