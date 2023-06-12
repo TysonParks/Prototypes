@@ -75,6 +75,24 @@
   },
   {
     "type": "enum",
+    "name": "Grid Traversal Start",
+    "options": [
+      "Top Left",
+      "Top Right",
+      "Bottom Right",
+      "Bottom Left"
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "Grid Traversal Direction",
+    "options": [
+      "Horizontal",
+      "Vertical"
+    ]
+  },
+  {
+    "type": "enum",
     "name": "Inset Ratio",
     "options": [
       "1:1",
