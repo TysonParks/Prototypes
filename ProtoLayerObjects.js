@@ -494,6 +494,8 @@ class SelectionBounds {
     this.islandID = islandID
   }
 
+  // MARK: Properties
+  // #region Properties
   get selectionCount() { return this.selection.length }
   get availableCount() { return this.availableCells.length }
   get cellBoundsCount() { return this.cellBoundsWidth * this.cellBoundsHeight }
@@ -577,8 +579,14 @@ class SelectionBounds {
 
   get cellsCentroid() { return Vertex.div(this.cellBoundsSize, 2) }
   get centroid() { return Vertex.mult(this.cellsCentroid, this.cellSize) }
-
+  //#endregion
+  // MARK: Methods
+  // #region Methods
+  transformedGrid(type) { }
+  // #endregion
   // TODO: try adding selection and bounds parameters and then feeding them transformed matrices
+  // MARK: Island Methods
+  // #region Island Methods
   //METH: 
   innerCellIslands({ taken = true, stored = false, direction = Direction.Horizontal } = {}) {
     return this.grid.findIslands({
@@ -598,7 +606,7 @@ class SelectionBounds {
   get vertCellIslands() {
     return this.innerCellIslands({ taken: this.isMostlyAvailable, stored: false, direction: Direction.Vertical })
   }
-
+  // #endregion
   // MARK: Encoder properties 
   // #region Encoder methods
   //NOTE:https://pressbooks.library.upei.ca/statics/chapter/centre-of-mass-composite-shapes/
@@ -680,8 +688,9 @@ class SelectionBounds {
     const vertCellLines = this.vertCellIslands
     // print(vertCellLines)
   }
-
+  // #endregion
   // MARK: Encoder methods 
+  // #region Encoder methods 
   //METH: 
   encodingWeight(direction) {
     if (this.isFull) { return 0 }
@@ -740,15 +749,17 @@ class SelectionBounds {
 class Grid extends ProtoLayer {
   gridSize
   cellRows
+  cellRowsPref
   groups = new OpArray
   islands = new OpArray
 
-  constructor(protoParent, gridSize, inset) {
+  constructor(protoParent, gridSize, inset, transform) {
     super({ protoParent: protoParent, inset: inset, drawRect: true, drawSVG: true })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
+    this.cellRowsPref = this.transformedCellRows(transform)
     this.setFrameRadii()
   }
 
@@ -937,6 +948,28 @@ class Grid extends ProtoLayer {
   //METH: 
   cellBounds({ selection = this.cells, groupID, islandID } = {}) {
     return new SelectionBounds({ selection: selection, grid: this, groupID: groupID, islandID: islandID })
+  }
+  transformedCellRows({ start = Corner.TopLeft, direction = Direction.Horizontal } = {}) {
+    let selection = this.cellRows
+    switch (start.value) { // horizontal direction
+      case 0: //topLeft
+      //no change
+      case 1: //topRight
+        selection = selection.flipped2D(Direction.Horizontal)
+      case 2: //botRight
+        selection = selection.rotated2D(180)
+      case 3: //botLeft
+        selection = selection.flipped2D(Direction.Vertical)
+    }
+
+    if (direction.isVertical) { //vertical direction
+      if (start.value % 2 === 0) { // topLeft &  botRight
+        selection = selection.flipped2D(Direction.NegOrdinal)
+      } else { //topRight &  botLeft
+        selection = selection.flipped2D(Direction.PosOrdinal)
+      }
+    }
+    return selection
   }
   //METH: 
   validNeighbors({ selection = this.cells, bounds = this.cellBounds(), directions = Direction.All.directions } = {}) {
