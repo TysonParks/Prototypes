@@ -219,6 +219,9 @@ function calculateFeatures(token = tokenData) {
       this.layerHeightEnum = new EnumFeature('Layer Height', this.heightOptions)
 
       this.densityEnum = new EnumFeature('Density', this.densityOptions)
+      this.gridTraversalStartEnum = new EnumFeature('Grid Traversal Start', this.gridTraversalStartOptions)
+      this.gridTraversalDirectionEnum = new EnumFeature('Grid Traversal Direction', this.gridTraversalDirectionOptions)
+
       this.pyramidalEnum = new EnumFeature('Pyramidal', this.pyramidalOptions)
 
       this.variableInsetEnum = new EnumFeature('Variable Inset', this.variableInsetOptions)
@@ -261,9 +264,9 @@ function calculateFeatures(token = tokenData) {
 
     // Private: layering options
     layeringOptions = [
-      ['Additive', 0.15],
+      ['Additive', 0.2],
       ['Subtractive', 0.3],
-      ['Additive and Subtractive', 0.45],
+      ['Additive and Subtractive', 0.5],
     ]
     // Private: pyramidal options
     pyramidalOptions = [
@@ -283,6 +286,18 @@ function calculateFeatures(token = tokenData) {
       ['So Lonely', 0.1],
       ['Some Availability', 0.15],
       ['At Capacity', 0.75],
+    ]
+    // Public: grid corner that traversal functions start at
+    gridTraversalStartOptions = [
+      ['Top Left', 0.3],
+      ['Top Right', 0.3],
+      ['Bottom Right', 0.2],
+      ['Bottom Left', 0.2]
+    ]
+    // Public: direction that traversal functions
+    gridTraversalDirectionOptions = [
+      ['Horizontal', 0.6],
+      ['Vertical', 0.4]
     ]
 
     // Public: inset options
@@ -316,7 +331,7 @@ function calculateFeatures(token = tokenData) {
       ['None', 0.8],
       ['Unhinged', 0.05],
       ['Lively', 0.05],
-      ['Tame', 0.8],
+      ['Tame', 0.1],
     ]
 
     // Private: (INSTANCE USE) style of additive cut
@@ -416,12 +431,12 @@ function calculateFeatures(token = tokenData) {
     }
     #getFeatureIndex(weight) { return this.#weightedOptions.findIndex(e => between(weight, e[1])) }
     #totalWeight() {
-      // console.log(this.#category)
+      console.log(this.#category)
       // console.log(this.#options)
       const weight = this.#options
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
-      // console.log(`total weight:`, weight)
+      console.log(`total weight:`, weight)
       return weight
     }
     #weighOptions() {
