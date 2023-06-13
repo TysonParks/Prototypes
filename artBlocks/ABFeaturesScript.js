@@ -23,53 +23,22 @@
 
 // FUNC: calculateFeatures
 function calculateFeatures(token = tokenData) {
-  // Action
-
-  let features
+  let featureSet
 
   function calcFeatures() {
 
   }
 
   function calculateAll() {
-    // initFeatures()
-    features = new FeatureSet(R)
-    console.log('features', features)
+    featureSet = new FeatureSet(R)
+    console.log('featureSet', featureSet)
     calcFeatures()
     return
   }
 
-
   class FeatureSet {
     // MARK: Random Instance
     r
-
-    // MARK: EnumFeatures 
-    // gridXEnum = new EnumFeature('GridX', this.gridXOptions)
-    // cellAspectEnum = new EnumFeature('Cell Aspect', this.cellAspectOptions)
-
-    // baseLayerEnum = new EnumFeature('Base Layer', this.baseLayerOptions)
-
-    // layeringEnum = new EnumFeature('Layering', this.layeringOptions)
-    // extraLayersEnum = new EnumFeature('Extra Layers', this.extraLayersOptions)
-
-    // additiveStyleEnum = new EnumFeature('Additive Style', this.additiveStyleOptions)
-    // subtractiveStyleEnum = new EnumFeature('Subtractive Style', this.subtractiveStyleOptions)
-
-    // layerDepthEnum = new EnumFeature('Layer Depth', this.depthOptions)
-    // layerHeightEnum = new EnumFeature('Layer Height', this.heightOptions)
-
-    // densityEnum = new EnumFeature('Density', this.densityOptions)
-    // pyramidalEnum = new EnumFeature('Pyramidal', this.pyramidalOptions)
-
-    // variableInsetEnum = new EnumFeature('Variable Inset', this.variableInsetOptions)
-    // insetRatioEnum = new EnumFeature('Inset Ratio', this.insetRatioOptions)
-
-    // luckyNumberEnum = new EnumFeature('Lucky Number', this.luckyNumberOptions)
-
-    // shapeInterpeterEnum = new EnumFeature('Shape Interpeter', this.shapeInterpeterOptions)
-    // shrinkWrapEnum = new EnumFeature('Shrinkwrap', this.shrinkWrapOptions)
-
     // MARK: Calculated Feature Properties
     x
     y
@@ -78,7 +47,8 @@ function calculateFeatures(token = tokenData) {
     layerCounts
     layers = []
     density
-    enums = []
+
+    enums
     options
 
     constructor(randomInstance) {
@@ -86,8 +56,6 @@ function calculateFeatures(token = tokenData) {
       this.#initFeatureSets()
       this.#calcFeatures()
     }
-
-
 
     // MARK: Calculated Properties
     // #region Calculated Properties
@@ -135,7 +103,7 @@ function calculateFeatures(token = tokenData) {
     #calcY(r) {
       const x = this.x
       let y
-      switch (this._cellAspect) {
+      switch (this.cellAspect) {
         case 'Square':
           y = 2 * x
         case 'Tall':
@@ -167,7 +135,7 @@ function calculateFeatures(token = tokenData) {
       if (extraGroups !== 'None') {
         const extra = parseInt(extraGroups)
         if (adds && subs) {
-          for (i = 0; i < extra; i++) {
+          for (let i = 0; i < extra; i++) {
             if (r.random_bool(.5)) { adds += 1 }
             else { subs += 1 }
           }
@@ -206,200 +174,265 @@ function calculateFeatures(token = tokenData) {
     }
     //METH:
     #initFeatureSets() {
-      this.enums.gridX = new EnumFeature('GridX', this.options.gridX)
-      this.enums.cellAspect = new EnumFeature('Cell Aspect', this.options.cellAspect)
+      const enums = {}
+      Object.keys(this.options).forEach((optionKey) => {
+        const option = this.options[optionKey]
+        const { name: name, options: optionValues } = option
+        const enumFeature = new EnumFeature(name, optionValues)
+        enums[optionKey] = enumFeature
+      })
 
-      this.enums.baseLayer = new EnumFeature('Base Layer', this.options.baseLayer)
-
-      this.enums.layering = new EnumFeature('Layering', this.options.layering)
-      this.enums.extraLayers = new EnumFeature('Extra Layers', this.options.extraLayers)
-
-      this.enums.density = new EnumFeature('Density', this.options.density)
-      this.enums.gridTraversalStart = new EnumFeature('Grid Traversal Start', this.options.gridTraversalStart)
-      this.enums.gridTraversalDirection = new EnumFeature('Grid Traversal Direction', this.options.gridTraversalDirection)
-
-      this.enums.pyramidal = new EnumFeature('Pyramidal', this.options.pyramidal)
-
-      this.enums.variableInset = new EnumFeature('Variable Inset', this.options.variableInset)
-      this.enums.insetRatio = new EnumFeature('Inset Ratio', this.options.insetRatio)
-
-      this.enums.luckyNumber = new EnumFeature('Lucky Number', this.options.luckyNumber)
-
-      this.enums.shapeInterpeter = new EnumFeature('Shape Interpeter', this.options.shapeInterpeter)
-      this.enums.shrinkWrap = new EnumFeature('Shrinkwrap', this.options.shrinkWrap)
-
-      this.enums.additiveStyle = new EnumFeature('Additive Style', this.options.additiveStyle)
-      this.enums.subtractiveStyle = new EnumFeature('Subtractive Style', this.options.subtractiveStyle)
-
-      this.enums.layerDepth = new EnumFeature('Layer Depth', this.options.depth)
-      this.enums.layerHeight = new EnumFeature('Layer Height', this.options.height)
+      this.enums = enums
     }
+    //METH:
+    // #initFeatureSets() {
+    //   this.enums.gridX = new EnumFeature('GridX', this.options.gridX)
+    //   this.enums.cellAspect = new EnumFeature('Cell Aspect', this.options.cellAspect)
+
+    //   this.enums.baseLayer = new EnumFeature('Base Layer', this.options.baseLayer)
+
+    //   this.enums.layering = new EnumFeature('Layering', this.options.layering)
+    //   this.enums.extraLayers = new EnumFeature('Extra Layers', this.options.extraLayers)
+
+    //   this.enums.density = new EnumFeature('Density', this.options.density)
+    //   this.enums.gridTraversalStart = new EnumFeature('Grid Traversal Start', this.options.gridTraversalStart)
+    //   this.enums.gridTraversalDirection = new EnumFeature('Grid Traversal Direction', this.options.gridTraversalDirection)
+
+    //   this.enums.pyramidal = new EnumFeature('Pyramidal', this.options.pyramidal)
+
+    //   this.enums.variableInset = new EnumFeature('Variable Inset', this.options.variableInset)
+    //   this.enums.insetRatio = new EnumFeature('Inset Ratio', this.options.insetRatio)
+
+    //   this.enums.luckyNumber = new EnumFeature('Lucky Number', this.options.luckyNumber)
+
+    //   this.enums.shapeInterpeter = new EnumFeature('Shape Interpeter', this.options.shapeInterpeter)
+    //   this.enums.shrinkWrap = new EnumFeature('Shrinkwrap', this.options.shrinkWrap)
+
+    //   this.enums.additiveStyle = new EnumFeature('Additive Style', this.options.additiveStyle)
+    //   this.enums.subtractiveStyle = new EnumFeature('Subtractive Style', this.options.subtractiveStyle)
+
+    //   this.enums.layerDepth = new EnumFeature('Layer Depth', this.options.depth)
+    //   this.enums.layerHeight = new EnumFeature('Layer Height', this.options.height)
+    // }
     // #endregion
 
     //MARK: Feature Options
     // #region Feature Options
     //Public: x cell width of grid
     options = {
-      gridX: [
-        ['10', 0.025],
-        ['9', 0.05],
-        ['8', 0.05],
-        ['7', 0.1],
-        ['6', 0.2],
-        ['5', 0.2],
-        ['4', 0.2],
-        ['3', 0.1],
-        ['2', 0.05],
-        ['1', 0.025],
-      ],
+      gridX: {
+        name: 'GridX',
+        options: [
+          ['10', 0.025],
+          ['9', 0.05],
+          ['8', 0.05],
+          ['7', 0.1],
+          ['6', 0.2],
+          ['5', 0.2],
+          ['4', 0.2],
+          ['3', 0.1],
+          ['2', 0.05],
+          ['1', 0.025],
+        ]
+      },
       // Public: y cell height of grid
-      cellAspect: [
-        ['Square', 0.8],
-        ['Tall', 0.1],
-        ['Wide', 0.1],
-      ],
+      cellAspect: {
+        name: 'Cell Aspect',
+        options: [
+          ['Square', 0.8],
+          ['Tall', 0.1],
+          ['Wide', 0.1],
+        ]
+      },
       // Public: (TRANSLATED) base is layer framing the grid
-      baseLayer: [
-        ['None', 0.4],
-        ['Additive', 0.35],
-        ['Subtractive', 0.25],
-      ],
-
+      baseLayer: {
+        name: 'Base Layer',
+        options: [
+          ['None', 0.4],
+          ['Additive', 0.35],
+          ['Subtractive', 0.25],
+        ]
+      },
       // Private: layering options
-      layering: [
-        ['Additive', 0.2],
-        ['Subtractive', 0.3],
-        ['Additive and Subtractive', 0.5],
-      ],
+      layering: {
+        name: 'Layering',
+        options: [
+          ['Additive', 0.2],
+          ['Subtractive', 0.3],
+          ['Additive and Subtractive', 0.5],
+        ]
+      },
       // Private: pyramidal options
-      pyramidal: [
-        ['True', 0.3],
-        ['False', 0.7],
-      ],
+      pyramidal: {
+        name: 'Pyramidal',
+        options: [
+          ['True', 0.3],
+          ['False', 0.7],
+        ]
+      },
       // Private: amount of extra groups to create
-      extraLayers: [
-        ['None', 0.5],
-        ['1', 0.35],
-        ['2', 0.125],
-        ['3', 0.025],
-      ],
+      extraLayers: {
+        name: 'Extra Layers',
+        options: [
+          ['None', 0.5],
+          ['1', 0.35],
+          ['2', 0.125],
+          ['3', 0.025],
+        ]
+      },
 
       // Public: how densely the grid is filled with shapes
-      density: [
-        ['So Lonely', 0.1],
-        ['Some Availability', 0.15],
-        ['At Capacity', 0.75],
-      ],
+      density: {
+        name: 'Density',
+        options: [
+          ['So Lonely', 0.1],
+          ['Some Availability', 0.15],
+          ['At Capacity', 0.75],
+        ]
+      },
       // Public: grid corner that traversal functions start at
-      gridTraversalStart: [
-        ['Top Left', 0.3],
-        ['Top Right', 0.3],
-        ['Bottom Right', 0.2],
-        ['Bottom Left', 0.2]
-      ],
+      gridTraversalStart: {
+        name: 'Grid Traversal Start',
+        options: [
+          ['Top Left', 0.3],
+          ['Top Right', 0.3],
+          ['Bottom Right', 0.2],
+          ['Bottom Left', 0.2]
+        ]
+      },
       // Public: direction that traversal functions
-      gridTraversalDirection: [
-        ['Horizontal', 0.6],
-        ['Vertical', 0.4]
-      ],
+      gridTraversalDirection: {
+        name: 'Grid Traversal Direction',
+        options: [
+          ['Horizontal', 0.6],
+          ['Vertical', 0.4]
+        ]
+      },
 
       // Public: inset options
-      insetRatio: [
-        ['1:1', 0.4],
-        ['2:1', 0.3],
-        ['3:1', 0.2],
-        ['5:1', 0.1],
-      ],
+      insetRatio: {
+        name: 'Inset Ratio',
+        options: [
+          ['1:1', 0.4],
+          ['2:1', 0.3],
+          ['3:1', 0.2],
+          ['5:1', 0.1],
+        ]
+      },
       // Public: lucky numbers trigger special shape instructions
-      luckyNumber: [
-        ['7', 0.75],
-        ['13', 0.75],
-        ['23', 0.75],
-        ['69', 0.1],
-        ['420', 0.15],
-      ],
+      luckyNumber: {
+        name: 'Lucky Number',
+        options: [
+          ['7', 0.75],
+          ['13', 0.75],
+          ['23', 0.75],
+          ['69', 0.1],
+          ['420', 0.15],
+        ]
+      },
       // Public: shape interpretor version
-      shapeInterpeter: [
-        ['v0', 0.025],
-        ['v1', 0.375],
-        ['v2', 0.6],
-      ],
+      shapeInterpeter: {
+        name: 'Shape Interpreter',
+        options: [
+          ['v0', 0.025],
+          ['v1', 0.375],
+          ['v2', 0.6],
+        ]
+      },
       // Public: block wraps to design
-      shrinkWrap: [
-        ['True', 0.2],
-        ['False', 0.8],
-      ],
+      shrinkWrap: {
+        name: 'Shrink Wrap',
+        options: [
+          ['True', 0.2],
+          ['False', 0.8],
+        ]
+      },
       // Public:  
-      variableInset: [
-        ['None', 0.8],
-        ['Unhinged', 0.05],
-        ['Lively', 0.05],
-        ['Tame', 0.1],
-      ],
+      variableInset: {
+        name: 'Variable Inset',
+        options: [
+          ['None', 0.8],
+          ['Unhinged', 0.05],
+          ['Lively', 0.05],
+          ['Tame', 0.1],
+        ]
+      },
 
       // Private: (INSTANCE USE) style of additive cut
-      additiveStyle: [
-        ['j', 0.2],
-        ['i', 0.2],
-        ['v', 0.3],
-        ['r', 0.3],
-      ],
+      additiveStyle: {
+        name: 'Additive Style',
+        options: [
+          ['j', 0.2],
+          ['i', 0.2],
+          ['v', 0.3],
+          ['r', 0.3],
+        ]
+      },
       // Private: (INSTANCE USE) style of subtractive cut
-      subtractiveStyle: [
-        ['j', 0.5],
-        ['i', 0.15],
-        ['v', 0.3],
-        ['r', 0.05],
-      ],
+      subtractiveStyle: {
+        name: 'Subtractive Style',
+        options: [
+          ['j', 0.5],
+          ['i', 0.15],
+          ['v', 0.3],
+          ['r', 0.05],
+        ]
+      },
       // Private: (INSTANCE USE) (subtractive) depth of cutouts
-      depth: [
-        ['Puddle', 0.05],
-        ['Kiddie Pool', 0.15],
-        ['Backyard Pool', 0.25],
-        ['Olympic Pool', 0.35],
-        ['Dynamic', 0.2],
-      ],
+      layerDepth: {
+        name: 'Depth',
+        options: [
+          ['Puddle', 0.05],
+          ['Kiddie Pool', 0.15],
+          ['Backyard Pool', 0.25],
+          ['Olympic Pool', 0.35],
+          ['Dynamic', 0.2],
+        ]
+      },
       // Private: (INSTANCE USE) (additive) height of addons
-      height: [
-        ['Plate', 0.15],
-        ['Curb', 0.2],
-        ['Bench', 0.25],
-        ['Loading Dock', 0.35],
-        ['Roof Drop', 0.05],
-      ],
+      layerHeight: {
+        name: 'Height',
+        options: [
+          ['Plate', 0.15],
+          ['Curb', 0.2],
+          ['Bench', 0.25],
+          ['Loading Dock', 0.35],
+          ['Roof Drop', 0.05],
+        ]
+      },
 
 
-
-
-
-
-
-      stripeStyle: [
-        ['None', 0.0],
-        ['Vertical', 0.4],
-        ['Horizontal', 0.6],
-      ],
-
-
-
-
-      complexStyle: [
-        ['None', 0.0],
-        ['Vertical Dyad', 0.3],
-        ['Vertical Triad', 0.45],
-        ['Horizontal Dyad', 0.25],
-      ],
-
-      symmetryStyle: [
-        ['None', 0.0],
-        ['Circular', 0.2],
-        ['Harmonic', 0.2],
-        ['Fibonacci', 0.2],
-        ['Palindromic Reflectional', 0.2],
-        ['Flipped', 0.2],
-        ['Radial', 0.2],
-        ['Glide Reflection', 0.2],
-      ]
+      // MARK: Currently unused
+      stripeStyle: {
+        name: 'Stripe Style',
+        options: [
+          ['None', 0.0],
+          ['Vertical', 0.4],
+          ['Horizontal', 0.6],
+        ]
+      },
+      complexStyle: {
+        name: 'Complex Style',
+        options: [
+          ['None', 0.0],
+          ['Vertical Dyad', 0.3],
+          ['Vertical Triad', 0.45],
+          ['Horizontal Dyad', 0.25],
+        ]
+      },
+      symmetryStyle: {
+        name: 'Symmetry Style',
+        options: [
+          ['None', 0.0],
+          ['Circular', 0.2],
+          ['Harmonic', 0.2],
+          ['Fibonacci', 0.2],
+          ['Palindromic Reflectional', 0.2],
+          ['Flipped', 0.2],
+          ['Radial', 0.2],
+          ['Glide Reflection', 0.2],
+        ]
+      },
     }
     // #endregion
   }
@@ -435,7 +468,8 @@ function calculateFeatures(token = tokenData) {
     #getFeature(index) {
       // console.log(this.#category)
       // console.log(this.#options)
-      return [this.#category, this.#options[index][0]]
+      return this.#options[index][0]
+      // return [this.#category, this.#options[index][0]]
     }
     #getFeatureIndex(weight) { return this.#weightedOptions.findIndex(e => between(weight, e[1])) }
     #totalWeight() {
