@@ -279,7 +279,7 @@ function gridTests2() {
       .flat()),
     keep: 2, drop: 3, start: 0
   })
-  grid.randGroup(0.05)
+  grid.randGroup(0.1)
 
   // grid.findIslands({
   //   // groupID: 'grp000',
