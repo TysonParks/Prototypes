@@ -952,8 +952,7 @@ class Grid extends ProtoLayer {
   transformedCellRows({ start = Corner.TopLeft, direction = Direction.Horizontal } = {}) {
     let selection = this.cellRows
     switch (start.value) { // horizontal direction
-      case 0: //topLeft
-      //no change
+      case 0: //topLeft -> no change
       case 1: //topRight
         selection = selection.flipped2D(Direction.Horizontal)
       case 2: //botRight
@@ -1172,13 +1171,17 @@ class Grid extends ProtoLayer {
     dropRange = range(2, 7),
     start = 0
   } = {}) {
-    const reduced = selection
-      .randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
+    const reduced = selection.randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
     this.assign(reduced)
   }
   //METH:
   comb({ selection = this.availableCells, keep = 2, drop = 1, start = 0 } = {}) {
-    this.randomComb({ selection: selection, keepRange: range(keep, keep), dropRange: range(drop, drop), start: start })
+    this.randomComb({
+      selection: selection,
+      keepRange: range(keep, keep),
+      dropRange: range(drop, drop),
+      start: start
+    })
   }
   //METH:
   randGroup(amount) { this.assign(this.availableCells.randReduce(amount)) }
@@ -1555,14 +1558,14 @@ class Island extends ProtoLayer {
   get isVertical() {
     return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Horizontal.directions))
   }
-  get isLinear() { return this.isSingle || this.isHorizontal || this.isVertical }
+  get isLine() { return this.isSingle || this.isHorizontal || this.isVertical }
   get isCardinal() {
     return !this.isSingle
       && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Ordinal.directions))
   }
   get isOrdinal() { return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index)) }
 
-  get isRectangle() { return !this.isLinear && this.cellBounds.isFull }
+  get isRectangle() { return !this.isLine && this.cellBounds.isFull }
   get isSquare() { return this.isRectangle && this.cellBounds.aspect.name === 'square' }
 
   get exposedSegments() {
@@ -1700,7 +1703,7 @@ class Shape extends ProtoLayer {
   get grid() { return this.island.grid }
   get cells() { return this.island.cells }
 
-  get isLinear() { return this.island.isLinear }
+  get isLine() { return this.island.isLine }
   get hasSubShapes() { return this.subShapes.length > 1 }
   get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
   get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
