@@ -184,36 +184,6 @@ function calculateFeatures(token = tokenData) {
 
       this.enums = enums
     }
-    //METH:
-    // #initFeatureSets() {
-    //   this.enums.gridX = new EnumFeature('GridX', this.options.gridX)
-    //   this.enums.cellAspect = new EnumFeature('Cell Aspect', this.options.cellAspect)
-
-    //   this.enums.baseLayer = new EnumFeature('Base Layer', this.options.baseLayer)
-
-    //   this.enums.layering = new EnumFeature('Layering', this.options.layering)
-    //   this.enums.extraLayers = new EnumFeature('Extra Layers', this.options.extraLayers)
-
-    //   this.enums.density = new EnumFeature('Density', this.options.density)
-    //   this.enums.gridTraversalStart = new EnumFeature('Grid Traversal Start', this.options.gridTraversalStart)
-    //   this.enums.gridTraversalDirection = new EnumFeature('Grid Traversal Direction', this.options.gridTraversalDirection)
-
-    //   this.enums.pyramidal = new EnumFeature('Pyramidal', this.options.pyramidal)
-
-    //   this.enums.variableInset = new EnumFeature('Variable Inset', this.options.variableInset)
-    //   this.enums.insetRatio = new EnumFeature('Inset Ratio', this.options.insetRatio)
-
-    //   this.enums.luckyNumber = new EnumFeature('Lucky Number', this.options.luckyNumber)
-
-    //   this.enums.shapeInterpeter = new EnumFeature('Shape Interpeter', this.options.shapeInterpeter)
-    //   this.enums.shrinkWrap = new EnumFeature('Shrinkwrap', this.options.shrinkWrap)
-
-    //   this.enums.additiveStyle = new EnumFeature('Additive Style', this.options.additiveStyle)
-    //   this.enums.subtractiveStyle = new EnumFeature('Subtractive Style', this.options.subtractiveStyle)
-
-    //   this.enums.layerDepth = new EnumFeature('Layer Depth', this.options.depth)
-    //   this.enums.layerHeight = new EnumFeature('Layer Height', this.options.height)
-    // }
     // #endregion
 
     //MARK: Feature Options
