@@ -37,19 +37,25 @@ function calculateFeatures(token = tokenData) {
   }
 
   class FeatureSet {
-    // MARK: Random Instance
-    r
+
     // MARK: Calculated Feature Properties
     x
     y
+    layers = []
+    layerTypes
+    density
     cellAspect
     baseLayer
+    extraLayers
     layerCounts
-    layers = []
-    density
+    singleLayerStyle
+
+
 
     enums
-    options
+
+    // MARK: Random Instance
+    r
 
     constructor(randomInstance) {
       this.r = randomInstance
@@ -94,10 +100,21 @@ function calculateFeatures(token = tokenData) {
       this.cellAspect = this.enums.cellAspect.feature(r)
       this.y = this.#calcY(r)
       this.baseLayer = this.#calcBaseLayer(r)
+      this.layerTypes = this.enums.layerTypes.feature(r)
+      this.extraLayers = this.enums.extraLayers.feature(r)
       this.layerCounts = this.#calcLayerCounts(r)
+      this.singleLayerStyle = this.enums.singleLayerStyle.feature(r) === 'True'
       this.layers = this.#calcLayers(r)
+      this.pyramidal = this.enums.pyramidal.feature(r)
       this.density = this.enums.density.feature(r)
-
+      this.gridTraversalStart = this.enums.startQuad.feature(r)
+      this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
+      this.insetRatio = this.enums.insetRatio.feature(r)
+      this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
+      this.shrinkwrap = this.enums.shrinkWrap.feature(r)
+      this.variableInset = this.enums.variableInset.feature(r)
+      this.symmetryStyle = this.enums.symmetryStyle.feature(r)
+      this.symmetryStart = this.enums.startQuad.feature(r)
     }
     //METH:
     #calcY(r) {
@@ -105,13 +122,12 @@ function calculateFeatures(token = tokenData) {
       let y
       switch (this.cellAspect) {
         case 'Square':
-          y = 2 * x
+          return 2 * x
         case 'Tall':
-          y = r.random_int(x, 2 * x)
+          return r.random_int(x, 2 * x)
         case 'Wide':
-          y = r.random_int(x / 2, x)
+          return r.random_int(x / 2, x)
       }
-      return y
     }
     //METH:
     #calcBaseLayer(r) {
@@ -127,43 +143,52 @@ function calculateFeatures(token = tokenData) {
     }
     //METH:
     #calcLayerCounts(r) {
-      let adds, subs
-      const layering = this.enums.layering.feature(r)
-      const extraGroups = this.enums.extraLayers.feature(r)
-      if (layering.includes('Additive')) { adds = 1 }
-      if (layering.includes('Subtractive')) { subs = 1 }
-      if (extraGroups !== 'None') {
-        const extra = parseInt(extraGroups)
+      let adds = 0
+      let subs = 0
+      const types = this.layerTypes
+      let extra = this.extraLayers
+      if (types.includes('Additive')) { adds = 1 }
+      if (types.includes('Subtractive')) { subs = 1 }
+      if (extra !== 'None') {
+        extra = parseInt(extra)
         if (adds && subs) {
           for (let i = 0; i < extra; i++) {
             if (r.random_bool(.5)) { adds += 1 }
             else { subs += 1 }
           }
+        } else {
+          if (adds) { adds += extra }
+          if (subs) { subs += extra }
         }
-        if (adds) { adds += extra }
-        if (subs) { subs += extra }
       }
-      return {
-        'adds': adds,
-        'subs': subs,
-      }
+      return { adds: adds, subs: subs }
     }
     //METH:
     #calcLayers(r) {
       let layers = []
       const adds = this.layerCounts.adds
       const subs = this.layerCounts.subs
-      for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true)) }
-      for (let i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false)) }
+      let style
+      // console.log('single?', this.singleLayerStyle)
+      if (this.singleLayerStyle) {
+        style = (adds >= subs) ? this.enums.additiveStyle : this.enums.subtractiveStyle
+        style = style.feature(r)
+      }
+      for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true, style)) }
+      for (let i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false, style)) }
       return layers
     }
     //METH:
-    #calcLayer(r, additive) {
-      const style = additive ? this.enums.additiveStyle : this.enums.subtractiveStyle
+    #calcLayer(r, additive, style) {
+      // console.log('style', style)
+      if (!style) {
+        style = additive ? this.enums.additiveStyle.feature(r) : this.enums.subtractiveStyle.feature(r)
+      }
+      // console.log('style2', style)
       const length = additive ? this.enums.layerHeight : this.enums.layerDepth
       return {
         'type': additive ? "Additive" : "Subtractive",
-        style: style.feature(r),
+        style: style,
         length: length.feature(r),
       }
     }
@@ -175,8 +200,8 @@ function calculateFeatures(token = tokenData) {
     //METH:
     #initFeatureSets() {
       const enums = {}
-      Object.keys(this.options).forEach((optionKey) => {
-        const option = this.options[optionKey]
+      Object.keys(this.#options).forEach((optionKey) => {
+        const option = this.#options[optionKey]
         const { name: name, options: optionValues } = option
         const enumFeature = new EnumFeature(name, optionValues)
         enums[optionKey] = enumFeature
@@ -189,7 +214,7 @@ function calculateFeatures(token = tokenData) {
     //MARK: Feature Options
     // #region Feature Options
     //Public: x cell width of grid
-    options = {
+    #options = {
       gridX: {
         name: 'GridX',
         options: [
@@ -223,24 +248,24 @@ function calculateFeatures(token = tokenData) {
           ['Subtractive', 0.25],
         ]
       },
-      // Private: layering options
-      layering: {
-        name: 'Layering',
+      // Public: layering options
+      layerTypes: {
+        name: 'Layer Types',
         options: [
           ['Additive', 0.2],
           ['Subtractive', 0.3],
           ['Additive and Subtractive', 0.5],
         ]
       },
-      // Private: pyramidal options
-      pyramidal: {
-        name: 'Pyramidal',
+      // Public: layering options
+      singleLayerStyle: {
+        name: 'Single Layer Style',
         options: [
-          ['True', 0.3],
-          ['False', 0.7],
+          ['True', 0.6],
+          ['False', 0.4],
         ]
       },
-      // Private: amount of extra groups to create
+      // Public: amount of extra groups to create
       extraLayers: {
         name: 'Extra Layers',
         options: [
@@ -248,6 +273,14 @@ function calculateFeatures(token = tokenData) {
           ['1', 0.35],
           ['2', 0.125],
           ['3', 0.025],
+        ]
+      },
+      // Public: pyramidal options
+      pyramidal: {
+        name: 'Pyramidal',
+        options: [
+          ['True', 0.3],
+          ['False', 0.7],
         ]
       },
 
@@ -260,53 +293,32 @@ function calculateFeatures(token = tokenData) {
           ['At Capacity', 0.75],
         ]
       },
-      // Public: grid corner that traversal functions start at
-      gridTraversalStart: {
-        name: 'Grid Traversal Start',
-        options: [
-          ['Top Left', 0.3],
-          ['Top Right', 0.3],
-          ['Bottom Right', 0.2],
-          ['Bottom Left', 0.2]
-        ]
-      },
-      // Public: direction that traversal functions
+
+      // Private: direction that traversal functions
       gridTraversalDirection: {
         name: 'Grid Traversal Direction',
         options: [
-          ['Horizontal', 0.6],
-          ['Vertical', 0.4]
+          ['Horizontal', 0.5],
+          ['Vertical', 0.5]
         ]
       },
-
       // Public: inset options
       insetRatio: {
         name: 'Inset Ratio',
         options: [
           ['1:1', 0.4],
-          ['2:1', 0.3],
-          ['3:1', 0.2],
-          ['5:1', 0.1],
-        ]
-      },
-      // Public: lucky numbers trigger special shape instructions
-      luckyNumber: {
-        name: 'Lucky Number',
-        options: [
-          ['7', 0.75],
-          ['13', 0.75],
-          ['23', 0.75],
-          ['69', 0.1],
-          ['420', 0.15],
+          ['5:4', 0.3],
+          ['4:3', 0.2],
+          ['2:1', 0.1],
         ]
       },
       // Public: shape interpretor version
-      shapeInterpeter: {
+      shapeInterpreter: {
         name: 'Shape Interpreter',
         options: [
           ['v0', 0.025],
-          ['v1', 0.375],
-          ['v2', 0.6],
+          ['v1', 0.275],
+          ['v2', 0.7],
         ]
       },
       // Public: block wraps to design
@@ -317,7 +329,7 @@ function calculateFeatures(token = tokenData) {
           ['False', 0.8],
         ]
       },
-      // Public:  
+      // Public: random variability of inset per shape
       variableInset: {
         name: 'Variable Inset',
         options: [
@@ -327,7 +339,36 @@ function calculateFeatures(token = tokenData) {
           ['Tame', 0.1],
         ]
       },
+      // Public: style of symmetry to apply to groups
+      symmetryStyle: {
+        name: 'Symmetry Style',
+        options: [
+          ['None', 0.6],
+          ['Horizontal Reflection', .1],
+          ['Vertical Reflection', .1],
+          ['Quadrant Reflection', .06],
+          ['Positive Ordinal Reflection', .02],
+          ['Negative Ordinal Reflection', .02],
+          ['Horizontal Rotation', .02],
+          ['Vertical Rotation', .02],
+          ['Quadrant Rotation', .02],
+          ['Positive Ordinal Rotation', .02],
+          ['Negative Ordinal Rotation', .02],
+        ]
+      },
 
+
+      // MARK: INSTANCE USE ENUMS
+      // Private: (INSTANCE USE) quadrant/corner to start from
+      startQuad: {
+        name: 'Starting Quadrant',
+        options: [
+          ['Top Left', 0.25],
+          ['Top Right', 0.25],
+          ['Bottom Right', 0.25],
+          ['Bottom Left', 0.25]
+        ]
+      },
       // Private: (INSTANCE USE) style of additive cut
       additiveStyle: {
         name: 'Additive Style',
@@ -390,24 +431,22 @@ function calculateFeatures(token = tokenData) {
           ['Horizontal Dyad', 0.25],
         ]
       },
-      symmetryStyle: {
-        name: 'Symmetry Style',
+      // Public: lucky numbers trigger special shape instructions
+      luckyNumber: {
+        name: 'Lucky Number',
         options: [
-          ['None', 0.0],
-          ['Circular', 0.2],
-          ['Harmonic', 0.2],
-          ['Fibonacci', 0.2],
-          ['Palindromic Reflectional', 0.2],
-          ['Flipped', 0.2],
-          ['Radial', 0.2],
-          ['Glide Reflection', 0.2],
+          ['7', 0.75],
+          ['13', 0.75],
+          ['23', 0.75],
+          ['69', 0.1],
+          ['420', 0.15],
         ]
       },
     }
     // #endregion
   }
 
-  // TODO: this could probably be refined with new understanding of ENUMS in js
+  // TODO: OPTIMIZE by converting options.options from arrays to objects and refine methods accordingly
   // ENUM: EnumFeature 
   class EnumFeature {
     #category
@@ -443,12 +482,12 @@ function calculateFeatures(token = tokenData) {
     }
     #getFeatureIndex(weight) { return this.#weightedOptions.findIndex(e => between(weight, e[1])) }
     #totalWeight() {
-      console.log(this.#category)
+      // console.log(this.#category)
       // console.log(this.#options)
       const weight = this.#options
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
-      console.log(`total weight:`, weight)
+      // console.log(`total weight:`, weight)
       return weight
     }
     #weighOptions() {
