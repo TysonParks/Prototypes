@@ -1136,7 +1136,7 @@ class Grid extends ProtoLayer {
   }
   //METH:
   setFrameRadii() {
-    F.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize)
+    FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize)
   }
   //METH:
   inset(amount) {
