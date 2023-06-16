@@ -31,7 +31,7 @@ function calculateFeatures(token = tokenData) {
 
   function calculateAll() {
     featureSet = new FeatureSet(R)
-    console.log('featureSet', featureSet)
+    if (F) { F = featureSet }
     calcFeatures()
     return
   }
@@ -42,15 +42,22 @@ function calculateFeatures(token = tokenData) {
     x
     y
     layers = []
-    layerTypes
-    density
-    cellAspect
     baseLayer
+    cellAspect
+    layerTypes
     extraLayers
     layerCounts
     singleLayerStyle
-
-
+    density
+    pyramidal
+    gridTraversalStart
+    gridTraversalDirection
+    insetRatio
+    variableInset
+    symmetryStyle
+    symmetryStart
+    shapeInterpreter
+    shrinkwrap
 
     enums
 
@@ -105,16 +112,16 @@ function calculateFeatures(token = tokenData) {
       this.layerCounts = this.#calcLayerCounts(r)
       this.singleLayerStyle = this.enums.singleLayerStyle.feature(r) === 'True'
       this.layers = this.#calcLayers(r)
-      this.pyramidal = this.enums.pyramidal.feature(r)
       this.density = this.enums.density.feature(r)
+      this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
       this.gridTraversalStart = this.enums.startQuad.feature(r)
       this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
-      this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
-      this.shrinkwrap = this.enums.shrinkWrap.feature(r)
       this.variableInset = this.enums.variableInset.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
+      this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
+      this.shrinkwrap = this.enums.shrinkWrap.feature(r) === 'True'
     }
     //METH:
     #calcY(r) {
