@@ -117,7 +117,7 @@ function calculateFeatures(token = tokenData) {
       this.gridTraversalStart = this.enums.startQuad.feature(r)
       this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
-      this.variableInset = this.enums.variableInset.feature(r)
+      this.insetVariability = this.enums.insetVariability.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
       this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
@@ -192,17 +192,17 @@ function calculateFeatures(token = tokenData) {
         style = additive ? this.enums.additiveStyle.feature(r) : this.enums.subtractiveStyle.feature(r)
       }
       // console.log('style2', style)
-      const length = additive ? this.enums.layerHeight : this.enums.layerDepth
+      const loft = additive ? this.enums.layerHeight : this.enums.layerDepth
       return {
         'type': additive ? "Additive" : "Subtractive",
         style: style,
-        length: length.feature(r),
+        loft: loft.feature(r),
       }
     }
     //METH:
     #describeLayer(layer) {
-      const length = layer.type === "Additive" ? "high" : "deep"
-      return `${layer.length} ${length} ${layer.style}-style`
+      const loft = layer.type === "Additive" ? "high" : "deep"
+      return `${layer.loft} ${loft} ${layer.style}-style`
     }
     //METH:
     #initFeatureSets() {
@@ -223,7 +223,7 @@ function calculateFeatures(token = tokenData) {
     //Public: x cell width of grid
     #options = {
       gridX: {
-        name: 'GridX',
+        name: 'Columns',
         options: [
           ['10', 0.025],
           ['9', 0.05],
@@ -259,8 +259,8 @@ function calculateFeatures(token = tokenData) {
       layerTypes: {
         name: 'Layer Types',
         options: [
-          ['Additive', 0.2],
-          ['Subtractive', 0.3],
+          ['Additive', 0.15],
+          ['Subtractive', 0.35],
           ['Additive and Subtractive', 0.5],
         ]
       },
@@ -301,22 +301,26 @@ function calculateFeatures(token = tokenData) {
         ]
       },
 
-      // Private: direction that traversal functions
-      gridTraversalDirection: {
-        name: 'Grid Traversal Direction',
-        options: [
-          ['Horizontal', 0.5],
-          ['Vertical', 0.5]
-        ]
-      },
+
       // Public: inset options
       insetRatio: {
         name: 'Inset Ratio',
         options: [
-          ['1:1', 0.4],
-          ['5:4', 0.3],
-          ['4:3', 0.2],
-          ['2:1', 0.1],
+          ['1:1', 0.5],
+          ['5:4', 0.2],
+          ['4:3', 0.15],
+          ['3:2', 0.1],
+          ['2:1', 0.05],
+        ]
+      },
+      // Public: random variability of inset per shape
+      insetVariability: {
+        name: 'Inset Variability',
+        options: [
+          ['None', 0.8],
+          ['Unhinged', 0.05],
+          ['Lively', 0.05],
+          ['Tame', 0.1],
         ]
       },
       // Public: shape interpretor version
@@ -336,16 +340,7 @@ function calculateFeatures(token = tokenData) {
           ['False', 0.8],
         ]
       },
-      // Public: random variability of inset per shape
-      variableInset: {
-        name: 'Variable Inset',
-        options: [
-          ['None', 0.8],
-          ['Unhinged', 0.05],
-          ['Lively', 0.05],
-          ['Tame', 0.1],
-        ]
-      },
+
       // Public: style of symmetry to apply to groups
       symmetryStyle: {
         name: 'Symmetry Style',
@@ -364,6 +359,14 @@ function calculateFeatures(token = tokenData) {
         ]
       },
 
+      // Private: direction that traversal functions
+      gridTraversalDirection: {
+        name: 'Grid Traversal Direction',
+        options: [
+          ['Horizontal', 0.5],
+          ['Vertical', 0.5]
+        ]
+      },
 
       // MARK: INSTANCE USE ENUMS
       // Private: (INSTANCE USE) quadrant/corner to start from
@@ -400,22 +403,22 @@ function calculateFeatures(token = tokenData) {
       layerDepth: {
         name: 'Depth',
         options: [
-          ['Puddle', 0.05],
-          ['Kiddie Pool', 0.15],
-          ['Backyard Pool', 0.25],
-          ['Olympic Pool', 0.35],
-          ['Dynamic', 0.2],
+          ['0.25', 0.1],
+          ['0.5', 0.2],
+          ['0.75', 0.25],
+          ['1', 0.35],
+          ['>1', 0.1],
         ]
       },
       // Private: (INSTANCE USE) (additive) height of addons
       layerHeight: {
         name: 'Height',
         options: [
-          ['Plate', 0.15],
-          ['Curb', 0.2],
-          ['Bench', 0.25],
-          ['Loading Dock', 0.35],
-          ['Roof Drop', 0.05],
+          ['0.25', 0.05],
+          ['0.5', 0.1],
+          ['0.666', 0.15],
+          ['0.8', 0.2],
+          ['1', 0.5],
         ]
       },
 
@@ -531,7 +534,30 @@ function calculateFeatures(token = tokenData) {
 
 //MARK: UNUSED FEATURES
 function unusedFeatures() {
-
+  const lengths = {
+    // Private: (INSTANCE USE) (subtractive) depth of cutouts
+    layerDepth: {
+      name: 'Depth',
+      options: [
+        ['Puddle', 0.05],
+        ['Kiddie Pool', 0.15],
+        ['Backyard Pool', 0.25],
+        ['Olympic Pool', 0.35],
+        ['Dynamic', 0.2],
+      ]
+    },
+    // Private: (INSTANCE USE) (additive) height of addons
+    layerHeight: {
+      name: 'Height',
+      options: [
+        ['Plate', 0.15],
+        ['Curb', 0.2],
+        ['Bench', 0.25],
+        ['Loading Dock', 0.35],
+        ['Roof Drop', 0.05],
+      ]
+    },
+  }
   const protoStyleOptions = [
     ['Grid', 0.3],
     ['Stacks', 0.2],
