@@ -1,10 +1,17 @@
 //-------------------------------------------------------------------------
 //FUNC: FUNCTION TESTS
 function functionTestPrint() {
+  //NOTE: OpArray.shift() test
+  // const arrayOne = OpArray.from([1, 2, 3, 4, 5])
+  // const shiftArray = arrayOne.shifted(2)
+  // const shiftArray2 = arrayOne.shifted(-2)
+  // console.log('shiftArray', shiftArray)
+  // console.log('shiftArray2', shiftArray2)
+
   // print(values16x16bit)
   // print(values21x12bit)
 
-  print(tokenData.hash)
+  // print(tokenData.hash)
 
   // print(values32x8bit)
   // print(values64x4bit)
