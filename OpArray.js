@@ -221,6 +221,13 @@ class OpArray extends Array {
     return OpArray.from(res)
   }
 
+  shifted(index) {
+    const shiftedIndex = index >= 0 ? index : this.length + index
+    const firstSlice = this.slice(shiftedIndex) // Extract the first slice
+    const secondSlice = this.slice(0, shiftedIndex)                // The remaining part is the second slice
+    return firstSlice.concat(secondSlice)   // Concatenate the second slice with the first slice
+  }
+
   randReduce(reducer) {
     // let remove = 0
     // if (reducer < 1) {
@@ -256,10 +263,12 @@ class OpArray extends Array {
   }
 
   randCombReduce({ keepRange, dropRange, start = 0 }) {
+    let thisArray = this.copy
+    if (start !== 0) { thisArray = thisArray.shifted(start) }
     let removeRange
     if (dropRange) { removeRange = dropRange } else { removeRange = keepRange }
 
-    for (let i = start; i < this.lastIndex; i++) {
+    for (let i = 0; i < thisArray.lastIndex; i++) {
       let keep = R.random_int(keepRange.start, keepRange.end)
       let remove = R.random_int(removeRange.start, removeRange.end)
       // print(`i: ${i}`)
@@ -268,8 +277,8 @@ class OpArray extends Array {
       let removeIndex
       for (let j = 0; j < remove; j++) {
         removeIndex = i + keep + j
-        if (removeIndex < this.length) {
-          this[removeIndex] = null
+        if (removeIndex < thisArray.length) {
+          thisArray[removeIndex] = null
         } else {
           j = remove
         }
@@ -279,11 +288,11 @@ class OpArray extends Array {
       }
       i = removeIndex
     }
-    // print(this)
-    let filtered = this.filter(e => e !== null)
-    this.splice(0, this.length, ...filtered)
+    // print(thisArray)
+    let filtered = thisArray.filter(e => e !== null)
+    thisArray.splice(0, thisArray.length, ...filtered)
     // print(filtered)
-    return this
+    return thisArray
   }
 }
 
