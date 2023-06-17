@@ -50,14 +50,17 @@
     ]
   },
   {
+    "type": "boolean",
+    "name": "Single Layer Style"
+  },
+  {
     "type": "enum",
-    "name": "Unique Layer Styles",
+    "name": "Extra Layers",
     "options": [
+      "None",
       "1",
       "2",
-      "3",
-      "4",
-      "5"
+      "3"
     ]
   },
   {
@@ -75,20 +78,23 @@
   },
   {
     "type": "enum",
-    "name": "Grid Traversal Start",
+    "name": "Inset Ratio",
     "options": [
-      "Top Left",
-      "Top Right",
-      "Bottom Right",
-      "Bottom Left"
+      "1:1",
+      "5:4",
+      "4:3",
+      "3:2",
+      "2:1"
     ]
   },
   {
     "type": "enum",
-    "name": "Grid Traversal Direction",
+    "name": "Inset Variability",
     "options": [
-      "Horizontal",
-      "Vertical"
+      "None",
+      "Unhinged",
+      "Lively",
+      "Tame"
     ]
   },
   {
@@ -100,17 +106,6 @@
       "3:1",
       "4:1",
       "5:1"
-    ]
-  },
-  {
-    "type": "enum",
-    "name": "Lucky Numbers",
-    "options": [
-      "7",
-      "13",
-      "23",
-      "69",
-      "420"
     ]
   },
   {
@@ -133,6 +128,23 @@
     ]
   },
   {
+    "type": "enum",
+    "name": "Symmetry Style",
+    "options": [
+      "None",
+      "Horizontal Reflection",
+      "Vertical Reflection",
+      "Quadrant Reflection",
+      "Positive Ordinal Reflection",
+      "Negative Ordinal Reflection",
+      "Horizontal Rotation",
+      "Vertical Rotation",
+      "Quadrant Rotation",
+      "Positive Ordinal Rotation",
+      "Negative Ordinal Rotation"
+    ]
+  },
+  {
     "type": "boolean",
     "name": "Shrinkwrap"
   },
@@ -152,4 +164,18 @@
     "type": "boolean",
     "name": "r-Style Cutting"
   }
+]
+//MARK: UNUSED
+[
+  {
+    "type": "enum",
+    "name": "Lucky Numbers",
+    "options": [
+      "7",
+      "13",
+      "23",
+      "69",
+      "420"
+    ]
+  },
 ]
