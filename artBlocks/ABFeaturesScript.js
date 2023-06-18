@@ -500,16 +500,13 @@ function calculateFeatures(token = tokenData) {
   // TODO: OPTIMIZE by converting options.options from arrays to objects and refine methods accordingly
   // ENUM: EnumFeature 
   class EnumFeature {
-    #category
+    name
     #options
     #weightedOptions
 
-    constructor(category, options = []) {
-      // console.log('category', category)
-      // console.log('options', options)
-      this.#category = category
+    constructor(name, options = []) {
+      this.name = name
       this.#options = options
-
       this.#weightedOptions = this.#weighOptions()
     }
 
@@ -524,27 +521,29 @@ function calculateFeatures(token = tokenData) {
         const option = this.#options.find(opt => opt[0] === name)
         newOptions.push(option)
       })
-      const newEnum = new EnumFeature(this.#category, newOptions)
+      const newEnum = new EnumFeature(this.name, newOptions)
       return newEnum.feature(r)
+    }
+    reduceOptions(toOptions) {
+      const reduced = this.#options.filter(opt => toOptions.includes(opt[0]))
+      this.#options = reduced
+      this.#weightedOptions = this.#weighOptions()
     }
     // #endregion
     // MARK: Private Methods
     // #region Private Methods
-    #findOption() {
-
-    }
     //METH:
     #getFeature(index) {
-      // console.log(this.#category)
+      // console.log(this.name)
       // console.log(this.#options)
       return this.#options[index][0]
-      // return [this.#category, this.#options[index][0]]
+      // return [this.name, this.#options[index][0]]
     }
     //METH:
     #getFeatureIndex(weight) { return this.#weightedOptions.findIndex(e => between(weight, e[1])) }
     //METH:
     #totalWeight() {
-      // console.log(this.#category)
+      // console.log(this.name)
       // console.log(this.#options)
       const weight = this.#options
         .map(option => option[1])
