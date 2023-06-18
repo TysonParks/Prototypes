@@ -54,6 +54,8 @@ function calculateFeatures(token = tokenData) {
     gridTraversalDirection
     insetRatio
     variableInset
+    seedStyle
+    modifierStyle
     symmetryStyle
     symmetryStart
     shapeInterpreter
@@ -118,6 +120,8 @@ function calculateFeatures(token = tokenData) {
       this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
       this.insetVariability = this.enums.insetVariability.feature(r)
+      this.seedStyle = this.#calcSeedStyle(r)
+      this.modifierStyle = this.enums.modifierStyle.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
       this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
@@ -198,6 +202,18 @@ function calculateFeatures(token = tokenData) {
         style: style,
         loft: loft.feature(r),
       }
+    }
+    //METH:
+    #calcSeedStyle(r) {
+      if (this.x < 4) {
+        return this.enums.seedStyle.limitedFeature(r, ['Noise', 'Random Comb'])
+      } else { return this.enums.seedStyle.feature(r) }
+    }
+    //METH:
+    #calcModifierStyle(r) {
+      if (this.x < 4) {
+        return this.enums.modifierStyle.limitedFeature(r, ['None', 'Concentric',])
+      } else { return this.enums.modifierStyle.feature(r) }
     }
     //METH:
     #describeLayer(layer) {
@@ -323,6 +339,50 @@ function calculateFeatures(token = tokenData) {
           ['Tame', 0.1],
         ]
       },
+
+      // Public: style of seed
+      seedStyle: {
+        name: 'Seed Style',
+        options: [
+          ['Noise', 0.3],
+          ['Random Comb', 0.25],
+          ['Rectangles', 0.2],
+          ['Vertical Pattern', 0.1],
+          ['Horizontal Pattern', 0.1],
+          ['Ordinal Pattern', 0.05],
+        ]
+      },
+      // Public: style of modifier
+      modifierStyle: {
+        name: 'Modifier Style',
+        options: [
+          ['None', 0.6],
+          ['Concentric', 0.6],
+          ['Double Concentric', 0.6],
+          ['Triple Concentric', 0.6],
+          ['Thick Concentric', 0.6],
+          ['Inflate', 0.6],
+          ['Inflate Horizontal', 0.6],
+          ['Inflate Vertical', 0.6],
+        ]
+      },
+      // Public: style of symmetry to apply to groups
+      symmetryStyle: {
+        name: 'Symmetry Style',
+        options: [
+          ['None', 0.6],
+          ['Horizontal Reflection', .1],
+          ['Vertical Reflection', .1],
+          ['Quadrant Reflection', .06],
+          ['Positive Ordinal Reflection', .02],
+          ['Negative Ordinal Reflection', .02],
+          ['Horizontal Rotation', .02],
+          ['Vertical Rotation', .02],
+          ['Quadrant Rotation', .02],
+          ['Positive Ordinal Rotation', .02],
+          ['Negative Ordinal Rotation', .02],
+        ]
+      },
       // Public: shape interpretor version
       shapeInterpreter: {
         name: 'Shape Interpreter',
@@ -341,24 +401,6 @@ function calculateFeatures(token = tokenData) {
         ]
       },
 
-      // Public: style of symmetry to apply to groups
-      symmetryStyle: {
-        name: 'Symmetry Style',
-        options: [
-          ['None', 0.6],
-          ['Horizontal Reflection', .1],
-          ['Vertical Reflection', .1],
-          ['Quadrant Reflection', .06],
-          ['Positive Ordinal Reflection', .02],
-          ['Negative Ordinal Reflection', .02],
-          ['Horizontal Rotation', .02],
-          ['Vertical Rotation', .02],
-          ['Quadrant Rotation', .02],
-          ['Positive Ordinal Rotation', .02],
-          ['Negative Ordinal Rotation', .02],
-        ]
-      },
-
       // Private: direction that traversal functions
       gridTraversalDirection: {
         name: 'Grid Traversal Direction',
@@ -367,7 +409,6 @@ function calculateFeatures(token = tokenData) {
           ['Vertical', 0.5]
         ]
       },
-
       // MARK: INSTANCE USE ENUMS
       // Private: (INSTANCE USE) quadrant/corner to start from
       startQuad: {
@@ -472,25 +513,36 @@ function calculateFeatures(token = tokenData) {
       this.#weightedOptions = this.#weighOptions()
     }
 
-    // public methods
+    // MARK: Public Methods
+    // #region Public Methods
+    //METH:
     feature(r) { return this.#getFeature(this.#getFeatureIndex(r.random_dec())) }
-    // none() { return this.#getFeature(0) }
-    none() {
-      if (this.#options.some(e => e[0] === 'None')) {
-        let index = this.#weightedOptions.findIndex(e => e[0] === "None")
-        return this.#getFeature(index)
-      }
-      // return this.#options.some(e => e[0] === 'None')
+    //METH:
+    limitedFeature(r, limitTo) {
+      let newOptions = new OpArray
+      limitTo.forEach(name => {
+        const option = this.#options.find(opt => opt[0] === name)
+        newOptions.push(option)
+      })
+      const newEnum = new EnumFeature(this.#category, newOptions)
+      return newEnum.feature(r)
     }
+    // #endregion
+    // MARK: Private Methods
+    // #region Private Methods
+    #findOption() {
 
-    // private methods
+    }
+    //METH:
     #getFeature(index) {
       // console.log(this.#category)
       // console.log(this.#options)
       return this.#options[index][0]
       // return [this.#category, this.#options[index][0]]
     }
+    //METH:
     #getFeatureIndex(weight) { return this.#weightedOptions.findIndex(e => between(weight, e[1])) }
+    //METH:
     #totalWeight() {
       // console.log(this.#category)
       // console.log(this.#options)
@@ -500,6 +552,7 @@ function calculateFeatures(token = tokenData) {
       // console.log(`total weight:`, weight)
       return weight
     }
+    //METH:
     #weighOptions() {
       let p = []
       let currentWeight = 0
@@ -513,7 +566,7 @@ function calculateFeatures(token = tokenData) {
       return p
     }
   }
-
+  // #endregion
   // MARK: Helper Methods
   // #region Helper Methods
   function between(x, range = [0, 1]) { return x >= range[0] && x <= range[1] }
