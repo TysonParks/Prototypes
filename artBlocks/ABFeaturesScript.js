@@ -120,7 +120,7 @@ function calculateFeatures(token = tokenData) {
       this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
       this.insetVariability = this.enums.insetVariability.feature(r)
-      this.seedStyle = this.#calcSeedStyle(r)
+      this.seedStyle = this.enums.seedStyle.feature(r)
       this.modifierStyle = this.enums.modifierStyle.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
@@ -128,15 +128,34 @@ function calculateFeatures(token = tokenData) {
       this.shrinkwrap = this.enums.shrinkWrap.feature(r) === 'True'
     }
     //METH:
+    #calcX(r) {
+      const x = parseInt(this.enums.gridX.feature(r))
+      if (x < 4) {
+        this.enums.seedStyle.reduceOptions(['Noise', 'Random Comb'])
+        this.enums.modifierStyle.reduceOptions(['None', 'Concentric',])
+        this.enums.extraLayers.removeOptions(['2', '3'])
+        this.enums.pyramidal.replaceOptions([['True', 0.5], ['False', 0.5]])
+      }
+      if (x > 7) {
+        this.enums.insetRatio.removeOptions(['3:2', '2:1'])
+        this.enums.pyramidal.replaceOptions([['True', 0.2], ['False', 0.8]])
+      }
+      return x
+    }
+
+    //METH:
     #calcY(r) {
       const x = this.x
+      const interpOpts = () => { this.enums.shapeInterpreter.replaceOptions([['v0', 0.05], ['v1', 0.95]]) }
       let y
       switch (this.cellAspect) {
         case 'Square':
           return 2 * x
         case 'Tall':
+          interpOpts()
           return r.random_int(x, 2 * x)
         case 'Wide':
+          interpOpts()
           return r.random_int(x / 2, x)
       }
     }
@@ -202,18 +221,6 @@ function calculateFeatures(token = tokenData) {
         style: style,
         loft: loft.feature(r),
       }
-    }
-    //METH:
-    #calcSeedStyle(r) {
-      if (this.x < 4) {
-        return this.enums.seedStyle.limitedFeature(r, ['Noise', 'Random Comb'])
-      } else { return this.enums.seedStyle.feature(r) }
-    }
-    //METH:
-    #calcModifierStyle(r) {
-      if (this.x < 4) {
-        return this.enums.modifierStyle.limitedFeature(r, ['None', 'Concentric',])
-      } else { return this.enums.modifierStyle.feature(r) }
     }
     //METH:
     #describeLayer(layer) {
@@ -501,13 +508,13 @@ function calculateFeatures(token = tokenData) {
   // ENUM: EnumFeature 
   class EnumFeature {
     name
-    #options
-    #weightedOptions
+    options
+    weightedOptions
 
     constructor(name, options = []) {
       this.name = name
-      this.#options = options
-      this.#weightedOptions = this.#weighOptions()
+      this.options = options
+      this.weightedOptions = this.#weighOptions()
     }
 
     // MARK: Public Methods
@@ -515,19 +522,26 @@ function calculateFeatures(token = tokenData) {
     //METH:
     feature(r) { return this.#getFeature(this.#getFeatureIndex(r.random_dec())) }
     //METH:
-    limitedFeature(r, limitTo) {
-      let newOptions = new OpArray
-      limitTo.forEach(name => {
-        const option = this.#options.find(opt => opt[0] === name)
-        newOptions.push(option)
-      })
-      const newEnum = new EnumFeature(this.name, newOptions)
-      return newEnum.feature(r)
+    // limitedFeature(r, limitTo) {
+    //   let newOptions = new OpArray
+    //   limitTo.forEach(name => {
+    //     const option = this.options.find(opt => opt[0] === name)
+    //     newOptions.push(option)
+    //   })
+    //   const newEnum = new EnumFeature(this.name, newOptions)
+    //   return newEnum.feature(r)
+    // }
+    removeOptions(options) {
+      const reduced = this.options.filter(opt => !options.includes(opt[0]))
+      this.replaceOptions(reduced)
     }
     reduceOptions(toOptions) {
-      const reduced = this.#options.filter(opt => toOptions.includes(opt[0]))
-      this.#options = reduced
-      this.#weightedOptions = this.#weighOptions()
+      const reduced = this.options.filter(opt => toOptions.includes(opt[0]))
+      this.replaceOptions(reduced)
+    }
+    replaceOptions(withOptions) {
+      this.options = withOptions
+      this.weightedOptions = this.#weighOptions()
     }
     // #endregion
     // MARK: Private Methods
@@ -535,17 +549,17 @@ function calculateFeatures(token = tokenData) {
     //METH:
     #getFeature(index) {
       // console.log(this.name)
-      // console.log(this.#options)
-      return this.#options[index][0]
-      // return [this.name, this.#options[index][0]]
+      // console.log(this.options)
+      return this.options[index][0]
+      // return [this.name, this.options[index][0]]
     }
     //METH:
-    #getFeatureIndex(weight) { return this.#weightedOptions.findIndex(e => between(weight, e[1])) }
+    #getFeatureIndex(weight) { return this.weightedOptions.findIndex(e => between(weight, e[1])) }
     //METH:
     #totalWeight() {
       // console.log(this.name)
-      // console.log(this.#options)
-      const weight = this.#options
+      // console.log(this.options)
+      const weight = this.options
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
       // console.log(`total weight:`, weight)
@@ -556,7 +570,7 @@ function calculateFeatures(token = tokenData) {
       let p = []
       let currentWeight = 0
       let weightRange = [0, this.#totalWeight()]
-      this.#options.forEach(e => {
+      this.options.forEach(e => {
         let range = [currentWeight, currentWeight + e[1]]
         let normRange = normalizeSubRange(range, weightRange)
         currentWeight += e[1]
