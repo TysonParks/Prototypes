@@ -1101,10 +1101,10 @@ class Grid extends ProtoLayer {
       shape.assignUTurnVerts()
       shape.assignSingleStepVerts()
     })
-    console.log('shape sizes', shapes.map(e => e.cells.length))
-    console.log('shapes', shapes)
-    console.log('shapes verts', shapes.map(e => e.assignedVerts).flat())
-    console.log('shapes parts', shapes.map(e => e.parts).flat())
+    // console.log('shape sizes', shapes.map(e => e.cells.length))
+    // console.log('shapes', shapes)
+    // console.log('shapes verts', shapes.map(e => e.assignedVerts).flat())
+    // console.log('shapes parts', shapes.map(e => e.parts).flat())
   }
   // #endregion
   // MARK: Setup Methods
@@ -1260,7 +1260,7 @@ class Grid extends ProtoLayer {
   }
   //METH:
   updateGroup(group) {
-    console.log('group', group)
+    // console.log('group', group)
     group.cells.forEach(cell => {
       // console.log('this Cell', cell)
       let thisCell = this.cells[cell.index]
