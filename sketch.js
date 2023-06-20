@@ -135,6 +135,7 @@ function setupStore() { S = new Store() }
 function setupFeatures() {
   calculateFeatures(tokenData)
   console.log('F: FeatureSet', F)
+  console.log('layers', F.layers)
 }
 
 // FUNC: setupColors()
@@ -161,36 +162,36 @@ function setupBackground() {
 }
 
 // FUNC: makePrototype()
-function makePrototype(feats) {
-  //configure grid
-  let grid = new Grid(FRAME, { x: F.x, y: F.y })
-  const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
-  //configure baseLayer
-  let baseShader
-  if (F.baseLayer === 'None') {
-    grid.inset(R.random_num(0.9, 0.95))
-  } else {
-    grid.inset(R.random_num(0.7, 0.9))
-    let baseShadeStack
-    if (F.baseLayer === 'Additive') {
-      baseShadeStack = Shade.neuShadeSVGFactory(
-        { mag: R.random_num(0.5, 2), start: .5, pixToUserUnits: FRAME.pixToUserUnits })
-    } else {
-      baseShadeStack = Shade.neuShadeSVGFactory(
-        { mag: grid.gridCellBounds.size.x * 0.5, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
-    }
-    baseShader = createFilter().dropShadow(baseShadeStack)
-    grid.setFilter(baseShader)
-  }
-  // configure shaders
-  let shaders = new OpArray
+// function makePrototype(feats) {
+//   //configure grid
+//   let grid = new Grid(FRAME, { x: F.x, y: F.y })
+//   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
+//   //configure baseLayer
+//   let baseShader
+//   if (F.baseLayer === 'None') {
+//     grid.inset(R.random_num(0.9, 0.95))
+//   } else {
+//     grid.inset(R.random_num(0.7, 0.9))
+//     let baseShadeStack
+//     if (F.baseLayer === 'Additive') {
+//       baseShadeStack = Shade.neuShadeSVGFactory(
+//         { mag: R.random_num(0.5, 2), start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+//     } else {
+//       baseShadeStack = Shade.neuShadeSVGFactory(
+//         { mag: grid.gridCellBounds.size.x * 0.5, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+//     }
+//     baseShader = createFilter().dropShadow(baseShadeStack)
+//     grid.setFilter(baseShader)
+//   }
+//   // configure shaders
+//   let shaders = new OpArray
 
 
-  // configure grouping methods
-  // configure groups
-  // configure islands
+//   // configure grouping methods
+//   // configure groups
+//   // configure islands
 
-}
+// }
 
 class ProtoMill {
   grid
@@ -231,9 +232,6 @@ class ProtoMill {
   }
   //METH:
   mkShaders() {
-    let insets
-    const ratio = this.#calcInsetRatio(F.insetRatio)
-    if (ratio !== 1) { }
     let shaders = F.layers.map(l => {
       const inset = 2 * (1 - l.inset)
       const loft = parseFloat(l.loft)
