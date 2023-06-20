@@ -235,11 +235,10 @@ class ProtoMill {
     const ratio = this.#calcInsetRatio(F.insetRatio)
     if (ratio !== 1) { }
     let shaders = F.layers.map(l => {
-      //FIXME: inset needs to be computed!!!
-      const inset = 1
-      const type = (l.type === 'Additive') ? 2 * (1 - inset) : -2
+      const inset = 2 * (1 - l.inset)
       const loft = parseFloat(l.loft)
-      const mag = type * loft * this.minCellSize
+      const type = (l.type === 'Additive') ? inset : -2 + inset
+      const mag = loft * type * this.minCellSize
       const stack = Shade.neuShadeSVGFactory({ mag: mag, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
       const shader = createFilter().dropShadow(stack)
       return shader
@@ -262,7 +261,7 @@ class ProtoMill {
 // FUNC: gridTests2()
 function gridTests2() {
   // FRAME.inset(.95)
-  let gridX = R.random_int(2, 8)
+  let gridX = R.random_int(2, 6)
   // gridX = 6
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
@@ -278,7 +277,7 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: -minCellSize * 1.8, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.9, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
   console.log('shadeStack0', shadeStack0)
 
