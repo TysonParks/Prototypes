@@ -48,12 +48,13 @@ function calculateFeatures(token = tokenData) {
     layerTypes
     extraLayers
     layerCounts
+    density
     singleLayerStyle
     insetRatio
     insetVariability
     pyramidal
     // group dependencies
-    density
+
     seedStyle
     modifierStyle
     symmetryStyle
@@ -100,13 +101,13 @@ function calculateFeatures(token = tokenData) {
       this.layerTypes = this.enums.layerTypes.feature(r)
       this.extraLayers = this.enums.extraLayers.feature(r)
       this.layerCounts = this.#calcLayerCounts(r)
+      this.density = this.enums.density.feature(r)
       this.singleLayerStyle = this.enums.singleLayerStyle.feature(r) === 'True'
       this.insetRatio = this.enums.insetRatio.feature(r)
       this.insetVariability = this.enums.insetVariability.feature(r)
       this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
       this.layers = this.#calcLayers(r)
       // group dependencies
-      this.density = this.enums.density.feature(r)
       this.gridTraversalStart = this.enums.startQuad.feature(r)
       this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.seedStyle = this.enums.seedStyle.feature(r)
@@ -152,13 +153,14 @@ function calculateFeatures(token = tokenData) {
     //METH:
     #calcBaseLayer(r) {
       const base = this.enums.baseLayer.feature(r)
+      const inset = (min, max) => { return r.random_num(min, max) }
       switch (base) {
         case 'None':
           return 'None'
         case 'Additive':
-          return this.#calcLayer(r, true)
+          return this.#calcLayer(r, true, undefined, inset(0.7, 0.9))
         case 'Subtractive':
-          return this.#calcLayer(r, false)
+          return this.#calcLayer(r, false, undefined, inset(0.7, 0.9))
       }
     }
     //METH:
@@ -196,7 +198,6 @@ function calculateFeatures(token = tokenData) {
         return toggle ? insets[0] : insets[1]
       }
       let style
-      // console.log('single?', this.singleLayerStyle)
       if (this.singleLayerStyle) {
         style = (adds >= subs) ? this.enums.additiveStyle : this.enums.subtractiveStyle
         style = style.feature(r)
@@ -230,6 +231,7 @@ function calculateFeatures(token = tokenData) {
       const range = [0.5, 0.9]
       const insetLrg = r.random_num(range[0], range[1])
       const insetSml = insetLrg * ratioVal
+      console.log([insetLrg, insetSml])
       return [insetLrg, insetSml]
     }
 
@@ -315,6 +317,15 @@ function calculateFeatures(token = tokenData) {
           ['3', 0.025],
         ]
       },
+      // Public: how densely the grid is filled with shapes
+      density: {
+        name: 'Density',
+        options: [
+          ['So Lonely', 0.1],
+          ['Some Availability', 0.15],
+          ['At Capacity', 0.75],
+        ]
+      },
       // Public: inset options
       insetRatio: {
         name: 'Inset Ratio',
@@ -347,15 +358,6 @@ function calculateFeatures(token = tokenData) {
       // #endregion
       // MARK: Group Dependencies
       // #region Group Dependencies
-      // Public: how densely the grid is filled with shapes
-      density: {
-        name: 'Density',
-        options: [
-          ['So Lonely', 0.1],
-          ['Some Availability', 0.15],
-          ['At Capacity', 0.75],
-        ]
-      },
       // Public: style of seed
       seedStyle: {
         name: 'Seed Style',
