@@ -188,29 +188,49 @@ function calculateFeatures(token = tokenData) {
       let layers = []
       const adds = this.layerCounts.adds
       const subs = this.layerCounts.subs
+      const insets = this.#calcInsets(r)
+      let toggle = true
+      const inset = () => {
+        toggle = !toggle
+        console.log('toggle', toggle)
+        return toggle ? insets[0] : insets[1]
+      }
       let style
       // console.log('single?', this.singleLayerStyle)
       if (this.singleLayerStyle) {
         style = (adds >= subs) ? this.enums.additiveStyle : this.enums.subtractiveStyle
         style = style.feature(r)
       }
-      for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true, style)) }
-      for (let i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false, style)) }
+      for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true, style, inset())) }
+      for (let i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false, style, inset())) }
       return layers
     }
     //METH:
-    #calcLayer(r, additive, style) {
+    #calcLayer(r, additive, style, inset) {
       // console.log('style', style)
+      console.log('inset', inset)
       if (!style) {
         style = additive ? this.enums.additiveStyle.feature(r) : this.enums.subtractiveStyle.feature(r)
       }
       // console.log('style2', style)
       const loft = additive ? this.enums.layerHeight : this.enums.layerDepth
       return {
-        'type': additive ? "Additive" : "Subtractive",
+        type: additive ? 'Additive' : 'Subtractive',
         style: style,
+        inset: inset,
         loft: loft.feature(r),
       }
+    }
+    //METH:
+    #calcInsets(r) {
+      const [a, b] = this.insetRatio.split(':').map(Number)
+      const ratioVal = b / a
+      console.log('ratioVal', ratioVal)
+      //FIXME: need to calculate range for inset based on gridX, layerTypes, layercounts???
+      const range = [0.5, 0.9]
+      const insetLrg = r.random_num(range[0], range[1])
+      const insetSml = insetLrg * ratioVal
+      return [insetLrg, insetSml]
     }
 
     //METH:
@@ -444,11 +464,11 @@ function calculateFeatures(token = tokenData) {
       layerDepth: {
         name: 'Depth',
         options: [
-          ['0.25', 0.1],
-          ['0.5', 0.2],
-          ['0.75', 0.25],
-          ['1', 0.35],
-          ['>1', 0.1],
+          ['0.25', 0.05],
+          ['0.5', 0.1],
+          ['0.75', 0.3],
+          ['1', 0.5],
+          ['2', 0.05],
         ]
       },
       // Private: (INSTANCE USE) (additive) height of addons
@@ -571,7 +591,7 @@ function calculateFeatures(token = tokenData) {
   // #endregion
   // MARK: Helper Methods
   // #region Helper Methods
-  function between(x, range = [0, 1]) { return x >= range[0] && x <= range[1] }
+  function between(x, range = [0, 1]) { return x >= range[0] && x < range[1] }
   function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
   function normalize(value, range) { return convertRange(value, range, [0, 1]) }
   function normalizeSubRange(subrange, range) { return [normalize(subrange[0], range), normalize(subrange[1], range)] }
