@@ -37,34 +37,33 @@ function calculateFeatures(token = tokenData) {
   }
 
   class FeatureSet {
-
     // MARK: Calculated Feature Properties
+    // grid dependencies
     x
     y
-    layers = []
+    layers = [] // actually a shader dependency - just here for logging purposes
     baseLayer
     cellAspect
+    // shader dependencies
     layerTypes
     extraLayers
     layerCounts
     singleLayerStyle
-    density
-    pyramidal
-    gridTraversalStart
-    gridTraversalDirection
     insetRatio
-    variableInset
+    insetVariability
+    pyramidal
+    // group dependencies
+    density
     seedStyle
     modifierStyle
     symmetryStyle
-    symmetryStart
+    // shape dependencies
     shapeInterpreter
     shrinkwrap
 
-    enums
-
-    // MARK: Random Instance
+    // underlying storage (could be private?)
     r
+    enums
 
     constructor(randomInstance) {
       this.r = randomInstance
@@ -72,8 +71,7 @@ function calculateFeatures(token = tokenData) {
       this.#calcFeatures()
     }
 
-    // MARK: Calculated Properties
-    // #region Calculated Properties
+    // MARK: Public Method
     get publicFeatures() {
       return {
         // grid: `${this.x} x ${this.y}`,
@@ -87,43 +85,35 @@ function calculateFeatures(token = tokenData) {
 
       }
     }
-    get privateFeatures() {
-      return {
-        x: this.x,
-        y: this.y,
-        cellAspect: this.cellAspect,
-        baseLayer: this.baseLayer,
-        layerCounts: this.layerCounts,
-        density: this.density,
-        layers: this.layers,
-      }
-    }
-    // #endregion
 
-    // MARK: Methods
-    // #region Methods
+    // MARK: Private Methods
+    // #region Private Methods
     //METH:
     #calcFeatures() {
       const r = this.r
+      // grid dependencies
       this.x = parseInt(this.enums.gridX.feature(r))
       this.cellAspect = this.enums.cellAspect.feature(r)
       this.y = this.#calcY(r)
       this.baseLayer = this.#calcBaseLayer(r)
+      // shader dependencies
       this.layerTypes = this.enums.layerTypes.feature(r)
       this.extraLayers = this.enums.extraLayers.feature(r)
       this.layerCounts = this.#calcLayerCounts(r)
       this.singleLayerStyle = this.enums.singleLayerStyle.feature(r) === 'True'
-      this.layers = this.#calcLayers(r)
-      this.density = this.enums.density.feature(r)
-      this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
-      this.gridTraversalStart = this.enums.startQuad.feature(r)
-      this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
       this.insetVariability = this.enums.insetVariability.feature(r)
+      this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
+      this.layers = this.#calcLayers(r)
+      // group dependencies
+      this.density = this.enums.density.feature(r)
+      this.gridTraversalStart = this.enums.startQuad.feature(r)
+      this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.seedStyle = this.enums.seedStyle.feature(r)
       this.modifierStyle = this.enums.modifierStyle.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
+      // shape dependencies
       this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
       this.shrinkwrap = this.enums.shrinkWrap.feature(r) === 'True'
     }
@@ -222,11 +212,7 @@ function calculateFeatures(token = tokenData) {
         loft: loft.feature(r),
       }
     }
-    //METH:
-    #describeLayer(layer) {
-      const loft = layer.type === "Additive" ? "high" : "deep"
-      return `${layer.loft} ${loft} ${layer.style}-style`
-    }
+
     //METH:
     #initFeatureSets() {
       const enums = {}
@@ -236,13 +222,14 @@ function calculateFeatures(token = tokenData) {
         const enumFeature = new EnumFeature(name, optionValues)
         enums[optionKey] = enumFeature
       })
-
       this.enums = enums
     }
     // #endregion
 
     //MARK: Feature Options
     // #region Feature Options
+    // MARK: Grid Dependencies
+    // #region Grid Dependencies
     //Public: x cell width of grid
     #options = {
       gridX: {
@@ -278,6 +265,9 @@ function calculateFeatures(token = tokenData) {
           ['Subtractive', 0.25],
         ]
       },
+      // #endregion
+      // MARK: Shader Dependencies
+      // #region Shader Dependencies
       // Public: layering options
       layerTypes: {
         name: 'Layer Types',
@@ -305,26 +295,6 @@ function calculateFeatures(token = tokenData) {
           ['3', 0.025],
         ]
       },
-      // Public: pyramidal options
-      pyramidal: {
-        name: 'Pyramidal',
-        options: [
-          ['True', 0.3],
-          ['False', 0.7],
-        ]
-      },
-
-      // Public: how densely the grid is filled with shapes
-      density: {
-        name: 'Density',
-        options: [
-          ['So Lonely', 0.1],
-          ['Some Availability', 0.15],
-          ['At Capacity', 0.75],
-        ]
-      },
-
-
       // Public: inset options
       insetRatio: {
         name: 'Inset Ratio',
@@ -346,7 +316,26 @@ function calculateFeatures(token = tokenData) {
           ['Tame', 0.1],
         ]
       },
-
+      // Public: pyramidal options
+      pyramidal: {
+        name: 'Pyramidal',
+        options: [
+          ['True', 0.3],
+          ['False', 0.7],
+        ]
+      },
+      // #endregion
+      // MARK: Group Dependencies
+      // #region Group Dependencies
+      // Public: how densely the grid is filled with shapes
+      density: {
+        name: 'Density',
+        options: [
+          ['So Lonely', 0.1],
+          ['Some Availability', 0.15],
+          ['At Capacity', 0.75],
+        ]
+      },
       // Public: style of seed
       seedStyle: {
         name: 'Seed Style',
@@ -390,6 +379,9 @@ function calculateFeatures(token = tokenData) {
           ['Negative Ordinal Rotation', .02],
         ]
       },
+      // #endregion
+      // MARK: Shape Dependencies
+      // #region Shape Dependencies
       // Public: shape interpretor version
       shapeInterpreter: {
         name: 'Shape Interpreter',
@@ -407,7 +399,9 @@ function calculateFeatures(token = tokenData) {
           ['False', 0.8],
         ]
       },
-
+      // #endregion
+      // MARK: Private INSTANCE USE ENUMS
+      // #region Private INSTANCE USE ENUMS
       // Private: direction that traversal functions
       gridTraversalDirection: {
         name: 'Grid Traversal Direction',
@@ -416,7 +410,6 @@ function calculateFeatures(token = tokenData) {
           ['Vertical', 0.5]
         ]
       },
-      // MARK: INSTANCE USE ENUMS
       // Private: (INSTANCE USE) quadrant/corner to start from
       startQuad: {
         name: 'Starting Quadrant',
@@ -469,9 +462,10 @@ function calculateFeatures(token = tokenData) {
           ['1', 0.5],
         ]
       },
-
+      // #endregion
 
       // MARK: Currently unused
+      // #region UNUSED
       stripeStyle: {
         name: 'Stripe Style',
         options: [
@@ -502,11 +496,13 @@ function calculateFeatures(token = tokenData) {
       },
     }
     // #endregion
+    // #endregion
   }
 
   // TODO: OPTIMIZE by converting options.options from arrays to objects and refine methods accordingly
   // ENUM: EnumFeature 
   class EnumFeature {
+    // FIXME: make options and weightedOptions private after fully tested 
     name
     options
     weightedOptions
@@ -522,23 +518,16 @@ function calculateFeatures(token = tokenData) {
     //METH:
     feature(r) { return this.#getFeature(this.#getFeatureIndex(r.random_dec())) }
     //METH:
-    // limitedFeature(r, limitTo) {
-    //   let newOptions = new OpArray
-    //   limitTo.forEach(name => {
-    //     const option = this.options.find(opt => opt[0] === name)
-    //     newOptions.push(option)
-    //   })
-    //   const newEnum = new EnumFeature(this.name, newOptions)
-    //   return newEnum.feature(r)
-    // }
     removeOptions(options) {
       const reduced = this.options.filter(opt => !options.includes(opt[0]))
       this.replaceOptions(reduced)
     }
+    //METH:
     reduceOptions(toOptions) {
       const reduced = this.options.filter(opt => toOptions.includes(opt[0]))
       this.replaceOptions(reduced)
     }
+    //METH:
     replaceOptions(withOptions) {
       this.options = withOptions
       this.weightedOptions = this.#weighOptions()
