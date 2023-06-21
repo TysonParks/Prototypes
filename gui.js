@@ -107,6 +107,7 @@ function createGUI() {
 //FUNC: keyPressed() p5js overload for PNG saving
 function keyPressed() {
   if (key === 's') {
+    // console.log('s pressed')
     const scale = 2
     const rez = vert(1000, 1800)
     const scaledRez = rez.mult(scale)
@@ -116,7 +117,7 @@ function keyPressed() {
     const hash = tokenData.hash
     const name = `Prototype-${date}-${rezString}-${hash}.png`
 
-    ProtoSVG.exportPNG(F.svgMarkup, name, rez.x, rez.y, scale)
+    ProtoSVG.exportPNG(FRAME.svgMarkup, name, rez.x, rez.y, scale)
   }
 }
 //NOTE: Create with GPT-4 on April 15,2023
