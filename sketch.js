@@ -40,7 +40,7 @@ function setup() {
   sizeFrame()
   noCanvas(frameSize.x, frameSize.y)
 
-  // functionTestPrint()
+  functionTestPrint()
 
   setupPrefs()
   setupStore()
@@ -96,15 +96,7 @@ function redrawAll() {
   // S.allLayers.forEach(e => e.resize())
 }
 
-// FUNC: sizeFrame()
-function sizeFrame() {
-  const width = min(windowWidth, windowHeight / 2) * 1.1
-  const height = width * 1.8
-  // const height = 2 * floor(windowHeight / 2)
-  // const width = 2 * floor(height / 4)
-  frameSize = vert(width, height)
-  print(frameSize)
-}
+
 
 // FUNC: wix() : returns pixel value of a wixel count
 // NOTE: 'wixel' is the fundamental measure unit of Prototypes, its the percent of frameSize.x
@@ -120,6 +112,15 @@ function globalShadowVector() {
 
 
 // MARK: SETUP FUNCS
+// FUNC: sizeFrame()
+function sizeFrame() {
+  const width = min(windowWidth, windowHeight / 2) * 1.1
+  const height = width * 1.8
+  // const height = 2 * floor(windowHeight / 2)
+  // const width = 2 * floor(height / 4)
+  frameSize = vert(width, height)
+  console.log('frameSize', frameSize)
+}
 
 // FUNC: setupPrefs()
 function setupPrefs() {
