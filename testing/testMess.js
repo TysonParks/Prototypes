@@ -11,7 +11,7 @@ function functionTestPrint() {
   // print(values16x16bit)
   // print(values21x12bit)
 
-  // print(tokenData.hash)
+  console.log('hash', tokenData.hash)
 
   // print(values32x8bit)
   // print(values64x4bit)
