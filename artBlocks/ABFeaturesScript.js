@@ -48,13 +48,14 @@ function calculateFeatures(token = tokenData) {
     layerTypes
     extraLayers
     layerCounts
-    density
     singleLayerStyle
     insetRatio
     insetVariability
     pyramidal
+    // (layers)
     // group dependencies
-
+    density
+    weight
     seedStyle
     modifierStyle
     symmetryStyle
@@ -93,7 +94,7 @@ function calculateFeatures(token = tokenData) {
     #calcFeatures() {
       const r = this.r
       // grid dependencies
-      this.x = parseInt(this.enums.gridX.feature(r))
+      this.x = this.#calcX(r)
       this.cellAspect = this.enums.cellAspect.feature(r)
       this.y = this.#calcY(r)
       this.baseLayer = this.#calcBaseLayer(r)
@@ -101,16 +102,17 @@ function calculateFeatures(token = tokenData) {
       this.layerTypes = this.enums.layerTypes.feature(r)
       this.extraLayers = this.enums.extraLayers.feature(r)
       this.layerCounts = this.#calcLayerCounts(r)
-      this.density = this.enums.density.feature(r)
       this.singleLayerStyle = this.enums.singleLayerStyle.feature(r) === 'True'
       this.insetRatio = this.enums.insetRatio.feature(r)
       this.insetVariability = this.enums.insetVariability.feature(r)
       this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
       this.layers = this.#calcLayers(r)
       // group dependencies
+      this.density = this.enums.density.feature(r)
+      this.weight = this.#calcWeight(r)
+      this.seedStyle = this.enums.seedStyle.feature(r)
       this.gridTraversalStart = this.enums.startQuad.feature(r)
       this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
-      this.seedStyle = this.enums.seedStyle.feature(r)
       this.modifierStyle = this.enums.modifierStyle.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
@@ -122,12 +124,13 @@ function calculateFeatures(token = tokenData) {
     #calcX(r) {
       const x = parseInt(this.enums.gridX.feature(r))
       if (x < 4) {
-        this.enums.seedStyle.reduceOptions(['Noise', 'Random Comb'])
-        this.enums.modifierStyle.reduceOptions(['None', 'Concentric',])
         this.enums.extraLayers.removeOptions(['2', '3'])
         this.enums.pyramidal.replaceOptions([['True', 0.5], ['False', 0.5]])
+        this.enums.seedStyle.reduceOptions(['Noise', 'Random Comb'])
+        this.enums.modifierStyle.reduceOptions(['None', 'Concentric',])
       }
       if (x > 7) {
+        this.enums.density.replaceOptions([['So Lonely', 0.2], ['Some Availability', 0.4], ['At Capacity', 0.4],])
         this.enums.insetRatio.removeOptions(['3:2', '2:1'])
         this.enums.pyramidal.replaceOptions([['True', 0.2], ['False', 0.8]])
       }
@@ -188,15 +191,17 @@ function calculateFeatures(token = tokenData) {
     //METH:
     #calcLayers(r) {
       let layers = []
-      const adds = this.layerCounts.adds
-      const subs = this.layerCounts.subs
+      let adds = this.layerCounts.adds
+      let subs = this.layerCounts.subs
+      const total = adds + subs
+      // insets
       const insets = this.#calcInsets(r)
       let toggle = true
       const inset = () => {
         toggle = !toggle
-        console.log('toggle', toggle)
         return toggle ? insets[0] : insets[1]
       }
+      //style
       let style
       if (this.singleLayerStyle) {
         style = (adds >= subs) ? this.enums.additiveStyle : this.enums.subtractiveStyle
@@ -204,12 +209,13 @@ function calculateFeatures(token = tokenData) {
       }
       for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true, style, inset())) }
       for (let i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false, style, inset())) }
+
       return layers
     }
     //METH:
     #calcLayer(r, additive, style, inset) {
       // console.log('style', style)
-      console.log('inset', inset)
+      // console.log('inset', inset)
       if (!style) {
         style = additive ? this.enums.additiveStyle.feature(r) : this.enums.subtractiveStyle.feature(r)
       }
@@ -226,13 +232,26 @@ function calculateFeatures(token = tokenData) {
     #calcInsets(r) {
       const [a, b] = this.insetRatio.split(':').map(Number)
       const ratioVal = b / a
-      console.log('ratioVal', ratioVal)
+      // console.log('ratioVal', ratioVal)
       //FIXME: need to calculate range for inset based on gridX, layerTypes, layercounts???
       const range = [0.5, 0.9]
       const insetLrg = r.random_num(range[0], range[1])
       const insetSml = insetLrg * ratioVal
-      console.log([insetLrg, insetSml])
+      // console.log([insetLrg, insetSml])
       return [insetLrg, insetSml]
+    }
+
+    //METH:
+    #calcWeight(r) {
+      const total = this.layerCounts.adds + this.layerCounts.subs
+      switch (this.density) {
+        case 'So Lonely':
+          return ceil(total / r.random_num(0.2, 0.45))
+        case 'Some Availability':
+          return floor(total / r.random_num(0.5, 0.95))
+        case 'At Capacity':
+          return total
+      }
     }
 
     //METH:
@@ -321,9 +340,9 @@ function calculateFeatures(token = tokenData) {
       density: {
         name: 'Density',
         options: [
-          ['So Lonely', 0.1],
-          ['Some Availability', 0.15],
-          ['At Capacity', 0.75],
+          ['So Lonely', 0.05],
+          ['Some Availability', 0.25],
+          ['At Capacity', 0.7],
         ]
       },
       // Public: inset options
@@ -374,14 +393,14 @@ function calculateFeatures(token = tokenData) {
       modifierStyle: {
         name: 'Modifier Style',
         options: [
-          ['None', 0.6],
-          ['Concentric', 0.6],
-          ['Double Concentric', 0.6],
-          ['Triple Concentric', 0.6],
-          ['Thick Concentric', 0.6],
-          ['Inflate', 0.6],
-          ['Inflate Horizontal', 0.6],
-          ['Inflate Vertical', 0.6],
+          ['None', 0.2],
+          ['Concentric', 0.15],
+          ['Double Concentric', 0.1],
+          ['Triple Concentric', 0.05],
+          ['Thick Concentric', 0.15],
+          ['Inflate', 0.1],
+          ['Inflate Horizontal', 0.1],
+          ['Inflate Vertical', 0.1],
         ]
       },
       // Public: style of symmetry to apply to groups
