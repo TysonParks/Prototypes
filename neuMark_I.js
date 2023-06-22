@@ -351,7 +351,7 @@ class Shade {
     const cols = baseCol.highShadSpread(colSpread)
     // console.log('cols', cols)
     let neuShades = cleanSlices(start, mag, globalControls.shadQuality)
-    console.log('slices', neuShades)
+    // console.log('slices', neuShades)
 
 
     neuShades = neuShades
