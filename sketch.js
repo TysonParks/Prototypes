@@ -260,8 +260,8 @@ class ProtoMill {
 // FUNC: gridTests2()
 function gridTests2() {
   // FRAME.inset(.95)
-  let gridX = R.random_int(2, 6)
-  // gridX = 6
+  let gridX = R.random_int(2, 10)
+  gridX = 5
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   grid.inset(R.random_num(0.95, 0.95))
@@ -329,7 +329,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp000',
     filter: shader1,
-    inset: .95,
+    inset: .86,
     direction: Direction.All,
     taken: true,
   })
@@ -337,7 +337,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp001',
     filter: shader1,
-    inset: .95,
+    inset: .86,
     direction: Direction.Cardinal,
     taken: true,
   })
@@ -345,7 +345,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp002',
     filter: shader1,
-    inset: .95,
+    inset: .86,
     direction: Direction.Cardinal,
     taken: true,
   })
@@ -353,7 +353,7 @@ function gridTests2() {
   // grid.findIslands({
   //   groupID: 'grp003',
   //   filter: shader1,
-  //   inset: .95,
+  //   inset: .86,
   //   direction: Direction.Cardinal,
   //   taken: true,
   // })
@@ -366,7 +366,7 @@ function gridTests2() {
   grid.findIslands({
     // groupID: 'grp002',
     filter: shader2,
-    inset: .95,
+    inset: .86,
     direction: Direction.Cardinal,
     taken: false,
   })
