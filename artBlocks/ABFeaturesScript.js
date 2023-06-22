@@ -247,15 +247,15 @@ function calculateFeatures(token = tokenData) {
     }
     //METH:
     #calcInsets(r) {
-      console.log('Grid', [this.x, this.y])
+      // console.log('Grid', [this.x, this.y])
       let scaleRange
       if (this.layerTypes === 'Additive') { scaleRange = [0.75, 0.85] }
       else { scaleRange = [0.8, 0.9] }
       scaleRange = scaleRange.map(sub => min(1, sub + (0.08 / sqrt(this.x))))
-      console.log('layerTypes', this.layerTypes)
-      console.log('scaleRange', scaleRange)
+      // console.log('layerTypes', this.layerTypes)
+      // console.log('scaleRange', scaleRange)
       let range
-      console.log('this.inset', this.inset)
+      // console.log('this.inset', this.inset)
       switch (this.inset) {
         case 'Maximum':
           range = [0, 0.3]
@@ -267,14 +267,14 @@ function calculateFeatures(token = tokenData) {
           range = [0.8, 1]
       }
 
-      console.log('range', range)
+      // console.log('range', range)
       let insetLrg = r.random_num(range[0], range[1])
-      console.log('insetLrg', insetLrg)
+      // console.log('insetLrg', insetLrg)
       insetLrg = convertRange(insetLrg, [0, 1], scaleRange)
       const [a, b] = this.insetRatio.split(':').map(Number)
       const ratioVal = b / a
       const insetSml = insetLrg * ratioVal
-      console.log('insets', [insetLrg, insetSml])
+      // console.log('insets', [insetLrg, insetSml])
       return [insetLrg, insetSml]
     }
 
