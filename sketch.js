@@ -264,16 +264,16 @@ function gridTests2() {
   grid.insetCells(R.random_num(0.1, .4))
   // grid.insetCells(.8, 'grp000')
 
-  console.log('Grid:', gridX)
+  // console.log('Grid:', gridX)
 
   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
-  console.log('minCellSize', minCellSize)
+  // console.log('minCellSize', minCellSize)
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
   const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.9, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
-  console.log('shadeStack0', shadeStack0)
+  // console.log('shadeStack0', shadeStack0)
 
   const shadeStack1 = Shade.neuShadeSVGFactory({ mag: 1, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
   const shader1 = createFilter().dropShadow(shadeStack1)
@@ -284,7 +284,7 @@ function gridTests2() {
   // console.log('shadeStack2', shadeStack2)
 
   grid.setFilter(shader0)
-  console.log(grid.filter)
+  // console.log(grid.filter)
 
   // grid.randGroup(0.05)
   // grid.randomComb({
@@ -322,7 +322,7 @@ function gridTests2() {
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
   const inset = R.random_num(0.9, 0.99)
-  console.log('inset', inset)
+  // console.log('inset', inset)
 
   grid.findIslands({
     groupID: 'grp000',
@@ -373,9 +373,9 @@ function gridTests2() {
   grid.groupNamed('grp000').inset(0.7)
   // grid.groupNamed('grp001')?.setFilter(shader1)
 
-  console.log('shape0', grid.islands[0].shape)
-  console.log('group', grid.groupNamed('grp000'))
-  console.log('children', grid.groupNamed('grp000').svgElt?.child())
+  // console.log('shape0', grid.islands[0].shape)
+  // console.log('group', grid.groupNamed('grp000'))
+  // console.log('children', grid.groupNamed('grp000').svgElt?.child())
 
   // const testShadeCSS = Shade.neuBoxShadFactory()
   // const testShadeSVG = Shade.neuShadeSVGFactory({ pixToUserUnits: FRAME.pixToUserUnits })
@@ -386,8 +386,8 @@ function gridTests2() {
   // console.log('cleanSlices', cleanSlices(1, 30, 0.5))
   // console.log('exponentialSlices', exponentialSlices(0.5, 2.35, 2))
 
-  console.log('Effect0', S.Effects.db[0][1])
-  console.log('Effect1', S.Effects.db[1][1])
+  // console.log('Effect0', S.Effects.db[0][1])
+  // console.log('Effect1', S.Effects.db[1][1])
 
   console.log('all layers', S.allLayers)
   // console.log('gridBounds', grid.gridCellBounds.cornerCellCenters)
