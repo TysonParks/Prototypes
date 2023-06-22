@@ -48,7 +48,8 @@ function calculateFeatures(token = tokenData) {
     layerTypes
     extraLayers
     layerCounts
-    singleLayerStyle
+    variableLayerStyles
+    variableLayerLofts
     insetRatio
     insetVariability
     pyramidal
@@ -98,11 +99,13 @@ function calculateFeatures(token = tokenData) {
       this.cellAspect = this.enums.cellAspect.feature(r)
       this.y = this.#calcY(r)
       this.baseLayer = this.#calcBaseLayer(r)
+      console.log('baseLayer', this.baseLayer)
       // shader dependencies
       this.layerTypes = this.enums.layerTypes.feature(r)
       this.extraLayers = this.enums.extraLayers.feature(r)
       this.layerCounts = this.#calcLayerCounts(r)
-      this.singleLayerStyle = this.enums.singleLayerStyle.feature(r) === 'True'
+      this.variableLayerStyles = this.enums.variableLayerStyles.feature(r) === 'True'
+      this.variableLayerLofts = this.enums.variableLayerLofts.feature(r) === 'True'
       this.inset = this.enums.inset.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
       this.insetVariability = this.enums.insetVariability.feature(r)
@@ -211,7 +214,7 @@ function calculateFeatures(token = tokenData) {
       }
       //style
       let style
-      if (this.singleLayerStyle) {
+      if (!this.variableLayerStyles) {
         style = (adds >= subs) ? this.enums.additiveStyle : this.enums.subtractiveStyle
         style = style.feature(r)
       }
@@ -219,6 +222,28 @@ function calculateFeatures(token = tokenData) {
       for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true, style, inset())) }
 
       return layers
+    }
+
+    //METH:
+    #calcLayer(r, additive, style, inset) {
+      // console.log('style', style)
+      // console.log('inset', inset)
+      if (!style) {
+        style = additive ? this.enums.additiveStyle.feature(r) : this.enums.subtractiveStyle.feature(r)
+      }
+      // console.log('style2', style)
+      let loft
+      if (this.variableLayerLofts) {
+        loft = additive ? this.enums.layerHeight : this.enums.layerDepth
+        loft = loft.feature(r)
+      } else { loft = 1 }
+
+      return {
+        type: additive ? 'Additive' : 'Subtractive',
+        style: style,
+        inset: inset,
+        loft: loft,
+      }
     }
     //METH:
     #calcInsets(r) {
@@ -251,22 +276,6 @@ function calculateFeatures(token = tokenData) {
       const insetSml = insetLrg * ratioVal
       console.log('insets', [insetLrg, insetSml])
       return [insetLrg, insetSml]
-    }
-    //METH:
-    #calcLayer(r, additive, style, inset) {
-      // console.log('style', style)
-      // console.log('inset', inset)
-      if (!style) {
-        style = additive ? this.enums.additiveStyle.feature(r) : this.enums.subtractiveStyle.feature(r)
-      }
-      // console.log('style2', style)
-      const loft = additive ? this.enums.layerHeight : this.enums.layerDepth
-      return {
-        type: additive ? 'Additive' : 'Subtractive',
-        style: style,
-        inset: inset,
-        loft: loft.feature(r),
-      }
     }
 
     //METH:
@@ -347,8 +356,16 @@ function calculateFeatures(token = tokenData) {
         ]
       },
       // Public: layering options
-      singleLayerStyle: {
-        name: 'Single Layer Style',
+      variableLayerStyles: {
+        name: 'Variable Layer Styles',
+        options: [
+          ['True', 0.4],
+          ['False', 0.6],
+        ]
+      },
+      // Public: layering options
+      variableLayerLofts: {
+        name: 'Variable Layer Lofts',
         options: [
           ['True', 0.6],
           ['False', 0.4],
