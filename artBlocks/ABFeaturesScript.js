@@ -103,6 +103,7 @@ function calculateFeatures(token = tokenData) {
       this.extraLayers = this.enums.extraLayers.feature(r)
       this.layerCounts = this.#calcLayerCounts(r)
       this.singleLayerStyle = this.enums.singleLayerStyle.feature(r) === 'True'
+      this.inset = this.enums.inset.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
       this.insetVariability = this.enums.insetVariability.feature(r)
       this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
@@ -172,8 +173,15 @@ function calculateFeatures(token = tokenData) {
       let subs = 0
       const types = this.layerTypes
       let extra = this.extraLayers
+
       if (types.includes('Additive')) { adds = 1 }
-      if (types.includes('Subtractive')) { subs = 1 }
+      if (types.includes('Subtractive')) {
+        if (types === 'Subtractive') {
+          this.enums.inset.removeOptions(['Maximum'])
+          this.enums.insetRatio.replaceOptions([['1:1', 0.75]], false)
+        }
+        subs = 1
+      }
       if (extra !== 'None') {
         extra = parseInt(extra)
         if (adds && subs) {
@@ -196,7 +204,7 @@ function calculateFeatures(token = tokenData) {
       const total = adds + subs
       // insets
       const insets = this.#calcInsets(r)
-      let toggle = true
+      let toggle = false
       const inset = () => {
         toggle = !toggle
         return toggle ? insets[0] : insets[1]
@@ -207,10 +215,42 @@ function calculateFeatures(token = tokenData) {
         style = (adds >= subs) ? this.enums.additiveStyle : this.enums.subtractiveStyle
         style = style.feature(r)
       }
-      for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true, style, inset())) }
       for (let i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false, style, inset())) }
+      for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true, style, inset())) }
 
       return layers
+    }
+    //METH:
+    #calcInsets(r) {
+      console.log('Grid', [this.x, this.y])
+      let scaleRange
+      if (this.layerTypes === 'Additive') { scaleRange = [0.75, 0.85] }
+      else { scaleRange = [0.8, 0.9] }
+      scaleRange = scaleRange.map(sub => min(1, sub + (0.08 / sqrt(this.x))))
+      console.log('layerTypes', this.layerTypes)
+      console.log('scaleRange', scaleRange)
+      let range
+      console.log('this.inset', this.inset)
+      switch (this.inset) {
+        case 'Maximum':
+          range = [0, 0.3]
+          break
+        case 'Medium':
+          range = [0.4, 0.7]
+          break
+        case 'Minimum':
+          range = [0.8, 1]
+      }
+
+      console.log('range', range)
+      let insetLrg = r.random_num(range[0], range[1])
+      console.log('insetLrg', insetLrg)
+      insetLrg = convertRange(insetLrg, [0, 1], scaleRange)
+      const [a, b] = this.insetRatio.split(':').map(Number)
+      const ratioVal = b / a
+      const insetSml = insetLrg * ratioVal
+      console.log('insets', [insetLrg, insetSml])
+      return [insetLrg, insetSml]
     }
     //METH:
     #calcLayer(r, additive, style, inset) {
@@ -227,18 +267,6 @@ function calculateFeatures(token = tokenData) {
         inset: inset,
         loft: loft.feature(r),
       }
-    }
-    //METH:
-    #calcInsets(r) {
-      const [a, b] = this.insetRatio.split(':').map(Number)
-      const ratioVal = b / a
-      // console.log('ratioVal', ratioVal)
-      //FIXME: need to calculate range for inset based on gridX, layerTypes, layercounts???
-      const range = [0.5, 0.9]
-      const insetLrg = r.random_num(range[0], range[1])
-      const insetSml = insetLrg * ratioVal
-      // console.log([insetLrg, insetSml])
-      return [insetLrg, insetSml]
     }
 
     //METH:
@@ -346,14 +374,23 @@ function calculateFeatures(token = tokenData) {
         ]
       },
       // Public: inset options
+      inset: {
+        name: 'Inset',
+        options: [
+          ['Minimum', 0.65],
+          ['Medium', 0.25],
+          ['Maximum', 0.1],
+        ]
+      },
+      // Public: inset ratio options
       insetRatio: {
         name: 'Inset Ratio',
         options: [
-          ['1:1', 0.5],
-          ['5:4', 0.2],
-          ['4:3', 0.15],
-          ['3:2', 0.1],
-          ['2:1', 0.05],
+          ['1:1', 0.15],
+          ['5:4', 0.3],
+          ['4:3', 0.25],
+          ['3:2', 0.2],
+          ['2:1', 0.1],
         ]
       },
       // Public: random variability of inset per shape
@@ -475,32 +512,54 @@ function calculateFeatures(token = tokenData) {
       subtractiveStyle: {
         name: 'Subtractive Style',
         options: [
-          ['j', 0.5],
-          ['i', 0.15],
-          ['v', 0.3],
-          ['r', 0.05],
+          ['j', 0.7],
+          ['i', 0.1],
+          ['v', 0.175],
+          ['r', 0.025],
         ]
       },
       // Private: (INSTANCE USE) (subtractive) depth of cutouts
       layerDepth: {
         name: 'Depth',
         options: [
-          ['0.25', 0.05],
-          ['0.5', 0.1],
-          ['0.75', 0.3],
-          ['1', 0.5],
-          ['2', 0.05],
+          ['0.25', 0.025],
+          ['0.5', 0.05],
+          ['0.666', 0.075],
+          ['0.75', 0.075],
+          ['0.875', 0.1],
+          ['1', 0.6],
+          ['2', 0.075],
         ]
       },
       // Private: (INSTANCE USE) (additive) height of addons
       layerHeight: {
         name: 'Height',
         options: [
-          ['0.25', 0.05],
-          ['0.5', 0.1],
-          ['0.666', 0.15],
+          ['0.25', 0.025],
+          ['0.5', 0.075],
+          ['0.666', 0.1],
           ['0.8', 0.2],
-          ['1', 0.5],
+          ['1', 0.6],
+        ]
+      },
+      // Private: (INSTANCE USE) pyramidal layer count options
+      pyramidalLayerCount: {
+        name: 'Pyramidal Layer Count',
+        options: [
+          ['All', 0.05],
+          ['Most', 0.1],
+          ['Few', 0.15],
+          ['1', 0.7],
+        ]
+      },
+      // Private: (INSTANCE USE) pyramidal layer count options
+      pyramidStacks: {
+        name: 'Pyramidal',
+        options: [
+          ['1', 0.4],
+          ['2', 0.3],
+          ['3', 0.2],
+          ['4', 0.1],
         ]
       },
       // #endregion
@@ -569,8 +628,15 @@ function calculateFeatures(token = tokenData) {
       this.replaceOptions(reduced)
     }
     //METH:
-    replaceOptions(withOptions) {
-      this.options = withOptions
+    replaceOptions(withOptions, all = true) {
+      if (all) {
+        this.options = withOptions
+      } else {
+        withOptions.forEach(newOpt => {
+          const oldOpt = this.options.find(opt => opt[0] === newOpt[0])
+          if (oldOpt) { oldOpt[1] = newOpt[1] }
+        })
+      }
       this.weightedOptions = this.#weighOptions()
     }
     // #endregion
