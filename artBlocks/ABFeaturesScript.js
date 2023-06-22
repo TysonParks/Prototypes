@@ -124,6 +124,9 @@ function calculateFeatures(token = tokenData) {
       this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
       this.shrinkwrap = this.enums.shrinkWrap.feature(r) === 'True'
     }
+    // #endregion
+    // MARK: Grid Methods
+    // #region Grid Methods
     //METH:
     #calcX(r) {
       const x = parseInt(this.enums.gridX.feature(r))
@@ -157,6 +160,9 @@ function calculateFeatures(token = tokenData) {
           return r.random_int(x / 2, x)
       }
     }
+    // #endregion
+    // MARK: Layer Methods
+    // #region Layer Methods
     //METH:
     #calcBaseLayer(r) {
       const base = this.enums.baseLayer.feature(r)
@@ -223,7 +229,6 @@ function calculateFeatures(token = tokenData) {
 
       return layers
     }
-
     //METH:
     #calcLayer(r, additive, style, inset) {
       // console.log('style', style)
@@ -277,7 +282,9 @@ function calculateFeatures(token = tokenData) {
       // console.log('insets', [insetLrg, insetSml])
       return [insetLrg, insetSml]
     }
-
+    // #endregion
+    // MARK: Group Methods
+    // #region Group Methods
     //METH:
     #calcWeight(r) {
       const total = this.layerCounts.adds + this.layerCounts.subs
@@ -290,7 +297,14 @@ function calculateFeatures(token = tokenData) {
           return total
       }
     }
+    //METH:
+    #calcGroups(r) {
 
+    }
+
+    // #endregion
+    // MARK: Init Methods
+    // #region Init Methods
     //METH:
     #initFeatureSets() {
       const enums = {}
@@ -302,6 +316,7 @@ function calculateFeatures(token = tokenData) {
       })
       this.enums = enums
     }
+    // #endregion
     // #endregion
 
     //MARK: Feature Options
