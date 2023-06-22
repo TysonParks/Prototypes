@@ -343,6 +343,15 @@ function calculateFeatures(token = tokenData) {
           ['Subtractive', 0.25],
         ]
       },
+      // Public: style of Base Layer
+      baseLayerStyle: {
+        name: 'Base Layer Style',
+        options: [
+          ['j', 0.2],
+          ['v', 0.3],
+          ['r', 0.3],
+        ]
+      },
       // #endregion
       // MARK: Shader Dependencies
       // #region Shader Dependencies
