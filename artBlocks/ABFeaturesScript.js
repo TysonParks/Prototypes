@@ -112,7 +112,7 @@ function calculateFeatures(token = tokenData) {
       this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
       this.layers = this.#calcLayers(r)
       // group dependencies
-      this.density = this.enums.density.feature(r)
+      this.density = this.#calcDensity(r)
       this.weight = this.#calcWeight(r)
       this.seedStyle = this.enums.seedStyle.feature(r)
       this.gridTraversalStart = this.enums.startQuad.feature(r)
@@ -134,13 +134,16 @@ function calculateFeatures(token = tokenData) {
       if (x < 4) {
         this.enums.extraLayers.removeOptions(['2', '3'])
         this.enums.pyramidal.replaceOptions([['True', 0.5], ['False', 0.5]])
-        this.enums.seedStyle.reduceOptions(['Noise', 'Random Comb'])
-        this.enums.modifierStyle.reduceOptions(['None', 'Concentric',])
+        this.enums.seedStyle.reduceOptions(['Noise', 'Thin Random Comb'])
+        this.enums.modifierStyle.removeOptions(['Double Concentric', 'Triple Concentric', 'Thick Concentric',
+          'Inflate'])
       }
       if (x > 7) {
         this.enums.density.replaceOptions([['So Lonely', 0.2], ['Some Availability', 0.4], ['At Capacity', 0.4],])
         this.enums.insetRatio.removeOptions(['3:2', '2:1'])
         this.enums.pyramidal.replaceOptions([['True', 0.2], ['False', 0.8]])
+        // this.enums.seedStyle.replaceOptions([])
+        this.enums.modifierStyle.removeOptions(['Seed'])
       }
       return x
     }
@@ -288,7 +291,11 @@ function calculateFeatures(token = tokenData) {
     // #region Group Methods
 
     #calcDensity(r) {
-
+      const density = this.enums.density.feature(r)
+      if (density !== 'At Capacity') {
+        this.enums.modifierStyle.removeOptions(['Triple Concentric'])
+      }
+      return density
     }
     //METH:
     #calcWeight(r) {
@@ -498,12 +505,13 @@ function calculateFeatures(token = tokenData) {
       seedStyle: {
         name: 'Seed Style',
         options: [
-          ['Noise', 0.3],
-          ['Random Comb', 0.25],
+          ['Noise', 0.25],
+          ['Thick Random Comb', 0.15],
+          ['Thin Random Comb', 0.1],
           ['Rectangles', 0.2],
           ['Vertical Pattern', 0.1],
           ['Horizontal Pattern', 0.1],
-          ['Ordinal Pattern', 0.05],
+          ['Ordinal Pattern', 0.1],
         ]
       },
       // Public: style of modifier
@@ -644,36 +652,6 @@ function calculateFeatures(token = tokenData) {
       },
       // #endregion
 
-      // MARK: Currently unused
-      // #region UNUSED
-      stripeStyle: {
-        name: 'Stripe Style',
-        options: [
-          ['None', 0.0],
-          ['Vertical', 0.4],
-          ['Horizontal', 0.6],
-        ]
-      },
-      complexStyle: {
-        name: 'Complex Style',
-        options: [
-          ['None', 0.0],
-          ['Vertical Dyad', 0.3],
-          ['Vertical Triad', 0.45],
-          ['Horizontal Dyad', 0.25],
-        ]
-      },
-      // Public: lucky numbers trigger special shape instructions
-      luckyNumber: {
-        name: 'Lucky Number',
-        options: [
-          ['7', 0.75],
-          ['13', 0.75],
-          ['23', 0.75],
-          ['69', 0.1],
-          ['420', 0.15],
-        ]
-      },
     }
     // #endregion
     // #endregion
@@ -700,12 +678,12 @@ function calculateFeatures(token = tokenData) {
     //METH:
     removeOptions(options) {
       const reduced = this.options.filter(opt => !options.includes(opt[0]))
-      this.replaceOptions(reduced)
+      if (reduced) { this.replaceOptions(reduced) }
     }
     //METH:
     reduceOptions(toOptions) {
       const reduced = this.options.filter(opt => toOptions.includes(opt[0]))
-      this.replaceOptions(reduced)
+      if (reduced) { this.replaceOptions(reduced) }
     }
     //METH:
     replaceOptions(withOptions, all = true) {
@@ -777,6 +755,38 @@ function calculateFeatures(token = tokenData) {
 //MARK: UNUSED FEATURES
 function unusedFeatures() {
   const lengths = {
+    // MARK: Currently unused
+    // #region UNUSED
+    stripeStyle: {
+      name: 'Stripe Style',
+      options: [
+        ['None', 0.0],
+        ['Vertical', 0.4],
+        ['Horizontal', 0.6],
+      ]
+    },
+    complexStyle: {
+      name: 'Complex Style',
+      options: [
+        ['None', 0.0],
+        ['Vertical Dyad', 0.3],
+        ['Vertical Triad', 0.45],
+        ['Horizontal Dyad', 0.25],
+      ]
+    },
+    // Public: lucky numbers trigger special shape instructions
+    luckyNumber: {
+      name: 'Lucky Number',
+      options: [
+        ['7', 0.75],
+        ['13', 0.75],
+        ['23', 0.75],
+        ['69', 0.1],
+        ['420', 0.15],
+      ]
+    },
+
+    // #endregion
     // Private: (INSTANCE USE) (subtractive) depth of cutouts
     layerDepth: {
       name: 'Depth',
