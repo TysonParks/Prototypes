@@ -120,6 +120,7 @@ function calculateFeatures(token = tokenData) {
       this.modifierStyle = this.enums.modifierStyle.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
+      this.groups = this.#calcGroups(r)
       // shape dependencies
       this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
       this.shrinkwrap = this.enums.shrinkWrap.feature(r) === 'True'
@@ -290,17 +291,35 @@ function calculateFeatures(token = tokenData) {
       const total = this.layerCounts.adds + this.layerCounts.subs
       switch (this.density) {
         case 'So Lonely':
-          return ceil(total / r.random_num(0.2, 0.45))
+          return ceil(total / r.random_num(0.1, 0.4))
         case 'Some Availability':
-          return floor(total / r.random_num(0.5, 0.95))
+          return floor(total / r.random_num(0.5, 0.9))
         case 'At Capacity':
           return total
       }
     }
     //METH:
     #calcGroups(r) {
+      console.log('density', this.density)
+      console.log('total weight', this.weight)
+      // console.log('layer counts', this.layerCounts)
+      const layerWeight = this.layerCounts.adds + this.layerCounts.subs
+      console.log('layerWeight', layerWeight)
+      const emptyWeight = this.weight - layerWeight
+      console.log('emptyWeight', emptyWeight)
+      let count
+      if (this.density === 'At Capacity') { count = layerWeight }
+      else { count = max(2, layerWeight * 2 - 1) }
+      console.log('count', count)
+
+      for (let i = 0; i < count; i++) {
+        console.log('new group', i)
+
+      }
 
     }
+    //METH:
+    #calcgroup() { }
 
     // #endregion
     // MARK: Init Methods
@@ -411,7 +430,7 @@ function calculateFeatures(token = tokenData) {
         options: [
           ['So Lonely', 0.05],
           ['Some Availability', 0.25],
-          ['At Capacity', 0.7],
+          // ['At Capacity', 0.7],
         ]
       },
       // Public: inset options
@@ -471,7 +490,7 @@ function calculateFeatures(token = tokenData) {
       modifierStyle: {
         name: 'Modifier Style',
         options: [
-          ['None', 0.2],
+          ['Seed', 0.2],
           ['Concentric', 0.15],
           ['Double Concentric', 0.1],
           ['Triple Concentric', 0.05],
