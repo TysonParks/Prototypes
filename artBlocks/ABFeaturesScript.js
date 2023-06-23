@@ -117,6 +117,7 @@ function calculateFeatures(token = tokenData) {
       this.seedStyle = this.enums.seedStyle.feature(r)
       this.gridTraversalStart = this.enums.startQuad.feature(r)
       this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
+      console.log('enums.modifierStyle', this.enums.modifierStyle)
       this.modifierStyle = this.enums.modifierStyle.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
@@ -207,6 +208,18 @@ function calculateFeatures(token = tokenData) {
           if (subs) { subs += extra }
         }
       }
+      const layerWeight = adds + subs
+      switch (layerWeight) {
+        case 5:
+        case 4:
+          this.enums.modifierStyle.addOptions([['Triple Concentric', 0.05]])
+        case 3:
+          this.enums.modifierStyle.addOptions([['Double Concentric', 0.1]])
+        case 2:
+          this.enums.modifierStyle.addOptions([['Seed', 0.2], ['Concentric', 0.15], ['Thick Concentric', 0.15]])
+        case 1:
+      }
+
       return { adds: adds, subs: subs }
     }
     //METH:
@@ -343,7 +356,7 @@ function calculateFeatures(token = tokenData) {
 
       return {
         method: method,
-
+        coverage: 0.3,
 
       }
     }
@@ -518,14 +531,9 @@ function calculateFeatures(token = tokenData) {
       modifierStyle: {
         name: 'Modifier Style',
         options: [
-          ['Seed', 0.2],
-          ['Concentric', 0.15],
-          ['Double Concentric', 0.1],
-          ['Triple Concentric', 0.05],
-          ['Thick Concentric', 0.15],
           ['Inflate', 0.1],
           ['Inflate Horizontal', 0.1],
-          ['Inflate Vertical', 0.1],
+          ['Inflate Vertical', 0.1]
         ]
       },
       // Public: style of symmetry to apply to groups
@@ -676,6 +684,17 @@ function calculateFeatures(token = tokenData) {
     //METH:
     feature(r) { return this.#getFeature(this.#getFeatureIndex(r.random_dec())) }
     //METH:
+    addOptions(options) {
+      // console.log('addOptions called')
+      // console.log('options', options)
+      // options = OpArray.format(options)
+      // console.log('options', options)
+      // const oldOpts = OpArray.format(this.options)
+      const newOpts = [...options, ...this.options]
+      // console.log('newOpts', newOpts)
+      if (newOpts) { this.replaceOptions(newOpts) }
+    }
+    //METH:
     removeOptions(options) {
       const reduced = this.options.filter(opt => !options.includes(opt[0]))
       if (reduced) { this.replaceOptions(reduced) }
@@ -702,9 +721,15 @@ function calculateFeatures(token = tokenData) {
     // #region Private Methods
     //METH:
     #getFeature(index) {
-      // console.log(this.name)
+      // console.log(index)
       // console.log(this.options)
-      return this.options[index][0]
+      const result = this.options[index][0]
+      if (result) { return result }
+      else {
+        console.log(this.index)
+        console.log(this.options)
+      }
+
       // return [this.name, this.options[index][0]]
     }
     //METH:
@@ -713,17 +738,20 @@ function calculateFeatures(token = tokenData) {
     #totalWeight() {
       // console.log(this.name)
       // console.log(this.options)
-      const weight = this.options
+      let weight = this.options
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
+      weight = round(weight * 100) / 100
       // console.log(`total weight:`, weight)
       return weight
     }
     //METH:
     #weighOptions() {
-      let p = []
+      let p = new OpArray
       let currentWeight = 0
-      let weightRange = [0, this.#totalWeight()]
+      const weightRange = [0, this.#totalWeight()]
+      // console.log('name', this.name)
+      // console.log('weightRange', weightRange)
       this.options.forEach(e => {
         let range = [currentWeight, currentWeight + e[1]]
         let normRange = normalizeSubRange(range, weightRange)
