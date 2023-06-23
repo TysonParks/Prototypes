@@ -1,6 +1,9 @@
 // CLASS: Random
 // Seeded Random numbers from https://github.com/ArtBlocks/artblocks-docs/tree/main/creator-onboarding/readme
 class Random {
+  // NOTE: (my implementation) useage counter
+  useage = 0
+
   constructor() {
     this.useA = false;
     let sfc32 = function (uint128Hex) {
@@ -30,6 +33,8 @@ class Random {
   }
   // random number between 0 (inclusive) and 1 (exclusive)
   random_dec() {
+    // NOTE: (my implementation) useage counter
+    this.useage += 1
     this.useA = !this.useA;
     return this.useA ? this.prngA() : this.prngB();
   }
