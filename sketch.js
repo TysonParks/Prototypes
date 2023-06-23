@@ -51,6 +51,7 @@ function setup() {
 
   //TESTING
   createGUI()
+  console.log('random useage', R.useage)
 }
 
 // MARK: DRAWING FUNCS
