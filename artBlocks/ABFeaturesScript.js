@@ -286,6 +286,10 @@ function calculateFeatures(token = tokenData) {
     // #endregion
     // MARK: Group Methods
     // #region Group Methods
+
+    #calcDensity(r) {
+
+    }
     //METH:
     #calcWeight(r) {
       const total = this.layerCounts.adds + this.layerCounts.subs
@@ -298,6 +302,9 @@ function calculateFeatures(token = tokenData) {
           return total
       }
     }
+    get #layerWeight() { return this.layerCounts.adds + this.layerCounts.subs }
+    get #emptyWeight() { return this.weight - this.#layerWeight }
+
     //METH:
     #calcGroups(r) {
       console.log('density', this.density)
@@ -312,14 +319,27 @@ function calculateFeatures(token = tokenData) {
       else { count = max(2, layerWeight * 2 - 1) }
       console.log('count', count)
 
-      for (let i = 0; i < count; i++) {
+      for (let i = 1; i <= count; i++) {
         console.log('new group', i)
-
+        const group = this.#calcgroup(r, i, count,)
       }
 
     }
     //METH:
-    #calcgroup() { }
+    #calcgroup(r, i, count) {
+      let method
+      if (i === 1) { method = this.seedStyle }
+      if (0 < i && i < count) {
+
+      }
+      if (i === count) { method = 'groupAvail' }
+
+      return {
+        method: method,
+
+
+      }
+    }
 
     // #endregion
     // MARK: Init Methods
