@@ -98,6 +98,7 @@ function calculateFeatures(token = tokenData) {
       this.x = this.#calcX(r)
       this.cellAspect = this.enums.cellAspect.feature(r)
       this.y = this.#calcY(r)
+      console.log('Grid', this.x, this.y)
       this.baseLayer = this.#calcBaseLayer(r)
       console.log('baseLayer', this.baseLayer)
       // shader dependencies
@@ -117,7 +118,7 @@ function calculateFeatures(token = tokenData) {
       this.seedStyle = this.enums.seedStyle.feature(r)
       this.gridTraversalStart = this.enums.startQuad.feature(r)
       this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
-      console.log('enums.modifierStyle', this.enums.modifierStyle)
+      // console.log('modifierStyle options', this.enums.modifierStyle.options)
       this.modifierStyle = this.enums.modifierStyle.feature(r)
       this.symmetryStyle = this.enums.symmetryStyle.feature(r)
       this.symmetryStart = this.enums.startQuad.feature(r)
@@ -241,8 +242,18 @@ function calculateFeatures(token = tokenData) {
         style = (adds >= subs) ? this.enums.additiveStyle : this.enums.subtractiveStyle
         style = style.feature(r)
       }
-      for (let i = 0; i < subs; i++) { layers.push(this.#calcLayer(r, false, style, inset())) }
-      for (let i = 0; i < adds; i++) { layers.push(this.#calcLayer(r, true, style, inset())) }
+      for (let i = 0; i < subs; i++) {
+        // layers.push(this.#calcLayer(r, false, style, inset()))
+        const layer = this.#calcLayer(r, false, style, inset())
+        console.log('layer', layer)
+        layers.push(layer)
+      }
+      for (let i = 0; i < adds; i++) {
+        // layers.push(this.#calcLayer(r, true, style, inset())) 
+        const layer = this.#calcLayer(r, true, style, inset())
+        console.log('layer', layer)
+        layers.push(layer)
+      }
 
       return layers
     }
@@ -327,37 +338,51 @@ function calculateFeatures(token = tokenData) {
 
     //METH:
     #calcGroups(r) {
+      const layerWeight = this.layerCounts.adds + this.layerCounts.subs
+      const layerCoverage = round(1 / this.weight * 100) / 100
+      const emptyWeight = this.weight - layerWeight
+
       console.log('density', this.density)
       console.log('total weight', this.weight)
-      // console.log('layer counts', this.layerCounts)
-      const layerWeight = this.layerCounts.adds + this.layerCounts.subs
       console.log('layerWeight', layerWeight)
-      const emptyWeight = this.weight - layerWeight
       console.log('emptyWeight', emptyWeight)
-      let count
-      if (this.density === 'At Capacity') { count = layerWeight }
-      else { count = max(2, layerWeight * 2 - 1) }
-      console.log('count', count)
 
-      for (let i = 1; i <= count; i++) {
-        console.log('new group', i)
-        const group = this.#calcgroup(r, i, count,)
+      let count, full
+      let emptyCoverage = 0
+      if (this.density === 'At Capacity') {
+        count = layerWeight
+        full = true
+      } else {
+        count = max(2, layerWeight * 2 - 1)
+        full = false
+        emptyCoverage = emptyWeight / (count - layerWeight)
       }
 
+      console.log('count', count)
+      console.log('full', full)
+      let groups = []
+      for (let i = 1; i <= count; i++) {
+        const group = this.#calcgroup(r, i, count, full, emptyCoverage)
+        console.log('group', i, group)
+        groups.push(group)
+      }
+      return groups
     }
     //METH:
-    #calcgroup(r, i, count) {
-      let method
+    #calcgroup(r, i, count, full, emptyCoverage) {
+      let method, coverage
       if (i === 1) { method = this.seedStyle }
-      if (0 < i && i < count) {
-
+      if (1 < i && i < count) {
+        if (!full && i % 2 === 0) { method = 'empty' }
+        else { method = this.modifierStyle }
       }
       if (i === count) { method = 'groupAvail' }
+      if (full === true) { coverage = emptyCoverage }
+      else { coverage = 1 / count }
 
       return {
         method: method,
-        coverage: 0.3,
-
+        coverage: coverage,
       }
     }
 
@@ -470,7 +495,7 @@ function calculateFeatures(token = tokenData) {
         options: [
           ['So Lonely', 0.05],
           ['Some Availability', 0.25],
-          // ['At Capacity', 0.7],
+          ['At Capacity', 0.7],
         ]
       },
       // Public: inset options
@@ -518,13 +543,15 @@ function calculateFeatures(token = tokenData) {
       seedStyle: {
         name: 'Seed Style',
         options: [
-          ['Noise', 0.25],
-          ['Thick Random Comb', 0.15],
+          ['Noise', 0.2],
+          ['Thick Random Comb', 0.1],
           ['Thin Random Comb', 0.1],
-          ['Rectangles', 0.2],
+          ['Rectangles', 0.1],
+          ['Squares', 0.1],
           ['Vertical Pattern', 0.1],
           ['Horizontal Pattern', 0.1],
           ['Ordinal Pattern', 0.1],
+          ['Snake', 0.1],
         ]
       },
       // Public: style of modifier
@@ -747,7 +774,7 @@ function calculateFeatures(token = tokenData) {
     }
     //METH:
     #weighOptions() {
-      let p = new OpArray
+      let p = []
       let currentWeight = 0
       const weightRange = [0, this.#totalWeight()]
       // console.log('name', this.name)
