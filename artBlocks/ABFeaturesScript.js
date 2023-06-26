@@ -313,7 +313,7 @@ function calculateFeatures(token = tokenData) {
     // #endregion
     // MARK: Group Methods
     // #region Group Methods
-
+    //METH:
     #calcDensity(r) {
       const density = this.enums.density.feature(r)
       if (density !== 'At Capacity') {
@@ -326,9 +326,9 @@ function calculateFeatures(token = tokenData) {
       const total = this.layerCounts.adds + this.layerCounts.subs
       switch (this.density) {
         case 'So Lonely':
-          return ceil(total / r.random_num(0.1, 0.4))
+          return floor(total / r.random_num(0.1, 0.4))
         case 'Some Availability':
-          return floor(total / r.random_num(0.5, 0.9))
+          return ceil(total / r.random_num(0.5, 0.9))
         case 'At Capacity':
           return total
       }
@@ -339,47 +339,51 @@ function calculateFeatures(token = tokenData) {
     //METH:
     #calcGroups(r) {
       const layerWeight = this.layerCounts.adds + this.layerCounts.subs
-      const layerCoverage = round(1 / this.weight * 100) / 100
+      const layerCvrg = round(1 / this.weight * 1000) / 1000
       const emptyWeight = this.weight - layerWeight
 
       console.log('density', this.density)
       console.log('total weight', this.weight)
       console.log('layerWeight', layerWeight)
       console.log('emptyWeight', emptyWeight)
+      console.log('layerCvrg', layerCvrg)
 
-      let count, full
-      let emptyCoverage = 0
-      if (this.density === 'At Capacity') {
-        count = layerWeight
-        full = true
-      } else {
+      let count = layerWeight
+      let full = true
+      let emptyCvrg = 0
+      if (this.density !== 'At Capacity') {
         count = max(2, layerWeight * 2 - 1)
         full = false
-        emptyCoverage = emptyWeight / (count - layerWeight)
+        emptyCvrg = round(emptyWeight / this.weight * (1 / max(1, (layerWeight - 1))) * 1000) / 1000
       }
-
+      let cvrg = { empty: emptyCvrg, layer: layerCvrg, total: 0 }
+      console.log('emptyCvrg', emptyCvrg)
       console.log('count', count)
       console.log('full', full)
       let groups = []
       for (let i = 1; i <= count; i++) {
-        const group = this.#calcgroup(r, i, count, full, emptyCoverage)
+        const group = this.#calcgroup(r, i, count, full, cvrg)
         console.log('group', i, group)
         groups.push(group)
       }
       return groups
     }
     //METH:
-    #calcgroup(r, i, count, full, emptyCoverage) {
-      let method, coverage
+    #calcgroup(r, i, count, full, cvrg) {
+      let method
+      let coverage = cvrg.layer
       if (i === 1) { method = this.seedStyle }
       if (1 < i && i < count) {
-        if (!full && i % 2 === 0) { method = 'empty' }
-        else { method = this.modifierStyle }
+        if (!full && i % 2 === 0) {
+          method = 'empty'
+          coverage = cvrg.empty
+        } else { method = this.modifierStyle }
       }
-      if (i === count) { method = 'groupAvail' }
-      if (full === true) { coverage = emptyCoverage }
-      else { coverage = 1 / count }
-
+      if (i === count) {
+        method = 'groupAvail'
+        coverage = round((1 - cvrg.total) * 1000) / 1000
+      }
+      cvrg.total += coverage
       return {
         method: method,
         coverage: coverage,
@@ -494,8 +498,8 @@ function calculateFeatures(token = tokenData) {
         name: 'Density',
         options: [
           ['So Lonely', 0.05],
-          ['Some Availability', 0.25],
-          ['At Capacity', 0.7],
+          // ['Some Availability', 0.25],
+          // ['At Capacity', 0.7],
         ]
       },
       // Public: inset options
