@@ -51,8 +51,6 @@ function calculateFeatures(token = tokenData) {
     variableLayerStyles
     variableLayerLofts
     insetRatio
-    insetVariability
-    pyramidal
     // (layers)
     // group dependencies
     density
@@ -60,6 +58,9 @@ function calculateFeatures(token = tokenData) {
     seedStyle
     modifierStyle
     symmetryStyle
+    insetVariability
+    pyramidal
+    groups
     // shape dependencies
     shapeInterpreter
     shrinkwrap
@@ -98,7 +99,7 @@ function calculateFeatures(token = tokenData) {
       this.x = this.#calcX(r)
       this.cellAspect = this.enums.cellAspect.feature(r)
       this.y = this.#calcY(r)
-      console.log('Grid', this.x, this.y)
+      console.log('Feature Grid', this.x, this.y)
       this.baseLayer = this.#calcBaseLayer(r)
       console.log('baseLayer', this.baseLayer)
       // shader dependencies
@@ -109,20 +110,19 @@ function calculateFeatures(token = tokenData) {
       this.variableLayerLofts = this.enums.variableLayerLofts.feature(r) === 'True'
       this.inset = this.enums.inset.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
-      this.insetVariability = this.enums.insetVariability.feature(r)
-      this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
+
       this.layers = this.#calcLayers(r)
       // group dependencies
       this.density = this.#calcDensity(r)
       this.weight = this.#calcWeight(r)
       this.seedStyle = this.enums.seedStyle.feature(r)
-      this.gridTraversalStart = this.enums.startQuad.feature(r)
-      this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
-      // console.log('modifierStyle options', this.enums.modifierStyle.options)
+      // this.gridTraversalStart = this.enums.startQuad.feature(r)
+      // this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.modifierStyle = this.enums.modifierStyle.feature(r)
-      this.symmetryStyle = this.enums.symmetryStyle.feature(r)
-      this.symmetryStart = this.enums.startQuad.feature(r)
       this.groups = this.#calcGroups(r)
+      this.symmetryStyle = this.#calcSymmetry(r)
+      this.insetVariability = this.enums.insetVariability.feature(r)
+      this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
       // shape dependencies
       this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
       this.shrinkwrap = this.enums.shrinkWrap.feature(r) === 'True'
@@ -137,16 +137,12 @@ function calculateFeatures(token = tokenData) {
         this.enums.extraLayers.removeOptions(['2', '3'])
         this.enums.pyramidal.replaceOptions([['True', 0.5], ['False', 0.5]])
         this.enums.seedStyle.reduceOptions(['Noise', 'Thin Random Comb'])
-        this.enums.modifierStyle.removeOptions(['Double Concentric', 'Triple Concentric', 'Thick Concentric',
-          'Inflate'])
         this.enums.symmetryStyle.replaceOptions([['None', 1.2]])
       }
       if (x > 7) {
         this.enums.density.replaceOptions([['So Lonely', 0.2], ['Some Availability', 0.4], ['At Capacity', 0.4],])
         this.enums.insetRatio.removeOptions(['3:2', '2:1'])
         this.enums.pyramidal.replaceOptions([['True', 0.2], ['False', 0.8]])
-        // this.enums.seedStyle.replaceOptions([])
-        this.enums.modifierStyle.removeOptions(['Seed'])
         this.enums.symmetryStyle.replaceOptions([['None', 0.4], ['Quadrant Reflection', .1], ['Quadrant Rotation', .1]])
       }
       return x
@@ -211,16 +207,19 @@ function calculateFeatures(token = tokenData) {
           if (subs) { subs += extra }
         }
       }
-      const layerWeight = adds + subs
-      switch (layerWeight) {
-        case 5:
-        case 4:
-          this.enums.modifierStyle.addOptions([['Triple Concentric', 0.05]])
-        case 3:
-          this.enums.modifierStyle.addOptions([['Double Concentric', 0.1]])
-        case 2:
-          this.enums.modifierStyle.addOptions([['Seed', 0.2], ['Concentric', 0.15], ['Thick Concentric', 0.15]])
-        case 1:
+      if (this.x > 3) {
+        const layerWeight = adds + subs
+        switch (layerWeight) {
+          case 5:
+          case 4:
+            this.enums.modifierStyle.addOptions([['Triple Concentric', 0.05]])
+          case 3:
+            this.enums.modifierStyle.addOptions([['Double Concentric', 0.1]])
+          case 2:
+            if (this.x < 7) { this.enums.modifierStyle.addOptions([['Seed', 0.2]]) }
+            this.enums.modifierStyle.addOptions([['Concentric', 0.15], ['Thick Concentric', 0.15]])
+          case 1:
+        }
       }
 
       return { adds: adds, subs: subs }
@@ -323,21 +322,20 @@ function calculateFeatures(token = tokenData) {
       }
       return density
     }
-    //METH:
-    #calcWeight(r) {
-      const total = this.layerCounts.adds + this.layerCounts.subs
-      switch (this.density) {
-        case 'So Lonely':
-          return floor(total / r.random_num(0.1, 0.4))
-        case 'Some Availability':
-          return ceil(total / r.random_num(0.5, 0.9))
-        case 'At Capacity':
-          return max(2, total)
-      }
-    }
     get #layerWeight() { return this.layerCounts.adds + this.layerCounts.subs }
     get #emptyWeight() { return this.weight - this.#layerWeight }
 
+    //METH:
+    #calcWeight(r) {
+      switch (this.density) {
+        case 'So Lonely':
+          return floor(this.#layerWeight / r.random_num(0.1, 0.4))
+        case 'Some Availability':
+          return ceil(this.#layerWeight / r.random_num(0.5, 0.9))
+        case 'At Capacity':
+          return max(2, this.#layerWeight)
+      }
+    }
     //METH:
     #calcGroups(r) {
       const layerWeight = this.layerCounts.adds + this.layerCounts.subs
@@ -392,7 +390,24 @@ function calculateFeatures(token = tokenData) {
         coverage: coverage,
       }
     }
-
+    //METH:
+    #calcSymmetry(r) {
+      const style = this.enums.symmetryStyle.feature(r)
+      let use = 'None'
+      let start = 'None'
+      if (style !== 'None') {
+        if (this.density === 'At Capacity') { this.enums.symmetryUse.removeOptions(['Available']) }
+        if (this.#layerWeight < 3) {
+          this.enums.symmetryUse.removeOptions(['Some Layers'])
+          if (this.#layerWeight === 1) { this.enums.symmetryUse.removeOptions(['One Layer']) }
+        }
+        use = this.enums.symmetryUse.feature(r)
+        start = this.enums.startQuad.feature(r)
+      }
+      this.symmetryUse = use
+      this.symmetryStart = start
+      return style
+    }
     // #endregion
     // MARK: Init Methods
     // #region Init Methods
@@ -419,14 +434,14 @@ function calculateFeatures(token = tokenData) {
       gridX: {
         name: 'Columns',
         options: [
-          ['10', 0.025],
-          ['9', 0.05],
-          ['8', 0.05],
-          ['7', 0.1],
+          ['10', 0.038],
+          ['9', 0.042],
+          ['8', 0.045],
+          ['7', 0.12],
           ['6', 0.2],
           ['5', 0.2],
           ['4', 0.2],
-          ['3', 0.1],
+          ['3', 0.075],
           ['2', 0.05],
           ['1', 0.025],
         ]
@@ -567,7 +582,12 @@ function calculateFeatures(token = tokenData) {
         options: [
           ['Inflate', 0.1],
           ['Inflate Horizontal', 0.1],
-          ['Inflate Vertical', 0.1]
+          ['Inflate Vertical', 0.1],
+          // ['Concentric', 0.15], 
+          // ['Thick Concentric', 0.15],
+          // ['Double Concentric', 0.1],
+          // ['Triple Concentric', 0.05],
+
         ]
       },
       // Public: style of symmetry to apply to groups
@@ -585,6 +605,17 @@ function calculateFeatures(token = tokenData) {
           ['Quadrant Rotation', .02],
           ['Positive Ordinal Rotation', .02],
           ['Negative Ordinal Rotation', .02],
+        ]
+      },
+      // Public: the way symmetry is used
+      symmetryUse: {
+        name: 'Symmetry Use',
+        options: [
+          ['All', 0.5],
+          ['Assigned', .2],
+          ['Available', .1],
+          ['One Layer', .1],
+          ['Some Layers', .1],
         ]
       },
       // #endregion
