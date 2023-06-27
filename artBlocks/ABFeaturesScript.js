@@ -139,6 +139,7 @@ function calculateFeatures(token = tokenData) {
         this.enums.seedStyle.reduceOptions(['Noise', 'Thin Random Comb'])
         this.enums.modifierStyle.removeOptions(['Double Concentric', 'Triple Concentric', 'Thick Concentric',
           'Inflate'])
+        this.enums.symmetryStyle.replaceOptions([['None', 1.2]])
       }
       if (x > 7) {
         this.enums.density.replaceOptions([['So Lonely', 0.2], ['Some Availability', 0.4], ['At Capacity', 0.4],])
@@ -146,6 +147,7 @@ function calculateFeatures(token = tokenData) {
         this.enums.pyramidal.replaceOptions([['True', 0.2], ['False', 0.8]])
         // this.enums.seedStyle.replaceOptions([])
         this.enums.modifierStyle.removeOptions(['Seed'])
+        this.enums.symmetryStyle.replaceOptions([['None', 0.4], ['Quadrant Reflection', .1], ['Quadrant Rotation', .1]])
       }
       return x
     }
@@ -330,7 +332,7 @@ function calculateFeatures(token = tokenData) {
         case 'Some Availability':
           return ceil(total / r.random_num(0.5, 0.9))
         case 'At Capacity':
-          return total
+          return max(2, total)
       }
     }
     get #layerWeight() { return this.layerCounts.adds + this.layerCounts.subs }
@@ -370,22 +372,23 @@ function calculateFeatures(token = tokenData) {
     }
     //METH:
     #calcgroup(r, i, count, full, cvrg) {
-      let method
+      let methods
       let coverage = cvrg.layer
-      if (i === 1) { method = this.seedStyle }
-      if (1 < i && i < count) {
-        if (!full && i % 2 === 0) {
-          method = 'empty'
-          coverage = cvrg.empty
-        } else { method = this.modifierStyle }
-      }
       if (i === count) {
-        method = 'groupAvail'
+        methods = ['groupAvail', this.modifierStyle]
         coverage = round((1 - cvrg.total) * 1000) / 1000
       }
+      if (1 < i && i < count) {
+        if (!full && i % 2 === 0) {
+          methods = ['empty', this.modifierStyle]
+          coverage = cvrg.empty
+        } else { methods = this.modifierStyle }
+      }
+      if (i === 1) { methods = [this.seedStyle, this.modifierStyle] }
+
       cvrg.total += coverage
       return {
-        method: method,
+        methods: methods,
         coverage: coverage,
       }
     }
@@ -450,9 +453,9 @@ function calculateFeatures(token = tokenData) {
       baseLayerStyle: {
         name: 'Base Layer Style',
         options: [
-          ['j', 0.2],
+          ['j', 0.3],
           ['v', 0.3],
-          ['r', 0.3],
+          ['r', 0.4],
         ]
       },
       // #endregion
@@ -498,8 +501,8 @@ function calculateFeatures(token = tokenData) {
         name: 'Density',
         options: [
           ['So Lonely', 0.05],
-          // ['Some Availability', 0.25],
-          // ['At Capacity', 0.7],
+          ['Some Availability', 0.25],
+          ['At Capacity', 0.7],
         ]
       },
       // Public: inset options
@@ -773,6 +776,7 @@ function calculateFeatures(token = tokenData) {
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
       weight = round(weight * 100) / 100
+      if (weight !== 1) console.log(`weight != 1`, this.name, weight)
       // console.log(`total weight:`, weight)
       return weight
     }
