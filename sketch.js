@@ -288,16 +288,16 @@ function gridTests2() {
   grid.setFilter(shader0)
   // console.log(grid.filter)
 
-  // grid.randGroup(0.05)
-  grid.randomComb({
-    selection: (grid.cellRows
-      // .rotated2D(90)
-      .flipped2D(Direction.Vertical)
-      .flat()),
-    keepRange: range(1, gridX - 1),
-    dropRange: range(gridX, gridX * 3),
-    start: 0
-  })
+  grid.randGroup(0.1)
+  // grid.randomComb({
+  //   selection: (grid.cellRows
+  //     // .rotated2D(90)
+  //     .flipped2D(Direction.Vertical)
+  //     .flat()),
+  //   keepRange: range(1, gridX - 1),
+  //   dropRange: range(gridX, gridX * 3),
+  //   start: 0
+  // })
 
   // grid.comb({
   //   selection: (grid.cellRows
@@ -314,9 +314,10 @@ function gridTests2() {
   //   taken: true,
   // })
 
-  grid.outlineTaken(Direction.Vertical, false)
+  grid.outlineTaken(Direction.Right, false)
+  grid.outlineTaken(Direction.Up, false)
   grid.outlineTaken(Direction.All, true)
-  grid.outlineTaken(Direction.Cardinal, false)
+  // grid.outlineTaken(Direction.All, false)
 
   // grid.outlineGroup('grp000', Direction.All, false)
   // grid.outline({ groupID: 'grp000', direction: Direction.All, newGroup: true })
