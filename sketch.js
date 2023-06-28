@@ -47,14 +47,14 @@ function setup() {
   setupColors()
   setupBackground()
   setupFeatures()
-  gridTests2()
+  // gridTests2()
+  const mill = new ProtoMill()
+  mill.mkProtoType()
 
   //TESTING
   createGUI()
   console.log('random useage', R.useage)
 }
-
-// MARK: DRAWING FUNCS
 
 // FUNC: draw()
 function draw() {
@@ -63,53 +63,6 @@ function draw() {
   }
 }
 
-// FUNC: globalAnimation()
-function globalAnimation() {
-  globalControls.shadAngle = (millis() / (1000 * 8)) * 360 % 360
-  // globalControls.shadMag = (millis() / (1000 * 4)) * 64 % 64
-
-  // displayTime()
-  drawObjects()
-}
-
-// FUNC: drawObjects()
-function drawObjects() {
-  redrawAll()
-  // drawContainer()
-  // drawClone()
-  // drawSquircle()
-}
-
-
-// MARK: GLOBAL FUNCS
-
-// FUNC: windowResized()
-function windowResized() {
-  sizeFrame()
-  BG.size(windowWidth, windowHeight)
-  redrawAll()
-}
-
-// FUNC: redrawAll()
-function redrawAll() {
-  print('REDRAW ALL called')
-  BG.size(windowWidth, windowHeight)
-  // S.allLayers.forEach(e => e.resize())
-}
-
-
-
-// FUNC: wix() : returns pixel value of a wixel count
-// NOTE: 'wixel' is the fundamental measure unit of Prototypes, its the percent of frameSize.x
-// NOTE: i.e. every Prototype is 100 wixels wide x 200 wixels high
-// NOTE: 0.5 wix should be minimum Element size (~3px on 4K Landscape, ~6px on iphone Portrait)
-function wix(count) { return count / 100 * frameSize.x }
-function wixPx(count) { return `${wix(count)}px` }
-
-// FUNC: globalShadowVector()
-function globalShadowVector() {
-  return Shade.shadVect(globalControls.shadAngle, globalControls.shadMag)
-}
 
 
 // MARK: SETUP FUNCS
@@ -183,7 +136,7 @@ class ProtoMill {
   //METH: 
   mkGrid() {
     this.grid = new Grid(FRAME, { x: F.x, y: F.y })
-    this.minCellSize = min(grid.cellSize.x, grid.cellSize.y)
+    this.minCellSize = min(this.grid.cellSize.x, this.grid.cellSize.y)
   }
   //METH: 
   mkBaseShader() {
@@ -263,6 +216,10 @@ class ProtoMill {
 
     return { methods: methods, coverage: coverage }
   }
+  //METH:
+  assignShaders() { }
+  //METH:
+  mkFinal() { }
 
 }
 
@@ -413,4 +370,51 @@ function gridTests2() {
   console.log('all layers', S.allLayers)
   // console.log('gridBounds', grid.gridCellBounds.cornerCellCenters)
   grid.customizeShapes()
+}
+
+// MARK: DRAWING FUNCS
+// FUNC: globalAnimation()
+function globalAnimation() {
+  globalControls.shadAngle = (millis() / (1000 * 8)) * 360 % 360
+  // globalControls.shadMag = (millis() / (1000 * 4)) * 64 % 64
+
+  // displayTime()
+  drawObjects()
+}
+
+// FUNC: drawObjects()
+function drawObjects() {
+  redrawAll()
+  // drawContainer()
+  // drawClone()
+  // drawSquircle()
+}
+
+
+// MARK: GLOBAL FUNCS
+
+// FUNC: windowResized()
+function windowResized() {
+  sizeFrame()
+  BG.size(windowWidth, windowHeight)
+  redrawAll()
+}
+
+// FUNC: redrawAll()
+function redrawAll() {
+  print('REDRAW ALL called')
+  BG.size(windowWidth, windowHeight)
+  // S.allLayers.forEach(e => e.resize())
+}
+
+// FUNC: wix() : returns pixel value of a wixel count
+// NOTE: 'wixel' is the fundamental measure unit of Prototypes, its the percent of frameSize.x
+// NOTE: i.e. every Prototype is 100 wixels wide x 200 wixels high
+// NOTE: 0.5 wix should be minimum Element size (~3px on 4K Landscape, ~6px on iphone Portrait)
+function wix(count) { return count / 100 * frameSize.x }
+function wixPx(count) { return `${wix(count)}px` }
+
+// FUNC: globalShadowVector()
+function globalShadowVector() {
+  return Shade.shadVect(globalControls.shadAngle, globalControls.shadMag)
 }
