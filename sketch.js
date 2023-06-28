@@ -150,10 +150,10 @@ class ProtoMill {
           { mag: R.random_num(0.5, 2), start: .5, pixToUserUnits: FRAME.pixToUserUnits })
       } else {
         baseShadeStack = Shade.neuShadeSVGFactory(
-          { mag: grid.gridCellBounds.size.x * 0.5, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+          { mag: this.grid.gridCellBounds.size.x * 0.5, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
       }
       this.baseShader = createFilter().dropShadow(baseShadeStack)
-      this.grid.setFilter(baseShader)
+      this.grid.setFilter(this.baseShader)
     }
   }
   //METH:
@@ -170,20 +170,20 @@ class ProtoMill {
   }
   //METH:
   mkGroups() {
-    const layerCvrg = roundToDec(l.weight)
-    console.log('density', l.density)
-    console.log('total weight', l.weight)
-    console.log('layerWeight', l.layerWeight)
-    console.log('emptyWeight', l.emptyWeight)
+    const layerCvrg = roundToDec(1 / F.weight)
+    console.log('density', F.density)
+    console.log('total weight', F.weight)
+    console.log('layerWeight', F.layerWeight)
+    console.log('emptyWeight', F.emptyWeight)
     console.log('layerCvrg', layerCvrg)
 
-    let count = l.layerWeight
+    let count = F.layerWeight
     let full = true
     let emptyCvrg = 0
-    if (l.density !== 'At Capacity') {
-      count = max(2, l.layerWeight * 2 - 1)
+    if (F.density !== 'At Capacity') {
+      count = max(2, F.layerWeight * 2 - 1)
       full = false
-      emptyCvrg = roundToDec(l.emptyWeight / l.weight * (1 / max(1, (l.layerWeight - 1))))
+      emptyCvrg = roundToDec(F.emptyWeight / F.weight * (1 / max(1, (F.layerWeight - 1))))
     }
     let cvrg = { empty: emptyCvrg, layer: layerCvrg, total: 0 }
     console.log('emptyCvrg', emptyCvrg)
@@ -202,16 +202,16 @@ class ProtoMill {
     let methods
     let coverage = cvrg.layer
     if (i === count) {
-      methods = ['groupAvail', this.modifierStyle]
+      methods = ['groupAvail', F.modifierStyle]
       coverage = roundToDec((1 - cvrg.total))
     }
     if (1 < i && i < count) {
       if (!full && i % 2 === 0) {
-        methods = ['empty', this.modifierStyle]
+        methods = ['empty', F.modifierStyle]
         coverage = cvrg.empty
-      } else { methods = this.modifierStyle }
+      } else { methods = F.modifierStyle }
     }
-    if (i === 1) { methods = [this.seedStyle, this.modifierStyle] }
+    if (i === 1) { methods = [F.seedStyle, F.modifierStyle] }
     cvrg.total += coverage
 
     return { methods: methods, coverage: coverage }
