@@ -60,7 +60,7 @@ function calculateFeatures(token = tokenData) {
     symmetryStyle
     insetVariability
     pyramidal
-    groups
+    // groups
     // shape dependencies
     shapeInterpreter
     shrinkwrap
@@ -119,7 +119,7 @@ function calculateFeatures(token = tokenData) {
       // this.gridTraversalStart = this.enums.startQuad.feature(r)
       // this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.modifierStyle = this.enums.modifierStyle.feature(r)
-      this.groups = this.#calcGroups(r)
+      // this.groups = this.#calcGroups(r)
       this.symmetryStyle = this.#calcSymmetry(r)
       this.insetVariability = this.enums.insetVariability.feature(r)
       this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
@@ -322,39 +322,38 @@ function calculateFeatures(token = tokenData) {
       }
       return density
     }
-    get #layerWeight() { return this.layerCounts.adds + this.layerCounts.subs }
-    get #emptyWeight() { return this.weight - this.#layerWeight }
+    get layerWeight() { return this.layerCounts.adds + this.layerCounts.subs }
+    get emptyWeight() { return this.weight - this.layerWeight }
 
     //METH:
     #calcWeight(r) {
       switch (this.density) {
         case 'So Lonely':
-          return floor(this.#layerWeight / r.random_num(0.1, 0.4))
+          return floor(this.layerWeight / r.random_num(0.1, 0.4))
         case 'Some Availability':
-          return ceil(this.#layerWeight / r.random_num(0.5, 0.9))
+          return ceil(this.layerWeight / r.random_num(0.5, 0.9))
         case 'At Capacity':
-          return max(2, this.#layerWeight)
+          return max(2, this.layerWeight)
       }
     }
+    //TODO: DEPRECATE - moved to ProtoMill
     //METH:
-    #calcGroups(r) {
-      const layerWeight = this.layerCounts.adds + this.layerCounts.subs
+    #calcGroups() {
       const layerCvrg = round(1 / this.weight * 1000) / 1000
-      const emptyWeight = this.weight - layerWeight
 
       console.log('density', this.density)
       console.log('total weight', this.weight)
-      console.log('layerWeight', layerWeight)
-      console.log('emptyWeight', emptyWeight)
+      console.log('layerWeight', this.layerWeight)
+      console.log('emptyWeight', this.emptyWeight)
       console.log('layerCvrg', layerCvrg)
 
-      let count = layerWeight
+      let count = this.layerWeight
       let full = true
       let emptyCvrg = 0
       if (this.density !== 'At Capacity') {
-        count = max(2, layerWeight * 2 - 1)
+        count = max(2, this.layerWeight * 2 - 1)
         full = false
-        emptyCvrg = round(emptyWeight / this.weight * (1 / max(1, (layerWeight - 1))) * 1000) / 1000
+        emptyCvrg = round(this.emptyWeight / this.weight * (1 / max(1, (this.layerWeight - 1))) * 1000) / 1000
       }
       let cvrg = { empty: emptyCvrg, layer: layerCvrg, total: 0 }
       console.log('emptyCvrg', emptyCvrg)
@@ -362,14 +361,15 @@ function calculateFeatures(token = tokenData) {
       console.log('full', full)
       let groups = []
       for (let i = 1; i <= count; i++) {
-        const group = this.#calcgroup(r, i, count, full, cvrg)
+        const group = this.#calcgroup(i, count, full, cvrg)
         console.log('group', i, group)
         groups.push(group)
       }
       return groups
     }
+    //TODO: DEPRECATE - moved to ProtoMill
     //METH:
-    #calcgroup(r, i, count, full, cvrg) {
+    #calcgroup(i, count, full, cvrg) {
       let methods
       let coverage = cvrg.layer
       if (i === count) {
@@ -383,12 +383,9 @@ function calculateFeatures(token = tokenData) {
         } else { methods = this.modifierStyle }
       }
       if (i === 1) { methods = [this.seedStyle, this.modifierStyle] }
-
       cvrg.total += coverage
-      return {
-        methods: methods,
-        coverage: coverage,
-      }
+
+      return { methods: methods, coverage: coverage }
     }
     //METH:
     #calcSymmetry(r) {
@@ -397,9 +394,9 @@ function calculateFeatures(token = tokenData) {
       let start = 'None'
       if (style !== 'None') {
         if (this.density === 'At Capacity') { this.enums.symmetryUse.removeOptions(['Available']) }
-        if (this.#layerWeight < 3) {
+        if (this.layerWeight < 3) {
           this.enums.symmetryUse.removeOptions(['Some Layers'])
-          if (this.#layerWeight === 1) { this.enums.symmetryUse.removeOptions(['One Layer']) }
+          if (this.layerWeight === 1) { this.enums.symmetryUse.removeOptions(['One Layer']) }
         }
         use = this.enums.symmetryUse.feature(r)
         start = this.enums.startQuad.feature(r)
