@@ -138,7 +138,7 @@ function setupFeatures() {
   calculateFeatures(tokenData)
   console.log('F: FeatureSet', F)
   console.log('layers', F.layers)
-  console.log('groups', F.groups)
+
 }
 
 // FUNC: setupColors()
@@ -164,51 +164,21 @@ function setupBackground() {
   FRAME = new Frame(BG)
 }
 
-// FUNC: makePrototype()
-// function makePrototype(feats) {
-//   //configure grid
-//   let grid = new Grid(FRAME, { x: F.x, y: F.y })
-//   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
-//   //configure baseLayer
-//   let baseShader
-//   if (F.baseLayer === 'None') {
-//     grid.inset(R.random_num(0.9, 0.95))
-//   } else {
-//     grid.inset(R.random_num(0.7, 0.9))
-//     let baseShadeStack
-//     if (F.baseLayer === 'Additive') {
-//       baseShadeStack = Shade.neuShadeSVGFactory(
-//         { mag: R.random_num(0.5, 2), start: .5, pixToUserUnits: FRAME.pixToUserUnits })
-//     } else {
-//       baseShadeStack = Shade.neuShadeSVGFactory(
-//         { mag: grid.gridCellBounds.size.x * 0.5, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
-//     }
-//     baseShader = createFilter().dropShadow(baseShadeStack)
-//     grid.setFilter(baseShader)
-//   }
-//   // configure shaders
-//   let shaders = new OpArray
-
-
-//   // configure grouping methods
-//   // configure groups
-//   // configure islands
-
-// }
-
 class ProtoMill {
   grid
   minCellSize
   baseShader
   shaders
+  groups
 
   constructor() { }
-
   //METH: 
   mkProtoType() {
     this.mkGrid()
     this.mkBaseShader()
     this.mkShaders()
+    this.mkGroups()
+    console.log('groups', this.groups)
   }
   //METH: 
   mkGrid() {
@@ -247,7 +217,51 @@ class ProtoMill {
   }
   //METH:
   mkGroups() {
+    const layerCvrg = roundToDec(l.weight)
+    console.log('density', l.density)
+    console.log('total weight', l.weight)
+    console.log('layerWeight', l.layerWeight)
+    console.log('emptyWeight', l.emptyWeight)
+    console.log('layerCvrg', layerCvrg)
 
+    let count = l.layerWeight
+    let full = true
+    let emptyCvrg = 0
+    if (l.density !== 'At Capacity') {
+      count = max(2, l.layerWeight * 2 - 1)
+      full = false
+      emptyCvrg = roundToDec(l.emptyWeight / l.weight * (1 / max(1, (l.layerWeight - 1))))
+    }
+    let cvrg = { empty: emptyCvrg, layer: layerCvrg, total: 0 }
+    console.log('emptyCvrg', emptyCvrg)
+    console.log('count', count)
+    console.log('full', full)
+    let groups = []
+    for (let i = 1; i <= count; i++) {
+      const group = this.mkGroup(i, count, full, cvrg)
+      console.log('group', i, group)
+      groups.push(group)
+    }
+    this.groups = groups
+  }
+  //METH:
+  mkGroup(i, count, full, cvrg) {
+    let methods
+    let coverage = cvrg.layer
+    if (i === count) {
+      methods = ['groupAvail', this.modifierStyle]
+      coverage = roundToDec((1 - cvrg.total))
+    }
+    if (1 < i && i < count) {
+      if (!full && i % 2 === 0) {
+        methods = ['empty', this.modifierStyle]
+        coverage = cvrg.empty
+      } else { methods = this.modifierStyle }
+    }
+    if (i === 1) { methods = [this.seedStyle, this.modifierStyle] }
+    cvrg.total += coverage
+
+    return { methods: methods, coverage: coverage }
   }
 
 }
