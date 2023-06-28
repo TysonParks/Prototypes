@@ -170,7 +170,7 @@ function calculateFeatures(token = tokenData) {
     //METH:
     #calcBaseLayer(r) {
       const base = this.enums.baseLayer.feature(r)
-      const inset = (min, max) => { return r.random_num(min, max) }
+      const inset = (min, max) => { return roundToDec(r.random_num(min, max)) }
       switch (base) {
         case 'None':
           return 'None'
@@ -309,7 +309,7 @@ function calculateFeatures(token = tokenData) {
       const ratioVal = b / a
       const insetSml = insetLrg * ratioVal
       // console.log('insets', [insetLrg, insetSml])
-      return [insetLrg, insetSml]
+      return [roundToDec(insetLrg), roundToDec(insetSml)]
     }
     // #endregion
     // MARK: Group Methods
@@ -831,6 +831,11 @@ function calculateFeatures(token = tokenData) {
   function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
   function normalize(value, range) { return convertRange(value, range, [0, 1]) }
   function normalizeSubRange(subrange, range) { return [normalize(subrange[0], range), normalize(subrange[1], range)] }
+  // FUNC:
+  function roundToDec(number, decimalPlaces = 3) {
+    const factor = 10 ** decimalPlaces;
+    return Math.round(number * factor) / factor;
+  }
   // #endregion
 
   return calculateAll()
