@@ -493,7 +493,7 @@ function getKeyByValue(object, value) {
 }
 
 // FUNC:
-function roundToDec(number, decimalPlaces) {
+function roundToDec(number, decimalPlaces = 3) {
   const factor = 10 ** decimalPlaces;
   return Math.round(number * factor) / factor;
 }
@@ -534,7 +534,7 @@ class Range {
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
 const rangeArray = (start, stop, step = 1) => OpArray.from({ length: (stop - start) / step + 1 }, (_, i) => start + (i * step))
 
-//TODO: DEPRECATE? - included in ABFeatureScript.js
+//TODO: DEPRECATE? - included in ABFeatureScript.js - actually no, because they are wrapped in calculateFeatures()
 // MARK: Helper Methods
 function between(x, range = [0, 1]) { return x >= range[0] && x <= range[1] }
 function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
