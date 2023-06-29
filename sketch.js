@@ -214,12 +214,16 @@ class ProtoMill {
     if (i === 1) { methods = [F.seedStyle, F.modifierStyle] }
     cvrg.total += coverage
 
+
+
     return { methods: methods, coverage: coverage }
   }
   //METH:
   assignShaders() { }
   //METH:
   mkFinal() { }
+
+
 
 }
 
@@ -307,23 +311,23 @@ function gridTests2() {
     filter: shader1,
     inset: inset,
     direction: Direction.All,
-    taken: true,
+    // taken: true,
   })
 
   grid.findIslands({
     groupID: 'grp001',
     filter: shader1,
     inset: inset,
-    direction: Direction.Cardinal,
-    taken: true,
+    // direction: Direction.Cardinal,
+    // taken: true,
   })
 
   grid.findIslands({
     groupID: 'grp002',
     filter: shader1,
     inset: inset,
-    direction: Direction.Cardinal,
-    taken: true,
+    // direction: Direction.Cardinal,
+    // taken: true,
   })
 
   // grid.findIslands({
