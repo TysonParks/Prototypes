@@ -47,9 +47,9 @@ function setup() {
   setupColors()
   setupBackground()
   setupFeatures()
-  // gridTests2()
+  gridTests2()
   const mill = new ProtoMill()
-  mill.mkProtoType()
+  // mill.mkProtoType()
 
   //TESTING
   createGUI()
@@ -233,7 +233,7 @@ class ProtoMill {
 function gridTests2() {
   // FRAME.inset(.95)
   let gridX = R.random_int(2, 10)
-  // gridX = 5
+  gridX = 3
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   grid.inset(R.random_num(0.95, 0.95))
@@ -248,40 +248,40 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.9, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.6, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: 1, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.8, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: 8, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.4, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
   grid.setFilter(shader0)
   // console.log(grid.filter)
 
-  grid.randGroup(0.1)
-  // grid.randomComb({
-  //   selection: (grid.cellRows
-  //     // .rotated2D(90)
-  //     .flipped2D(Direction.Vertical)
-  //     .flat()),
-  //   keepRange: range(1, gridX - 1),
-  //   dropRange: range(gridX, gridX * 3),
-  //   start: 0
-  // })
+  // grid.randGroup(0.2)
+  grid.randomComb({
+    selection: (grid.cellRows
+      // .rotated2D(90)
+      .flipped2D(Direction.Vertical)
+      .flat()),
+    keepRange: range(1, gridX / 2),
+    dropRange: range(gridX * 2, gridX * 4),
+    start: 0
+  })
 
   // grid.comb({
   //   selection: (grid.cellRows
-  //     // .rotated2D(90)
-  //     // .flipped2D(Direction.Vertical)
+  //     .rotated2D(90)
+  //     .flipped2D(Direction.Horizontal)
   //     .flat()),
-  //   keep: 2, drop: 12, start: 0
+  //   keep: 2, drop: 8, start: 0
   // })
-  // grid.randGroup(0.1)
+  grid.randGroup(0.1)
 
   // grid.findIslands({
   //   // groupID: 'grp000',
@@ -290,8 +290,8 @@ function gridTests2() {
   // })
 
   grid.outlineTaken(Direction.Right, false)
-  grid.outlineTaken(Direction.Up, false)
-  grid.outlineTaken(Direction.All, true)
+  grid.outlineTaken(Direction.Up, true)
+  grid.outlineTaken(Direction.All, false)
   // grid.outlineTaken(Direction.All, false)
 
   // grid.outlineGroup('grp000', Direction.All, false)
@@ -308,8 +308,8 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp000',
-    filter: shader1,
-    inset: inset,
+    filter: shader0,
+    inset: 0.8,
     direction: Direction.All,
     // taken: true,
   })
@@ -317,14 +317,14 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp001',
     filter: shader1,
-    inset: inset,
+    inset: 0.8,
     // direction: Direction.Cardinal,
     // taken: true,
   })
 
   grid.findIslands({
     groupID: 'grp002',
-    filter: shader1,
+    filter: shader2,
     inset: inset,
     // direction: Direction.Cardinal,
     // taken: true,
@@ -343,13 +343,13 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Ordinal)
   // grid.groupNamed('grp002')?.setFilter(shader2)
 
-  // grid.findIslands({
-  //   // groupID: 'grp002',
-  //   filter: shader2,
-  //   inset: inset,
-  //   direction: Direction.Cardinal,
-  //   taken: false,
-  // })
+  grid.findIslands({
+    // groupID: 'grp002',
+    filter: shader2,
+    inset: inset,
+    direction: Direction.Cardinal,
+    taken: false,
+  })
 
   grid.groupNamed('grp000').setFilter(shader2)
   grid.groupNamed('grp000').inset(0.7)
