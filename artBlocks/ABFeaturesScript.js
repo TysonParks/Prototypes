@@ -130,8 +130,10 @@ function calculateFeatures(token = tokenData) {
     // #endregion
     // MARK: Grid Methods
     // #region Grid Methods
+
     //METH:
     #calcX(r) {
+      //FIXME: had a crash here with hash = "0xd86c78f27b1f09427e6822f299e686e9f4a1290577fef2452863588801cb774d"
       const x = parseInt(this.enums.gridX.feature(r))
       if (x < 4) {
         this.enums.extraLayers.removeOptions(['2', '3'])
