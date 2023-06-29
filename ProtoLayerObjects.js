@@ -1006,15 +1006,24 @@ class Grid extends ProtoLayer {
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
   //TODO: add filter paramater and implement useage, currently feeding this method filters in sketch.js 🤣😂
   //METH: findIslands()
-  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, direction = Direction.Cardinal, taken = true, stored = true, inset = 1 } = {}) {
-    let cells
+  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, filter, direction = Direction.Cardinal, taken = true, stored = true, inset = 1 } = {}) {
+    let cells, group, island
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
       else { cells = this.availableCells }
+      if (filter) { this.setFilter(filter) }
     }
     if (!selection) {
-      if (groupID) { cells = this.groupNamed(groupID)?.cells || OpArray.empty }
-      if (islandID) { cells = this.islandNamed(islandID)?.cells || OpArray.empty }
+      if (groupID) {
+        group = this.groupNamed(groupID)
+        cells = group?.cells || OpArray.empty
+        group.setFilter(filter)
+      }
+      if (islandID) {
+        island = this.islandNamed(islandID)
+        cells = island?.cells || OpArray.empty
+        island.setFilter(filter)
+      }
     } else {
       cells = OpArray.from(selection)
     }
@@ -1046,6 +1055,7 @@ class Grid extends ProtoLayer {
       tempIslands.push(island)
       // }
 
+      //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
       //NOTE: Non-recursive flood-fill implementation from: https://codeguppy.com/blog/flood-fill/index.html
       function findIslanders({ cell, grid, bounds: bounds, directions, groupID, islandID, taken } = {}) {
         fillstack.push(cell)
@@ -1605,6 +1615,7 @@ class Island extends ProtoLayer {
     })
     this.shape = thisShape
 
+    //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
     function findShape(direction) {
       let segLength = segments.length
       let subShape
@@ -1619,7 +1630,7 @@ class Island extends ProtoLayer {
         console.error(`END SUBSHAPE ${shapeIter}`)
         segments = segments.exclude(subShape, ['id'])
         subShapes.push(subShape)
-
+        //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
         function findSubShape(seg, direction) {
           fillstack.push(seg)
 
