@@ -781,6 +781,7 @@ class Grid extends ProtoLayer {
       else { return max }
     })
   }
+  get lastGroup() { return this.groups.last() }
   // get islands() { return this.findIslands({ selection: this.cells }) }
   // #endregion
   // MARK: Geometry Methods
@@ -1003,8 +1004,9 @@ class Grid extends ProtoLayer {
   //TODO: add transform functionality
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
+  //TODO: add filter paramater and implement useage, currently feeding this method filters in sketch.js 🤣😂
   //METH: findIslands()
-  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, direction = Direction.All, taken = true, stored = true, inset = 1 } = {}) {
+  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, direction = Direction.Cardinal, taken = true, stored = true, inset = 1 } = {}) {
     let cells
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
@@ -1187,6 +1189,12 @@ class Grid extends ProtoLayer {
   randGroup(amount) { this.assign(this.availableCells.randReduce(amount)) }
   //METH:
   groupAvail() { this.assign(this.availableCells) }
+  //METH:
+  rects(coverage, aspects) { }
+  //METH:
+  squares(coverage) { }
+  //METH:
+  snake() { }
   // #endregion
   // MARK: Grammar Modifiers
   // #region Grammar Modifiers
@@ -1225,6 +1233,8 @@ class Grid extends ProtoLayer {
   outlineTaken(direction = Direction.All, newGroup = true) {
     return this.outline({ selection: this.takenCells, direction, newGroup })
   }
+  //METH:
+  symmetrize({ selection, groupID, islandID, style, direction, start, use } = {}) { }
   // #endregion
   // MARK: Grammar Assignment Methods
   // #region Grammar Methods
@@ -1241,6 +1251,7 @@ class Grid extends ProtoLayer {
     // console.log('groupID', group.id)
     this.groups.push(group)
     this.updateCells({ groupID: group.id })
+    return this
   }
   //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
