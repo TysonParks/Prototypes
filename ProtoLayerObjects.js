@@ -769,6 +769,8 @@ class Grid extends ProtoLayer {
   get testColor() { return protoColor(0, 230, 0, 90) }
 
   get gridCellBounds() { return this.cellBounds() }
+  get columnCount() { return this.gridCellBounds.cellBoundsWidth }
+  get rowCount() { return this.gridCellBounds.cellBoundsHeight }
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
   get cells() { return this.cellRows.flat() }
   get cellColumns() { return this.cellRowsFlipped() }
@@ -1246,8 +1248,43 @@ class Grid extends ProtoLayer {
   //METH:
   symmetrize({ selection, groupID, islandID, style, direction, start, use } = {}) { }
   // #endregion
+  // MARK: Grammar Enum Methods
+  // #region Grammar Enum Methods
+  //METH:
+  useSeed(named, coverage) {
+    switch (named) {
+      case 'Noise':
+        this.randGroup(coverage)
+        break
+      case 'Thick Random Comb':
+
+        break
+      case 'Thin Random Comb':
+
+        break
+      case 'Rectangles':
+
+        break
+      case 'Squares':
+
+        break
+      case 'Vertical Pattern':
+
+        this.comb()
+        break
+      case 'Horizontal Pattern':
+
+        break
+      case 'Ordinal Pattern':
+
+        break
+      case 'Snake':
+
+    }
+  }
+  // #endregion
   // MARK: Grammar Assignment Methods
-  // #region Grammar Methods
+  // #region Grammar AssignmentMethods
   //METH:
   assign(selection, group) {
     if (selection.isEmpty) { return }
