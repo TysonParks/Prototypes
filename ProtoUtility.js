@@ -492,10 +492,27 @@ function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
 }
 
-// FUNC:
+//MARK: Number Utilities
+//NOTE: made with ChatGPT 4.0 June30.2023
+// FUNC: primeDivisors() get array of prime divisors
+function primeDivisors(number) {
+  const divisors = []
+  for (let i = 2; i <= Math.sqrt(number); i++) {
+    while (number % i === 0) {
+      divisors.push(i)
+      number /= i
+    }
+  }
+  if (number > 1) {
+    divisors.push(number)
+  }
+  return divisors
+}
+
+// FUNC: roundToDec() round to number of decimal places
 function roundToDec(number, decimalPlaces = 3) {
-  const factor = 10 ** decimalPlaces;
-  return Math.round(number * factor) / factor;
+  const factor = 10 ** decimalPlaces
+  return Math.round(number * factor) / factor
 }
 
 // TODO: consider the intersection with the DOM Range interface
