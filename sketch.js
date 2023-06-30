@@ -233,7 +233,7 @@ class ProtoMill {
 function gridTests2() {
   // FRAME.inset(.95)
   let gridX = R.random_int(2, 10)
-  gridX = 3
+  // gridX = 7
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   grid.inset(R.random_num(0.95, 0.95))
@@ -281,7 +281,7 @@ function gridTests2() {
   //     .flat()),
   //   keep: 2, drop: 8, start: 0
   // })
-  grid.randGroup(0.1)
+  grid.randGroup(0.2)
 
   // grid.findIslands({
   //   // groupID: 'grp000',
@@ -310,7 +310,7 @@ function gridTests2() {
     groupID: 'grp000',
     filter: shader0,
     inset: 0.8,
-    direction: Direction.All,
+    // direction: Direction.All,
     // taken: true,
   })
 
@@ -318,15 +318,15 @@ function gridTests2() {
     groupID: 'grp001',
     filter: shader1,
     inset: 0.8,
-    // direction: Direction.Cardinal,
+    // direction: Direction.All,
     // taken: true,
   })
 
   grid.findIslands({
     groupID: 'grp002',
     filter: shader2,
-    inset: inset,
-    // direction: Direction.Cardinal,
+    inset: 0.8,
+    direction: Direction.All,
     // taken: true,
   })
 
@@ -346,8 +346,8 @@ function gridTests2() {
   grid.findIslands({
     // groupID: 'grp002',
     filter: shader2,
-    inset: inset,
-    direction: Direction.Cardinal,
+    inset: 0.8,
+    // direction: Direction.Cardinal,
     taken: false,
   })
 
