@@ -331,8 +331,8 @@ class Shade {
     // console.log('components', vector.x, vector.y, blurRad)
     const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: 1 * blurRad, col: highCol, inset: inset })
     const shadow = this.dropShadSVG({ x: 1 * vector.x, y: 1 * vector.y, blurRad: 1 * blurRad, col: shadCol, inset: inset })
-    return [shadow, highlight]
-    // return [highlight, shadow]
+    // return [shadow, highlight]
+    return [highlight, shadow]
   }
   //METH:
   static neuShadeSVGFactory({
@@ -353,7 +353,6 @@ class Shade {
     let neuShades = cleanSlices(start, mag, globalControls.shadQuality)
     // console.log('slices', neuShades)
 
-
     neuShades = neuShades
       .map(e => e / pixToUserUnits)
       .map(sliceOffset => this.neuShadeSVG(vector.setMag(sliceOffset), sliceOffset / sqrt(2), cols[0], cols[1], inset))
@@ -361,6 +360,8 @@ class Shade {
     // console.log('neuShades', neuShades)
     return neuShades
   }
+  // MARK: OG CSS Methods
+  // #region OG CSS Methods
   //METH: Box-Shadow CSS
   static boxShadCSS(x, y, blurRad = 0, spreadRad = 0, col = color(0), inset = false) {
     let color = col.toString('#rrggbb')
@@ -396,6 +397,7 @@ class Shade {
     neuShads = neuShads.map(sliceOffset => this.neuBoxShadCSS(vector.setMag(sliceOffset), 2 * sliceOffset, cols[0], cols[1], inset))
     return neuShads
   }
+  // #endregion
 }
 
 // TODO: can these functions be generalized into Classes? Or extensions on a Color class?
