@@ -494,19 +494,30 @@ function getKeyByValue(object, value) {
 
 //MARK: Number Utilities
 //NOTE: made with ChatGPT 4.0 June30.2023
-// FUNC: primeDivisors() get array of prime divisors
-function primeDivisors(number) {
+// FUNC: getDivisors() get array of prime divisors
+function getDivisors(number, prime = false) {
   const divisors = []
-  for (let i = 2; i <= Math.sqrt(number); i++) {
-    while (number % i === 0) {
+  for (let i = 2; i <= sqrt(number); i++) {
+    if (number % i === 0) {
       divisors.push(i)
-      number /= i
+      if (i !== number / i) {
+        divisors.push(number / i)
+      }
     }
   }
-  if (number > 1) {
-    divisors.push(number)
+  if (prime) {
+    return divisors.filter((divisor) => isPrime(divisor)).sort((a, b) => a - b)
   }
-  return divisors
+  return divisors.sort((a, b) => a - b)
+}
+//NOTE: made with ChatGPT 4.0 June30.2023
+// FUNC: isPrime() 
+function isPrime(number) {
+  if (number < 2) { return false }
+  for (let i = 2; i <= Math.sqrt(number); i++) {
+    if (number % i === 0) { return false }
+  }
+  return true
 }
 
 // FUNC: roundToDec() round to number of decimal places
