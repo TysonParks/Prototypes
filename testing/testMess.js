@@ -672,7 +672,6 @@ function styleP6() {
   );
 }
 
-
 // NOTE: Migrated following funcs from sketch.js on June 15, 2023
 // MARK: Recent Test Functions
 // #region Recent Test Functions
@@ -1090,5 +1089,195 @@ function nmJ(direction = directions.out, offset, blurRadius = offset * 2, highli
 
 function drawSquiggle() {
   let svg = SVGElement
+}
+
+// NOTE: Removed from Frame on July 4th, 2023
+// MARK: DeprecatedFrameMethods
+class DeprecatedFrameMethods {
+  //METH: 
+  testElementsSetup() {
+    this.testRect = createSVGElt('rect').id('testRect')
+    this.testCircle1 = createSVGElt('circle').id('testCircle1')
+    this.testCircle2 = createSVGElt('circle').id('testCircle2')
+    this.testCircle3 = createSVGElt('circle').id('testCircle3')
+
+    this.dropShadow1 = createFilter()
+    this.dropShadow2 = createFilter()
+    this.dropShadow3 = createFilter()
+  }
+  //METH: 
+  testElementsDraw() {
+    //COLORIZED
+    // const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: false };
+    // const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: false };
+    // const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: false };
+    // const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: false };
+    // const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: false };
+    // const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: false };
+    // const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: false };
+    // const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: false };
+    // const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: false };
+    // const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: false };
+
+    // const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(0, 160, 0), inset: true };
+    // const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(0, 255, 0), inset: true };
+    // const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(0, 100, 100), inset: true };
+    // const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(0, 255, 255), inset: true };
+    // const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(140, 0, 140), inset: true };
+    // const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 0, 250), inset: true };
+    // const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(180, 180, 0), inset: true };
+    // const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 0), inset: true };
+    // const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 0, 0), inset: true };
+    // const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 0, 0), inset: true };
+
+    // MONO
+    const shadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: false };
+    const shadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: false };
+    const shadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: false };
+    const shadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: false };
+    const shadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: false };
+    const shadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: false };
+    const shadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: false };
+    const shadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: false };
+    const shadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: false };
+    const shadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: false };
+
+    const insetShadow01 = { dx: 0.5, dy: 0.5, blur: 0.25, color: protoColor(160, 160, 160), inset: true };
+    const insetShadow0 = { dx: -0.25, dy: -0.25, blur: 0.125, color: protoColor(255, 255, 255), inset: true };
+    const insetShadow1 = { dx: 1, dy: 1, blur: 0.5, color: protoColor(160, 160, 160), inset: true };
+    const insetShadow2 = { dx: -1, dy: -1, blur: 0.5, color: protoColor(255, 255, 255), inset: true };
+    const insetShadow3 = { dx: 2, dy: 2, blur: 1, color: protoColor(175, 175, 175), inset: true };
+    const insetShadow4 = { dx: -2, dy: -2, blur: 1, color: protoColor(250, 250, 250), inset: true };
+    const insetShadow5 = { dx: 4, dy: 4, blur: 2, color: protoColor(190, 190, 190), inset: true };
+    const insetShadow6 = { dx: -4, dy: -4, blur: 2, color: protoColor(245, 245, 245), inset: true };
+    const insetShadow7 = { dx: 8, dy: 8, blur: 4, color: protoColor(205, 205, 205), inset: true };
+    const insetShadow8 = { dx: -8, dy: -8, blur: 4, color: protoColor(240, 240, 240), inset: true };
+
+    this.dropShadow1
+      .dropShadow([
+        insetShadow8,
+        insetShadow7,
+        insetShadow6,
+        insetShadow5,
+        insetShadow4,
+        insetShadow3,
+        insetShadow2,
+        insetShadow1,
+        // insetShadow0,
+        // insetShadow01,
+        shadow8,
+        shadow7,
+        shadow6,
+        shadow5,
+        shadow4,
+        shadow3,
+        shadow2,
+        shadow1,
+        // shadow0,
+        // shadow01,
+      ])
+    // .applyFilterToElement(this.testCircle2)
+
+    this.dropShadow2
+      .dropShadow([
+        shadow8,
+        shadow7,
+        shadow6,
+        shadow5,
+        shadow4,
+        shadow3,
+        shadow2,
+        shadow1,
+        shadow0,
+        shadow01,
+      ])
+    // .applyFilterToElement(this.testCircle1)
+    // .applyFilterToElement(this.testCircle2)
+
+    this.dropShadow3
+      .dropShadow([
+        // sh  insetShadow8,
+        // insetShadow7,
+        insetShadow6,
+        insetShadow5,
+        insetShadow4,
+        insetShadow3,
+        insetShadow2,
+        insetShadow1,
+        // insetShadow0,
+        // insetShadow01,
+      ])
+
+    this.testRect
+      .attribute('x', `${2}`)
+      .attribute('y', `${2}`)
+      .attribute('width', `${96}`)
+      .attribute('height', `${196}`)
+      .attribute('rx', `${18}`)
+      .attribute('ry', `${18}`)
+      .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '1')
+      // .attribute('stroke-width', '1')
+      // .attribute('stroke-linejoin', 'round')
+      .parent(this.svgElt)
+      .applyFilter(this.dropShadow3)
+
+    this.testCircle1
+      .attribute('cx', `${50}`)
+      .attribute('cy', `${40}`)
+      .attribute('r', `${20}`)
+      .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '1')
+      // .attribute('stroke', protoColor(230))
+      // .attribute('stroke-width', '4')
+      // .attribute('stroke-linejoin', 'round')
+      .parent(this.svgElt)
+      .applyFilter(this.dropShadow1, 2)
+
+    this.testCircle2
+      .attribute('cx', `${50}`)
+      .attribute('cy', `${100}`)
+      .attribute('r', `${20}`)
+      .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '1')
+      .attribute('stroke', protoColor(230))
+      .attribute('stroke-opacity', '1')
+      .attribute('stroke-width', '6')
+      .attribute('pathLength', '360')
+      .attribute('stroke-dashoffset', '18')
+      .attribute('stroke-dasharray', `${180 / 6} `)
+      .attribute('stroke-linejoin', 'round')
+      .attribute('stroke-linecap', 'round')
+      .parent(this.svgElt)
+      .applyFilter(this.dropShadow2)
+
+
+    this.testCircle3
+      .attribute('cx', `${50}`)
+      .attribute('cy', `${160}`)
+      .attribute('r', `${20}`)
+      .attribute('fill', protoColor(230))
+      .attribute('fill-opacity', '1')
+      // .attribute('stroke', protoColor(230))
+      // .attribute('stroke-opacity', '.125')
+      // .attribute('stroke-width', '6')
+      // .attribute('pathLength', '360')
+      // .attribute('stroke-dashoffset', '18')
+      // .attribute('stroke-dasharray', `${180 / 16} `)
+      // .attribute('stroke-linejoin', 'round')
+      // .attribute('stroke-linecap', 'round')
+      .parent(this.svgElt)
+    // .applyFilter(this.dropShadow3, 3)
+    // .applyFilter(this.dropShadow1, 3, 4)
+
+    // console.log('circle3', this.testCircle3)
+    this.testCircle3
+      .applyFilter(this.dropShadow2, 3)
+    // console.log('circle3', this.testCircle3)
+    // this.testCircle3
+    // .applyFilter(this.dropShadow3, 3, 3000)
+
+
+  }
 }
 
