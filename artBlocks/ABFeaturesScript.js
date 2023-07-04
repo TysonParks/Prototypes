@@ -876,11 +876,12 @@ function unusedFeatures() {
     luckyNumber: {
       name: 'Lucky Number',
       options: [
-        ['7', 0.75],
-        ['13', 0.75],
+        ['1', 'BullsEye'], // concentric circles around middle, maybe pyramidal as well?
+        ['13', 'Unlucky Number'], //
         ['23', 0.75],
-        ['69', 0.1],
-        ['420', 0.15],
+        ['69', 'Sexy Meme'],
+        ['90', 'Right Angle']
+        ['420', 'Stoney Meme'],
       ]
     },
 
