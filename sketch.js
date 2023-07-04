@@ -236,9 +236,10 @@ function gridTests2() {
   // gridX = 7
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
-  grid.inset(R.random_num(0.95, 0.95))
+  let gridInset = R.random_num(0.75, 0.95)
+  grid.inset(gridInset)
   // grid.inset(.8)
-  grid.insetCells(R.random_num(0.1, .4))
+  // grid.insetCells(R.random_num(0.1, .4))
   // grid.insetCells(.8, 'grp000')
 
   // console.log('Grid:', gridX)
@@ -260,8 +261,10 @@ function gridTests2() {
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
-  grid.setFilter(shader0)
-  // console.log(grid.filter)
+  FRAME.setFilter(shader1)
+  // grid.setFilter(shader1)
+  console.log('FRAME Filter', FRAME.filter)
+  console.log('gridFilter', grid.filter)
 
   grid.randGroup(4 / grid.cellCount)
   // grid.randomComb({
@@ -307,7 +310,7 @@ function gridTests2() {
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
   let inset = R.random_num(0.9, 0.97)
-  inset = 0.85
+  inset = 0.8
   // console.log('inset', inset)
 
   grid.findIslands({
@@ -355,8 +358,8 @@ function gridTests2() {
     taken: false,
   })
 
-  grid.groupNamed('grp000').setFilter(shader2)
-  grid.groupNamed('grp000').inset(0.7)
+  // grid.groupNamed('grp000').setFilter(shader2)
+  // grid.groupNamed('grp000').inset(0.7)
   // grid.groupNamed('grp001')?.setFilter(shader1)
 
   // console.log('shape0', grid.islands[0].shape)
