@@ -771,6 +771,7 @@ class Grid extends ProtoLayer {
   get gridCellBounds() { return this.cellBounds() }
   get columnCount() { return this.gridCellBounds.cellBoundsWidth }
   get rowCount() { return this.gridCellBounds.cellBoundsHeight }
+  get cellCount() { return this.gridCellBounds.cellBoundsCount }
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
   get cells() { return this.cellRows.flat() }
   get cellColumns() { return this.cellRowsFlipped() }
@@ -1251,7 +1252,13 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Enum Methods
   // #region Grammar Enum Methods
   //METH:
-  useSeed(named, coverage) {
+  useSeed(named, coverage, selection = this.availableCells) {
+    const target = round(coverage * this.cellCount)
+    const fillsColumn = target >= this.rowCount
+    const fillsRow = target >= this.rowcount
+    const range = vert(round(target * 0.5), round(target * 1.5))
+    const divisors = primeDivisors(this.cellCount)
+
     switch (named) {
       case 'Noise':
         this.randGroup(coverage)
@@ -1269,8 +1276,14 @@ class Grid extends ProtoLayer {
 
         break
       case 'Vertical Pattern':
+        const keep = R.random_num(1, this.columnCount)
+        const dropBase = this.columnCount - keep
 
-        this.comb()
+        this.comb({
+          keep: keep,
+          drop: dropBase,
+          start: R.random_num(0, this.cellCount / 2 - 1)
+        })
         break
       case 'Horizontal Pattern':
 
