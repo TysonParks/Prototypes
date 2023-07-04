@@ -263,16 +263,16 @@ function gridTests2() {
   grid.setFilter(shader0)
   // console.log(grid.filter)
 
-  // grid.randGroup(0.2)
-  grid.randomComb({
-    selection: (grid.cellRows
-      // .rotated2D(90)
-      .flipped2D(Direction.Vertical)
-      .flat()),
-    keepRange: range(1, gridX / 2),
-    dropRange: range(gridX * 2, gridX * 4),
-    start: 0
-  })
+  grid.randGroup(4 / grid.cellCount)
+  // grid.randomComb({
+  //   selection: (grid.cellRows
+  //     // .rotated2D(90)
+  //     .flipped2D(Direction.Vertical)
+  //     .flat()),
+  //   keepRange: range(1, gridX / 2),
+  //   dropRange: range(gridX * 2, gridX * 4),
+  //   start: 0
+  // })
 
   // grid.comb({
   //   selection: (grid.cellRows
@@ -281,7 +281,7 @@ function gridTests2() {
   //     .flat()),
   //   keep: 2, drop: 8, start: 0
   // })
-  grid.randGroup(0.2)
+  // grid.randGroup(0.2)
 
   // grid.findIslands({
   //   // groupID: 'grp000',
@@ -290,9 +290,12 @@ function gridTests2() {
   // })
 
   grid.outlineTaken(Direction.Right, false)
-  grid.outlineTaken(Direction.Up, true)
-  grid.outlineTaken(Direction.All, false)
-  // grid.outlineTaken(Direction.All, false)
+  // grid.outlineTaken(Direction.Up, true)
+  grid.outlineTaken(Direction.Up, false)
+  // grid.outlineTaken(Direction.All, true)
+  grid.randGroup(4 / grid.cellCount)
+  grid.outlineGroup(grid.lastGroup.id, Direction.All, false)
+
 
   // grid.outlineGroup('grp000', Direction.All, false)
   // grid.outline({ groupID: 'grp000', direction: Direction.All, newGroup: true })
@@ -303,32 +306,33 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
-  const inset = R.random_num(0.9, 0.97)
+  let inset = R.random_num(0.9, 0.97)
+  inset = 0.85
   // console.log('inset', inset)
 
   grid.findIslands({
     groupID: 'grp000',
     filter: shader0,
-    inset: 0.8,
+    inset: inset,
     // direction: Direction.All,
     // taken: true,
   })
 
   grid.findIslands({
     groupID: 'grp001',
-    filter: shader1,
-    inset: 0.8,
+    filter: shader2,
+    inset: inset,
     // direction: Direction.All,
     // taken: true,
   })
 
-  grid.findIslands({
-    groupID: 'grp002',
-    filter: shader2,
-    inset: 0.8,
-    direction: Direction.All,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp002',
+  //   filter: shader1,
+  //   inset: inset,
+  //   direction: Direction.All,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp003',
@@ -345,9 +349,9 @@ function gridTests2() {
 
   grid.findIslands({
     // groupID: 'grp002',
-    filter: shader2,
-    inset: 0.8,
-    // direction: Direction.Cardinal,
+    filter: shader1,
+    inset: inset,
+    direction: Direction.All,
     taken: false,
   })
 
