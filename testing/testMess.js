@@ -2,17 +2,16 @@
 //FUNC: FUNCTION TESTS
 function functionTestPrint() {
   //NOTE: primeDivisors() test
-
-  console.log('prime divisors 8', getDivisors(8))
-  console.log('prime divisors 18', getDivisors(18))
-  console.log('prime divisors 32', getDivisors(32))
-  console.log('prime divisors 30', getDivisors(30))
-  console.log('prime divisors 50', getDivisors(50))
-  console.log('prime divisors 72', getDivisors(72))
-  console.log('prime divisors 98', getDivisors(98))
-  console.log('prime divisors 128', getDivisors(128))
-  console.log('prime divisors 162', getDivisors(162))
-  console.log('prime divisors 200', getDivisors(200))
+  // console.log('prime divisors 8', getDivisors(8))
+  // console.log('prime divisors 18', getDivisors(18))
+  // console.log('prime divisors 32', getDivisors(32))
+  // console.log('prime divisors 30', getDivisors(30))
+  // console.log('prime divisors 50', getDivisors(50))
+  // console.log('prime divisors 72', getDivisors(72))
+  // console.log('prime divisors 98', getDivisors(98))
+  // console.log('prime divisors 128', getDivisors(128))
+  // console.log('prime divisors 162', getDivisors(162))
+  // console.log('prime divisors 200', getDivisors(200))
 
   //NOTE: OpArray.shift() test
   // const arrayOne = OpArray.from([1, 2, 3, 4, 5])
