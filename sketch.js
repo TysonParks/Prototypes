@@ -231,14 +231,15 @@ class ProtoMill {
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
-  // FRAME.inset(.95)
+
   let gridX = R.random_int(2, 10)
   // gridX = 7
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
-  grid.inset(gridInset)
-  // grid.inset(.8)
+  // grid.inset(gridInset)
+  FRAME.inset(.95)
+  // grid.inset(.95)
   // grid.insetCells(R.random_num(0.1, .4))
   // grid.insetCells(.8, 'grp000')
 
@@ -262,7 +263,7 @@ function gridTests2() {
   // console.log('shadeStack2', shadeStack2)
 
   FRAME.setFilter(shader1)
-  // grid.setFilter(shader1)
+  grid.setFilter(shader1)
   console.log('FRAME Filter', FRAME.filter)
   console.log('gridFilter', grid.filter)
 
@@ -315,7 +316,7 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp000',
-    filter: shader0,
+    filter: shader1,
     inset: inset,
     // direction: Direction.All,
     // taken: true,
@@ -323,7 +324,7 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp001',
-    filter: shader2,
+    filter: shader0,
     inset: inset,
     // direction: Direction.All,
     // taken: true,
@@ -352,7 +353,7 @@ function gridTests2() {
 
   grid.findIslands({
     // groupID: 'grp002',
-    filter: shader1,
+    filter: shader2,
     inset: inset,
     direction: Direction.All,
     taken: false,
