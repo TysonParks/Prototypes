@@ -52,6 +52,8 @@ class ProtoLayer {
     return [clear, stroke, fill, black]
   }
 
+  get cornerRadius() { return 1 }
+
   get insetAmount() {
     if (this._insetAmount) { return this._insetAmount }
     else { return this.protoParent.insetAmount }
@@ -156,6 +158,8 @@ class ProtoLayer {
       this.rect
         // .svgLook(this.look)
         .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+        .attribute('rx', `${this.cornerRadius}`)
+        .attribute('ry', `${this.cornerRadius}`)
 
       if (this.filter) {
         this.rect.applyFilter(this.filter, 2)
@@ -582,12 +586,14 @@ class Grid extends ProtoLayer {
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'grid') }
   get testColor() { return protoColor(0, 230, 0, 90) }
+  get cornerRadius() { return this.minCellWidth / 2 }
 
   get gridCellBounds() { return this.cellBounds() }
   get columnCount() { return this.gridCellBounds.cellBoundsWidth }
   get rowCount() { return this.gridCellBounds.cellBoundsHeight }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
+  get minCellWidth() { return min(this.cellSize.x, this.cellSize.y) }
   get cells() { return this.cellRows.flat() }
   get cellColumns() { return this.cellRowsFlipped() }
   get availableCells() { return this.cells.filter(e => e.available) }
@@ -1175,13 +1181,13 @@ class Grid extends ProtoLayer {
 class CellGroup extends ProtoLayer {
   grid
   cells = new OpArray
-  color
+  // color
 
   constructor(protoParent, svgParent, grid) {
     super({ protoParent: protoParent, svgParent: svgParent, drawSVG: false, drawRect: false })
     this.grid = grid
     this.finishSetup(S.Groups)
-    this.color = R.random_hash(3, '#')
+    // this.color = R.random_hash(3, '#')
   }
 
   // MARK: Computed Properties
@@ -1290,7 +1296,7 @@ class Cell extends ProtoLayer {
   groupID = -1
   islandIDs = new Set()
   islandChecked = false
-  color
+  // color
   segments
 
   constructor({ protoParent, svgParent, grid, index, coords, available = true, color = '888' } = {}) {
@@ -1300,7 +1306,7 @@ class Cell extends ProtoLayer {
     this.index = index
     this.coords = coords
     this.available = available
-    this.color = color
+    // this.color = color
     this.finishSetup(S.Cells)
   }
 
@@ -1401,7 +1407,7 @@ class Island extends ProtoLayer {
   cells
   shape
   direction
-  color
+  // color
   constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, inset = 1 } = {}) {
     super({ protoParent: protoParent, svgParent: svgParent, inset: inset, drawRect: false, drawSVG: false })
     this.cells = cells
@@ -1411,7 +1417,7 @@ class Island extends ProtoLayer {
     this.parentIslandID = parentIslandID
     if (stored) { this.finishSetup(S.Islands) }
     // else { this.finishSetup() }
-    this.color = R.random_hash(3, '#')
+    // this.color = R.random_hash(3, '#')
     // this.createShape()
   }
   // MARK: Computed Properties
@@ -1567,7 +1573,7 @@ class Shape extends ProtoLayer {
   subShapes
   turns
   parts
-  color
+  // color
   testVerts
   testColor
 
