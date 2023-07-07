@@ -15,6 +15,7 @@ class ProtoLayer {
   svgParent // 'SVG' p5.Element
   _insetAmount
   _filter
+  _filterLoft
   drawSVG
   drawRect
 
@@ -42,13 +43,13 @@ class ProtoLayer {
   get protoLook() { return SVGLook.clear }
   get testColor() { return protoColor(0, 230, 230, 1) }
 
+  get color() { return protoColor(230) }
 
   get look() {
     const clear = SVGLook.clear
     const stroke = testingControls.borders ? SVGLook.testStroke() : []
     const fill = testingControls.testColors ? SVGLook.testFill() : []
     const black = testingControls.blackMode ? SVGLook.blackAndWhite : []
-
     return [clear, stroke, fill, black]
   }
 
@@ -63,6 +64,9 @@ class ProtoLayer {
     if (this._filter) { return this._filter }
     if (this.protoParent?.filter) { return this.protoParent.filter }
   }
+
+  get filterLoft() { return this._filterLoft ?? 0 }
+  get loft() { return this.protoParent.loft + this.filterLoft }
   // #endregion
   // MARK: Computed Properties
   // #region Computed Properties
@@ -182,6 +186,11 @@ class ProtoLayer {
     this._filter = filter
     this.drawElement()
   }
+  //METH: 
+  setFilterLoft(loft) {
+    this._filterLoft = loft
+  }
+
   //TODO: implement this!
   drawChildElements() {
 
@@ -201,13 +210,16 @@ class Frame extends ProtoLayer {
   cornerRadius = 5
 
   constructor(svgParent) {
-    super({ protoParent: svgParent, inset: 1, drawRect: false })
+    super({ protoParent: svgParent, inset: 1, drawRect: true })
     this.finishSetup(S.Frame)
   }
 
   get look() { return SVGLook.clear }
   get testLook() { return Look.test(this.size, 'frame') }
   get testColor() { return protoColor(200, 200, 200) }
+
+  get loft() { return 0 }
+
   get bleedLook() {
     return [
       [CS.border, testingControls.borders ? '1px dashed orange' : 'none'],
@@ -573,7 +585,7 @@ class Grid extends ProtoLayer {
   islands = new OpArray
 
   constructor(protoParent, gridSize, inset, transform) {
-    super({ protoParent: protoParent, inset: inset, drawRect: true, drawSVG: true })
+    super({ protoParent: protoParent, inset: inset, drawRect: false, drawSVG: true })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this.finishSetup(S.Grids)
@@ -841,12 +853,12 @@ class Grid extends ProtoLayer {
       if (groupID) {
         group = this.groupNamed(groupID)
         cells = group?.cells || OpArray.empty
-        group.setFilter(filter)
+        group?.setFilter(filter)
       }
       if (islandID) {
         island = this.islandNamed(islandID)
         cells = island?.cells || OpArray.empty
-        island.setFilter(filter)
+        island?.setFilter(filter)
       }
     } else {
       cells = OpArray.from(selection)
@@ -1159,7 +1171,7 @@ class Grid extends ProtoLayer {
       // console.log('thisCell', thisCell.id)
       thisCell.groupID = group.id
       thisCell.available = false
-      thisCell.color = group.color
+      // thisCell.color = group.color
       thisCell.drawElement()
     })
   }
@@ -1169,7 +1181,7 @@ class Grid extends ProtoLayer {
       let thisCell = this.cells[cell.index]
       if (thisCell) {
         thisCell.islandIDs.add(island.id)
-        thisCell.color = island.color
+        // thisCell.color = island.color
         thisCell.drawElement()
       }
     })
