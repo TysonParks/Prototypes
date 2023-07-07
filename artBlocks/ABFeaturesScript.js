@@ -809,7 +809,7 @@ function calculateFeatures(token = tokenData) {
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
       weight = round(weight * 100) / 100
-      if (weight !== 1) console.log(`weight != 1`, this.name, weight)
+      // if (weight !== 1) console.log(`weight != 1`, this.name, weight)
       // console.log(`total weight:`, weight)
       return weight
     }
