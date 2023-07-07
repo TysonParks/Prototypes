@@ -323,14 +323,14 @@ class Shade {
   }
   //METH:
   //Drop-Shadow 
-  static dropShadSVG({ x, y, blurRad = 0, spreadRad = 0, col = protoColor(230), inset = false } = {}) {
-    return { dx: x, dy: y, blur: blurRad, color: col, inset: inset }
+  static dropShadSVG({ lighten, x, y, blurRad = 0, spreadRad = 0, col = protoColor(230), inset = false } = {}) {
+    return { lighten: lighten, dx: x, dy: y, blur: blurRad, color: col, inset: inset }
   }
   //METH:
   static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
     // console.log('components', vector.x, vector.y, blurRad)
-    const highlight = this.dropShadSVG({ x: -vector.x, y: -vector.y, blurRad: 1 * blurRad, col: highCol, inset: inset })
-    const shadow = this.dropShadSVG({ x: 1 * vector.x, y: 1 * vector.y, blurRad: 1 * blurRad, col: shadCol, inset: inset })
+    const highlight = this.dropShadSVG({ lighten: true, x: -vector.x, y: -vector.y, blurRad: 1 * blurRad, col: highCol, inset: inset })
+    const shadow = this.dropShadSVG({ lighten: false, x: 1 * vector.x, y: 1 * vector.y, blurRad: 1 * blurRad, col: shadCol, inset: inset })
     // return [shadow, highlight]
     return [highlight, shadow]
   }
