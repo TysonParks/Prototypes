@@ -248,24 +248,24 @@ class ProtoFilter {
     // INSET
     function buildFilter(shadows, filter, inset, clearInset) {
       for (const shadow of shadows) {
-        const { dx, dy, blur, color } = shadow
+        const { dx, dy, blur, color, lighten } = shadow
         const resultId = `shadow-${inset ? "inset" : "outset"}-${Math.random()
           .toString(36)
           .substring(7)}`
-        //1 feGaussianBlur
+        //1 feGaussianBlur: blur the alpha channel of the input shape
         createSVGElt('feGaussianBlur')
           .attribute('in', 'SourceAlpha')
           .attribute('stdDeviation', blur)
           .attribute('result', 'blur')
           .parent(filter)
-        //2 feOffset
+        //2 feOffset: offset the blurred result
         createSVGElt('feOffset')
           .attribute('in', 'blur')
           .attribute('dx', dx)
           .attribute('dy', dy)
           .attribute('result', 'offset-blur')
           .parent(filter)
-        //3 feFlood
+        //3 feFlood: flood the offset result with the input color
         createSVGElt('feFlood')
           .attribute('flood-color', color)
           .attribute('flood-opacity', 1)
@@ -273,7 +273,7 @@ class ProtoFilter {
           .parent(filter)
 
         if (inset) {
-          //3B feComposite - MASK IN
+          //3B feComposite - MASK IN: if this is an inset shadow, mask 
           createSVGElt('feComposite')
             .attribute('operator', 'out')
             .attribute('in', clearInset ? 'SourceAlpha' : insetResult) // might need to option insetResult here
@@ -292,17 +292,26 @@ class ProtoFilter {
           .attribute('result', `composite`)
           .parent(filter)
         //5 feMerge - 'resultId'
-        createSVGElt('feMerge')
-          .parent(filter)
-          .child(
-            createSVGElt('feMergeNode')
-              .attribute('in', inset ? insetResult : outsetResult)
-          )
-          .child(
-            createSVGElt('feMergeNode')
-              .attribute('in', 'composite')
-          )
+        // createSVGElt('feMerge')
+        //   .child(
+        //     createSVGElt('feMergeNode')
+        //       .attribute('in', inset ? insetResult : outsetResult)
+        //   )
+        //   .child(
+        //     createSVGElt('feMergeNode')
+        //       .attribute('in', 'composite')
+        //   )
+        //   .attribute('result', resultId)
+        //   .parent(filter)
+
+        //5A feBlend - 
+        createSVGElt('feBlend')
+          .attribute('mode', 'normal') // 'darken' or 'lighten' based on your needs
+          .attribute('in', inset ? insetResult : outsetResult)
+          .attribute('in2', 'composite')
           .attribute('result', resultId)
+          .parent(filter)
+
 
         if (inset) {
           insetResult = resultId
