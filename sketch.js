@@ -97,7 +97,7 @@ function setupFeatures() {
 // FUNC: setupColors()
 function setupColors() {
   backgroundColor = color(0)
-  frameColor = color(240)
+  frameColor = protoColor(230)
   accentColor = color("hsb(190, 100%, 90%)")
 
   acHiCol = color("hsb(190, 20%, 100%)").toString('#rrggbb')
@@ -233,7 +233,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(2, 10)
-  gridX = 2
+  // gridX = 6
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -249,21 +249,21 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.6, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -2, pixToUserUnits: FRAME.pixToUserUnits })
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.8, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1, pixToUserUnits: FRAME.pixToUserUnits })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.4, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.4, pixToUserUnits: FRAME.pixToUserUnits })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
   FRAME.inset(.9)
   grid.inset(.9)
-  FRAME.setFilter(shader1)
+  FRAME.setFilter(shader2)
   // grid.setFilter(shader1)
   console.log('FRAME Filter', FRAME.filter)
   console.log('gridFilter', grid.filter)
@@ -313,7 +313,7 @@ function gridTests2() {
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
   let inset = R.random_num(0.9, 0.97)
-  inset = 0.8
+  inset = .8
   // console.log('inset', inset)
 
   grid.findIslands({
@@ -326,7 +326,7 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp002',
-    filter: shader1,
+    filter: shader0,
     inset: inset,
     // direction: Direction.All,
     // taken: true,
@@ -334,7 +334,7 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp000',
-    filter: shader0,
+    filter: shader1,
     inset: inset,
     direction: Direction.All,
     // taken: true,
