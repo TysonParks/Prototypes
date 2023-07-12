@@ -302,7 +302,7 @@ class Frame extends ProtoLayer {
       .attribute('rx', `${this.cornerRadius}`)
       .attribute('ry', `${this.cornerRadius}`)
       // .attribute('fill', ProtoColor.randomHighHue().setSaturation(10))
-      .attribute(`fill`, protoColor(230))
+      .attribute(`fill`, frameColor)
       .attribute('fill-opacity', '1')
     // .applyFilter(this.filter, 2)
 
