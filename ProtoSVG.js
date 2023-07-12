@@ -226,8 +226,24 @@ class ProtoFilter {
   dropShadow(shadows, clearInset = true) {
     shadows = OpArray.format(shadows)
 
+    const batchlayering = false
+    const normalBlending = true
     const insetShadows = shadows.filter(shadow => shadow.inset)
     const outsetShadows = shadows.filter(shadow => !shadow.inset)
+    // const insetLightShads = shadows.filter(shad => shad.inset && shad.lighten)
+    // const insetDarkShads = shadows.filter(shad => shad.inset && !shad.lighten)
+    // const outsetLightShads = shadows.filter(shad => !shad.inset && shad.lighten)
+    // const outsetDarkShads = shadows.filter(shad => !shad.inset && !shad.lighten)
+    // let insetShadows = OpArray.from([...insetLightShads, ...insetDarkShads])
+    // let outsetShadows = OpArray.from([...outsetLightShads, ...outsetDarkShads])
+    // insetShadows = OpArray.from([...insetDarkShads, ...insetLightShads])
+    // outsetShadows = OpArray.from([...outsetDarkShads, ...outsetLightShads])
+    // insetShadows = shadows.filter(shadow => shadow.inset)
+    // outsetShadows = shadows.filter(shadow => !shadow.inset)
+    //TODO: need to build light and dark stacks separately within buildFilter()
+    //TODO: then merge the two outside 
+    //TODO: but then this will likely break the filter for creating r-curve shadows because of the internal bounce highlight
+
     this.shadows = outsetShadows
 
     // this.clearInset = clearInset
@@ -245,13 +261,20 @@ class ProtoFilter {
     let insetResult = clearInset ? 'transparentInput' : 'SourceGraphic'
     let outsetResult = 'SourceGraphic'
 
+
     // INSET
     function buildFilter(shadows, filter, inset, clearInset) {
+      let prevMode = 'normal'
       for (const shadow of shadows) {
         const { dx, dy, blur, color, lighten } = shadow
-        const resultId = `shadow-${inset ? "inset" : "outset"}-${Math.random()
+        const resultId = `shadow-${inset ? "inset" : "outset"}-${random()
           .toString(36)
           .substring(7)}`
+        const blendMode = () => {
+          if ((prevMode === 'lighten' && !lighten) || (prevMode === 'darken' && lighten)) { return 'normal' }
+          return lighten ? 'lighten' : 'darken'
+        }
+
         //1 feGaussianBlur: blur the alpha channel of the input shape
         createSVGElt('feGaussianBlur')
           .attribute('in', 'SourceAlpha')
@@ -303,33 +326,95 @@ class ProtoFilter {
         //   )
         //   .attribute('result', resultId)
         //   .parent(filter)
-
-        //5A feBlend - 
+        // console.log('blendMode', blendMode())
+        //5A feBlend - 'resultId'
         createSVGElt('feBlend')
-          .attribute('mode', 'normal') // 'darken' or 'lighten' based on your needs
+          .attribute('mode', normalBlending ? 'normal' : blendMode()) // 'darken' or 'lighten'
           .attribute('in', inset ? insetResult : outsetResult)
           .attribute('in2', 'composite')
           .attribute('result', resultId)
           .parent(filter)
 
+        prevMode = blendMode()
+        // console.log('prevMode', prevMode)
 
         if (inset) {
           insetResult = resultId
+          // console.log('inset resultId', resultId)
         } else {
           outsetResult = resultId
+          // console.log('outset resultId', resultId)
         }
-
       }
     }
 
-    if (insetShadows.length > 0) {
-      buildFilter(insetShadows, this.filter, true, clearInset)
+    //METH:
+    const processBatches = (shadows, inset = true) => {
+      const batches = shadows.reduce((result, shadow) => {
+        // console.log('result', result)
+        const lastBatch = result[result.length - 1]
+        if (lastBatch && lastBatch[0].lighten === shadow.lighten) {
+          lastBatch.push(shadow)
+        } else {
+          result.push(OpArray.from([shadow]))
+        }
+        return result
+      }, new OpArray)
+      console.log('batches', batches)
+
+      const processed = batches.map(batch => {
+        buildFilter(batch, this.filter, inset, clearInset)
+        return inset ? insetResult : outsetResult
+      })
+      console.log('processed', processed)
+      // return processed
+
+      for (let i = 1; i < processed.length; i++) {
+        createSVGElt('feBlend')
+          .attribute('mode', 'normal')
+          .attribute('in', processed[i - 1])
+          .attribute('in2', processed[i])
+          .attribute('result', processed[i])
+          .parent(this.filter)
+      }
+
+      // let feMerge = createSVGElt('feMerge')
+      //   .attribute('result', inset ? insetResult : outsetResult)
+      //   .parent(this.filter)
+
+      // processed.forEach(resultID => {
+      //   createSVGElt('feMergeNode')
+      //     .attribute('in', resultID)
+      //     .parent(feMerge)
+      // })
+
 
     }
-    else { if (clearInset) { insetResult = 'SourceAlpha' } }
+
+
+
+    if (insetShadows.length > 0) {
+
+      if (batchlayering) {
+        const insetBatches = processBatches(insetShadows, true)
+        console.log('insetBatches', insetBatches)
+      } else {
+        buildFilter(insetShadows, this.filter, true, clearInset)
+      }
+    }
+    else {
+      if (clearInset) { insetResult = 'SourceAlpha' }
+    }
 
     if (outsetShadows.length > 0) {
-      buildFilter(outsetShadows, this.filter, false, clearInset)
+
+      if (batchlayering) {
+        const outsetBatches = processBatches(outsetShadows, false)
+        console.log('outsetBatches', outsetBatches)
+      } else {
+        buildFilter(outsetShadows, this.filter, false, clearInset)
+      }
+
       if (clearInset) {
         createSVGElt('feComposite')
           .attribute('operator', 'out')
