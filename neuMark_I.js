@@ -327,37 +327,83 @@ class Shade {
     return { lighten: lighten, dx: x, dy: y, blur: blurRad, color: col, inset: inset }
   }
   //METH:
-  static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
+  static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false, blur = true) {
     // console.log('components', vector.x, vector.y, blurRad)
-    const highlight = this.dropShadSVG({ lighten: true, x: -vector.x, y: -vector.y, blurRad: 1 * blurRad, col: highCol, inset: inset })
-    const shadow = this.dropShadSVG({ lighten: false, x: 1 * vector.x, y: 1 * vector.y, blurRad: 1 * blurRad, col: shadCol, inset: inset })
-    // return [shadow, highlight]
+    const highlight = this.dropShadSVG({ lighten: true, x: -1.5 * vector.x, y: -1.5 * vector.y, blurRad: (blur ? 1 : 0) * blurRad, col: highCol, inset: inset })
+    const shadow = this.dropShadSVG({ lighten: false, x: 1 * vector.x, y: 1 * vector.y, blurRad: (blur ? 1 : 0) * blurRad, col: shadCol, inset: inset })
+    // console.log('nsSVG shadow', shadow)
+    return [shadow, highlight]
     return [highlight, shadow]
+    // return [shadow]
+    // return [highlight]
   }
   //METH:
   static neuShadeSVGFactory({
-    baseCol = protoColor(230),
+    baseCol = frameColor,
     vector = this.shadVect(),
     mag,
-    start = 0.5,
-    colSpread = 25,
-    pixToUserUnits = 1 } = {}
+    start = 1,
+    colSpread = 26,
+    count = 3,
+    pixToUserUnits = 1,
+    sort = false,
+    blur = true,
+    type = 'multiShade' } = {}
   ) {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true
     mag = abs(mag)
-    // console.log('inset', inset)
-    // const offset = mag / sqrt(2)
-    const cols = baseCol.highShadSpread(colSpread)
-    // console.log('cols', cols)
-    let neuShades = cleanSlices(start, mag, globalControls.shadQuality)
-    // console.log('slices', neuShades)
 
-    neuShades = neuShades
-      .map(e => e / pixToUserUnits)
-      .map(sliceOffset => this.neuShadeSVG(vector.setMag(sliceOffset), sliceOffset / sqrt(2), cols[0], cols[1], inset))
-      .flat()
-    // console.log('neuShades', neuShades)
+    let neuShades = exponentialSlices(start, mag, count)
+    neuShades = OpArray.from([1, 2, 4, mag * 1 / 8, mag * 1 / 4, mag * 1 / 2, mag * 3 / 4, mag])
+    console.log('slices', neuShades)
+
+    if (type === 'multiShade') {
+      const colRange = range(neuShades[0], neuShades.last())
+      neuShades = neuShades
+        .map(e => {
+          const mag = e / pixToUserUnits
+          const blurRadius = mag / sqrt(2)
+          const colorSpread = colSpread - round(pow(colRange.normalize(e), 2) * colSpread / 1)
+          console.log('colorSpread', colorSpread)
+          const colors = baseCol.highShadComplementSpread(colorSpread)
+          // console.log('colors', colors)
+          console.log('light color', colors[0].levels)
+          console.log('dark color', colors[1].levels)
+          const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur)
+          // console.log('shades', shades)
+          return shades
+        })
+        .flat()
+
+    } else {
+      let color1, color2
+      if (type === 'multiAlpha') {
+        color1 = protoColor(255, 256 / count)
+        color2 = protoColor(0, 256 / count)
+      }
+      if (type === 'flat') {
+        const cols = baseCol.highShadComplementSpread(colSpread)
+        color1 = cols[0]
+        color2 = cols[1]
+      }
+      neuShades = neuShades
+        .map(e => {
+          const mag = e / pixToUserUnits
+          const blurRadius = mag / sqrt(2)
+          const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, color1, color2, inset, blur)
+          return shades
+        })
+        .flat()
+    }
+
+    if (sort) {
+      const lighten = neuShades.filter(shad => shad.lighten)
+      const darken = neuShades.filter(shad => !shad.lighten)
+      neuShades = OpArray.from([...lighten, ...darken])
+      // neuShades = OpArray.from([...darken, ...lighten])
+    }
+    console.log('neuShades', neuShades)
     return neuShades
   }
   // MARK: OG CSS Methods
@@ -446,12 +492,14 @@ class ProtoColor extends p5.Color {
   setSaturation(sat) { return protoColor(`hsba(${this.hue}, ${sat}%, ${this.brightness}%, ${this.alpha})`) }
 
   highShadComplementSpread(spread = 16) {
+    spread = spread / 2.56
     const h = this.hue
     const s = this.saturation
     const b = this.brightness
+    // console.log('brightness', b)
 
     const high = [h, s, constrain(b + spread, 0, 100)]
-    const shad = [this.complementHue, s, constrain(b - 2 * spread, 0, 100)]
+    const shad = [this.complementHue, s, constrain(b - 2.5 * spread, 0, 100)]
     // console.log('cols:', high, shad)
     let cols = [high, shad]
       .map(hsb => `hsb(${hsb[0]}, ${hsb[1]}%, ${hsb[2]}%)`)
@@ -462,9 +510,10 @@ class ProtoColor extends p5.Color {
   highShadSpread(spread = 16) {
     let b = this.brightness
     let bPair = [round(b + spread), round(b - 1.3 * spread)]
+    // console.log('bPair', bPair)
     let cols = bPair
       .map(b => `hsb(${this.hue}, ${this.saturation}%, ${b}%)`)
-      .map(dscrpt => color(dscrpt))
+      .map(dscrpt => protoColor(dscrpt))
     return cols
   }
 
@@ -509,11 +558,13 @@ function createSlices(min, max, factor = 0.5) {
   return OpArray.from(slice)
 }
 // FUNC: exponentialSlices()
-function exponentialSlices(min, max, amount) {
-  if (amount < 3) { return OpArray.from([min, max]) }
+function exponentialSlices(min, max, amount, factor = 0.5) {
+  console.log('expSlicesInput', min, max, amount)
+  // if (amount < 3) { return OpArray.from([min, max]) }
   const range = max - min
-  const multipliers = createSlices(1, pow(2, amount - 1)).map(e => e - 1)
+  const multipliers = createSlices(1, pow(2, amount - 1), factor).map(e => e - 1)
   const last = multipliers.last()
+  console.log('multipliers', multipliers)
   return multipliers.map(e => min + e * (range / last))
 }
 // FUNC: cleanSlices()
