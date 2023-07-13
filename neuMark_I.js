@@ -371,7 +371,7 @@ class Shade {
     neuShades = OpArray.from([1, 2, 4, mag * 1 / 8, mag * 1 / 4, mag * 1 / 2, mag * 3 / 4, mag])
       .map(e => round(e))
       .numSorted
-    console.log('slices', neuShades)
+    // console.log('slices', neuShades)
 
     if (type === 'multiShade') {
       const colRange = range(neuShades[0], neuShades.last())
@@ -380,11 +380,11 @@ class Shade {
           const mag = e / pixToUserUnits
           const blurRadius = mag / sqrt(2)
           const colorSpread = colSpread - round(pow(colRange.normalize(e), 2) * colSpread / 1)
-          console.log('colorSpread', colorSpread)
+          // console.log('colorSpread', colorSpread)
           const colors = baseCol.highShadComplementSpread(colorSpread)
           // console.log('colors', colors)
-          console.log('light color', colors[0].levels)
-          console.log('dark color', colors[1].levels)
+          // console.log('light color', colors[0].levels)
+          // console.log('dark color', colors[1].levels)
           const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur, curve)
           // console.log('shades', shades)
           return shades
@@ -574,12 +574,12 @@ function createSlices(min, max, factor = 0.5) {
 }
 // FUNC: exponentialSlices()
 function exponentialSlices(min, max, amount, factor = 0.5) {
-  console.log('expSlicesInput', min, max, amount)
+  // console.log('expSlicesInput', min, max, amount)
   // if (amount < 3) { return OpArray.from([min, max]) }
   const range = max - min
   const multipliers = createSlices(1, pow(2, amount - 1), factor).map(e => e - 1)
   const last = multipliers.last()
-  console.log('multipliers', multipliers)
+  // console.log('multipliers', multipliers)
   return multipliers.map(e => min + e * (range / last))
 }
 // FUNC: cleanSlices()
