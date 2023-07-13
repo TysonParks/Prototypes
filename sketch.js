@@ -249,21 +249,21 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -2, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -2 })
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.4, pixToUserUnits: FRAME.pixToUserUnits })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.4 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
   FRAME.inset(.9)
   grid.inset(.9)
-  FRAME.setFilter(shader2)
+  FRAME.setFilter(shader1)
   // grid.setFilter(shader1)
   console.log('FRAME Filter', FRAME.filter)
   console.log('gridFilter', grid.filter)
