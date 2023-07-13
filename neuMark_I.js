@@ -316,7 +316,7 @@ p5.Element.prototype.boxShadow = function (value) {
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = 45, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
+  static shadVect(angle = 0, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
   static maxComponent(vector = this.shadVect()) {
     return vector.y
     // return max(this.x, this.y)
@@ -327,15 +327,27 @@ class Shade {
     return { lighten: lighten, dx: x, dy: y, blur: blurRad, color: col, inset: inset }
   }
   //METH:
-  static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false, blur = true) {
+  static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j') {
     // console.log('components', vector.x, vector.y, blurRad)
     const highlight = this.dropShadSVG({ lighten: true, x: -1.5 * vector.x, y: -1.5 * vector.y, blurRad: (blur ? 1 : 0) * blurRad, col: highCol, inset: inset })
     const shadow = this.dropShadSVG({ lighten: false, x: 1 * vector.x, y: 1 * vector.y, blurRad: (blur ? 1 : 0) * blurRad, col: shadCol, inset: inset })
     // console.log('nsSVG shadow', shadow)
-    return [shadow, highlight]
-    return [highlight, shadow]
-    // return [shadow]
-    // return [highlight]
+    if (curve === 'j') {
+      return [shadow, highlight]
+      return [highlight, shadow]
+      // return [shadow]
+      // return [highlight]
+    }
+    if (curve === 'r') {
+      const outerShadow = this.dropShadSVG({ lighten: false, x: 1 * vector.x, y: 1 * vector.y, blurRad: (blur ? 1 : 0) * blurRad, col: shadCol, inset: !inset })
+      return [
+        shadow,
+        highlight,
+        // outerShadow,
+      ]
+    }
+
+
   }
   //METH:
   static neuShadeSVGFactory({
@@ -345,17 +357,20 @@ class Shade {
     start = 1,
     colSpread = 26,
     count = 3,
-    pixToUserUnits = 1,
+    pixToUserUnits = FRAME.pixToUserUnits,
     sort = false,
     blur = true,
+    curve = 'r',
     type = 'multiShade' } = {}
   ) {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true
     mag = abs(mag)
-
+    // TODO: Optimization: reduce neushades based upon mag ( reduceTo(mag/5) ???)
     let neuShades = exponentialSlices(start, mag, count)
     neuShades = OpArray.from([1, 2, 4, mag * 1 / 8, mag * 1 / 4, mag * 1 / 2, mag * 3 / 4, mag])
+      .map(e => round(e))
+      .numSorted
     console.log('slices', neuShades)
 
     if (type === 'multiShade') {
@@ -370,7 +385,7 @@ class Shade {
           // console.log('colors', colors)
           console.log('light color', colors[0].levels)
           console.log('dark color', colors[1].levels)
-          const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur)
+          const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur, curve)
           // console.log('shades', shades)
           return shades
         })
@@ -391,7 +406,7 @@ class Shade {
         .map(e => {
           const mag = e / pixToUserUnits
           const blurRadius = mag / sqrt(2)
-          const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, color1, color2, inset, blur)
+          const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, color1, color2, inset, blur, curve)
           return shades
         })
         .flat()
