@@ -13,13 +13,13 @@ class ProtoLayer {
   rect // 'rect' p5.Element
   protoParent // ProtoLayer
   svgParent // 'SVG' p5.Element
-  _insetAmount
+  _insetScale
   _filter
   _filterLoft
   drawSVG
   drawRect
 
-  constructor({ protoParent, svgParent, inset, filter, drawSVG = true, drawRect = true } = {}) {
+  constructor({ protoParent, svgParent, insetScale, filter, drawSVG = true, drawRect = true } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
       this.svgParent = protoParent.svgElt
@@ -27,7 +27,7 @@ class ProtoLayer {
     else if (protoParent instanceof p5.Element) { this.svgParent = protoParent }
     else { console.error('protoParent is not valid') }
     if (svgParent) { this.svgParent = svgParent }
-    this._insetAmount = inset
+    this._insetScale = insetScale
     this._filter = filter
     this.drawSVG = drawSVG
     this.drawRect = drawRect
@@ -55,9 +55,9 @@ class ProtoLayer {
 
   get cornerRadius() { return 1 }
 
-  get insetAmount() {
-    if (this._insetAmount) { return this._insetAmount }
-    else { return this.protoParent.insetAmount }
+  get insetScale() {
+    if (this._insetScale) { return this._insetScale }
+    else { return this.protoParent.insetScale }
   }
 
   get filter() {
@@ -78,8 +78,7 @@ class ProtoLayer {
   get size() { return vert(this.boundsRect.width, this.boundsRect.height) }
 
   get insetAnchor() { return this.anchorFor(this.insetSize) }
-  //TODO: INSET MIGRATION: recalc as this.size - 2*this.insetAmount
-  get insetSize() { return Vertex.mult(this.size, vert(this.insetAmount)) }
+  get insetSize() { return Vertex.mult(this.size, vert(this.insetScale)) }
 
   get insetBoundsRect() {
     return DOMRect.fromRect(
@@ -91,7 +90,6 @@ class ProtoLayer {
       })
   }
 
-  //TODO: INSET MIGRATION: this is actually what inset will become, create new insetScale computed property
   get padSize() { return Vertex.sub(this.size, this.insetSize).div(2) }
   get center() { return Vertex.div(this.size, 2).add(this.anchor) }
   get corners() {
@@ -178,10 +176,9 @@ class ProtoLayer {
   // MARK: Layer Grammar Methods
   // #region LayerGrammar Methods
   //METH: 
-  inset(amount) {
-    this._insetAmount = amount
+  setInsetScale(scale) {
+    this._insetScale = scale
     this.drawElement()
-    // redrawAll()
   }
   //METH: 
   setFilter(filter) {
@@ -212,8 +209,7 @@ class Frame extends ProtoLayer {
   cornerRadius = 5
 
   constructor(svgParent) {
-    //TODO: INSET MIGRATION: change inset default to 0
-    super({ protoParent: svgParent, inset: 1, drawRect: true })
+    super({ protoParent: svgParent, insetScale: 1, drawRect: true })
     this.finishSetup(S.Frame)
   }
 
@@ -587,8 +583,8 @@ class Grid extends ProtoLayer {
   groups = new OpArray
   islands = new OpArray
 
-  constructor(protoParent, gridSize, inset, transform) {
-    super({ protoParent: protoParent, inset: inset, drawRect: false, drawSVG: true })
+  constructor(protoParent, gridSize, insetScale, transform) {
+    super({ protoParent: protoParent, insetScale: insetScale, drawRect: false, drawSVG: true })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this.finishSetup(S.Grids)
@@ -607,7 +603,6 @@ class Grid extends ProtoLayer {
   get columnCount() { return this.gridCellBounds.cellBoundsWidth }
   get rowCount() { return this.gridCellBounds.cellBoundsHeight }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
-  //TODO: INSET MIGRATION: create an insetScale computed property and replace this.insetSize with it
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
   get minCellWidth() { return min(this.cellSize.x, this.cellSize.y) }
   get cells() { return this.cellRows.flat() }
@@ -846,8 +841,7 @@ class Grid extends ProtoLayer {
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
   //TODO: add filter paramater and implement useage, currently feeding this method filters in sketch.js 🤣😂
   //METH: findIslands()
-  //TODO: INSET MIGRATION: set inset to 0
-  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, filter, direction = Direction.Cardinal, taken = true, stored = true, inset = 1 } = {}) {
+  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, filter, direction = Direction.Cardinal, taken = true, stored = true, insetScale = 1 } = {}) {
     let cells, group, island
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
@@ -884,7 +878,7 @@ class Grid extends ProtoLayer {
         cells: islanders,
         protoParent: groupID ? this.groupNamed(groupID) : this,
         svgParent: this.protoParent.svgElt,
-        inset: inset,
+        insetScale: insetScale,
         grid: this,
         groupID: groupID,
         parentIslandID: islandID,
@@ -988,13 +982,10 @@ class Grid extends ProtoLayer {
     return OpArray.from(rows)
   }
   //METH:
-  setFrameRadii() {
-    //TODO: INSET MIGRATION: replace this.padSize with this.insetAmount 
-    FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize)
-  }
+  setFrameRadii() { FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize) }
   //METH:
-  inset(amount) {
-    super.inset(amount)
+  setInsetScale(scale) {
+    super.setInsetScale(scale)
     this.setFrameRadii()
     this.updateCells()
   }
@@ -1390,8 +1381,7 @@ class Cell extends ProtoLayer {
 
       // super(this.drawElement(look))
       if (this.taken) {
-        //TODO: INSET MIGRATION: If re-enabling cell drawing, must take into account new (non-scaling) inset method
-        // this.insetAmount = 0.9
+        // this.insetScale = 0.9
         let maxWidthDivisor = 8
         // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
         let strokeMaskWidth = R.random_num(4, this.grid.cellSize.x / maxWidthDivisor)
@@ -1400,16 +1390,16 @@ class Cell extends ProtoLayer {
           .attribute('fill-opacity', '0')
           .attribute('fill', protoColor(230))
         // .applyStrokeMask('black', 20)
-        // .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
+        // .applyFilter(S.Effects.db[1][1], 2 / this.insetScale)
       }
       if (this.available) {
-        // this.insetAmount = 0.5
+        // this.insetScale = 0.5
         this.rect
           // .attribute('fill', 'orange')
           .attribute('fill-opacity', '0')
           .attribute('fill', protoColor(230))
         // .applyStrokeMask('black', 10)
-        // .applyFilter(S.Effects.db[1][1], 2 / this.insetAmount)
+        // .applyFilter(S.Effects.db[1][1], 2 / this.insetScale)
       }
 
       this.rect
@@ -1427,9 +1417,8 @@ class Island extends ProtoLayer {
   shape
   direction
   // color
-  //TODO: INSET MIGRATION: set inset to 0
-  constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, inset = 1 } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent, inset: inset, drawRect: false, drawSVG: false })
+  constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, insetScale = 1 } = {}) {
+    super({ protoParent: protoParent, svgParent: svgParent, insetScale: insetScale, drawRect: false, drawSVG: false })
     this.cells = cells
     this.grid = grid
     this.groupID = groupID
@@ -1447,7 +1436,7 @@ class Island extends ProtoLayer {
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.groupID, islandID: this.id }) }
   get cellAnchor() { return this.cellBounds.cellAnchor }
-  //TODO: INSET MIGRATION: Fine for now, but once inset transitions from filter to geometry will need to refactor
+  //TODO: Once inset transitions from filter to geometry will need to refactor
   get insetAnchor() { return this.anchor }
   get insetSize() { return this.size }
 
@@ -1490,7 +1479,7 @@ class Island extends ProtoLayer {
   // MARK: Methods
   // #region Methods
   //METH:
-  createShape(inset) {
+  createShape(insetScale) {
     let segments = OpArray.format(this.exposedSegments)
     let subShapes = new OpArray
     let shapeIter = 0
@@ -1502,7 +1491,7 @@ class Island extends ProtoLayer {
       protoParent: this,
       svgParent: this.svgParent,
       island: this,
-      inset: inset
+      insetScale: insetScale
     })
     this.shape = thisShape
 
@@ -1597,8 +1586,8 @@ class Shape extends ProtoLayer {
   testVerts
   testColor
 
-  constructor({ subShapes, protoParent, svgParent, island, inset } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent, inset: inset })
+  constructor({ subShapes, protoParent, svgParent, island, insetScale } = {}) {
+    super({ protoParent: protoParent, svgParent: svgParent, insetScale: insetScale })
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
@@ -1800,11 +1789,10 @@ class Shape extends ProtoLayer {
       let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
       strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
 
-      const posInset = this.insetAmount >= 0
-      //TODO: INSET MIGRATION: I think strokeMaskWidth = this.insetAmount should work
-      strokeMaskWidth = 1 * (posInset ? 1 - this.insetAmount : this.insetAmount) * this.grid.cellSize.x
+      const posInset = this.insetScale >= 0
+      strokeMaskWidth = 1 * (posInset ? 1 - this.insetScale : this.insetScale) * this.grid.cellSize.x
       // strokeMaskWidth = -.6 * this.grid.cellSize.x
-      // console.log('insetAmount', this.insetAmount)
+      // console.log('insetScale', this.insetScale)
       // console.log('strokeMaskWidth', strokeMaskWidth)
       // console.log('cellSize', this.grid.cellSize.x)
       // const posStrokeMask = strokeMaskWidth >= 0

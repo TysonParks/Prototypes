@@ -50,6 +50,7 @@ function calculateFeatures(token = tokenData) {
     layerCounts
     variableLayerStyles
     variableLayerLofts
+    insetScale
     insetRatio
     // (layers)
     // group dependencies
@@ -76,6 +77,7 @@ function calculateFeatures(token = tokenData) {
     }
 
     // MARK: Public Method
+    //TODO: complete implementation after all else is tuned
     get publicFeatures() {
       return {
         // grid: `${this.x} x ${this.y}`,
@@ -108,7 +110,7 @@ function calculateFeatures(token = tokenData) {
       this.layerCounts = this.#calcLayerCounts(r)
       this.variableLayerStyles = this.enums.variableLayerStyles.feature(r) === 'True'
       this.variableLayerLofts = this.enums.variableLayerLofts.feature(r) === 'True'
-      this.inset = this.enums.inset.feature(r)
+      this.insetScale = this.enums.insetScale.feature(r)
       this.insetRatio = this.enums.insetRatio.feature(r)
 
       this.layers = this.#calcLayers(r)
@@ -179,11 +181,10 @@ function calculateFeatures(token = tokenData) {
           return 'None'
         case 'Additive':
           noShrinkWrap()
-          //TODO: INSET MIGRATION: adjust values to non-scale inset: inset(0.1, 0.3)
+          //TODO: If these value remain the same, just make a property instead of arrow function
           return this.#calcLayer(r, true, undefined, inset(0.7, 0.9))
         case 'Subtractive':
           noShrinkWrap()
-          //TODO: INSET MIGRATION: adjust values to non-scale inset: inset(0.1, 0.3)
           //TODO: If these value remain the same, just make a property instead of arrow function
           return this.#calcLayer(r, false, undefined, inset(0.7, 0.9))
       }
@@ -198,7 +199,7 @@ function calculateFeatures(token = tokenData) {
       if (types.includes('Additive')) { adds = 1 }
       if (types.includes('Subtractive')) {
         if (types === 'Subtractive') {
-          this.enums.inset.removeOptions(['Maximum'])
+          this.enums.insetScale.removeOptions(['Maximum'])
           this.enums.insetRatio.replaceOptions([['1:1', 0.75]], false)
         }
         subs = 1
@@ -288,46 +289,37 @@ function calculateFeatures(token = tokenData) {
       }
     }
     //METH:
-    //TODO: INSET MIGRATION: It might be easiest to just convert the final method output to (1-inset)
     #calcInsets(r) {
       // console.log('Grid', [this.x, this.y])
       let scaleRange
       if (this.layerTypes === 'Additive') {
-        //TODO: INSET MIGRATION: adjust values to non-scale inset: scaleRange = [0.15, 0.25]
         scaleRange = [0.75, 0.85]
       } else {
-        //TODO: INSET MIGRATION: adjust values to non-scale inset: scaleRange = [0.1, 0.2]
         scaleRange = [0.8, 0.9]
       }
       console.log('scaleRange 1', scaleRange)
       // NOTE: This tunes the scale to mostly hit 0.9 - 0.95 range for any grid
-      //TODO: INSET MIGRATION: adjust values to non-scale inset: max(0, sub - (0.08 / sqrt(this.x)))
       scaleRange = scaleRange.map(sub => min(1, sub + (0.08 / sqrt(this.x))))
       console.log('layerTypes', this.layerTypes)
       console.log('scaleRange 2', scaleRange)
       let range
-      console.log('this.inset', this.inset)
-      switch (this.inset) {
+      console.log('this.insetScale', this.insetScale)
+      switch (this.insetScale) {
         case 'Maximum':
-          //TODO: INSET MIGRATION: adjust values to non-scale inset: range = [0.7, 1]
           range = [0, 0.3]
           break
         case 'Medium':
-          //TODO: INSET MIGRATION: adjust values to non-scale inset: range = [0.3, 0.6]
           range = [0.4, 0.7]
           break
         case 'Minimum':
-          //TODO: INSET MIGRATION: adjust values to non-scale inset: range = [0, 0.2]
           range = [0.8, 1]
       }
 
       console.log('range', range)
       let insetLrg = r.random_num(range[0], range[1])
       console.log('insetLrg', insetLrg)
-      //TODO: INSET MIGRATION: Not sure, but maybe just swap [0, 1] to [1,0]???
       insetLrg = convertRange(insetLrg, [0, 1], scaleRange)
       const [a, b] = this.insetRatio.split(':').map(Number)
-      //TODO: INSET MIGRATION: this probably needs changed as well 
       const ratioVal = b / a
       const insetSml = insetLrg * ratioVal
       console.log('insets', [insetLrg, insetSml])
@@ -540,8 +532,8 @@ function calculateFeatures(token = tokenData) {
         ]
       },
       // Public: inset options
-      inset: {
-        name: 'Inset',
+      insetScale: {
+        name: 'Inset Scale',
         options: [
           ['Minimum', 0.65],
           ['Medium', 0.25],

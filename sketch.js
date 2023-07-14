@@ -141,12 +141,12 @@ class ProtoMill {
   //METH: 
   mkBaseShader() {
     if (FTS.baseLayer === 'None') {
-      //TODO: INSET MIGRATION: change to R.random_num(0.05, 0.1)
-      this.grid.inset(R.random_num(0.9, 0.95))
+      //TODO: INSET MIGRATION: test this
+      this.grid.setInsetScale(R.random_num(0.9, 0.95))
     } else {
       //TODO: INSET MIGRATION: Will need to reconsider this whole block
       const frameInset = R.random_num(0.02, 0.18)
-      this.grid.inset(1 - frameInset)
+      this.grid.setInsetScale(1 - frameInset)
 
       let baseShadeStack
       if (FTS.baseLayer === 'Additive') {
@@ -161,10 +161,10 @@ class ProtoMill {
   //METH:
   mkShaders() {
     let shaders = FTS.layers.map(l => {
-      //TODO: INSET MIGRATION: change to inset = 2 * l.inset
-      const inset = 2 * (1 - l.inset)
-      //TODO: INSET MIGRATION: change to inset = -2 * (1-l.inset)
-      const type = l.type === 'Additive' ? inset : -2 + inset
+      //TODO: INSET MIGRATION: test this
+      const insetAmount = 2 * (1 - l.insetScale)
+      //TODO: INSET MIGRATION: test this
+      const type = l.type === 'Additive' ? insetAmount : -2 + insetAmount
       const mag = l.loft * type * this.minCellSize
       const stack = Shade.neuShadeSVGFactory({ mag: mag })
       const shader = createFilter().dropShadow(stack)
@@ -240,7 +240,6 @@ function gridTests2() {
   // gridX = 6
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
-  //TODO: INSET MIGRATION: adjust values to non-scale inset
   let gridInset = R.random_num(0.75, 0.95)
   // grid.inset(gridInset)
 
@@ -267,9 +266,8 @@ function gridTests2() {
   // console.log('shadeStack2', shadeStack2)
 
   // const frameInset = R.random_num(0.02, 0.18)
-  //TODO: INSET MIGRATION: adjust values to non-scale inset
-  FRAME.inset(.9)
-  grid.inset(.9)
+  FRAME.setInsetScale(.9)
+  grid.setInsetScale(.9)
   FRAME.setFilter(shader1)
   // grid.setFilter(shader1)
   console.log('FRAME Filter', FRAME.filter.id)
@@ -319,15 +317,14 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
-  //TODO: INSET MIGRATION: adjust values to non-scale inset
-  let inset = R.random_num(0.9, 0.97)
-  inset = .8
-  // console.log('inset', inset)
+  let insetScale = R.random_num(0.9, 0.97)
+  insetScale = .9
+  // console.log('insetScale', insetScale)
 
   grid.findIslands({
     groupID: 'grp001',
     filter: shader2,
-    inset: inset,
+    insetScale: insetScale,
     // direction: Direction.All,
     // taken: true,
   })
@@ -335,7 +332,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp002',
     filter: shader0,
-    inset: inset,
+    insetScale: insetScale,
     // direction: Direction.All,
     // taken: true,
   })
@@ -343,7 +340,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp000',
     filter: shader1,
-    inset: inset,
+    insetScale: insetScale,
     direction: Direction.All,
     // taken: true,
   })
@@ -351,7 +348,7 @@ function gridTests2() {
   // grid.findIslands({
   //   groupID: 'grp003',
   //   filter: shader1,
-  //   inset: inset,
+  //   insetScale: insetScale,
   //   direction: Direction.Cardinal,
   //   taken: true,
   // })
@@ -364,7 +361,7 @@ function gridTests2() {
   // grid.findIslands({
   //   // groupID: 'grp002',
   //   filter: shader2,
-  //   inset: inset,
+  //   insetScale: insetScale,
   //   direction: Direction.All,
   //   taken: false,
   // })
