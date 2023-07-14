@@ -316,7 +316,7 @@ p5.Element.prototype.boxShadow = function (value) {
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = 0, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
+  static shadVect(angle = 15, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
   static maxComponent(vector = this.shadVect()) {
     return vector.y
     // return max(this.x, this.y)
@@ -366,12 +366,14 @@ class Shade {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true
     mag = abs(mag)
-    // TODO: Optimization: reduce neushades based upon mag ( reduceTo(mag/5) ???)
+    // TODO: Optimization: reduce neushades length based upon mag ( reduceTo(mag/5) ???)
     let neuShades = exponentialSlices(start, mag, count)
     neuShades = OpArray.from([1, 2, 4, mag * 1 / 8, mag * 1 / 4, mag * 1 / 2, mag * 3 / 4, mag])
       .map(e => round(e))
       .numSorted
-    // console.log('slices', neuShades)
+      .unique()
+      .filter(e => e > 0)
+    console.log('slices', neuShades)
 
     if (type === 'multiShade') {
       const colRange = range(neuShades[0], neuShades.last())
@@ -379,7 +381,7 @@ class Shade {
         .map(e => {
           const mag = e / pixToUserUnits
           const blurRadius = mag / sqrt(2)
-          const colorSpread = colSpread - round(pow(colRange.normalize(e), 2) * colSpread / 1)
+          const colorSpread = colSpread - round(pow(colRange.normalize(e), 2) * colSpread / 3)
           // console.log('colorSpread', colorSpread)
           const colors = baseCol.highShadComplementSpread(colorSpread)
           // console.log('colors', colors)
@@ -393,10 +395,12 @@ class Shade {
 
     } else {
       let color1, color2
+      //NOTE: AVOID - 'multiAlpha' causes extreme banding artifacts in my implementation
       if (type === 'multiAlpha') {
         color1 = protoColor(255, 256 / count)
         color2 = protoColor(0, 256 / count)
       }
+      //NOTE: AVOID - 'flat' isn't quite convincing and loses the crisp outlines of 'multishade'
       if (type === 'flat') {
         const cols = baseCol.highShadComplementSpread(colSpread)
         color1 = cols[0]
