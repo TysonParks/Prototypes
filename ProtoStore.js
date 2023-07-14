@@ -8,18 +8,18 @@ class Store {
     this.Groups = new ProtoStorage('grp')
     this.Islands = new ProtoStorage('isle')
     this.Shapes = new ProtoStorage('shp')
-    this.Segments = new ProtoStorage('seg')
-    this.Verts = new ProtoStorage('vert')
+    // this.Segments = new ProtoStorage('seg')
+    // this.Verts = new ProtoStorage('vert')
 
-    this.Grammars = new ProtoStorage('grmr', 2)
-    this.Looks = new ProtoStorage('look', 2)
-    this.Actions = new ProtoStorage('axn')
+    // this.Grammars = new ProtoStorage('grmr', 2)
+    // this.Looks = new ProtoStorage('look', 2)
+    // this.Actions = new ProtoStorage('axn')
     this.Effects = new ProtoStorage('fx', 1)
     // this.ElmtGroups = new ProtoStorage('eltGrp', 4)
   }
 
   get allLayers() {
-    return [...this.Effects.db, ...this.Frame.db, ...this.Grids.db, ...this.Groups.db, ...this.Islands.db, ...this.Shapes.db, ...this.Cells.db,]
+    return [...this.Frame.db, ...this.Grids.db, ...this.Groups.db, ...this.Islands.db, ...this.Shapes.db, ...this.Effects.db, ...this.Cells.db,]
       .map(e => e[1])
   }
   // static shared() {
