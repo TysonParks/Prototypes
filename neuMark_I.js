@@ -418,7 +418,7 @@ class Shade {
       neuShades = OpArray.from([...lighten, ...darken])
       // neuShades = OpArray.from([...darken, ...lighten])
     }
-    console.log('neuShades', neuShades)
+    // console.log('neuShades', neuShades)
     return neuShades
   }
   // MARK: OG CSS Methods
