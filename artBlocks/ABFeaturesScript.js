@@ -182,11 +182,11 @@ function calculateFeatures(token = tokenData) {
         case 'Additive':
           noShrinkWrap()
           //TODO: If these value remain the same, just make a property instead of arrow function
-          return this.#calcLayer(r, true, undefined, inset(0.7, 0.9))
+          return this.#calcLayer(r, true, undefined, inset(0.8, 0.95))
         case 'Subtractive':
           noShrinkWrap()
           //TODO: If these value remain the same, just make a property instead of arrow function
-          return this.#calcLayer(r, false, undefined, inset(0.7, 0.9))
+          return this.#calcLayer(r, false, undefined, inset(0.8, 0.95))
       }
     }
     //METH:
@@ -297,11 +297,11 @@ function calculateFeatures(token = tokenData) {
       } else {
         scaleRange = [0.8, 0.9]
       }
-      console.log('scaleRange 1', scaleRange)
+      // console.log('scaleRange 1', scaleRange)
       // NOTE: This tunes the scale to mostly hit 0.9 - 0.95 range for any grid
       scaleRange = scaleRange.map(sub => min(1, sub + (0.08 / sqrt(this.x))))
-      console.log('layerTypes', this.layerTypes)
-      console.log('scaleRange 2', scaleRange)
+      // console.log('layerTypes', this.layerTypes)
+      // console.log('scaleRange 2', scaleRange)
       let range
       console.log('this.insetScale', this.insetScale)
       switch (this.insetScale) {
@@ -315,14 +315,14 @@ function calculateFeatures(token = tokenData) {
           range = [0.8, 1]
       }
 
-      console.log('range', range)
+      // console.log('range', range)
       let insetLrg = r.random_num(range[0], range[1])
-      console.log('insetLrg', insetLrg)
+      // console.log('insetLrg', insetLrg)
       insetLrg = convertRange(insetLrg, [0, 1], scaleRange)
       const [a, b] = this.insetRatio.split(':').map(Number)
       const ratioVal = b / a
       const insetSml = insetLrg * ratioVal
-      console.log('insets', [insetLrg, insetSml])
+      // console.log('insets', [insetLrg, insetSml])
       return [roundToDec(insetLrg), roundToDec(insetSml)]
     }
     // #endregion
