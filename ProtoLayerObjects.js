@@ -59,6 +59,7 @@ class ProtoLayer {
     if (this._insetScale) { return this._insetScale }
     else { return this.protoParent.insetScale }
   }
+  get insetAmount() { return Vertex.sub(this.size, this.insetSize).div(2) }
 
   get filter() {
     if (this._filter) { return this._filter }
@@ -993,7 +994,7 @@ class Grid extends ProtoLayer {
   // MARK: Cell Grammar Ops
   // #region Cell Grammar Ops
   //METH:
-  insetCells(amount, groupID) {
+  insetCells(scale, groupID) {
     let cells
     if (groupID) {
       const group = this.groupNamed(groupID)
@@ -1004,7 +1005,7 @@ class Grid extends ProtoLayer {
         // console.log(`current groups:`, this.groups)
       }
     } else { cells = this.cells }
-    cells.forEach(e => e.inset(amount))
+    cells.forEach(e => e.setInsetScale(scale))
   }
   // #endregion
   // MARK: Grammar Generators
