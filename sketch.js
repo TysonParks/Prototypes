@@ -20,7 +20,7 @@ let bgCol, acCol, hiCol, shCol
 
 //Variables
 let TestMode, frameSize
-let F = {}// Feature Set
+let FTS = {}// Feature Set
 let BG, FRAME // Background, Frame
 let R, S // Random, Store 
 
@@ -89,8 +89,8 @@ function setupStore() { S = new Store() }
 // FUNC: setupFeatures()
 function setupFeatures() {
   calculateFeatures(tokenData)
-  console.log('F: FeatureSet', F)
-  console.log('layers', F.layers)
+  console.log('FTS: FeatureSet', FTS)
+  console.log('layers', FTS.layers)
 
 }
 
@@ -135,22 +135,21 @@ class ProtoMill {
   }
   //METH: 
   mkGrid() {
-    this.grid = new Grid(FRAME, { x: F.x, y: F.y })
+    this.grid = new Grid(FRAME, { x: FTS.x, y: FTS.y })
     this.minCellSize = min(this.grid.cellSize.x, this.grid.cellSize.y)
   }
   //METH: 
   mkBaseShader() {
-    if (F.baseLayer === 'None') {
+    if (FTS.baseLayer === 'None') {
       this.grid.inset(R.random_num(0.9, 0.95))
     } else {
-      this.grid.inset(R.random_num(0.7, 0.9))
+      const frameInset = R.random_num(0.02, 0.18)
+      this.grid.inset(1 - frameInset)
       let baseShadeStack
-      if (F.baseLayer === 'Additive') {
-        baseShadeStack = Shade.neuShadeSVGFactory(
-          { mag: R.random_num(0.5, 2), start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+      if (FTS.baseLayer === 'Additive') {
+        baseShadeStack = Shade.neuShadeSVGFactory({ mag: R.random_num(0.5, 2) })
       } else {
-        baseShadeStack = Shade.neuShadeSVGFactory(
-          { mag: this.grid.gridCellBounds.size.x * 0.5, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+        baseShadeStack = Shade.neuShadeSVGFactory({ mag: this.grid.gridCellBounds.size.x * 0.5 })
       }
       this.baseShader = createFilter().dropShadow(baseShadeStack)
       this.grid.setFilter(this.baseShader)
@@ -158,7 +157,7 @@ class ProtoMill {
   }
   //METH:
   mkShaders() {
-    let shaders = F.layers.map(l => {
+    let shaders = FTS.layers.map(l => {
       const inset = 2 * (1 - l.inset)
       const type = (l.type === 'Additive') ? inset : -2 + inset
       const mag = l.loft * type * this.minCellSize
@@ -170,20 +169,20 @@ class ProtoMill {
   }
   //METH:
   mkGroups() {
-    const layerCvrg = roundToDec(1 / F.weight)
-    console.log('density', F.density)
-    console.log('total weight', F.weight)
-    console.log('layerWeight', F.layerWeight)
-    console.log('emptyWeight', F.emptyWeight)
+    const layerCvrg = roundToDec(1 / FTS.weight)
+    console.log('density', FTS.density)
+    console.log('total weight', FTS.weight)
+    console.log('layerWeight', FTS.layerWeight)
+    console.log('emptyWeight', FTS.emptyWeight)
     console.log('layerCvrg', layerCvrg)
 
-    let count = F.layerWeight
+    let count = FTS.layerWeight
     let full = true
     let emptyCvrg = 0
-    if (F.density !== 'At Capacity') {
-      count = max(2, F.layerWeight * 2 - 1)
+    if (FTS.density !== 'At Capacity') {
+      count = max(2, FTS.layerWeight * 2 - 1)
       full = false
-      emptyCvrg = roundToDec(F.emptyWeight / F.weight * (1 / max(1, (F.layerWeight - 1))))
+      emptyCvrg = roundToDec(FTS.emptyWeight / FTS.weight * (1 / max(1, (FTS.layerWeight - 1))))
     }
     let cvrg = { empty: emptyCvrg, layer: layerCvrg, total: 0 }
     console.log('emptyCvrg', emptyCvrg)
@@ -202,16 +201,16 @@ class ProtoMill {
     let methods
     let coverage = cvrg.layer
     if (i === count) {
-      methods = ['groupAvail', F.modifierStyle]
+      methods = ['groupAvail', FTS.modifierStyle]
       coverage = roundToDec((1 - cvrg.total))
     }
     if (1 < i && i < count) {
       if (!full && i % 2 === 0) {
-        methods = ['empty', F.modifierStyle]
+        methods = ['empty', FTS.modifierStyle]
         coverage = cvrg.empty
-      } else { methods = F.modifierStyle }
+      } else { methods = FTS.modifierStyle }
     }
-    if (i === 1) { methods = [F.seedStyle, F.modifierStyle] }
+    if (i === 1) { methods = [FTS.seedStyle, FTS.modifierStyle] }
     cvrg.total += coverage
 
 
@@ -261,12 +260,13 @@ function gridTests2() {
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
+  // const frameInset = R.random_num(0.02, 0.18)
   FRAME.inset(.9)
   grid.inset(.9)
   FRAME.setFilter(shader1)
   // grid.setFilter(shader1)
-  console.log('FRAME Filter', FRAME.filter)
-  console.log('gridFilter', grid.filter)
+  console.log('FRAME Filter', FRAME.filter.id)
+  console.log('gridFilter', grid.filter.id)
 
   grid.randGroup(4 / grid.cellCount)
   // grid.randomComb({
