@@ -179,9 +179,12 @@ function calculateFeatures(token = tokenData) {
           return 'None'
         case 'Additive':
           noShrinkWrap()
+          //TODO: INSET MIGRATION: adjust values to non-scale inset: inset(0.1, 0.3)
           return this.#calcLayer(r, true, undefined, inset(0.7, 0.9))
         case 'Subtractive':
           noShrinkWrap()
+          //TODO: INSET MIGRATION: adjust values to non-scale inset: inset(0.1, 0.3)
+          //TODO: If these value remain the same, just make a property instead of arrow function
           return this.#calcLayer(r, false, undefined, inset(0.7, 0.9))
       }
     }
@@ -285,35 +288,49 @@ function calculateFeatures(token = tokenData) {
       }
     }
     //METH:
+    //TODO: INSET MIGRATION: It might be easiest to just convert the final method output to (1-inset)
     #calcInsets(r) {
       // console.log('Grid', [this.x, this.y])
       let scaleRange
-      if (this.layerTypes === 'Additive') { scaleRange = [0.75, 0.85] }
-      else { scaleRange = [0.8, 0.9] }
+      if (this.layerTypes === 'Additive') {
+        //TODO: INSET MIGRATION: adjust values to non-scale inset: scaleRange = [0.15, 0.25]
+        scaleRange = [0.75, 0.85]
+      } else {
+        //TODO: INSET MIGRATION: adjust values to non-scale inset: scaleRange = [0.1, 0.2]
+        scaleRange = [0.8, 0.9]
+      }
+      console.log('scaleRange 1', scaleRange)
+      // NOTE: This tunes the scale to mostly hit 0.9 - 0.95 range for any grid
+      //TODO: INSET MIGRATION: adjust values to non-scale inset: max(0, sub - (0.08 / sqrt(this.x)))
       scaleRange = scaleRange.map(sub => min(1, sub + (0.08 / sqrt(this.x))))
-      // console.log('layerTypes', this.layerTypes)
-      // console.log('scaleRange', scaleRange)
+      console.log('layerTypes', this.layerTypes)
+      console.log('scaleRange 2', scaleRange)
       let range
-      // console.log('this.inset', this.inset)
+      console.log('this.inset', this.inset)
       switch (this.inset) {
         case 'Maximum':
+          //TODO: INSET MIGRATION: adjust values to non-scale inset: range = [0.7, 1]
           range = [0, 0.3]
           break
         case 'Medium':
+          //TODO: INSET MIGRATION: adjust values to non-scale inset: range = [0.3, 0.6]
           range = [0.4, 0.7]
           break
         case 'Minimum':
+          //TODO: INSET MIGRATION: adjust values to non-scale inset: range = [0, 0.2]
           range = [0.8, 1]
       }
 
-      // console.log('range', range)
+      console.log('range', range)
       let insetLrg = r.random_num(range[0], range[1])
-      // console.log('insetLrg', insetLrg)
+      console.log('insetLrg', insetLrg)
+      //TODO: INSET MIGRATION: Not sure, but maybe just swap [0, 1] to [1,0]???
       insetLrg = convertRange(insetLrg, [0, 1], scaleRange)
       const [a, b] = this.insetRatio.split(':').map(Number)
+      //TODO: INSET MIGRATION: this probably needs changed as well 
       const ratioVal = b / a
       const insetSml = insetLrg * ratioVal
-      // console.log('insets', [insetLrg, insetSml])
+      console.log('insets', [insetLrg, insetSml])
       return [roundToDec(insetLrg), roundToDec(insetSml)]
     }
     // #endregion

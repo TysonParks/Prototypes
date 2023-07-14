@@ -141,10 +141,13 @@ class ProtoMill {
   //METH: 
   mkBaseShader() {
     if (FTS.baseLayer === 'None') {
+      //TODO: INSET MIGRATION: change to R.random_num(0.05, 0.1)
       this.grid.inset(R.random_num(0.9, 0.95))
     } else {
+      //TODO: INSET MIGRATION: Will need to reconsider this whole block
       const frameInset = R.random_num(0.02, 0.18)
       this.grid.inset(1 - frameInset)
+
       let baseShadeStack
       if (FTS.baseLayer === 'Additive') {
         baseShadeStack = Shade.neuShadeSVGFactory({ mag: R.random_num(0.5, 2) })
@@ -158,10 +161,12 @@ class ProtoMill {
   //METH:
   mkShaders() {
     let shaders = FTS.layers.map(l => {
+      //TODO: INSET MIGRATION: change to inset = 2 * l.inset
       const inset = 2 * (1 - l.inset)
-      const type = (l.type === 'Additive') ? inset : -2 + inset
+      //TODO: INSET MIGRATION: change to inset = -2 * (1-l.inset)
+      const type = l.type === 'Additive' ? inset : -2 + inset
       const mag = l.loft * type * this.minCellSize
-      const stack = Shade.neuShadeSVGFactory({ mag: mag, start: .5, pixToUserUnits: FRAME.pixToUserUnits })
+      const stack = Shade.neuShadeSVGFactory({ mag: mag })
       const shader = createFilter().dropShadow(stack)
       return shader
     })
@@ -235,6 +240,7 @@ function gridTests2() {
   // gridX = 6
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
+  //TODO: INSET MIGRATION: adjust values to non-scale inset
   let gridInset = R.random_num(0.75, 0.95)
   // grid.inset(gridInset)
 
@@ -261,6 +267,7 @@ function gridTests2() {
   // console.log('shadeStack2', shadeStack2)
 
   // const frameInset = R.random_num(0.02, 0.18)
+  //TODO: INSET MIGRATION: adjust values to non-scale inset
   FRAME.inset(.9)
   grid.inset(.9)
   FRAME.setFilter(shader1)
@@ -312,6 +319,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
+  //TODO: INSET MIGRATION: adjust values to non-scale inset
   let inset = R.random_num(0.9, 0.97)
   inset = .8
   // console.log('inset', inset)

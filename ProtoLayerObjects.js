@@ -78,6 +78,7 @@ class ProtoLayer {
   get size() { return vert(this.boundsRect.width, this.boundsRect.height) }
 
   get insetAnchor() { return this.anchorFor(this.insetSize) }
+  //TODO: INSET MIGRATION: recalc as this.size - 2*this.insetAmount
   get insetSize() { return Vertex.mult(this.size, vert(this.insetAmount)) }
 
   get insetBoundsRect() {
@@ -90,6 +91,7 @@ class ProtoLayer {
       })
   }
 
+  //TODO: INSET MIGRATION: this is actually what inset will become, create new insetScale computed property
   get padSize() { return Vertex.sub(this.size, this.insetSize).div(2) }
   get center() { return Vertex.div(this.size, 2).add(this.anchor) }
   get corners() {
@@ -210,6 +212,7 @@ class Frame extends ProtoLayer {
   cornerRadius = 5
 
   constructor(svgParent) {
+    //TODO: INSET MIGRATION: change inset default to 0
     super({ protoParent: svgParent, inset: 1, drawRect: true })
     this.finishSetup(S.Frame)
   }
@@ -604,6 +607,7 @@ class Grid extends ProtoLayer {
   get columnCount() { return this.gridCellBounds.cellBoundsWidth }
   get rowCount() { return this.gridCellBounds.cellBoundsHeight }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
+  //TODO: INSET MIGRATION: create an insetScale computed property and replace this.insetSize with it
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
   get minCellWidth() { return min(this.cellSize.x, this.cellSize.y) }
   get cells() { return this.cellRows.flat() }
@@ -842,6 +846,7 @@ class Grid extends ProtoLayer {
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
   //TODO: add filter paramater and implement useage, currently feeding this method filters in sketch.js 🤣😂
   //METH: findIslands()
+  //TODO: INSET MIGRATION: set inset to 0
   findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, filter, direction = Direction.Cardinal, taken = true, stored = true, inset = 1 } = {}) {
     let cells, group, island
     if (!groupID && !islandID && !selection) {
@@ -984,6 +989,7 @@ class Grid extends ProtoLayer {
   }
   //METH:
   setFrameRadii() {
+    //TODO: INSET MIGRATION: replace this.padSize with this.insetAmount 
     FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize)
   }
   //METH:
@@ -1384,6 +1390,7 @@ class Cell extends ProtoLayer {
 
       // super(this.drawElement(look))
       if (this.taken) {
+        //TODO: INSET MIGRATION: If re-enabling cell drawing, must take into account new (non-scaling) inset method
         // this.insetAmount = 0.9
         let maxWidthDivisor = 8
         // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.1 }
@@ -1420,6 +1427,7 @@ class Island extends ProtoLayer {
   shape
   direction
   // color
+  //TODO: INSET MIGRATION: set inset to 0
   constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, inset = 1 } = {}) {
     super({ protoParent: protoParent, svgParent: svgParent, inset: inset, drawRect: false, drawSVG: false })
     this.cells = cells
@@ -1439,7 +1447,7 @@ class Island extends ProtoLayer {
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.groupID, islandID: this.id }) }
   get cellAnchor() { return this.cellBounds.cellAnchor }
-
+  //TODO: INSET MIGRATION: Fine for now, but once inset transitions from filter to geometry will need to refactor
   get insetAnchor() { return this.anchor }
   get insetSize() { return this.size }
 
@@ -1793,6 +1801,7 @@ class Shape extends ProtoLayer {
       strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
 
       const posInset = this.insetAmount >= 0
+      //TODO: INSET MIGRATION: I think strokeMaskWidth = this.insetAmount should work
       strokeMaskWidth = 1 * (posInset ? 1 - this.insetAmount : this.insetAmount) * this.grid.cellSize.x
       // strokeMaskWidth = -.6 * this.grid.cellSize.x
       // console.log('insetAmount', this.insetAmount)
