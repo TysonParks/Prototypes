@@ -31,7 +31,7 @@ function calculateFeatures(token = tokenData) {
 
   function calculateAll() {
     featureSet = new FeatureSet(R)
-    if (F) { F = featureSet }
+    if (FTS) { FTS = featureSet }
     calcFeatures()
     return
   }
