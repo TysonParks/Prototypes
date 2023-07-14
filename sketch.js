@@ -47,9 +47,9 @@ function setup() {
   setupColors()
   setupBackground()
   setupFeatures()
-  gridTests2()
+  // gridTests2()
   const mill = new ProtoMill()
-  // mill.mkProtoType()
+  mill.mkProtoType()
 
   //TESTING
   createGUI()
@@ -127,35 +127,49 @@ class ProtoMill {
   constructor() { }
   //METH: 
   mkProtoType() {
+    console.log(':::PROTOMILL RUNNING:::')
     this.mkGrid()
     this.mkBaseShader()
     this.mkShaders()
     this.mkGroups()
     console.log('groups', this.groups)
+    console.log('all layers', S.allLayers)
   }
   //METH: 
   mkGrid() {
     this.grid = new Grid(FRAME, { x: FTS.x, y: FTS.y })
     this.minCellSize = min(this.grid.cellSize.x, this.grid.cellSize.y)
+    console.log('Grid Cells', FTS.x, FTS.y)
   }
   //METH: 
   mkBaseShader() {
     if (FTS.baseLayer === 'None') {
-      //TODO: INSET MIGRATION: test this
-      this.grid.setInsetScale(R.random_num(0.9, 0.95))
+      this.grid.setInsetScale(R.random_num(0.9, 0.96))
     } else {
-      //TODO: INSET MIGRATION: Will need to reconsider this whole block
-      const frameInset = R.random_num(0.02, 0.18)
+      const frameInset = R.random_num(0.05, 0.15)
+      FRAME.setInsetScale(1 - frameInset)
       this.grid.setInsetScale(1 - frameInset)
+      // this.grid.setInsetScale(1 - (0.2 - frameInset))
 
-      let baseShadeStack
-      if (FTS.baseLayer === 'Additive') {
-        baseShadeStack = Shade.neuShadeSVGFactory({ mag: R.random_num(0.5, 2) })
+      let mag
+      if (FTS.baseLayer.type === 'Additive') {
+        // console.log('padSize', FRAME.padSize.string)
+        const max = min(FRAME.padSize.x, FRAME.padSize.y) * 3
+        // console.log('max inset', max)
+        mag = R.random_num(max / 2, max)
       } else {
-        baseShadeStack = Shade.neuShadeSVGFactory({ mag: this.grid.gridCellBounds.size.x * 0.5 })
+        const max = min(FRAME.padSize.x, FRAME.padSize.y) * 3
+        mag = -R.random_num(max / 2, max)
       }
+      // mag = mag * FRAME.pixToUserUnits
+      console.log('base mag', mag)
+      console.log('pixToUserUnits', FRAME.pixToUserUnits)
+      console.log('FTS.baseLayer', FTS.baseLayer)
+      const baseShadeStack = Shade.neuShadeSVGFactory({ mag: mag })
+      console.log(baseShadeStack)
       this.baseShader = createFilter().dropShadow(baseShadeStack)
-      this.grid.setFilter(this.baseShader)
+      FRAME.setFilter(this.baseShader)
+
     }
   }
   //METH:
@@ -166,6 +180,7 @@ class ProtoMill {
       //TODO: INSET MIGRATION: test this
       const type = l.type === 'Additive' ? insetAmount : -2 + insetAmount
       const mag = l.loft * type * this.minCellSize
+      console.log('layer mag', mag)
       const stack = Shade.neuShadeSVGFactory({ mag: mag })
       const shader = createFilter().dropShadow(stack)
       return shader
@@ -223,7 +238,9 @@ class ProtoMill {
     return { methods: methods, coverage: coverage }
   }
   //METH:
-  assignShaders() { }
+  assignShaders() {
+
+  }
   //METH:
   mkFinal() { }
 
@@ -261,14 +278,17 @@ function gridTests2() {
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.4 })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * -4 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
+
+  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: 15 })
+  const shader3 = createFilter().dropShadow(shadeStack3)
 
   // const frameInset = R.random_num(0.02, 0.18)
   FRAME.setInsetScale(.9)
   grid.setInsetScale(.9)
-  FRAME.setFilter(shader1)
+  FRAME.setFilter(shader3)
   // grid.setFilter(shader1)
   console.log('FRAME Filter', FRAME.filter.id)
   console.log('gridFilter', grid.filter.id)
