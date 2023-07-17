@@ -174,7 +174,7 @@ function calculateFeatures(token = tokenData) {
     //METH:
     #calcBaseLayer(r) {
       const base = this.enums.baseLayer.feature(r)
-      const inset = (min, max) => { return roundToDec(r.random_num(min, max)) }
+      const inset = roundToDec(r.random_num(0.8, 0.95))
       const noShrinkWrap = () => { this.enums.shrinkWrap.removeOptions(['True']) }
       switch (base) {
         case 'None':
@@ -182,11 +182,11 @@ function calculateFeatures(token = tokenData) {
         case 'Additive':
           noShrinkWrap()
           //TODO: If these value remain the same, just make a property instead of arrow function
-          return this.#calcLayer(r, true, undefined, inset(0.8, 0.95))
+          return this.#calcLayer(r, true, undefined, inset)
         case 'Subtractive':
           noShrinkWrap()
           //TODO: If these value remain the same, just make a property instead of arrow function
-          return this.#calcLayer(r, false, undefined, inset(0.8, 0.95))
+          return this.#calcLayer(r, false, undefined, inset)
       }
     }
     //METH:
@@ -303,7 +303,7 @@ function calculateFeatures(token = tokenData) {
       // console.log('layerTypes', this.layerTypes)
       // console.log('scaleRange 2', scaleRange)
       let range
-      console.log('this.insetScale', this.insetScale)
+      // console.log('this.insetScale', this.insetScale)
       switch (this.insetScale) {
         case 'Maximum':
           range = [0, 0.3]
@@ -317,12 +317,12 @@ function calculateFeatures(token = tokenData) {
 
       // console.log('range', range)
       let insetLrg = r.random_num(range[0], range[1])
-      // console.log('insetLrg', insetLrg)
+      console.log('insetLrg', insetLrg)
       insetLrg = convertRange(insetLrg, [0, 1], scaleRange)
       const [a, b] = this.insetRatio.split(':').map(Number)
       const ratioVal = b / a
       const insetSml = insetLrg * ratioVal
-      // console.log('insets', [insetLrg, insetSml])
+      console.log('insets', [insetLrg, insetSml])
       return [roundToDec(insetLrg), roundToDec(insetSml)]
     }
     // #endregion
