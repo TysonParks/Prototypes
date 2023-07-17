@@ -786,9 +786,34 @@ class Grid extends ProtoLayer {
   cellBounds({ selection = this.cells, groupID, islandID } = {}) {
     return new SelectionBounds({ selection: selection, grid: this, groupID: groupID, islandID: islandID })
   }
-  transformedCellRows({ start = Corner.TopLeft, direction = Direction.Horizontal } = {}) {
-    let selection = this.cellRows
-    switch (start.value) { // horizontal direction
+  //METH: converts 1D selection array to a 2D CellRows array
+  toCellRows(selection) {
+    const rows = new map()
+    for (const cell of selection) {
+      const y = cell.coords.y
+      if (!rows.has(y)) { rows.set(y, []) }
+      rows.get(y).push(cell)
+    }
+    return OpArray.from(rows.values())
+  }
+  //METH: randomly transforms a 1D or 2D selection array into a 2D CellRows array
+  randTransformedCells(selection) {
+    return this.transformedCellRows({
+      selection: selection,
+      start: R.random_int(0, 3),
+      direction: R.random_int(0, 1)
+    }).flat()
+  }
+  //METH: transforms a 1D or 2D selection array into a 2D CellRows array given a start corner and direction
+  transformedCellRows({ selection = this.cellRows, start = Corner.TopLeft, direction = Direction.Horizontal } = {}) {
+    if (!selection.is2D) { selection = this.toCellRows(selection) }
+    if (start instanceof Corner) { start = start.value }
+    let isVertical
+    if (direction instanceof Direction) { isVertical = direction.isVertical }
+    if (direction instanceof String) { isVertical = direction === 'vertical' }
+    if (Number.isFinite(direction)) { isVertical = direction === 0 }
+
+    switch (start) { // horizontal direction
       case 0: //topLeft -> no change
       case 1: //topRight
         selection = selection.flipped2D(Direction.Horizontal)
@@ -798,8 +823,8 @@ class Grid extends ProtoLayer {
         selection = selection.flipped2D(Direction.Vertical)
     }
 
-    if (direction.isVertical) { //vertical direction
-      if (start.value % 2 === 0) { // topLeft &  botRight
+    if (isVertical) { //vertical direction
+      if (start % 2 === 0) { // topLeft &  botRight
         selection = selection.flipped2D(Direction.NegOrdinal)
       } else { //topRight &  botLeft
         selection = selection.flipped2D(Direction.PosOrdinal)
@@ -840,7 +865,6 @@ class Grid extends ProtoLayer {
   //TODO: add transform functionality
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
-  //TODO: add filter paramater and implement useage, currently feeding this method filters in sketch.js 🤣😂
   //METH: findIslands()
   findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, filter, direction = Direction.Cardinal, taken = true, stored = true, insetScale = 1 } = {}) {
     let cells, group, island
@@ -1011,6 +1035,11 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Generators
   // #region Grammar Generators
   //METH:
+  randGroup(amount) { this.assign(this.availableCells.randReduce(amount)) }
+  //METH:
+  groupAvail() { this.assign(this.availableCells) }
+
+  //METH:
   randomComb({
     selection = this.availableCells,
     keepRange = range(2, 7),
@@ -1029,10 +1058,6 @@ class Grid extends ProtoLayer {
       start: start
     })
   }
-  //METH:
-  randGroup(amount) { this.assign(this.availableCells.randReduce(amount)) }
-  //METH:
-  groupAvail() { this.assign(this.availableCells) }
   //METH:
   rects(coverage, aspects) { }
   //METH:
