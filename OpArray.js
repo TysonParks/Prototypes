@@ -228,7 +228,7 @@ class OpArray extends Array {
     const secondSlice = this.slice(0, shiftedIndex)                // The remaining part is the second slice
     return firstSlice.concat(secondSlice)   // Concatenate the second slice with the first slice
   }
-
+  //TODO: complete implementation and test
   // apply to numeric arrays 
   reduceLength(reducer, fn) {
     let array = this.unique().numSorted
