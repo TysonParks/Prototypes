@@ -22,7 +22,7 @@ let bgCol, acCol, hiCol, shCol
 let TestMode, frameSize
 let FTS = {}// Feature Set
 let BG, FRAME // Background, Frame
-let R, S // Random, Store 
+let R, S, RuID // Random, Store, Random UID
 
 let boxShadowStyle
 // let container, clone, fpsDisplay, timeDisplay
@@ -43,7 +43,6 @@ function setup() {
   functionTestPrint()
 
   setupPrefs()
-  setupStore()
   setupColors()
   setupBackground()
   setupFeatures()
@@ -53,7 +52,8 @@ function setup() {
 
   //TESTING
   createGUI()
-  console.log('random useage', R.useage)
+  console.log('random R useage', R.useage)
+  console.log('random RuID useage', RuID.useage)
 }
 
 // FUNC: draw()
@@ -80,11 +80,10 @@ function sizeFrame() {
 function setupPrefs() {
   angleMode(DEGREES)
   R = new Random()
+  S = new Store()
+  RuID = new Random()
   TestMode = true
 }
-
-// FUNC: setupStore()
-function setupStore() { S = new Store() }
 
 // FUNC: setupFeatures()
 function setupFeatures() {
@@ -146,40 +145,35 @@ class ProtoMill {
     if (FTS.baseLayer === 'None') {
       this.grid.setInsetScale(R.random_num(0.9, 0.96))
     } else {
-      const frameInset = R.random_num(0.05, 0.15)
-      FRAME.setInsetScale(1 - frameInset)
-      this.grid.setInsetScale(1 - frameInset)
+      FRAME.setInsetScale(FTS.baseLayer.inset)
+      this.grid.setInsetScale(FTS.baseLayer.inset)
       // this.grid.setInsetScale(1 - (0.2 - frameInset))
 
       let mag
       if (FTS.baseLayer.type === 'Additive') {
-        // console.log('padSize', FRAME.padSize.string)
         const max = min(FRAME.padSize.x, FRAME.padSize.y) * 3
-        // console.log('max inset', max)
         mag = R.random_num(max / 2, max)
       } else {
-        const max = min(FRAME.padSize.x, FRAME.padSize.y) * 3
+        const max = min(this.grid.padSize.x, this.grid.padSize.y) * 3
         mag = -R.random_num(max / 2, max)
       }
-      // mag = mag * FRAME.pixToUserUnits
-      console.log('base mag', mag)
-      console.log('pixToUserUnits', FRAME.pixToUserUnits)
-      console.log('FTS.baseLayer', FTS.baseLayer)
+      // console.log('base mag', mag)
       const baseShadeStack = Shade.neuShadeSVGFactory({ mag: mag })
-      console.log(baseShadeStack)
       this.baseShader = createFilter().dropShadow(baseShadeStack)
       FRAME.setFilter(this.baseShader)
-
     }
   }
   //METH:
   mkShaders() {
     let shaders = FTS.layers.map(l => {
       //TODO: INSET MIGRATION: test this
-      const insetAmount = 2 * (1 - l.insetScale)
+      const insetAmount = 2 * (1 - l.inset)
       //TODO: INSET MIGRATION: test this
       const type = l.type === 'Additive' ? insetAmount : -2 + insetAmount
       const mag = l.loft * type * this.minCellSize
+      console.log('layer l.insetScale', l.inset)
+      // console.log('layer insetAmount', insetAmount)
+      // console.log('layer type', type)
       console.log('layer mag', mag)
       const stack = Shade.neuShadeSVGFactory({ mag: mag })
       const shader = createFilter().dropShadow(stack)
