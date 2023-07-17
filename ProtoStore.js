@@ -1,8 +1,6 @@
 // CLASS: Store
 class Store {
   constructor() {
-    // this.rUID = new random()
-
     this.Frame = new ProtoStorage('frame', 1)
     this.Layers = new ProtoStorage('layr', 1)
     this.Grids = new ProtoStorage('grd', 2)
