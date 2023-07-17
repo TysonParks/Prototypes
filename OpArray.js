@@ -169,6 +169,7 @@ class OpArray extends Array {
       (a, b) => a.filter(e => !b.includes(e))
     )
   }
+  //METH: checks if this array contains all elements from another array
   includesMany(vals, props) {
     return this.boolOp(vals, props,
       (a, b) => b.every(e => { return a.includes(e) })
@@ -228,14 +229,23 @@ class OpArray extends Array {
     return firstSlice.concat(secondSlice)   // Concatenate the second slice with the first slice
   }
 
+  // apply to numeric arrays 
+  reduceLength(reducer, fn) {
+    let array = this.unique().numSorted
+    // console.log('this', this)
+    // console.log('array', array)
+    let remove = round(reduce(array.length, reducer))
+    if (remove < 1 || !fn) { return array }
+
+    while (remove > 0) {
+      array = fn(array)
+      remove -= 1
+    }
+    return array
+  }
+
   randReduce(reducer) {
-    // let remove = 0
-    // if (reducer < 1) {
-    //   remove = round(this.length * (1 - reducer))
-    // } else {
-    //   remove = this.length - reducer
-    // }
-    let remove = round(reduce(this.length, reducer))
+    const remove = round(reduce(this.length, reducer))
     for (let i = remove; i > 0; i--) {
       this.splice(this.randomIndex, 1)
     }
