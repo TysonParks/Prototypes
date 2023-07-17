@@ -366,13 +366,15 @@ class Shade {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true
     mag = abs(mag)
-    // TODO: Optimization: reduce neushades length based upon mag ( reduceTo(mag/5) ???)
+    // TODO: Optimization: reduce neushades length based upon mag using Shadow Layer Decay chart
     let neuShades = exponentialSlices(start, mag, count)
     neuShades = OpArray.from([1, 2, 4, mag * 1 / 8, mag * 1 / 4, mag * 1 / 2, mag * 3 / 4, mag])
+    neuShades = OpArray.from([1, mag, mag * .5, 2, mag * .75, 4, mag * .25, mag * .125])
       .map(e => round(e))
-      .numSorted
-      .unique()
       .filter(e => e > 0)
+      .reduceLength(max(4, ceil(mag / 5)))
+    // .reduce()
+
     console.log('slices', neuShades)
 
     if (type === 'multiShade') {
