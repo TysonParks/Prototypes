@@ -1,6 +1,8 @@
 // CLASS: Store
 class Store {
   constructor() {
+    // this.rUID = new random()
+
     this.Frame = new ProtoStorage('frame', 1)
     this.Layers = new ProtoStorage('layr', 1)
     this.Grids = new ProtoStorage('grd', 2)
@@ -93,7 +95,7 @@ const storedProtocol = {
 // MARK: identifiableProtocol: a mixin for assigning uids to objects
 const identifiableProtocol = {
   uid: 'unassigned',
-  assignUID() { this.uid = R.random_hash() }
+  assignUID() { this.uid = RuID.random_hash() }
 }
 
 // MARK: identifiableStored: a mixin composition of storedProtocol and identifiableProtocol
