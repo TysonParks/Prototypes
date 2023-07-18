@@ -1114,18 +1114,30 @@ class Grid extends ProtoLayer {
     const fillsRow = target >= this.rowcount
     const range = vert(round(target * 0.5), round(target * 1.5))
     const divisors = primeDivisors(this.cellCount)
+    const maxWidth = this.columnCount - 1
 
     switch (named) {
       case 'Noise':
         this.randGroup(coverage)
         break
       case 'Thick Random Comb':
-
+        this.randomComb({
+          selection: this.randTransCells(),
+          keepRange: range(2, ceil(this.rowCount * coverage)),
+          dropRange: range(1, this.rowCount),
+          start: R.random_int(0, this.cellCount - 1)
+        })
         break
       case 'Thin Random Comb':
-
+        this.randomComb({
+          selection: this.randTransCells(),
+          keepRange: range(1, floor(this.columnCount)),
+          dropRange: range(2, this.columnCount / coverage),
+          start: R.random_int(0, this.cellCount - 1)
+        })
         break
       case 'Rectangles':
+
 
         break
       case 'Squares':
@@ -1866,13 +1878,6 @@ class Shape extends ProtoLayer {
 
 
 
-
-
-
-
-
-
-
 // MARK: DEPRECATE
 // #region DEPRECATE
 
@@ -1933,10 +1938,7 @@ class GOpt {
         ['maskedCornerShape', 0.2,],
       ]])
   }
-
-
 }
-
 // #endregion
 
 
