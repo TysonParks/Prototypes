@@ -316,7 +316,7 @@ p5.Element.prototype.boxShadow = function (value) {
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = 15, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
+  static shadVect(angle = 0, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
   static maxComponent(vector = this.shadVect()) {
     return vector.y
     // return max(this.x, this.y)
@@ -366,14 +366,25 @@ class Shade {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true
     mag = abs(mag)
-    // TODO: Optimization: reduce neushades length based upon mag using Shadow Layer Decay chart
-    let neuShades = exponentialSlices(start, mag, count)
-    neuShades = OpArray.from([1, 2, 4, mag * 1 / 8, mag * 1 / 4, mag * 1 / 2, mag * 3 / 4, mag])
-    neuShades = OpArray.from([1, mag, mag * .5, 2, mag * .75, 4, mag * .25, mag * .125])
-      .map(e => round(e))
+    // Optimization: reduce neushades stack size based upon mag using Shadow Layer Decay chart
+    const keep = () => {
+      const root = sqrt(mag)
+      if (root >= 31) { return 11 } // mag >= 961
+      if (root >= 22) { return 10 } // mag >= 484
+      if (root >= 16) { return 9 } // mag >= 256
+      if (root >= 11) { return 8 } // mag >= 121
+      if (root >= 8) { return 7 } // mag >= 64
+      if (root >= 6) { return 6 } // mag >= 36
+      if (root >= 3) { return floor(root) } // mag >= 9
+      return 3
+    }
+    console.log('KEEP', keep())
+    let neuShades = OpArray.from([1, mag, mag * .5, 2, mag * .75, 4, mag * .25, mag / 8, mag / 16, mag / 32, mag / 64, mag / 128])
+      .slice(0, keep())
+      .map(e => floor(e))
       .filter(e => e > 0)
-      .reduceLength(max(4, ceil(mag / 5)))
-    // .reduce()
+      .numSorted
+      .unique()
 
     console.log('slices', neuShades)
 
