@@ -1068,7 +1068,7 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Modifiers
   // #region Grammar Modifiers
   //METH:
-  outline({ selection, groupID, islandID, direction = Direction.All, newGroup = true } = {}) {
+  outline({ selection, groupID, islandID, direction = Direction.All, amount = 1, newGroup = true } = {}) {
     if ((selection && groupID) || (selection && islandID) || (groupID && islandID)) {
       console.error('Grid.outline can only use one selection method')
       return
@@ -1086,21 +1086,26 @@ class Grid extends ProtoLayer {
         selection = island.cells
       }
     }
-    if (selection.length > 0) {
-      const outline = this.validNeighbors({ selection: selection, directions: direction.directions })
-        .filter(cell => cell.available)
-      if (newGroup === true) { group = undefined }
-      if (typeof newGroup === 'string') { group = this.groupNamed(newGroup) }
-      this.assign(outline, group)
+    while (amount > 0) {
+      if (selection.length > 0) {
+        const outline = this.validNeighbors({ selection: selection, directions: direction.directions })
+          .filter(cell => cell.available)
+        if (newGroup === true) { group = undefined }
+        if (typeof newGroup === 'string') { group = this.groupNamed(newGroup) }
+        this.assign(outline, group)
+        if (newGroup === true && !group) { group = this.lastGroup }
+        selection = group.cells
+      }
+      amount -= 1
     }
   }
   //METH:
-  outlineGroup(groupID, direction = Direction.All, newGroup = true) {
-    return this.outline({ groupID, direction, newGroup })
+  outlineGroup({ groupID, direction = Direction.All, amount = 1, newGroup = true } = {}) {
+    return this.outline({ groupID, direction, amount, newGroup })
   }
   //METH:
-  outlineTaken(direction = Direction.All, newGroup = true) {
-    return this.outline({ selection: this.takenCells, direction, newGroup })
+  outlineTaken({ direction = Direction.All, amount = 1, newGroup = true } = {}) {
+    return this.outline({ selection: this.takenCells, direction, amount, newGroup })
   }
   //METH:
   symmetrize({ selection, groupID, islandID, style, direction, start, use } = {}) { }
