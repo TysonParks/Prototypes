@@ -756,7 +756,7 @@ class Grid extends ProtoLayer {
   //METH: 
   vertNormals({ cellIndex, groupID, islandID, directions = Direction.Ordinal.directions } = {}) {
     return directions.map(e => {
-      const adj = OpArray.from(e.adjacents)
+      const adj = OpArray.from(e.adjacents.directions)
       const exposed = OpArray.from(this.exposedDirections({ cellIndex: cellIndex, groupID: groupID, islandID: islandID }))
       const exposedAdj = adj.intersect(exposed, ['value'])
       const exposedDirect = exposed.some(f => f.value === e.value)
