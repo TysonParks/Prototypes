@@ -120,7 +120,7 @@ class OpArray extends Array {
 
 
 
-  // MARK: Key Value
+  // MARK: Key Value / Boolean
   kvMap(props) {
     if (this.isEmpty) { return new Map() }
     props = OpArray.format(props)
@@ -164,23 +164,30 @@ class OpArray extends Array {
       (a, b) => a.length === b.length && a.numSorted.toString() === b.numSorted.toString(),
     )
   }
-  exclude(vals, props) {
-    return this.boolOp(vals, props,
-      (a, b) => a.filter(e => !b.includes(e))
-    )
-  }
   //METH: checks if this array contains all elements from another array
   includesMany(vals, props) {
     return this.boolOp(vals, props,
       (a, b) => b.every(e => { return a.includes(e) })
     )
   }
+  // MARK: BOOLEAN Operators
+  // https://en.wikipedia.org/wiki/Venn_diagram
+  //METH: A ⋃ B: return union or all unique values in both sets
+  // [a,b,c] union [b,c,d] = [a,b,c,d]
+  union(vals, props) {
+    return this.boolOp(vals, props,
+      (a, b) => [...new Set([...a, ...b])]
+    )
+  }
+  //METH: A ⋂ B: returns intersection or values that both sets have in common
+  // [a,b,c] intersect [b,c,d] = [b,c]
   intersect(vals, props) {
     return this.boolOp(vals, props,
       (a, b) => a.filter(e => b.includes(e))
     )
   }
-
+  //METH: A △ B: return difference or values that are not in common, opposite result of intersect()
+  // [a,b,c] symDiff [b,c,d] = [a,d]
   symDiff(vals, props) {
     return this.boolOp(vals, props,
       (a, b) => a
@@ -188,9 +195,11 @@ class OpArray extends Array {
         .concat(b.filter(f => !a.includes(f)))
     )
   }
-  union(vals, props) {
+  //METH: A - B: return Relative Compliment or A minus any common values that B has
+  // [a,b,c] exclude [b,c,d] = [a]
+  exclude(vals, props) {
     return this.boolOp(vals, props,
-      (a, b) => [...new Set([...a, ...b])]
+      (a, b) => a.filter(e => !b.includes(e))
     )
   }
 
@@ -221,7 +230,7 @@ class OpArray extends Array {
     }
     return OpArray.from(res)
   }
-
+  // MARK: Shifting and reduction Methods
   shifted(index) {
     const shiftedIndex = index >= 0 ? index : this.length + index
     const firstSlice = this.slice(shiftedIndex) // Extract the first slice
