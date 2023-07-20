@@ -137,10 +137,13 @@ function calculateFeatures(token = tokenData) {
     #calcX(r) {
       //FIXME: had a crash here with hash = "0xd86c78f27b1f09427e6822f299e686e9f4a1290577fef2452863588801cb774d"
       const x = parseInt(this.enums.gridX.feature(r))
+      if (x < 5) {
+        this.enums.seedStyle.removeOptions(['Rectangles', 'Squares', 'Triangles'])// only 5-10 can pack more than 3 rects, squares, or triangles
+      }
       if (x < 4) {
-        this.enums.extraLayers.removeOptions(['2', '3'])
+        this.enums.extraLayers.removeOptions(['2', '3'])// not enough cells to support extra layers
         this.enums.pyramidal.replaceOptions([['True', 0.5], ['False', 0.5]])
-        this.enums.seedStyle.reduceOptions(['Noise', 'Thin Random Comb'])
+        this.enums.seedStyle.reduceOptions(['Noise', 'Thin Random Comb']) // not enough cells to support other styles
         this.enums.symmetryStyle.replaceOptions([['None', 1.2]])
       }
       if (x > 7) {
@@ -581,6 +584,7 @@ function calculateFeatures(token = tokenData) {
           ['Thin Random Comb', 0.1],
           ['Rectangles', 0.1],
           ['Squares', 0.1],
+          ['Triangles', 0.1],
           ['Vertical Pattern', 0.1],
           ['Horizontal Pattern', 0.1],
           ['Ordinal Pattern', 0.1],
