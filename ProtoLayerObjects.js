@@ -1059,9 +1059,49 @@ class Grid extends ProtoLayer {
     })
   }
   //METH:
-  rects(coverage, aspects) { }
+  rects(coverage, aspects) {
+
+  }
   //METH:
-  squares(coverage) { }
+  squares(coverage) {
+    let maxSize
+    switch (this.columnCount) {
+      case 5, 6: maxSize = 3
+      case 7: maxSize = 4
+      case 8, 9: maxSize = 5
+      case 10: maxSize = 6
+    }
+
+    const maxCells = round(coverage * this.cellCount)
+    let usedCells = 0
+    let squares = new OpArray
+    while (usedCells < maxCells) {
+      const square = R.random_int(1, maxSize)
+      squares.push(square)
+      usedCells += square * square
+    }
+    //TODO: need to find best way to: ( in order from largest to smallest )
+    //1. assign random cells of same square size to a single group 
+    //1a. assign those random cells within subgrid(s) to avoid outline collisions 
+    //1b. to achieve, modify outline() to return an outline without assignment
+    //2. apply outline() to make squares around each cell
+    //3. assign each sized group back to a single (low numbered) group
+    const group = new CellGroup(this, this.svgElt, this)
+    squares = squares.numSorted
+    squares.forEach(size => {
+      const cell = this.availableCells.randomElement
+      if (size === 1) { this.assign([cell], group) }
+      else { this.assignSquare(cell, size, group) }
+    })
+
+  }
+
+  //METH:
+  assignSquare(cell, size, group, direction = Direction.DownRight) {
+
+  }
+  //METH:
+  triangles(coverage) { }
   //METH:
   snake() { }
   // #endregion
