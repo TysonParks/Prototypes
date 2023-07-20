@@ -94,13 +94,34 @@ class Direction {
   get directions() { return OpArray.from(this.vals.map(a => new Direction(a))) }
   get names() { return OpArray.from(this.vals.map(a => this.#getName(a))) }
   get value() { return this.valOp(a => a) }
-  get adjacents() { return this.directOp(a => OpArray.from([a.previous(), a.next()])) }
-  get andAdjacents() { return this.directOp(a => OpArray.from([a.previous(), a, a.next()])) }
-  get opposites() { return this.directOp(a => a.rotated(180)) }
+
   get moveCoord() { return this.directOp(a => this.#moveCoords[a.name]) }
   // get angle() { return this.valOp(a => ((((a * -1) - 1) % 4) + 2) * PI / 2) }
   get angle() { return this.directOp(a => this.#angles[a.name]) }
   get angleDegrees() { return radianToDegree(this.angle) }
+
+  get adjacents() {
+    const directionsVals = this.directOp(a => OpArray.from([a.previous(), a.next()]))
+      .map(d => d.value)
+    return new Direction(directionsVals)
+  }
+  get andAdjacents() {
+    const directionsVals = this.directOp(a => OpArray.from([a.previous(), a, a.next()]))
+      .map(d => d.value)
+    return new Direction(directionsVals)
+  }
+  get opposites() {
+    const directionsVals = this.directOp(a => a.rotated(180))
+      .map(d => d.value)
+      .numSorted
+    return new Direction(directionsVals)
+  }
+  get andOpposites() {
+    const directionsVals = this.directOp(a => [a, a.rotated(180)])
+      .map(d => d.value)
+      .numSorted
+    return new Direction(directionsVals)
+  }
 
   get isHorizontal() { return this.valOp(a => a % 2 === 1) }
   get isVertical() { return this.valOp(a => a % 2 === 0) }
@@ -184,6 +205,7 @@ class Direction {
           .keys(this.#generalNames)
           .find(key => OpArray.from(this.#generalNames[key]).equalsSorted(OpArray.from(number)))
       }
+      if (number.length > 1) { return number.map(n => this.#descriptions[n * 2]).join(', ') }
     }
     return this.#descriptions[number * 2]
   }
