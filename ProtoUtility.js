@@ -112,9 +112,14 @@ class Direction {
   }
   get opposites() {
     const directionsVals = this.directOp(a => a.rotated(180))
-      .map(d => d.value)
-      .numSorted
-    return new Direction(directionsVals)
+    if (directionsVals instanceof Direction) {
+      return directionsVals
+    } else {
+      const vals = directionsVals
+        .map(d => d.value)
+        .numSorted
+      return new Direction(vals)
+    }
   }
   get andOpposites() {
     const directionsVals = this.directOp(a => [a, a.rotated(180)])
