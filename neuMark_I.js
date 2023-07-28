@@ -378,7 +378,7 @@ class Shade {
       if (root >= 3) { return floor(root) } // mag >= 9
       return 3
     }
-    console.log('KEEP', keep())
+    // console.log('KEEP', keep())
     let neuShades = OpArray.from([1, mag, mag * .5, 2, mag * .75, 4, mag * .25, mag / 8, mag / 16, mag / 32, mag / 64, mag / 128])
       .slice(0, keep())
       .map(e => floor(e))
@@ -386,7 +386,7 @@ class Shade {
       .numSorted
       .unique()
 
-    console.log('slices', neuShades)
+    // console.log('slices', neuShades)
 
     if (type === 'multiShade') {
       const colRange = range(neuShades[0], neuShades.last())
