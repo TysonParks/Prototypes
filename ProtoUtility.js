@@ -29,10 +29,10 @@ class Aspect {
 
 // ENUM: Corner
 class Corner {
-  static TopLeft = new Corner(0)
-  static TopRight = new Corner(1)
-  static BottomRight = new Corner(2)
-  static BottomLeft = new Corner(3)
+  static UpLeft = new Corner(0)
+  static UpRight = new Corner(1)
+  static DownRight = new Corner(2)
+  static DownLeft = new Corner(3)
 
   constructor(number) {
     this.name = this.#getName(number)
@@ -43,10 +43,10 @@ class Corner {
   get value() { return this.#descriptions.findIndex(e => e === this.name) }
 
   #descriptions = [
-    'topLeft',  // 0
-    'topRight', // 1
-    'botRight', // 2
-    'botLeft',  // 3
+    'upLeft',  // 0
+    'upRight', // 1
+    'downRight', // 2
+    'downLeft',  // 3
   ]
 }
 
@@ -121,12 +121,7 @@ class Direction {
       return new Direction(vals)
     }
   }
-  get andOpposites() {
-    const directionsVals = this.directOp(a => [a, a.rotated(180)])
-      .map(d => d.value)
-      .numSorted
-    return new Direction(directionsVals)
-  }
+  get andOpposites() { return new Direction(this.vals.union(this.opposites.vals, 'vals')) }
 
   get isHorizontal() { return this.valOp(a => a % 2 === 1) }
   get isVertical() { return this.valOp(a => a % 2 === 0) }
