@@ -144,6 +144,11 @@ class Direction {
   get toLeft() { return this.previous(2) }
   get toRight() { return this.next(2) }
 
+  random(amount = 1) {
+    const reducer = min(amount / this.vals.length, 0.999999)
+    return new Direction(this.vals.randReduce(reducer))
+  }
+
   previous(steps = 1) { return this.valOp(a => new Direction((a + 4 - (0.5 * steps)) % 4)) }
   next(steps = 1) { return this.valOp(a => new Direction((a + (0.5 * steps)) % 4)) }
   rotated(degree = 90) { return new Direction(this.vals.map(e => this.#normalizeVals(e + degree / 90)).numSorted) }
