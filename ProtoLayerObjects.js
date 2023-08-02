@@ -247,7 +247,7 @@ class Frame extends ProtoLayer {
   // MARK: Frame modifiers
   //METH:
   setCornerRadii(corners, padding) {
-    const radius = corners.topLeft.x + padding.x
+    const radius = corners.upLeft.x + padding.x
     this.cornerRadius = min(radius, 50)
     // this.cornerRadius = 50
     this.drawElement()
@@ -347,32 +347,33 @@ class SelectionBounds {
   get xMinMax() { return vert(this.xCellMin, this.xCellMax) }
   get yMinMax() { return vert(this.yCellMin, this.yCellMax) }
 
-  get topRowCells() { return this.selection.filter(e => e.y === this.yCellMin).flat() }
+  get upRowCells() { return this.selection.filter(e => e.y === this.yCellMin).flat() }
   get rightColCells() { return this.selection.filter(e => e.x === this.xCellMax).flat() }
-  get bottomRowCells() { return this.selection.filter(e => e.y === this.yCellMax).flat() }
+  get downRowCells() { return this.selection.filter(e => e.y === this.yCellMax).flat() }
   get leftColCells() { return this.selection.filter(e => e.x === this.xCellMin).flat() }
   get outerCells() {
     return {
-      top: this.topRowCells,
+      up: this.upRowCells,
       right: this.rightColCells,
-      bottom: this.bottomRowCells,
+      down: this.downRowCells,
       left: this.leftColCells,
     }
   }
+  // get outlineCells() { return [outerCells.up, outerCells.right, outerCells.down, outerCells.left].flat() }
 
   get cornerCellVerts() {
     return {
-      topLeft: vert(this.xCellMin, this.yCellMin),
-      topRight: vert(this.xCellMax, this.yCellMin),
-      botRight: vert(this.xCellMax, this.yCellMax),
-      botLeft: vert(this.xCellMin, this.yCellMax),
+      upLeft: vert(this.xCellMin, this.yCellMin),
+      upRight: vert(this.xCellMax, this.yCellMin),
+      downRight: vert(this.xCellMax, this.yCellMax),
+      downLeft: vert(this.xCellMin, this.yCellMax),
     }
   }
   get cornerCells() { return this.cornerCellVerts.map(v => this.grid.cellAtCoords(v.x, v.y)) }
   get cornerCellCenters() { return this.cornerCells.map(v => v.center) }
 
-  get cellAnchor() { return this.cornerCellVerts.topLeft }
-  get spanCellVerts() { return segment(this.cornerCellVerts.topLeft, this.cornerCellVerts.botRight) }
+  get cellAnchor() { return this.cornerCellVerts.upLeft }
+  get spanCellVerts() { return segment(this.cornerCellVerts.upLeft, this.cornerCellVerts.downRight) }
   get spanCellIndices() {
     const a = this.spanCellVerts.verts.start
     const b = this.spanCellVerts.verts.end
@@ -385,13 +386,12 @@ class SelectionBounds {
   get cellBoundsHeight() { return this.yCellMax - this.yCellMin + 1 }
   get cellBoundsSize() { return vert(this.cellBoundsWidth, this.cellBoundsHeight) }
 
-
   get takenWeight() { return this.selectionCount / this.cellBoundsCount }
   get isMostlyTaken() { return this.takenWeight >= 0.5 }
   get isMostlyAvailable() { return !this.isMostlyTaken }
   get isFull() { return this.takenWeight === 1 }
 
-  get anchor() { return Vertex.mult(this.cornerCellVerts.topLeft, this.cellSize) }
+  get anchor() { return Vertex.mult(this.cornerCellVerts.upLeft, this.cellSize) }
   get size() { return Vertex.mult(this.cellBoundsSize, this.cellSize) }
   get aspect() { return this.cellBoundsSize.aspect }
 
@@ -414,6 +414,11 @@ class SelectionBounds {
   // MARK: Methods
   // #region Methods
   transformedGrid(type) { }
+
+  //METH:
+  overlaps(cellBounds) {
+
+  }
   // #endregion
   // TODO: try adding selection and bounds parameters and then feeding them transformed matrices
   // MARK: Island Methods
@@ -814,19 +819,19 @@ class Grid extends ProtoLayer {
     if (Number.isFinite(direction)) { isVertical = direction === 0 }
 
     switch (start) { // horizontal direction
-      case 0: //topLeft -> no change
-      case 1: //topRight
+      case 0: //upLeft -> no change
+      case 1: //upRight
         selection = selection.flipped2D(Direction.Horizontal)
-      case 2: //botRight
+      case 2: //downRight
         selection = selection.rotated2D(180)
-      case 3: //botLeft
+      case 3: //downLeft
         selection = selection.flipped2D(Direction.Vertical)
     }
 
     if (isVertical) { //vertical direction
-      if (start % 2 === 0) { // topLeft &  botRight
+      if (start % 2 === 0) { // upLeft &  downRight
         selection = selection.flipped2D(Direction.NegOrdinal)
-      } else { //topRight &  botLeft
+      } else { //upRight &  downLeft
         selection = selection.flipped2D(Direction.PosOrdinal)
       }
     }
@@ -1037,6 +1042,8 @@ class Grid extends ProtoLayer {
   //METH:
   randGroup(amount) { this.assign(this.availableCells.randReduce(amount)) }
   //METH:
+  randomSelection(amount, selection = this.availableCells) { return selection.copy.randReduce(amount) }
+  //METH:
   groupAvail() { this.assign(this.availableCells) }
 
   //METH:
@@ -1063,42 +1070,102 @@ class Grid extends ProtoLayer {
 
   }
   //METH:
-  squares(coverage) {
-    let maxSize
+  squares({ coverage, direction = Direction.DownRight, minSize = 1, uniform = false, overlapping = true } = {}) {
+    console.log('columnCount', this.columnCount)
+    let maxSize // allowable max square based on 'Square and Rect Generation' study
     switch (this.columnCount) {
-      case 5, 6: maxSize = 3
-      case 7: maxSize = 4
-      case 8, 9: maxSize = 5
-      case 10: maxSize = 6
+      case 5:
+      case 6:
+        maxSize = 3
+        break
+      case 7:
+        maxSize = 4
+        break
+      case 8:
+      case 9:
+        maxSize = 5
+        break
+      case 10:
+        maxSize = 6
+        break
     }
 
+    // randomly generate squares within size range that add up to coverage
     const maxCells = round(coverage * this.cellCount)
+    maxSize = min(maxSize, floor(sqrt(maxCells))) // maxSize by gridSize or coverage amount
+    console.log('maxSize', maxSize)
     let usedCells = 0
     let squares = new OpArray
+    let uniformSquare = uniform ? R.random_int(minSize, maxSize) : undefined // single size if uniform
     while (usedCells < maxCells) {
-      const square = R.random_int(1, maxSize)
+      const square = uniform ? uniformSquare : R.random_int(minSize, maxSize)
       squares.push(square)
-      usedCells += square * square
+      usedCells += (square * square)
+      maxSize = min(maxSize, floor(sqrt(maxCells - usedCells))) //recalc maxSize each loop to keep close to coverage
     }
-    //TODO: need to find best way to: ( in order from largest to smallest )
-    //1. assign random cells of same square size to a single group 
-    //1a. assign those random cells within subgrid(s) to avoid outline collisions 
-    //1b. to achieve, modify outline() to return an outline without assignment
-    //2. apply outline() to make squares around each cell
-    //3. assign each sized group back to a single (low numbered) group
-    const group = new CellGroup(this, this.svgElt, this)
-    squares = squares.numSorted
-    squares.forEach(size => {
-      const cell = this.availableCells.randomElement
-      if (size === 1) { this.assign([cell], group) }
-      else { this.assignSquare(cell, size, group) }
+    console.log('squares', squares)
+
+    const original = this.availableCells.copy
+    let selection = new OpArray
+    let available = this.availableCells
+
+    squares.forEach((size, i) => {
+      let inlineSelection = this.inline(original, size - 1, direction.andAdjacents)
+      console.log('')
+      // console.log('inlineSelection', inlineSelection.map(e => e.id))
+      const padding = this.tempOutlineSelection(selection)
+      inlineSelection = inlineSelection.union(selection, 'id')
+      if (overlapping !== 'always') {
+        inlineSelection = inlineSelection.union(padding, 'id')
+      }
+      // console.log('inlineSelection', inlineSelection.map(e => e.id))
+      let shrunkSelection = available.exclude(inlineSelection, 'id') //shrunk selection by excluding inline
+      // console.log('shrunkSelection', shrunkSelection.map(e => e.id))
+
+      const newSquare = () => {
+        let isValid = false
+        let cell, square
+        while (isValid === false && shrunkSelection.length > 1) {
+          console.log('')
+          cell = this.randomSelection(1 / shrunkSelection.length, shrunkSelection) //random cell within shrunk
+          console.log('cell', cell.map(e => e.id))
+          const outline = this.tempOutlineSelection(cell, size - 1, direction.andAdjacents) //create square outline
+          square = cell.copy.union(outline, 'id') //union cell with outline to create square
+          console.log('shrunk start', shrunkSelection.map(e => e.id))
+          const overlaps = square.includesAny(padding, 'id')// check if square overlaps padding
+          console.log('padding length', padding.length)
+          console.log('square overlaps', overlaps)
+          switch (overlapping) {
+            case 'always':
+              isValid = padding.length > 0 ? overlaps : true
+              break
+            case 'never':
+              isValid = !overlaps
+              break
+            default:
+              isValid = true
+          }
+          console.log('square is valid', isValid)
+          // isValid = overlapping === 'never' ? !overlaps:
+          if (!isValid) {
+            square = new OpArray //make square empty
+            shrunkSelection = shrunkSelection.filter(e => e.id !== cell[0].id) // remove failed cell 
+          }
+          // console.log('shrunk end', shrunkSelection.map(e => e.id))
+        }
+        return square
+      }
+
+      let square = newSquare()
+
+      selection = selection.union(square, 'index') //union squares with selection for new selection
+      available = original.exclude(selection, 'index') //remove selection from available for new available
+      console.log('available', available.map(e => e.id))
     })
-
-  }
-
-  //METH:
-  assignSquare(cell, size, group, direction = Direction.DownRight) {
-
+    //create new group and assign collected squares to it
+    const group = new CellGroup(this, this.svgElt, this)
+    this.assign(selection, group)
+    // }
   }
   //METH:
   triangles(coverage) { }
@@ -1107,14 +1174,15 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: Grammar Modifiers
   // #region Grammar Modifiers
-  //METH:
+  //METH: iterative outliner driven by directions
   outline({ selection, groupID, islandID, direction = Direction.All, amount = 1, newGroup = true } = {}) {
+    // if (amount < 1) { return }
     if ((selection && groupID) || (selection && islandID) || (groupID && islandID)) {
       console.error('Grid.outline can only use one selection method')
       return
     }
     let group
-    if (selection && newGroup === false) { group = this.biggestGroup }
+    if (selection && newGroup === false) { group = this.lastGroup }
     if (groupID) {
       group = this.groupNamed(groupID)
       selection = group.cells
@@ -1130,22 +1198,81 @@ class Grid extends ProtoLayer {
       if (selection.length > 0) {
         const outline = this.validNeighbors({ selection: selection, directions: direction.directions })
           .filter(cell => cell.available)
-        if (newGroup === true) { group = undefined }
-        if (typeof newGroup === 'string') { group = this.groupNamed(newGroup) }
-        this.assign(outline, group)
-        if (newGroup === true && !group) { group = this.lastGroup }
+        if (newGroup === true) { group = undefined } //allow assign to create new group
+        if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
+        else { this.assign(outline, group) } //assign to group
+        if (newGroup === true && !group) { //continue adding to the new group
+          group = this.lastGroup
+          newGroup = false
+        }
         selection = group.cells
       }
       amount -= 1
     }
   }
-  //METH:
+  //METH: outline a group and assign
   outlineGroup({ groupID, direction = Direction.All, amount = 1, newGroup = true } = {}) {
     return this.outline({ groupID, direction, amount, newGroup })
   }
-  //METH:
+  //METH: outline all taken cells and assign
   outlineTaken({ direction = Direction.All, amount = 1, newGroup = true } = {}) {
-    return this.outline({ selection: this.takenCells, direction, amount, newGroup })
+    return this.outline({ selection: this.takenCells, direction: direction, amount: amount, newGroup: newGroup })
+  }
+  //METH: grab an outline of a selection without assignment
+  tempOutlineSelection(selection, amount = 1, direction = Direction.All) {
+    let newSelection = new OpArray
+    while (amount > 0) {
+      if (selection.length > 0) {
+        const outline = this.validNeighbors({ selection: selection, directions: direction.directions })
+        // console.log('temp outline', outline)
+        newSelection.push(...outline)
+        selection = newSelection.sort((a, b) => a.index - b.index)
+        // console.log('temp selection', selection.map(e => e.id))
+      }
+      amount -= 1
+      // console.log('temp newSelection', newSelection.map(e => e.id))
+      // console.log('temp selection', selection.map(e => e.id))
+    }
+    // console.log('tempOutline', amount, direction)
+    return selection
+
+  }
+  //METH: grab an inline of a selection without assignment
+  inline(selection, amount = 1, direction = Direction.All) {
+    if (amount < 1) { return new OpArray }
+    // console.log('inline amount', amount)
+    const bounds = this.cellBounds()
+    const directions = direction.directions
+    let inlineEdges = new OpArray //store edge rows/columns/corners that can't be outlined, to be inlined
+    directions.forEach(dir => {
+      const name = dir.names[0]
+      // console.log('direction name', name)
+      if (dir.isOrdinal) {
+        inlineEdges.push(bounds.cornerCells[name])
+        // console.log('addedCells', bounds.cornerCells[name])
+      } else {
+        inlineEdges.push(bounds.outerCells[name])
+        // console.log('addedCells', bounds.outerCells[name])
+      }
+
+    })
+    inlineEdges = inlineEdges
+      .flat()
+      .intersect(selection, 'id')
+    // console.log('inlineEdges', inlineEdges.map(e => e.id))
+    let inlinedEdges = this.tempOutlineSelection(inlineEdges, amount - 1, direction.opposites)
+    // console.log('inlinedEdges', inlinedEdges.map(e => e.id))
+    inlinedEdges = inlinedEdges.union(inlineEdges, 'id')
+    // console.log('inlinedEdges', inlinedEdges.map(e => e.id))
+
+    const outline = this.tempOutlineSelection(selection, 1, direction)
+    const inline = this.tempOutlineSelection(outline, amount, direction.opposites)
+      .union(inlinedEdges, 'id')
+    // console.log('outline', outline.map(e => e.id))
+    // console.log('inline', inline.map(e => e.id))
+    // console.log('inline method return')
+    // console.log('')
+    return selection.intersect(inline, 'index')
   }
   //METH:
   symmetrize({ selection, groupID, islandID, style, direction, start, use } = {}) { }
