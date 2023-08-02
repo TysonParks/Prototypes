@@ -451,7 +451,7 @@ function calculateFeatures(token = tokenData) {
           ['10', 0.038],
           ['9', 0.042],
           ['8', 0.045],
-          ['7', 0.12],
+          ['7', 0.125],
           ['6', 0.2],
           ['5', 0.2],
           ['4', 0.2],
@@ -821,8 +821,8 @@ function calculateFeatures(token = tokenData) {
       let weight = this.options
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
-      weight = round(weight * 100) / 100
-      // if (weight !== 1) console.log(`weight != 1`, this.name, weight)
+      // weight = round(weight * 1000) / 1000
+      if (roundToDec(weight) !== 1) console.error(`weight != 1`, this.name, weight)
       // console.log(`total weight:`, weight)
       return weight
     }
@@ -851,8 +851,8 @@ function calculateFeatures(token = tokenData) {
   function normalizeSubRange(subrange, range) { return [normalize(subrange[0], range), normalize(subrange[1], range)] }
   // FUNC:
   function roundToDec(number, decimalPlaces = 3) {
-    const factor = 10 ** decimalPlaces;
-    return Math.round(number * factor) / factor;
+    const factor = 10 ** decimalPlaces
+    return Math.round(number * factor) / factor
   }
   // #endregion
 
