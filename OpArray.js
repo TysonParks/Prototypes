@@ -164,6 +164,12 @@ class OpArray extends Array {
       (a, b) => a.length === b.length && a.numSorted.toString() === b.numSorted.toString(),
     )
   }
+  //METH: checks if this array contains any elements from another array
+  includesAny(vals, props) {
+    return this.boolOp(vals, props,
+      (a, b) => b.some(e => { return a.includes(e) })
+    )
+  }
   //METH: checks if this array contains all elements from another array
   includesMany(vals, props) {
     return this.boolOp(vals, props,
