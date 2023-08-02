@@ -801,29 +801,21 @@ function calculateFeatures(token = tokenData) {
     // #region Private Methods
     //METH:
     #getFeature(index) {
-      // console.log(index)
-      // console.log(this.options)
       const result = this.options[index][0]
       if (result) { return result }
       else {
         console.log(this.index)
         console.log(this.options)
       }
-
-      // return [this.name, this.options[index][0]]
     }
     //METH:
     #getFeatureIndex(weight) { return this.weightedOptions.findIndex(e => between(weight, e[1])) }
-    //METH:
+    //METH: sum of option weights
     #totalWeight() {
-      // console.log(this.name)
-      // console.log(this.options)
       let weight = this.options
         .map(option => option[1])
         .reduce((a, b) => a + b, 0)
-      // weight = round(weight * 1000) / 1000
-      if (roundToDec(weight) !== 1) console.error(`weight != 1`, this.name, weight)
-      // console.log(`total weight:`, weight)
+      // if (roundToDec(weight) !== 1) console.error(`weight != 1`, this.name, weight)
       return weight
     }
     //METH:
@@ -831,8 +823,6 @@ function calculateFeatures(token = tokenData) {
       let p = []
       let currentWeight = 0
       const weightRange = [0, this.#totalWeight()]
-      // console.log('name', this.name)
-      // console.log('weightRange', weightRange)
       this.options.forEach(e => {
         let range = [currentWeight, currentWeight + e[1]]
         let normRange = normalizeSubRange(range, weightRange)
