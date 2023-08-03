@@ -359,7 +359,6 @@ class SelectionBounds {
       left: this.leftColCells,
     }
   }
-  // get outlineCells() { return [outerCells.up, outerCells.right, outerCells.down, outerCells.left].flat() }
 
   get cornerCellVerts() {
     return {
@@ -425,6 +424,7 @@ class SelectionBounds {
   // #region Island Methods
   //METH: 
   innerCellIslands({ taken = true, stored = false, direction = Direction.Horizontal } = {}) {
+    console.log('innerCellIslands called')
     return this.grid.findIslands({
       selection: taken ? this.selection : this.availableCells,
       bounds: this,
@@ -1072,6 +1072,8 @@ class Grid extends ProtoLayer {
   //METH:
   squares({ coverage, direction = Direction.DownRight, minSize = 1, uniform = false, overlapping = true } = {}) {
     console.log('columnCount', this.columnCount)
+
+
     let maxSize // allowable max square based on 'Square and Rect Generation' study
     switch (this.columnCount) {
       case 5:
@@ -1093,7 +1095,7 @@ class Grid extends ProtoLayer {
     // randomly generate squares within size range that add up to coverage
     const maxCells = round(coverage * this.cellCount)
     maxSize = min(maxSize, floor(sqrt(maxCells))) // maxSize by gridSize or coverage amount
-    console.log('maxSize', maxSize)
+    // console.log('maxSize', maxSize)
     let usedCells = 0
     let squares = new OpArray
     let uniformSquare = uniform ? R.random_int(minSize, maxSize) : undefined // single size if uniform
@@ -1103,7 +1105,7 @@ class Grid extends ProtoLayer {
       usedCells += (square * square)
       maxSize = min(maxSize, floor(sqrt(maxCells - usedCells))) //recalc maxSize each loop to keep close to coverage
     }
-    console.log('squares', squares)
+    // console.log('squares', squares)
 
     const original = this.availableCells.copy
     let selection = new OpArray
@@ -1111,7 +1113,7 @@ class Grid extends ProtoLayer {
 
     squares.forEach((size, i) => {
       let inlineSelection = this.inline(original, size - 1, direction.andAdjacents)
-      console.log('')
+      // console.log('')
       // console.log('inlineSelection', inlineSelection.map(e => e.id))
       const padding = this.tempOutlineSelection(selection)
       inlineSelection = inlineSelection.union(selection, 'id')
@@ -1126,15 +1128,15 @@ class Grid extends ProtoLayer {
         let isValid = false
         let cell, square
         while (isValid === false && shrunkSelection.length > 1) {
-          console.log('')
+          // console.log('')
           cell = this.randomSelection(1 / shrunkSelection.length, shrunkSelection) //random cell within shrunk
-          console.log('cell', cell.map(e => e.id))
+          // console.log('cell', cell.map(e => e.id))
           const outline = this.tempOutlineSelection(cell, size - 1, direction.andAdjacents) //create square outline
           square = cell.copy.union(outline, 'id') //union cell with outline to create square
-          console.log('shrunk start', shrunkSelection.map(e => e.id))
+          // console.log('shrunk start', shrunkSelection.map(e => e.id))
           const overlaps = square.includesAny(padding, 'id')// check if square overlaps padding
-          console.log('padding length', padding.length)
-          console.log('square overlaps', overlaps)
+          // console.log('padding length', padding.length)
+          // console.log('square overlaps', overlaps)
           switch (overlapping) {
             case 'always':
               isValid = padding.length > 0 ? overlaps : true
@@ -1145,8 +1147,8 @@ class Grid extends ProtoLayer {
             default:
               isValid = true
           }
-          console.log('square is valid', isValid)
-          // isValid = overlapping === 'never' ? !overlaps:
+          // console.log('square is valid', isValid)
+
           if (!isValid) {
             square = new OpArray //make square empty
             shrunkSelection = shrunkSelection.filter(e => e.id !== cell[0].id) // remove failed cell 
@@ -1160,7 +1162,7 @@ class Grid extends ProtoLayer {
 
       selection = selection.union(square, 'index') //union squares with selection for new selection
       available = original.exclude(selection, 'index') //remove selection from available for new available
-      console.log('available', available.map(e => e.id))
+      // console.log('available', available.map(e => e.id))
     })
     //create new group and assign collected squares to it
     const group = new CellGroup(this, this.svgElt, this)
@@ -1175,7 +1177,13 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Modifiers
   // #region Grammar Modifiers
   //METH: iterative outliner driven by directions
-  outline({ selection, groupID, islandID, direction = Direction.All, amount = 1, newGroup = true } = {}) {
+  outline({
+    selection,
+    groupID,
+    islandID,
+    direction = Direction.All,
+    amount = 1,
+    newGroup = true } = {}) {
     // if (amount < 1) { return }
     if ((selection && groupID) || (selection && islandID) || (groupID && islandID)) {
       console.error('Grid.outline can only use one selection method')
@@ -1635,6 +1643,7 @@ class Island extends ProtoLayer {
     this.direction = direction
     this.parentIslandID = parentIslandID
     if (stored) { this.finishSetup(S.Islands) }
+    // console.log('new Island', cells.map(e => e.id))
     // else { this.finishSetup() }
     // this.color = R.random_hash(3, '#')
     // this.createShape()
