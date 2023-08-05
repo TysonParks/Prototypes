@@ -54,6 +54,7 @@ class Corner {
 class Direction {
 
   static None = new Direction()
+  // single Directions
   static Up = new Direction(0)
   static UpRight = new Direction(0.5)
   static Right = new Direction(1)
@@ -62,14 +63,18 @@ class Direction {
   static DownLeft = new Direction(2.5)
   static Left = new Direction(3)
   static UpLeft = new Direction(3.5)
-
+  // 2 directions
   static Vertical = new Direction([0, 2])
   static Horizontal = new Direction([1, 3])
   static PosOrdinal = new Direction([0.5, 2.5])
   static NegOrdinal = new Direction([1.5, 3.5])
+  // 4 directions
   static Cardinal = new Direction([0, 1, 2, 3])
   static Ordinal = new Direction([0.5, 1.5, 2.5, 3.5])
+  // 8 directions
   static All = new Direction([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5])
+  // 3 directions
+  static Cartesian = new Direction([1, 1.5, 2]) // frequently used for square/rect creation, equivalent: DownRight.andAdjacents
 
   name
   vals
