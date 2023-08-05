@@ -27,7 +27,7 @@ class ProtoLayer {
     else if (protoParent instanceof p5.Element) { this.svgParent = protoParent }
     else { console.error('protoParent is not valid') }
     if (svgParent) { this.svgParent = svgParent }
-    this._insetScale = insetScale
+    if (insetScale) { this._insetScale = insetScale instanceof Vertex ? insetScale : vert(insetScale) }
     this._filter = filter
     this.drawSVG = drawSVG
     this.drawRect = drawRect
@@ -79,7 +79,7 @@ class ProtoLayer {
   get size() { return vert(this.boundsRect.width, this.boundsRect.height) }
 
   get insetAnchor() { return this.anchorFor(this.insetSize) }
-  get insetSize() { return Vertex.mult(this.size, vert(this.insetScale)) }
+  get insetSize() { return Vertex.mult(this.size, this.insetScale) }
 
   get insetBoundsRect() {
     return DOMRect.fromRect(
@@ -178,7 +178,8 @@ class ProtoLayer {
   // #region LayerGrammar Methods
   //METH: 
   setInsetScale(scale) {
-    this._insetScale = scale
+    this._insetScale = scale instanceof Vertex ? scale : vert(scale)
+    console.log('ProtoLayer insetScale', this.insetScale)
     this.drawElement()
   }
   //METH: 
@@ -329,7 +330,7 @@ class SelectionBounds {
   // #region Properties
   get selectionCount() { return this.selection.length }
   get availableCount() { return this.availableCells.length }
-  get cellBoundsCount() { return this.cellBoundsWidth * this.cellBoundsHeight }
+  get cellBoundsCount() { return this.columnCount * this.rowCount }
 
   get cellSize() { return this.grid.cellSize }
   get boundCellRows() { return this.grid.cellSpanRowsBetween(...this.spanCellIndices) }
@@ -381,9 +382,9 @@ class SelectionBounds {
     return [e, f]
   }
 
-  get cellBoundsWidth() { return this.xCellMax - this.xCellMin + 1 }
-  get cellBoundsHeight() { return this.yCellMax - this.yCellMin + 1 }
-  get cellBoundsSize() { return vert(this.cellBoundsWidth, this.cellBoundsHeight) }
+  get columnCount() { return this.xCellMax - this.xCellMin + 1 }
+  get rowCount() { return this.yCellMax - this.yCellMin + 1 }
+  get cellBoundsSize() { return vert(this.columnCount, this.rowCount) }
 
   get takenWeight() { return this.selectionCount / this.cellBoundsCount }
   get isMostlyTaken() { return this.takenWeight >= 0.5 }
@@ -606,8 +607,8 @@ class Grid extends ProtoLayer {
   get cornerRadius() { return this.minCellWidth / 2 }
 
   get gridCellBounds() { return this.cellBounds() }
-  get columnCount() { return this.gridCellBounds.cellBoundsWidth }
-  get rowCount() { return this.gridCellBounds.cellBoundsHeight }
+  get columnCount() { return this.gridCellBounds.columnCount }
+  get rowCount() { return this.gridCellBounds.rowCount }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
   get minCellWidth() { return min(this.cellSize.x, this.cellSize.y) }
@@ -790,6 +791,11 @@ class Grid extends ProtoLayer {
   //METH: 
   cellBounds({ selection = this.cells, groupID, islandID } = {}) {
     return new SelectionBounds({ selection: selection, grid: this, groupID: groupID, islandID: islandID })
+  }
+  //METH: 
+  shrunkSelection(selection = this.cells, amount = 1, direction = Direction.Cartesian) {
+    const excludeEdges = this.grid.inline(selection, amount, direction)
+    return this.boundsCells.exclude(excludeEdges, 'id')
   }
   //METH: converts 1D selection array to a 2D CellRows array
   toCellRows(selection) {
@@ -1015,7 +1021,9 @@ class Grid extends ProtoLayer {
   setFrameRadii() { FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize) }
   //METH:
   setInsetScale(scale) {
+    console.log('Grid setInsetScale', scale)
     super.setInsetScale(scale)
+    console.log('Grid insetScale', this.insetScale)
     this.setFrameRadii()
     this.updateCells()
   }
@@ -1291,7 +1299,7 @@ class Grid extends ProtoLayer {
   useSeed(named, coverage, selection = this.availableCells) {
     const target = round(coverage * this.cellCount)
     const fillsColumn = target >= this.rowCount
-    const fillsRow = target >= this.rowcount
+    const fillsRow = target >= this.rowCount
     const range = vert(round(target * 0.5), round(target * 1.5))
     const divisors = primeDivisors(this.cellCount)
     const maxWidth = this.columnCount - 1
@@ -1401,6 +1409,10 @@ class Grid extends ProtoLayer {
       }
     })
   }
+  //METH:
+  setAvailability(selection = this.cells, available = false) {
+    selection.forEach(cell => cell.available = available)
+  }
   // #endregion
 }
 
@@ -1497,10 +1509,10 @@ class CellGroup extends ProtoLayer {
   }
 
   contractShape(direction = 2, distance = 1) {
-    if (isHorizontal(direction) && this.cellBoundsWidth - distance < 1) {
+    if (isHorizontal(direction) && this.columnCount - distance < 1) {
       return
     }
-    if (!isHorizontal(direction) && this.cellBoundsHeight - distance < 1) {
+    if (!isHorizontal(direction) && this.rowCount - distance < 1) {
       return
     }
     for (let i = 1; i <= distance; i++) {
@@ -1694,11 +1706,32 @@ class Island extends ProtoLayer {
   get exposedCorners() {
     return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
   }
+  //TODO: Finish Intergrids after submission
+  interGridClosure = (cell) => { this.grid.validNeighbors([cell], this.cellBounds, Direction.Cartesian).length === 3 }
+  get canHaveInterGrid() {
+    return this.grid.shrunkSelection(this.cells).length > 0
+    // let cells = this.grid.shrunkSelection(this.cells)
+    // return cells.some(cell => interGridClosure(cell))
+  }
+  createInterGrid(max = 1) {
+    if (!this.canHaveInterGrid) { return }
+    const intercells = this.grid.shrunkSelection(this.cells)
+    const cellBounds = this.grid.cellBounds({ selection: cells })
+    const interGrid = new Grid(this.island, { x: cellBounds.columnCount, y: cellBounds.rowCount })
+    while (max > 0) {
+      const interGrid = new Grid(this.island, { x: cellBounds.columnCount, y: cellBounds.rowCount })
+      interGrid.setAvailability()
+      const interCells = this.cells.filter(cell => interGridClosure(cell))
+
+    }
+
+  }
   // #endregion
   // MARK: Methods
   // #region Methods
   //METH:
   createShape(insetScale) {
+    console.log('createShape insetScale', insetScale)
     let segments = OpArray.format(this.exposedSegments)
     let subShapes = new OpArray
     let shapeIter = 0
@@ -1936,8 +1969,8 @@ class Shape extends ProtoLayer {
   assignRectangleVerts() {
     const bounds = this.cellBounds
     const aspect = bounds.aspect
-    const width = bounds.cellBoundsWidth
-    const height = bounds.cellBoundsHeight
+    const width = bounds.columnCount
+    const height = bounds.rowCount
     let offsetLength, length, offset
     let prevLength = 0
 
@@ -1962,7 +1995,7 @@ class Shape extends ProtoLayer {
   }
   //METH:
   // assignSquareVerts() {
-  //   const width = this.cellBounds.cellBoundsWidth
+  //   const width = this.cellBounds.columnCount
   //   // console.log(`square width = ${width}`)
   //   if (width % 2 === 0) {
   //     const offset = width / 2 - 1
@@ -2008,10 +2041,12 @@ class Shape extends ProtoLayer {
       let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
       strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
 
-      const posInset = this.insetScale >= 0
-      strokeMaskWidth = 1 * (posInset ? 1 - this.insetScale : this.insetScale) * this.grid.cellSize.x
+      console.log('shape insetScale', this.insetScale)
+      const insetScaleX = this.insetScale.x
+      const posInset = insetScaleX >= 0
+      strokeMaskWidth = 1 * (posInset ? 1 - insetScaleX : insetScaleX) * this.grid.cellSize.x
       // strokeMaskWidth = -.6 * this.grid.cellSize.x
-      // console.log('insetScale', this.insetScale)
+      // console.log('insetScaleX', insetScaleX)
       // console.log('strokeMaskWidth', strokeMaskWidth)
       // console.log('cellSize', this.grid.cellSize.x)
       // const posStrokeMask = strokeMaskWidth >= 0
