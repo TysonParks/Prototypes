@@ -268,11 +268,11 @@ function gridTests2() {
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.25 })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.5 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.25 })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.5 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
@@ -370,13 +370,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
-  //   groupID: 'grp000',
-  //   filter: shader2,
-  //   insetScale: .5,
-  //   // direction: Direction.All,
-  //   // taken: true,
-  // })
+  grid.findIslands({
+    groupID: 'grp000',
+    filter: shader2,
+    insetScale: .5,
+    // direction: Direction.All,
+    // taken: true,
+  })
 
   // grid.findIslands({
   //   groupID: 'grp000',
