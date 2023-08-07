@@ -122,6 +122,10 @@ class ProtoLayer {
       .add(this.center)
     // .add(vert(this.padSize))  
   }
+  insetAmountToScale(amount) {
+    amount = amount instanceof Vertex ? amount : vert(amount)
+    return Vertex.sub(this.size, amount).div(this.size)
+  }
   // #endregion
   // MARK: Setup Methods
   // #region Setup Methods
@@ -1291,7 +1295,10 @@ class Grid extends ProtoLayer {
     return selection.intersect(inline, 'index')
   }
   //METH:
-  symmetrize({ selection, groupID, islandID, style, direction, start, use } = {}) { }
+  symmetrize({ selection, groupID, islandID, style, direction, start, use } = {}) {
+
+
+  }
   // #endregion
   // MARK: Grammar Enum Methods
   // #region Grammar Enum Methods
@@ -1706,26 +1713,6 @@ class Island extends ProtoLayer {
   get exposedCorners() {
     return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
   }
-  //TODO: Finish Intergrids after submission
-  interGridClosure = (cell) => { this.grid.validNeighbors([cell], this.cellBounds, Direction.Cartesian).length === 3 }
-  get canHaveInterGrid() {
-    return this.grid.shrunkSelection(this.cells).length > 0
-    // let cells = this.grid.shrunkSelection(this.cells)
-    // return cells.some(cell => interGridClosure(cell))
-  }
-  createInterGrid(max = 1) {
-    if (!this.canHaveInterGrid) { return }
-    const intercells = this.grid.shrunkSelection(this.cells)
-    const cellBounds = this.grid.cellBounds({ selection: cells })
-    const interGrid = new Grid(this.island, { x: cellBounds.columnCount, y: cellBounds.rowCount })
-    while (max > 0) {
-      const interGrid = new Grid(this.island, { x: cellBounds.columnCount, y: cellBounds.rowCount })
-      interGrid.setAvailability()
-      const interCells = this.cells.filter(cell => interGridClosure(cell))
-
-    }
-
-  }
   // #endregion
   // MARK: Methods
   // #region Methods
@@ -1813,9 +1800,32 @@ class Island extends ProtoLayer {
   }
   //METH:
   exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, islandID: this.id }) }
-  //METH:
-  assignNormals() {
+  // #endregion
+  // MARK: TODO Methods
+  // #region TODO Methods
+  //TODO: Finish Intergrids after submission
+  interGridClosure = (cell) => { this.grid.validNeighbors([cell], this.cellBounds, Direction.Cartesian).length === 3 }
+  get canHaveInterGrid() {
+    return this.grid.shrunkSelection(this.cells).length > 0
+    // let cells = this.grid.shrunkSelection(this.cells)
+    // return cells.some(cell => interGridClosure(cell))
+  }
 
+  //METH:
+  createInterGrid() {
+    if (!this.canHaveInterGrid) { return }
+    const shrunk = this.grid.shrunkSelection(this.cells) // create shrunk selection
+    const cellBounds = this.grid.cellBounds({ shrunk: shrunk }) // get cellBounds of shrunk
+    const insetScale = this.insetAmountToScale(this.grid.cellSize) // new insetScale based upon 1 less row and column
+    const interGrid = new Grid(this.island, { x: cellBounds.columnCount, y: cellBounds.rowCount }, insetScale)
+    interGrid.setAvailability() // sets all cells to 'taken'
+    //FIXME: cell mapping needs to take offset into account!
+    const interCells = shrunk //map shrunk selection to selection of cells within new interGrid 
+      .map(cell => cell.coords) // get shrunk coords
+      // apply anchor/offset here???
+      .map(coords => interGrid.cellAtCoords(coords))
+    interGrid.setAvailability(interCells, true)
+    // FIXME: interGrid should get assigned to a new 'this.interGrid' property. This should probably be on be on ProtoLayer???
   }
   // #endregion
   //METH:
