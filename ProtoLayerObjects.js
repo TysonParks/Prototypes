@@ -434,53 +434,72 @@ class SelectionBounds {
         end = this.grid.index(this.xCellMax, evenMid ? evenMid - 1 : oddMid - 1)
         break
       case 1://right
-        start = this.grid.index(evenMid ? evenMid : oddMid + 1, 0)
+        start = this.grid.index(evenMid ? evenMid : oddMid + 1, this.spanCellVerts.start.y)
         end = last
         break
       case 2://down
-        start = this.grid.index(0, evenMid ? evenMid : oddMid + 1)
+        start = this.grid.index(this.spanCellVerts.start.x, evenMid ? evenMid : oddMid + 1)
         end = last
         break
       case 3://left
         start = first
         end = this.grid.index(evenMid ? evenMid - 1 : oddMid - 1, this.yCellMax)
     }
+
     return this.grid.cellSpanRowsBetween(start, end)
   }
   //METH: takes an Ordinal Direction and returns a row selection of corresponding quadrant of the cellBounds
   quadrant(direction) {
+    console.log('')
     if (!direction.isOrdinal || !direction.isSingle) { console.error('direction must be single Ordinal') }
     if (this.rowCount < 2 || this.columnCount < 2) { console.error('this grid is too small to get a quadrant') }
-    let start, end
-    let evenMid = {}
-    let oddMid = {}
-    const vect = this.cellBoundsSize
-    //TODO: FINISH this implementation!
-    if (vect.x % 2 === 0) { evenMid.x = vect.x / 2 }
-    else { oddMid.x = floor(vect.x / 2) }
-    if (vect.y % 2 === 0) { evenMid.y = vect.y / 2 }
-    else { oddMid.y = floor(vect.y / 2) }
-    const [first, last] = this.spanCellIndices
+    const val = direction.vals[0]
 
-    switch (direction.vals[0]) {
-      case 0.5://upRight
-        start = this.grid.index(evenMid.x ? evenMid.x : oddMid.x + 1, 0)
-        end = this.grid.index(this.xCellMax, evenMid.y ? evenMid.y - 1 : oddMid.y - 1)
-        break
-      case 1.5://downRight
-        start = this.grid.index(evenMid.x ? evenMid.x : oddMid.x + 1, evenMid.y ? evenMid.y : oddMid.y + 1)
-        end = last
-        break
-      case 2.5://downLeft
-        start = this.grid.index(0, evenMid.y ? evenMid.y : oddMid.y + 1)
-        end = this.grid.index(evenMid.x ? evenMid.x - 1 : oddMid.x - 1, this.yCellMax)
-        break
-      case 3.5://upLeft
-        start = first
-        end = this.grid.index(evenMid.x ? evenMid.x - 1 : oddMid.x - 1, evenMid.y ? evenMid.y - 1 : oddMid.y - 1)
-    }
-    return this.grid.cellSpanRowsBetween(start, end)
+    let dir = []
+    if (val < 1 || val > 3) { dir[0] = Direction.Up }
+    else { dir[0] = Direction.Down }
+    if (val < 2) { dir[1] = Direction.Right }
+    else { dir[1] = Direction.Left }
+
+    const firstHalf = this.half(dir[0]).flat() // select first half 
+    const bounds = this.grid.cellBounds({ selection: firstHalf }) // get bounds from first half
+    return bounds.half(dir[1]) // select half of first half to get second half
   }
+  // TODO: DEPRECATE old implementation
+  // quadrant(direction) {
+  //   console.log('')
+  //   if (!direction.isOrdinal || !direction.isSingle) { console.error('direction must be single Ordinal') }
+  //   if (this.rowCount < 2 || this.columnCount < 2) { console.error('this grid is too small to get a quadrant') }
+  //   let start, end
+  //   let evenMid = {}
+  //   let oddMid = {}
+  //   const vect = this.cellBoundsSize
+  //   //TODO: FINISH this implementation!
+  //   if (vect.x % 2 === 0) { evenMid.x = vect.x / 2 }
+  //   else { oddMid.x = floor(vect.x / 2) }
+  //   if (vect.y % 2 === 0) { evenMid.y = vect.y / 2 }
+  //   else { oddMid.y = floor(vect.y / 2) }
+  //   const [first, last] = this.spanCellIndices
+
+  //   switch (direction.vals[0]) {
+  //     case 0.5://upRight
+  //       start = this.grid.index(evenMid.x ? evenMid.x : oddMid.x + 1, 0)
+  //       end = this.grid.index(this.xCellMax, evenMid.y ? evenMid.y - 1 : oddMid.y - 1)
+  //       break
+  //     case 1.5://downRight
+  //       start = this.grid.index(evenMid.x ? evenMid.x : oddMid.x + 1, evenMid.y ? evenMid.y : oddMid.y + 1)
+  //       end = last
+  //       break
+  //     case 2.5://downLeft
+  //       start = this.grid.index(0, evenMid.y ? evenMid.y : oddMid.y + 1)
+  //       end = this.grid.index(evenMid.x ? evenMid.x - 1 : oddMid.x - 1, this.yCellMax)
+  //       break
+  //     case 3.5://upLeft
+  //       start = first
+  //       end = this.grid.index(evenMid.x ? evenMid.x - 1 : oddMid.x - 1, evenMid.y ? evenMid.y - 1 : oddMid.y - 1)
+  //   }
+  //   return this.grid.cellSpanRowsBetween(start, end)
+  // }
   //METH:
   transformedGrid(type) { }
 
