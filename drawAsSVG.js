@@ -509,9 +509,12 @@ class Segment {
 
   get lineVector() { return p5.Vector.sub(this.endPoint, this.startPoint) }
 
-  get startPoint() { return this.verts.start }
-  get midPoint() { return this.pointOnsegment(0.5) }
-  get endPoint() { return this.verts.end }
+  get start() { return this.verts.start }
+  get end() { return this.verts.end }
+
+  get startPoint() { return this.verts.start } // DEPRECATE usage of -point???
+  get midPoint() { return this.pointOnsegment(0.5) } // DEPRECATE usage of -point???
+  get endPoint() { return this.verts.end } // DEPRECATE usage of -point???
   get angle() { return this.lineVector.heading() }
   get direction() { return Direction.atAngle(this.angle) }
   get length() { return this.lineVector.mag() }
