@@ -417,6 +417,71 @@ class SelectionBounds {
   //#endregion
   // MARK: Methods
   // #region Methods
+  //METH: takes a Cardinal Direction and returns a row selection of corresponding half of the cellBounds
+  half(direction) {
+    if (!direction.isCardinal || !direction.isSingle) { console.error('direction must be single Cardinal') }
+    if (this.rowCount < 2 || this.columnCount < 2) { console.error('this grid is too small to get a half') }
+    let start, end, length, evenMid, oddMid
+    if (direction.isVertical) { length = this.rowCount }
+    else { length = this.columnCount }
+    if (length % 2 === 0) { evenMid = length / 2 }
+    else { oddMid = floor(length / 2) }
+    const [first, last] = this.spanCellIndices
+
+    switch (direction.vals[0]) {
+      case 0://up
+        start = first
+        end = this.grid.index(this.xCellMax, evenMid ? evenMid - 1 : oddMid - 1)
+        break
+      case 1://right
+        start = this.grid.index(evenMid ? evenMid : oddMid + 1, 0)
+        end = last
+        break
+      case 2://down
+        start = this.grid.index(0, evenMid ? evenMid : oddMid + 1)
+        end = last
+        break
+      case 3://left
+        start = first
+        end = this.grid.index(evenMid ? evenMid - 1 : oddMid - 1, this.yCellMax)
+    }
+    return this.grid.cellSpanRowsBetween(start, end)
+  }
+  //METH: takes an Ordinal Direction and returns a row selection of corresponding quadrant of the cellBounds
+  quadrant(direction) {
+    if (!direction.isOrdinal || !direction.isSingle) { console.error('direction must be single Ordinal') }
+    if (this.rowCount < 2 || this.columnCount < 2) { console.error('this grid is too small to get a quadrant') }
+    let start, end
+    let evenMid = {}
+    let oddMid = {}
+    const vect = this.cellBoundsSize
+    //TODO: FINISH this implementation!
+    if (vect.x % 2 === 0) { evenMid.x = vect.x / 2 }
+    else { oddMid.x = floor(vect.x / 2) }
+    if (vect.y % 2 === 0) { evenMid.y = vect.y / 2 }
+    else { oddMid.y = floor(vect.y / 2) }
+    const [first, last] = this.spanCellIndices
+
+    switch (direction.vals[0]) {
+      case 0.5://upRight
+        start = this.grid.index(evenMid.x ? evenMid.x : oddMid.x + 1, 0)
+        end = this.grid.index(this.xCellMax, evenMid.y ? evenMid.y - 1 : oddMid.y - 1)
+        break
+      case 1.5://downRight
+        start = this.grid.index(evenMid.x ? evenMid.x : oddMid.x + 1, evenMid.y ? evenMid.y : oddMid.y + 1)
+        end = last
+        break
+      case 2.5://downLeft
+        start = this.grid.index(0, evenMid.y ? evenMid.y : oddMid.y + 1)
+        end = this.grid.index(evenMid.x ? evenMid.x - 1 : oddMid.x - 1, this.yCellMax)
+        break
+      case 3.5://upLeft
+        start = first
+        end = this.grid.index(evenMid.x ? evenMid.x - 1 : oddMid.x - 1, evenMid.y ? evenMid.y - 1 : oddMid.y - 1)
+    }
+    return this.grid.cellSpanRowsBetween(start, end)
+  }
+  //METH:
   transformedGrid(type) { }
 
   //METH:
@@ -518,6 +583,7 @@ class SelectionBounds {
 
   get encodingCellCount() { return this.isMostlyTaken ? this.availableCount : this.selectionCount }
 
+  //TODO: complete implementation
   get encodedShape() {
     let cells
     if (this.isMostlyTaken) { cells = this.availableCells }
@@ -1295,7 +1361,7 @@ class Grid extends ProtoLayer {
     return selection.intersect(inline, 'index')
   }
   //METH:
-  symmetrize({ selection, groupID, islandID, style, direction, start, use } = {}) {
+  symmetrize({ selection = this.cellRows, groupID, islandID, style, direction, start, use } = {}) {
 
 
   }
@@ -2051,7 +2117,7 @@ class Shape extends ProtoLayer {
       let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
       strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
 
-      console.log('shape insetScale', this.insetScale)
+      // console.log('shape insetScale', this.insetScale)
       const insetScaleX = this.insetScale.x
       const posInset = insetScaleX >= 0
       strokeMaskWidth = 1 * (posInset ? 1 - insetScaleX : insetScaleX) * this.grid.cellSize.x
