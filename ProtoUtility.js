@@ -134,6 +134,11 @@ class Direction {
   get isOrdinal() { return this.valOp(a => a % 1 === 0.5) }
   get isNone() { return this.vals.length === 0 }
 
+  // get isUp() { return this.isSingle && this.vals[0] === 0 }
+  // get isRight() { return this.isSingle && this.vals[0] === 1 }
+  // get isDown() { return this.isSingle && this.vals[0] === 2 }
+  // get isLeft() { return this.isSingle && this.vals[0] === 3 }
+
   get allAreHorizontal() { return this.vals.every(a => a % 2 === 1) }
   get allAreVertical() { return this.vals.every(a => a % 2 === 0) }
   get allAreCardinal() { return this.directions.every(a => a.isHorizontal || a.isVertical) }
