@@ -489,20 +489,16 @@ function gridTests2() {
 
 
   console.log('all layers', S.allLayers)
-  // console.log('right half', S.Groups.db[0][1].cellBounds.half(Direction.Right).flat().map(e => e.id))
+  console.log('up half', grid.gridCellBounds.half(Direction.Up).flat().map(e => e.id))
+  console.log('right half', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
+  console.log('down half', grid.gridCellBounds.half(Direction.Down).flat().map(e => e.id))
+  console.log('left half', grid.gridCellBounds.half(Direction.Left).flat().map(e => e.id))
 
-  // console.log('up half', grid.gridCellBounds.half(Direction.Up).flat().map(e => e.id))
-  // console.log('right half', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
-  // console.log('down half', grid.gridCellBounds.half(Direction.Down).flat().map(e => e.id))
-  // console.log('left half', grid.gridCellBounds.half(Direction.Left).flat().map(e => e.id))
+  console.log('upRight quadrant', grid.gridCellBounds.quadrant(Direction.UpRight).flat().map(e => e.id))
+  console.log('downRight quadrant', grid.gridCellBounds.quadrant(Direction.DownRight).flat().map(e => e.id))
+  console.log('downLeft quadrant', grid.gridCellBounds.quadrant(Direction.DownLeft).flat().map(e => e.id))
+  console.log('upLeft quadrant', grid.gridCellBounds.quadrant(Direction.UpLeft).flat().map(e => e.id))
 
-  // console.log('upRight quadrant', grid.gridCellBounds.quadrant(Direction.UpRight).flat().map(e => e.id))
-  // console.log('downRight quadrant', grid.gridCellBounds.quadrant(Direction.DownRight).flat().map(e => e.id))
-  // console.log('downLeft quadrant', grid.gridCellBounds.quadrant(Direction.DownLeft).flat().map(e => e.id))
-  // console.log('upLeft quadrant', grid.gridCellBounds.quadrant(Direction.UpLeft).flat().map(e => e.id))
-
-  console.log(S.Groups.db[0][1].cellBounds.spanCellIndices)
-  // console.log('gridBounds', grid.gridCellBounds.cornerCellCenters)
   grid.customizeShapes()
 }
 
