@@ -248,7 +248,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(5, 10)
-  gridX = 7
+  gridX = 6
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -313,7 +313,7 @@ function gridTests2() {
 
   // grid.randGroup(0.2)
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
+  grid.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal, newGroup: false, amount: 1 })
@@ -321,11 +321,11 @@ function gridTests2() {
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 1), newGroup: false })
+  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 1), newGroup: false })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.PosOrdinal, newGroup: true, amount: 2 })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: 1 })
+  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: 1 })
 
   // grid.randGroup(.6)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
@@ -349,14 +349,14 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
-  grid.groupAvail()
+  // grid.groupAvail()
 
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
   grid.findIslands({
     groupID: 'grp000',
-    filter: shader2,
+    filter: shader1,
     insetScale: 1,
     // direction: Direction.All,
     // taken: true,
@@ -370,13 +370,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader2,
-    insetScale: .5,
-    // direction: Direction.All,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader2,
+  //   insetScale: .5,
+  //   // direction: Direction.All,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -386,13 +386,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader2,
-    insetScale: .001,
-    direction: Direction.Cardinal,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader2,
+  //   insetScale: .001,
+  //   direction: Direction.Cardinal,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -462,13 +462,13 @@ function gridTests2() {
     // taken: false,
   })
 
-  // grid.findIslands({
-  //   // groupID: 'grp002',
-  //   filter: shader0,
-  //   insetScale: .4,
-  //   direction: Direction.Cardinal,
-  //   taken: false,
-  // })
+  grid.findIslands({
+    // groupID: 'grp002',
+    filter: shader1,
+    insetScale: .4,
+    direction: Direction.None,
+    taken: false,
+  })
 
   // grid.findIslands({
   //   // groupID: 'grp002',
@@ -486,27 +486,22 @@ function gridTests2() {
   //   taken: false,
   // })
 
-  // grid.groupNamed('grp000').setFilter(shader2)
-  // grid.groupNamed('grp000').inset(0.7)
-  // grid.groupNamed('grp001')?.setFilter(shader1)
 
-  // console.log('shape0', grid.islands[0].shape)
-  // console.log('group', grid.groupNamed('grp000'))
-  // console.log('children', grid.groupNamed('grp000').svgElt?.child())
-
-  // const testShadeCSS = Shade.neuBoxShadFactory()
-  // const testShadeSVG = Shade.neuShadeSVGFactory({ pixToUserUnits: FRAME.pixToUserUnits })
-  // console.log('testShadeCSS', testShadeCSS)
-  // console.log('testShadeSVG', testShadeSVG)
-  // console.log('pixToUserUnits', FRAME.pixToUserUnits)
-  // console.log('createSlices', createSlices(1, 64, 0.5))
-  // console.log('cleanSlices', cleanSlices(1, 30, 0.5))
-  // console.log('exponentialSlices', exponentialSlices(0.5, 2.35, 2))
-
-  // console.log('Effect0', S.Effects.db[0][1])
-  // console.log('Effect1', S.Effects.db[1][1])
 
   console.log('all layers', S.allLayers)
+  // console.log('right half', S.Groups.db[0][1].cellBounds.half(Direction.Right).flat().map(e => e.id))
+
+  // console.log('up half', grid.gridCellBounds.half(Direction.Up).flat().map(e => e.id))
+  // console.log('right half', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
+  // console.log('down half', grid.gridCellBounds.half(Direction.Down).flat().map(e => e.id))
+  // console.log('left half', grid.gridCellBounds.half(Direction.Left).flat().map(e => e.id))
+
+  // console.log('upRight quadrant', grid.gridCellBounds.quadrant(Direction.UpRight).flat().map(e => e.id))
+  // console.log('downRight quadrant', grid.gridCellBounds.quadrant(Direction.DownRight).flat().map(e => e.id))
+  // console.log('downLeft quadrant', grid.gridCellBounds.quadrant(Direction.DownLeft).flat().map(e => e.id))
+  // console.log('upLeft quadrant', grid.gridCellBounds.quadrant(Direction.UpLeft).flat().map(e => e.id))
+
+  console.log(S.Groups.db[0][1].cellBounds.spanCellIndices)
   // console.log('gridBounds', grid.gridCellBounds.cornerCellCenters)
   grid.customizeShapes()
 }
