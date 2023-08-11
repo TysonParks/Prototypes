@@ -236,13 +236,15 @@ function functionTestPrint() {
   // print(S)
 
   // NOTE: Direction Multiples Tests
-  // print('Direction Multiples Tests')
-  // const dirA = Direction.Up
-  // const dirB = Direction.DownRight
-  // const dirC = Direction.Horizontal
+  console.log('Direction Multiples Tests')
+  const dirA = Direction.Up
+  const dirB = Direction.DownRight
+  const dirC = Direction.Horizontal
+  const dirD = Direction.Cardinal
 
-  // print(dirA)
-  // print(dirC)
+  console.log('dirA', dirA)
+  console.log('dirC', dirC)
+  console.log('dirD', dirD)
   // print(dirA.directions)
   // print(dirC.directions)
 
@@ -264,12 +266,18 @@ function functionTestPrint() {
   // print(dirC.adjacents)
   // print('')
   // print('is tests')
-  // print(dirA.isHorizontal)
-  // print(dirC.isHorizontal)
-  // print(dirA.isVertical)
-  // print(dirC.isVertical)
-  // print(dirA.isCardinal)
-  // print(dirC.isCardinal)
+  console.log('dirA.isHorizontal', dirA.isHorizontal)
+  console.log('dirC.isHorizontal', dirC.isHorizontal)
+  console.log('dirA.isVertical', dirA.isVertical)
+  console.log('dirC.isVertical', dirC.isVertical)
+  console.log('dirA.isCardinal', dirA.isCardinal)
+  console.log('dirC.isCardinal', dirC.isCardinal)
+  console.log('dirD.isCardinal', dirD.isCardinal)
+  console.log('dirA.equals Cardinal', dirA.equals(Direction.Cardinal))
+  console.log('dirC.equals Cardinal', dirC.equals(Direction.Cardinal))
+  console.log('dirD.equals Cardinal', dirD.equals(Direction.Cardinal))
+
+  console.log('dirA.opposites', dirA.opposites)
   // print(dirA.isOrdinal)
   // print(dirC.isOrdinal)
   // print('')
