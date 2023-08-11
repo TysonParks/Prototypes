@@ -324,6 +324,7 @@ class SelectionBounds {
   islandID
 
   constructor({ selection, grid, groupID, islandID } = {}) {
+    if (selection.is2D) { selection = selection.flat() }
     this.selection = selection
     this.grid = grid
     this.groupID = groupID
@@ -896,6 +897,15 @@ class Grid extends ProtoLayer {
     }
     return OpArray.from(rows.values())
   }
+  //FIXME: this method doesn't work, fix or deprecate if unnecessary
+  //METH: ensure a selection is 2D array
+  ensure2D(selection) {
+    if (selection.is2d) {
+      return selection
+    } else {
+      return this.toCellRows(selection)
+    }
+  }
   //METH: randomly transforms a 1D or 2D selection array into a 2D CellRows array
   randTransformedCells(selection) {
     return this.transformedCellRows({
@@ -1380,9 +1390,92 @@ class Grid extends ProtoLayer {
     return selection.intersect(inline, 'index')
   }
   //METH:
-  symmetrize({ selection = this.cellRows, groupID, islandID, style, direction, start, use } = {}) {
+  symmetrize({
+    selection = this.cellRows,
+    direction, // Horizontal/Vertical = HALF, Cardinal = QUAD
+    reflection, // BOOL: reflection or rotation
+    useAssign = true,
+    useEmpty = true,
+    groupIDs,
+  } = {}) {
+    if (!direction.isCardinal && direction.vals.length % 2 !== 0) { console.error('only Hor, Vert, and Cardinal allowed') }
+    const isQuad = direction.equals(Direction.Cardinal) // Horizontal/Vertical = HALF, Cardinal = QUAD
+    if (!selection.is2D) { selection = this.toCellRows(selection) }
+    // selection = this.ensure2D(selection) // ensure selection is 2D
+    const bounds = this.cellBounds({ selection: selection }) // get cellBounds of selection
+    console.log('bounds', bounds)
 
+    //METH: assignSym arrow function
+    const assignSym = (transformed, destination) => {
+      transformed = transformed.flat()
+      destination = destination.flat()
+      console.log('transformed', transformed.map(e => e.id))
+      console.log('destination 1', destination.map(e => e.id))
+      if (transformed.length !== destination.length) {
+        console.error('expected selections to have same length')
+      }
+      destination.forEach((destCell, i) => {
+        const transformCell = transformed[i]
+        if (useAssign) { destCell.groupID = transformCell.groupID }
+        if (useEmpty && transformCell.available === true) {
+          destCell.groupID = -1
+          destCell.available = true
+        }
+      })
+      if (groupIDs) { //filter destination by groupIDs
+        destination = destination.filter(destCell => groupIDs.some(id => destCell.groupID === id))
+      } else { // get all groupIDs
+        groupIDs = this.groups.map(group => group.id)
+      }
+      console.log('destination 2', destination.map(e => e.id))
+      console.log('groupIDs', groupIDs)
+      const groupSelections = groupIDs.map(id => { // group destCells
+        destination.filter(destCell => destCell.groupID === id)
+      })
+      console.log('groupSelections', groupSelections)
+      groupSelections.forEach((selection, i) => {
+        const group = this.groupNamed(groupIDs[i])
+        this.assign(selection, group)
+      })
+    }
 
+    //NOTE:
+    // half/quad transformation can be simplified similarly to half/quad selection
+    // any quad can be reflected/rotated by reflecting/rotating a half TWICE
+
+    // q reflection: (selected quad + next) half reflect, assign, then (selected quad + previous) half reflect, assign
+    // q rotation: (selected quad + next) half rotate(90), assign, then (selected quad + next) half rotate(180), assign
+    // h reflection: half reflect, assign
+    // h rotation:  half rotate(180), assign
+
+    let sourceDir = direction.random() // pick a random direction from available directions
+    console.log('sourceDir', sourceDir)
+    let source, transformed, destination
+    if (isQuad) { //quad
+      source = bounds.half(sourceDir) // get picked half
+      console.log('quad source', source)
+      destination = bounds.half(sourceDir.opposites) // get other half
+      if (reflection) {
+        direction = sourceDir.andOpposites // get flip direction
+        transformed = source.flipped2D(direction) // flip source
+        sourceDir = sourceDir.toLeft // set next source half to -90deg
+        direction = direction.toLeft // rotate flip direction -90deg
+      } else {
+        transformed = source.rotated2D(90) // rotate source 90deg
+      }
+      assignSym(transformed, destination)
+    }
+    // half symmetrize
+    source = bounds.half(sourceDir) // get picked half
+    console.log('half bounds', bounds)
+    console.log('half source', source)
+    destination = bounds.half(sourceDir.opposites) // get other half
+    if (reflection) {
+      transformed = source.flipped2D(direction) // flip source
+    } else {
+      transformed = source.rotated2D(180) // rotate source 180deg
+    }
+    assignSym(transformed, destination)
   }
   // #endregion
   // MARK: Grammar Enum Methods
@@ -1448,6 +1541,7 @@ class Grid extends ProtoLayer {
   // #region Grammar AssignmentMethods
   //METH:
   assign(selection, group) {
+    // console.log('selection', selection)
     if (selection.isEmpty) { return }
     if (!group) { group = new CellGroup(this, this.svgElt, this) }
     // console.log('selection', selection)
@@ -1803,7 +1897,7 @@ class Island extends ProtoLayer {
   // #region Methods
   //METH:
   createShape(insetScale) {
-    console.log('createShape insetScale', insetScale)
+    // console.log('createShape insetScale', insetScale)
     let segments = OpArray.format(this.exposedSegments)
     let subShapes = new OpArray
     let shapeIter = 0
@@ -1831,7 +1925,7 @@ class Island extends ProtoLayer {
 
         findSubShape(segment, direction)
 
-        console.error(`END SUBSHAPE ${shapeIter}`)
+        // console.error(`END SUBSHAPE ${shapeIter}`)
         segments = segments.exclude(subShape, ['id'])
         subShapes.push(subShape)
         //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
