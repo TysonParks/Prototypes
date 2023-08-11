@@ -248,7 +248,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(5, 10)
-  gridX = 6
+  gridX = 4
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -350,6 +350,24 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
   // grid.groupAvail()
+
+  const bounds = grid.cellBounds({ selection: grid.cells })
+  const bounds2 = grid.gridCellBounds
+  console.log('grid bounds 1', bounds)
+  console.log('grid bounds 2', bounds2)
+  console.log('half 1', bounds.half(Direction.Right).flat().map(e => e.id))
+  console.log('half 1', bounds2.half(Direction.Right).flat().map(e => e.id))
+  console.log('half 3', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
+
+  grid.symmetrize({
+    direction: Direction.Horizontal,
+    reflection: true,
+    // useEmptyuseAssign, 
+    // useEmpty, 
+    // groupIDs, 
+  })
+
+
 
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
@@ -489,15 +507,7 @@ function gridTests2() {
 
 
   console.log('all layers', S.allLayers)
-  console.log('up half', grid.gridCellBounds.half(Direction.Up).flat().map(e => e.id))
-  console.log('right half', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
-  console.log('down half', grid.gridCellBounds.half(Direction.Down).flat().map(e => e.id))
-  console.log('left half', grid.gridCellBounds.half(Direction.Left).flat().map(e => e.id))
 
-  console.log('upRight quadrant', grid.gridCellBounds.quadrant(Direction.UpRight).flat().map(e => e.id))
-  console.log('downRight quadrant', grid.gridCellBounds.quadrant(Direction.DownRight).flat().map(e => e.id))
-  console.log('downLeft quadrant', grid.gridCellBounds.quadrant(Direction.DownLeft).flat().map(e => e.id))
-  console.log('upLeft quadrant', grid.gridCellBounds.quadrant(Direction.UpLeft).flat().map(e => e.id))
 
   grid.customizeShapes()
 }
