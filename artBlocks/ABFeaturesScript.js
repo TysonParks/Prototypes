@@ -219,8 +219,10 @@ function calculateFeatures(token = tokenData) {
           if (subs) { subs += extra }
         }
       }
+      const layerWeight = adds + subs
+      if (layerWeight < 3) { this.enums.symmetryUse.removeOptions(['Some Layers']) }
+      if (layerWeight < 2) { this.enums.symmetryUse.removeOptions(['One Layer']) }
       if (this.x > 3) {
-        const layerWeight = adds + subs
         switch (layerWeight) {
           case 5:
           case 4:
@@ -336,6 +338,7 @@ function calculateFeatures(token = tokenData) {
       const density = this.enums.density.feature(r)
       if (density !== 'At Capacity') {
         this.enums.modifierStyle.removeOptions(['Triple Concentric'])
+        this.enums.symmetryUse.removeOptions(['All', 'Empty Layers'])
       }
       return density
     }
@@ -354,56 +357,56 @@ function calculateFeatures(token = tokenData) {
       }
     }
     //TODO: DEPRECATE - moved to ProtoMill
-    //METH:
-    #calcGroups() {
-      const layerCvrg = round(1 / this.weight * 1000) / 1000
+    // //METH:
+    // #calcGroups() {
+    //   const layerCvrg = round(1 / this.weight * 1000) / 1000
 
-      console.log('density', this.density)
-      console.log('total weight', this.weight)
-      console.log('layerWeight', this.layerWeight)
-      console.log('emptyWeight', this.emptyWeight)
-      console.log('layerCvrg', layerCvrg)
+    //   console.log('density', this.density)
+    //   console.log('total weight', this.weight)
+    //   console.log('layerWeight', this.layerWeight)
+    //   console.log('emptyWeight', this.emptyWeight)
+    //   console.log('layerCvrg', layerCvrg)
 
-      let count = this.layerWeight
-      let full = true
-      let emptyCvrg = 0
-      if (this.density !== 'At Capacity') {
-        count = max(2, this.layerWeight * 2 - 1)
-        full = false
-        emptyCvrg = round(this.emptyWeight / this.weight * (1 / max(1, (this.layerWeight - 1))) * 1000) / 1000
-      }
-      let cvrg = { empty: emptyCvrg, layer: layerCvrg, total: 0 }
-      console.log('emptyCvrg', emptyCvrg)
-      console.log('count', count)
-      console.log('full', full)
-      let groups = []
-      for (let i = 1; i <= count; i++) {
-        const group = this.#calcgroup(i, count, full, cvrg)
-        console.log('group', i, group)
-        groups.push(group)
-      }
-      return groups
-    }
-    //TODO: DEPRECATE - moved to ProtoMill
-    //METH:
-    #calcgroup(i, count, full, cvrg) {
-      let methods
-      let coverage = cvrg.layer
-      if (i === count) {
-        methods = ['groupAvail', this.modifierStyle]
-        coverage = round((1 - cvrg.total) * 1000) / 1000
-      }
-      if (1 < i && i < count) {
-        if (!full && i % 2 === 0) {
-          methods = ['empty', this.modifierStyle]
-          coverage = cvrg.empty
-        } else { methods = this.modifierStyle }
-      }
-      if (i === 1) { methods = [this.seedStyle, this.modifierStyle] }
-      cvrg.total += coverage
+    //   let count = this.layerWeight
+    //   let full = true
+    //   let emptyCvrg = 0
+    //   if (this.density !== 'At Capacity') {
+    //     count = max(2, this.layerWeight * 2 - 1)
+    //     full = false
+    //     emptyCvrg = round(this.emptyWeight / this.weight * (1 / max(1, (this.layerWeight - 1))) * 1000) / 1000
+    //   }
+    //   let cvrg = { empty: emptyCvrg, layer: layerCvrg, total: 0 }
+    //   console.log('emptyCvrg', emptyCvrg)
+    //   console.log('count', count)
+    //   console.log('full', full)
+    //   let groups = []
+    //   for (let i = 1; i <= count; i++) {
+    //     const group = this.#calcgroup(i, count, full, cvrg)
+    //     console.log('group', i, group)
+    //     groups.push(group)
+    //   }
+    //   return groups
+    // }
+    // //TODO: DEPRECATE - moved to ProtoMill
+    // //METH:
+    // #calcgroup(i, count, full, cvrg) {
+    //   let methods
+    //   let coverage = cvrg.layer
+    //   if (i === count) {
+    //     methods = ['groupAvail', this.modifierStyle]
+    //     coverage = round((1 - cvrg.total) * 1000) / 1000
+    //   }
+    //   if (1 < i && i < count) {
+    //     if (!full && i % 2 === 0) {
+    //       methods = ['empty', this.modifierStyle]
+    //       coverage = cvrg.empty
+    //     } else { methods = this.modifierStyle }
+    //   }
+    //   if (i === 1) { methods = [this.seedStyle, this.modifierStyle] }
+    //   cvrg.total += coverage
 
-      return { methods: methods, coverage: coverage }
-    }
+    //   return { methods: methods, coverage: coverage }
+    // }
     //METH:
     #calcSymmetry(r) {
       const style = this.enums.symmetryStyle.feature(r)
@@ -612,14 +615,14 @@ function calculateFeatures(token = tokenData) {
           ['None', 0.6],
           ['Horizontal Reflection', .1],
           ['Vertical Reflection', .1],
-          ['Quadrant Reflection', .06],
-          ['Positive Ordinal Reflection', .02],
-          ['Negative Ordinal Reflection', .02],
-          ['Horizontal Rotation', .02],
-          ['Vertical Rotation', .02],
-          ['Quadrant Rotation', .02],
-          ['Positive Ordinal Rotation', .02],
-          ['Negative Ordinal Rotation', .02],
+          ['Quadrant Reflection', .08],
+          ['Horizontal Rotation', .04],
+          ['Vertical Rotation', .04],
+          ['Quadrant Rotation', .04],
+          // ['Positive Ordinal Reflection', .02],
+          // ['Negative Ordinal Reflection', .02],
+          // ['Positive Ordinal Rotation', .02],
+          // ['Negative Ordinal Rotation', .02],
         ]
       },
       // Public: the way symmetry is used
@@ -627,10 +630,10 @@ function calculateFeatures(token = tokenData) {
         name: 'Symmetry Use',
         options: [
           ['All', 0.5],
-          ['Assigned', .2],
-          ['Available', .1],
-          ['One Layer', .1],
-          ['Some Layers', .1],
+          ['Empty Layers', .1], // removed if (Density === 'At Capacity') in #calcDensity()
+          ['Assigned Layers', .2],// removed if (Density === 'At Capacity') in #calcDensity()
+          ['One Layer', .1], // removed if (layersCount < 2) in #calcLayerCounts()
+          ['Some Layers', .1], // removed if (layersCount < 3) in #calcLayerCounts()
         ]
       },
       // #endregion
