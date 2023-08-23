@@ -9,13 +9,13 @@
 
 // CLASS: ProtoLayer
 class ProtoLayer {
-  svgElt
-  rect // 'rect' p5.Element
   protoParent // ProtoLayer
-  svgParent // 'SVG' p5.Element
   _insetScale
   _filter
   _filterLoft
+  svgParent // 'SVG' p5.Element
+  svgElt
+  rect // 'rect' p5.Element
   drawSVG
   drawRect
 
@@ -1147,11 +1147,11 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Generators
   // #region Grammar Generators
   //METH:
-  randGroup(amount) { this.assign(this.availableCells.randReduce(amount)) }
+  randGroup(amount) { this.assignCells(this.availableCells.randReduce(amount)) }
   //METH:
   randomSelection(amount, selection = this.availableCells) { return selection.copy.randReduce(amount) }
   //METH:
-  groupAvail() { this.assign(this.availableCells) }
+  groupAvail() { this.assignCells(this.availableCells) }
 
   //METH:
   randomComb({
@@ -1161,7 +1161,7 @@ class Grid extends ProtoLayer {
     start = 0
   } = {}) {
     const reduced = selection.randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
-    this.assign(reduced)
+    this.assignCells(reduced)
   }
   //METH:
   comb({ selection = this.availableCells, keep = 2, drop = 1, start = 0 } = {}) {
@@ -1178,9 +1178,7 @@ class Grid extends ProtoLayer {
   }
   //METH:
   squares({ coverage, direction = Direction.DownRight, minSize = 1, uniform = false, overlapping = true } = {}) {
-    console.log('columnCount', this.columnCount)
-
-
+    // console.log('columnCount', this.columnCount)
     let maxSize // allowable max square based on 'Square and Rect Generation' study
     switch (this.columnCount) {
       case 5:
@@ -1271,9 +1269,12 @@ class Grid extends ProtoLayer {
       available = original.exclude(selection, 'index') //remove selection from available for new available
       // console.log('available', available.map(e => e.id))
     })
+
+    this.assignCells(selection)
+
     //create new group and assign collected squares to it
-    const group = new CellGroup(this, this.svgElt, this)
-    this.assign(selection, group)
+    // const group = new CellGroup(this, this.svgElt, this)
+    // this.assignCells(selection, group)
     // }
   }
   //METH:
@@ -1315,7 +1316,7 @@ class Grid extends ProtoLayer {
           .filter(cell => cell.available)
         if (newGroup === true) { group = undefined } //allow assign to create new group
         if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
-        else { this.assign(outline, group) } //assign to group
+        else { this.assignCells(outline, group?.id) } //assign to group
         if (newGroup === true && !group) { //continue adding to the new group
           group = this.lastGroup
           newGroup = false
@@ -1389,17 +1390,20 @@ class Grid extends ProtoLayer {
     // console.log('')
     return selection.intersect(inline, 'index')
   }
+  //FIXME: somehow it's drawing multiple cell configs as it reassigns
+  //TODO: feature: flip a single quad once only
   //METH:
   symmetrize({
     selection = this.cellRows,
     direction, // Horizontal/Vertical = HALF, Cardinal = QUAD
     reflection, // BOOL: reflection or rotation
-    useAssign = true,
-    useEmpty = true,
+    useAssigned = false,
+    useAvailable = true,
     groupIDs,
   } = {}) {
     if (!direction.isCardinal && direction.vals.length % 2 !== 0) { console.error('only Hor, Vert, and Cardinal allowed') }
     const isQuad = direction.equals(Direction.Cardinal) // Horizontal/Vertical = HALF, Cardinal = QUAD
+    console.log('isQuad', isQuad)
     if (!selection.is2D) { selection = this.toCellRows(selection) }
     // selection = this.ensure2D(selection) // ensure selection is 2D
     const bounds = this.cellBounds({ selection: selection }) // get cellBounds of selection
@@ -1407,19 +1411,19 @@ class Grid extends ProtoLayer {
 
     //METH: assignSym arrow function
     const assignSym = (transformed, destination) => {
-      transformed = transformed.flat()
-      destination = destination.flat()
+      transformed = transformed.flat() // flatten half for operations
+      destination = destination.flat() // flatten half for operations
       console.log('transformed', transformed.map(e => e.id))
       console.log('destination 1', destination.map(e => e.id))
-      if (transformed.length !== destination.length) {
+      if (transformed.length !== destination.length) { // ensure halves are equal
         console.error('expected selections to have same length')
       }
       destination.forEach((destCell, i) => {
         const transformCell = transformed[i]
-        if (useAssign) { destCell.groupID = transformCell.groupID }
-        if (useEmpty && transformCell.available === true) {
-          destCell.groupID = -1
-          destCell.available = true
+        if (useAssigned) { destCell.groupID = transformCell.groupID } // useAssigned changes assigned cells' groupIDs
+        if (useAvailable && transformCell.available === true) { // useAvailable changes available cells 
+          destCell.groupID = -1 // groupID to -1
+          destCell.available = true // available to true
         }
       })
       if (groupIDs) { //filter destination by groupIDs
@@ -1429,14 +1433,24 @@ class Grid extends ProtoLayer {
       }
       console.log('destination 2', destination.map(e => e.id))
       console.log('groupIDs', groupIDs)
-      const groupSelections = groupIDs.map(id => { // group destCells
-        destination.filter(destCell => destCell.groupID === id)
+      const groupSelections = groupIDs.map(id => { // group destCells by groupID
+        console.log('process id', id)
+        return destination.filter(destCell => destCell.groupID === id)
       })
+      let emptySelections = destination
+        .exclude(groupSelections.flat(), 'id')
+      console.log('emptySelections 1', emptySelections)
+      emptySelections = emptySelections
+        .filter(unselected => unselected.available = true)
+      console.log('emptySelections 2', emptySelections)
       console.log('groupSelections', groupSelections)
       groupSelections.forEach((selection, i) => {
-        const group = this.groupNamed(groupIDs[i])
-        this.assign(selection, group)
+        const groupID = groupIDs[i]
+        const group = this.groupNamed(groupID)
+        this.assignCells(selection, groupID)
+        //FIXME: need to remove old cells from group
       })
+      this.setGridAvailability(emptySelections, true)
     }
 
     //NOTE:
@@ -1459,7 +1473,9 @@ class Grid extends ProtoLayer {
         direction = sourceDir.andOpposites // get flip direction
         transformed = source.flipped2D(direction) // flip source
         sourceDir = sourceDir.toLeft // set next source half to -90deg
-        direction = direction.toLeft // rotate flip direction -90deg
+        console.log('quad direction', direction)
+        direction = direction.equals(Direction.Horizontal) ? Direction.Vertical : Direction.Horizontal // rotate flip direction -90deg
+        console.log('after quad direction', direction)
       } else {
         transformed = source.rotated2D(90) // rotate source 90deg
       }
@@ -1471,6 +1487,7 @@ class Grid extends ProtoLayer {
     console.log('half source', source)
     destination = bounds.half(sourceDir.opposites) // get other half
     if (reflection) {
+      console.log('direction', direction)
       transformed = source.flipped2D(direction) // flip source
     } else {
       transformed = source.rotated2D(180) // rotate source 180deg
@@ -1540,10 +1557,17 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Assignment Methods
   // #region Grammar AssignmentMethods
   //METH:
-  assign(selection, group) {
+  assignCells(selection, groupID) {
     // console.log('selection', selection)
     if (selection.isEmpty) { return }
-    if (!group) { group = new CellGroup(this, this.svgElt, this) }
+    let newGroup = false
+    if (!groupID) { newGroup = true }
+    let group
+    if (newGroup) {
+      group = new CellGroup(this, this.svgElt, this)
+    } else {
+      group = this.groupNamed(groupID)
+    }
     // console.log('selection', selection)
     // console.log('group cells', group.cells)
     group.cells = group.cells.union(selection, ['id'])
@@ -1551,7 +1575,11 @@ class Grid extends ProtoLayer {
     // group.cells = selection
     // console.log('group cells selection', group.cells)
     // console.log('groupID', group.id)
-    this.groups.push(group)
+    if (newGroup) {
+      this.groups.push(group)
+    } else {
+
+    }
     this.updateCells({ groupID: group.id })
     return this
   }
@@ -1598,6 +1626,19 @@ class Grid extends ProtoLayer {
   //METH:
   setAvailability(selection = this.cells, available = false) {
     selection.forEach(cell => cell.available = available)
+  }
+
+  setGridAvailability(selection = this.cells, available = false) {
+    if (selection.isEmpty) { return }
+    selection.forEach(cell => {
+      const thisCell = this.cells[cell.index]
+      console.log('thisCell', thisCell)
+      const thisGroup = this.groupNamed(thisCell.groupID)
+      console.log('thisGroup', thisGroup)
+      if (thisGroup) { thisGroup.cells = thisGroup.cells.filter(cell => cell.id !== thisCell.id) }
+      thisCell.groupID = -1
+      thisCell.available = available
+    })
   }
   // #endregion
 }
@@ -2131,9 +2172,9 @@ class Shape extends ProtoLayer {
       const prev = sub[loop.cycle(i - 1)]
       const next = sub[loop.cycle(i + 1)]
       if (seg.isUTurn) {
-        prev.assign('mid')
-        seg.assign('mid')
-        next.assign('mid')
+        prev.assignVert('mid')
+        seg.assignVert('mid')
+        next.assignVert('mid')
       }
     }))
   }
@@ -2148,9 +2189,9 @@ class Shape extends ProtoLayer {
       // case covers 1 or 2 consequetive steps
       if (seg.isStep && !next.isStep) {
         // console.log('found single step')
-        prev.assign('mid')
-        seg.assign('mid')
-        next.assign('mid')
+        prev.assignVert('mid')
+        seg.assignVert('mid')
+        next.assignVert('mid')
       }
     }))
   }
@@ -2172,12 +2213,12 @@ class Shape extends ProtoLayer {
 
       if (offsetLength % 2 === 0) { // even number of cells
         offset = offsetLength / 2 - 1
-        this.subShapes[0][prevLength + offset].assign('end')
-        this.subShapes[0][prevLength + length - offset - 1].assign('start')
+        this.subShapes[0][prevLength + offset].assignVert('end')
+        this.subShapes[0][prevLength + length - offset - 1].assignVert('start')
       } else { // odd number of cells
         offset = (offsetLength - 1) / 2
-        this.subShapes[0][prevLength + offset].assign('mid')
-        this.subShapes[0][prevLength + length - offset - 1].assign('mid')
+        this.subShapes[0][prevLength + offset].assignVert('mid')
+        this.subShapes[0][prevLength + length - offset - 1].assignVert('mid')
       }
       prevLength += length
     }
@@ -2189,14 +2230,14 @@ class Shape extends ProtoLayer {
   //   if (width % 2 === 0) {
   //     const offset = width / 2 - 1
   //     for (let i = 0; i < 4; i++) {
-  //       this.subShapes[0][width * i + offset].assign('end')
-  //       this.subShapes[0][width * (i + 1) - offset - 1].assign('start')
+  //       this.subShapes[0][width * i + offset].assignVert('end')
+  //       this.subShapes[0][width * (i + 1) - offset - 1].assignVert('start')
   //     }
   //   }
   //   if (width % 2 === 1) {
   //     const offset = (width - 1) / 2
   //     for (let i = 0; i < 4; i++) {
-  //       this.subShapes[0][width * i + offset].assign('mid')
+  //       this.subShapes[0][width * i + offset].assignVert('mid')
   //     }
   //   }
   // }
