@@ -40,12 +40,12 @@ function setup() {
   sizeFrame()
   noCanvas(frameSize.x, frameSize.y)
 
-  functionTestPrint()
+  // functionTestPrint()
 
   setupPrefs()
   setupColors()
   setupBackground()
-  setupFeatures()
+  // setupFeatures()
   gridTests2()
   // const mill = new ProtoMill()
   // mill.mkProtoType()
@@ -248,7 +248,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(5, 10)
-  gridX = 4
+  gridX = 5
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -268,11 +268,11 @@ function gridTests2() {
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.5 })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.4 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.5 })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.4 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
@@ -311,23 +311,23 @@ function gridTests2() {
   // grid.outlineTaken({ direction: Direction.Up, newGroup: false })
   // grid.outlineTaken({ direction: Direction.All, amount: 1, newGroup: false })
 
-  // grid.randGroup(0.2)
+  // grid.randGroup(0.6)
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
+  grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
-  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal, newGroup: false, amount: 1 })
+  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Right, newGroup: false, amount: 1 })
   // const outlineDir = Direction.Cardinal.random(2)
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
-  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 1), newGroup: false })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 1), newGroup: false })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.PosOrdinal, newGroup: true, amount: 2 })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: 1 })
 
-  // grid.randGroup(.6)
+  // grid.randGroup(.3)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
@@ -351,13 +351,14 @@ function gridTests2() {
   // grid.groupNamed('grp001')?.setFilter(shader2)
   // grid.groupAvail()
 
-  const bounds = grid.cellBounds({ selection: grid.cells })
-  const bounds2 = grid.gridCellBounds
-  console.log('grid bounds 1', bounds)
-  console.log('grid bounds 2', bounds2)
-  console.log('half 1', bounds.half(Direction.Right).flat().map(e => e.id))
-  console.log('half 1', bounds2.half(Direction.Right).flat().map(e => e.id))
-  console.log('half 3', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
+  // const bounds = grid.cellBounds({ selection: grid.cells })
+  // const bounds2 = grid.gridCellBounds
+  // console.log('grid bounds 1', bounds)
+  // console.log('grid bounds 2', bounds2)
+  // console.log('half 1', bounds.half(Direction.Right).flat().map(e => e.id))
+  // console.log('half 1', bounds2.half(Direction.Right).flat().map(e => e.id))
+  // console.log('half 3', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
+  console.log('pre-symmetrized cellRows', grid.cellRows)
 
   grid.symmetrize({
     direction: Direction.Horizontal,
@@ -367,7 +368,7 @@ function gridTests2() {
     // groupIDs, 
   })
 
-
+  console.log('post-symmetrized cellRows', grid.cellRows)
 
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
@@ -380,35 +381,43 @@ function gridTests2() {
     // taken: true,
   })
 
-  // grid.findIslands({
-  //   groupID: 'grp000',
-  //   filter: shader2,
-  //   insetScale: .75,
-  //   direction: Direction.All,
-  //   // taken: true,
-  // })
+  grid.findIslands({
+    groupID: 'grp000',
+    filter: shader1,
+    insetScale: .8,
+    // direction: Direction.All,
+    // taken: true,
+  })
+
+  grid.findIslands({
+    groupID: 'grp000',
+    filter: shader1,
+    insetScale: .6,
+    // direction: Direction.All,
+    // taken: true,
+  })
+
+  grid.findIslands({
+    groupID: 'grp000',
+    filter: shader1,
+    insetScale: .4,
+    // direction: Direction.None,
+    // taken: true,
+  })
+
+  grid.findIslands({
+    groupID: 'grp000',
+    filter: shader1,
+    insetScale: .2,
+    // direction: Direction.None,
+    // taken: true,
+  })
 
   // grid.findIslands({
   //   groupID: 'grp000',
-  //   filter: shader2,
-  //   insetScale: .5,
-  //   // direction: Direction.All,
-  //   // taken: true,
-  // })
-
-  // grid.findIslands({
-  //   groupID: 'grp000',
-  //   filter: shader2,
-  //   insetScale: .25,
-  //   // direction: Direction.All,
-  //   // taken: true,
-  // })
-
-  // grid.findIslands({
-  //   groupID: 'grp000',
-  //   filter: shader2,
+  //   filter: shader1,
   //   insetScale: .001,
-  //   direction: Direction.Cardinal,
+  //   // direction: Direction.Cardinal,
   //   // taken: true,
   // })
 
@@ -420,21 +429,21 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
-    insetScale: .05,
-    direction: Direction.None,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   insetScale: .05,
+  //   direction: Direction.None,
+  //   // taken: true,
+  // })
 
-  grid.findIslands({
-    groupID: 'grp001',
-    filter: shader1,
-    insetScale: 1,
-    // direction: Direction.All,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp001',
+  //   filter: shader1,
+  //   insetScale: .75,
+  //   // direction: Direction.All,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp001',
@@ -472,35 +481,51 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Ordinal)
   // grid.groupNamed('grp002')?.setFilter(shader2)
 
-  grid.findIslands({
-    groupID: 'grp002',
-    filter: shader0,
-    insetScale: .75,
-    direction: Direction.Cardinal,
-    // taken: false,
-  })
+  // grid.findIslands({
+  //   // groupID: 'grp002',
+  //   filter: shader1,
+  //   insetScale: 1,
+  //   direction: Direction.All,
+  //   taken: false,
+  // })
 
   grid.findIslands({
     // groupID: 'grp002',
-    filter: shader1,
-    insetScale: .4,
-    direction: Direction.None,
+    filter: shader2,
+    insetScale: .8,
+    direction: Direction.All,
     taken: false,
   })
 
   // grid.findIslands({
   //   // groupID: 'grp002',
   //   filter: shader1,
-  //   insetScale: .5,
-  //   direction: Direction.Vertical,
+  //   insetScale: .6,
+  //   // direction: Direction.All,
+  //   taken: false,
+  // })
+
+  grid.findIslands({
+    // groupID: 'grp002',
+    filter: shader0,
+    insetScale: .4,
+    // direction: Direction.All,
+    taken: false,
+  })
+
+  // grid.findIslands({
+  //   // groupID: 'grp002',
+  //   filter: shader0,
+  //   insetScale: .2,
+  //   // direction: Direction.Vertical,
   //   taken: false,
   // })
 
   // grid.findIslands({
   //   // groupID: 'grp002',
-  //   filter: shader1,
-  //   insetScale: .25,
-  //   direction: Direction.Vertical,
+  //   filter: shader0,
+  //   insetScale: .001,
+  //   // direction: Direction.Vertical,
   //   taken: false,
   // })
 
