@@ -617,15 +617,15 @@ class ProtoSegment extends Segment {
   }
 
   assignCornerVerts() {
-    if (this.turns.start.value !== 0) { this.assign(this.startPoint) }
-    if (this.turns.end.value !== 0) { this.assign(this.endPoint) }
+    if (this.turns.start.value !== 0) { this.assignVert(this.startPoint) }
+    if (this.turns.end.value !== 0) { this.assignVert(this.endPoint) }
   }
 
   // assignUTurnVerts() {
   //   if (this.part.isUTurn) { this}
   // }
 
-  assign(vert) {
+  assignVert(vert) {
     if (typeof vert === 'string') {
       // console.log(`assign ${vert}`)
       vert = this.#vertNames[vert]
