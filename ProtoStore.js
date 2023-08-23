@@ -19,7 +19,15 @@ class Store {
   }
 
   get allLayers() {
-    return [...this.Frame.db, ...this.Grids.db, ...this.Groups.db, ...this.Islands.db, ...this.Shapes.db, ...this.Effects.db, ...this.Cells.db,]
+    return [
+      ...this.Frame.db,
+      ...this.Grids.db,
+      ...this.Groups.db,
+      ...this.Islands.db,
+      ...this.Shapes.db,
+      ...this.Effects.db,
+      // ...this.Cells.db,
+    ]
       .map(e => e[1])
   }
   // static shared() {
