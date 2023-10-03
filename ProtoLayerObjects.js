@@ -1397,7 +1397,7 @@ class Grid extends ProtoLayer {
     selection = this.cellRows,
     direction, // Horizontal/Vertical = HALF, Cardinal = QUAD
     reflection, // BOOL: reflection or rotation
-    useAssigned = false,
+    useAssigned = true,
     useAvailable = true,
     groupIDs,
   } = {}) {
@@ -1414,36 +1414,59 @@ class Grid extends ProtoLayer {
       transformed = transformed.flat() // flatten half for operations
       destination = destination.flat() // flatten half for operations
       console.log('transformed', transformed.map(e => e.id))
-      console.log('destination 1', destination.map(e => e.id))
+      console.log('transformed available', transformed.map(e => e.available))
+      console.log('destination flattened', destination.map(e => e.id))
+      console.log('destination available', destination.map(e => e.available))
       if (transformed.length !== destination.length) { // ensure halves are equal
         console.error('expected selections to have same length')
       }
+
       destination.forEach((destCell, i) => {
         const transformCell = transformed[i]
-        if (useAssigned) { destCell.groupID = transformCell.groupID } // useAssigned changes assigned cells' groupIDs
-        if (useAvailable && transformCell.available === true) { // useAvailable changes available cells 
+        if (useAssigned) { // useAssigned changes assigned cells' groupIDs
+          if (groupIDs && !groupIDs?.some(id => id === transformCell.groupID)) {
+            console.log('HIT THIS HIT THIS HIT THIS HIT THIS')
+          } else {
+            if (transformCell.groupID !== -1) {
+              console.log('newGroupID', transformCell.groupID)
+              destCell.groupID = transformCell.groupID
+            }
+          }
+        }
+        if (useAvailable && transformCell.available === true) { // useAvailable changes available cells  
+          const currentGroup = this.groupNamed(destCell.groupID)
+          if (currentGroup) { // remove cell from currentGroup
+            currentGroup.cells = currentGroup.cells.filter(cell => cell.id !== destCell.id)
+          }
           destCell.groupID = -1 // groupID to -1
           destCell.available = true // available to true
         }
       })
+      console.log('destination transformed available', destination.map(e => e.available))
+      console.log('destination transformed groupID', destination.map(e => e.groupID))
+
       if (groupIDs) { //filter destination by groupIDs
         destination = destination.filter(destCell => groupIDs.some(id => destCell.groupID === id))
       } else { // get all groupIDs
         groupIDs = this.groups.map(group => group.id)
       }
-      console.log('destination 2', destination.map(e => e.id))
+      console.log('destination groupID filtered', destination.map(e => e.id))
       console.log('groupIDs', groupIDs)
+
       const groupSelections = groupIDs.map(id => { // group destCells by groupID
         console.log('process id', id)
         return destination.filter(destCell => destCell.groupID === id)
       })
+      console.log('groupID Selections', groupSelections)
+
       let emptySelections = destination
-        .exclude(groupSelections.flat(), 'id')
+        .filter(cell => cell.available === true) // filter for only available cells
       console.log('emptySelections 1', emptySelections)
+
       emptySelections = emptySelections
-        .filter(unselected => unselected.available = true)
-      console.log('emptySelections 2', emptySelections)
-      console.log('groupSelections', groupSelections)
+        .exclude(groupSelections.flat(), 'id') // exclude cells that will be taken
+      console.log('emptySelections 2', emptySelections.map(e => e.id))
+
       groupSelections.forEach((selection, i) => {
         const groupID = groupIDs[i]
         const group = this.groupNamed(groupID)
@@ -1485,9 +1508,10 @@ class Grid extends ProtoLayer {
     source = bounds.half(sourceDir) // get picked half
     console.log('half bounds', bounds)
     console.log('half source', source)
+    console.log('half source flattened', source.flat().map(e => e.id))
     destination = bounds.half(sourceDir.opposites) // get other half
     if (reflection) {
-      console.log('direction', direction)
+      console.log('reflection direction', direction)
       transformed = source.flipped2D(direction) // flip source
     } else {
       transformed = source.rotated2D(180) // rotate source 180deg
@@ -1632,9 +1656,11 @@ class Grid extends ProtoLayer {
     if (selection.isEmpty) { return }
     selection.forEach(cell => {
       const thisCell = this.cells[cell.index]
-      console.log('thisCell', thisCell)
+      console.log('thisCell id', thisCell.id)
+      console.log('thisCell groupID', thisCell.groupID)
+      console.log('thisCell available', thisCell.available)
       const thisGroup = this.groupNamed(thisCell.groupID)
-      console.log('thisGroup', thisGroup)
+      // console.log('thisGroup', thisGroup)
       if (thisGroup) { thisGroup.cells = thisGroup.cells.filter(cell => cell.id !== thisCell.id) }
       thisCell.groupID = -1
       thisCell.available = available
