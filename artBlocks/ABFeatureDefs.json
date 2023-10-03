@@ -165,17 +165,3 @@
     "name": "r-Style Cutting"
   }
 ]
-//MARK: UNUSED
-[
-  {
-    "type": "enum",
-    "name": "Lucky Numbers",
-    "options": [
-      "7",
-      "13",
-      "23",
-      "69",
-      "420"
-    ]
-  },
-]
