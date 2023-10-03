@@ -248,7 +248,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(5, 10)
-  gridX = 5
+  gridX = 4
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -311,9 +311,9 @@ function gridTests2() {
   // grid.outlineTaken({ direction: Direction.Up, newGroup: false })
   // grid.outlineTaken({ direction: Direction.All, amount: 1, newGroup: false })
 
-  // grid.randGroup(0.6)
+  grid.randGroup(0.6)
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
+  // grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Right, newGroup: false, amount: 1 })
@@ -321,11 +321,11 @@ function gridTests2() {
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 1), newGroup: false })
+  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 1), newGroup: false })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.PosOrdinal, newGroup: true, amount: 2 })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
-  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: 1 })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: 1 })
 
   // grid.randGroup(.3)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
@@ -373,13 +373,13 @@ function gridTests2() {
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
-    insetScale: 1,
-    // direction: Direction.All,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   insetScale: 1,
+  //   // direction: Direction.All,
+  //   // taken: true,
+  // })
 
   grid.findIslands({
     groupID: 'grp000',
@@ -390,28 +390,28 @@ function gridTests2() {
   })
 
   grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
+    groupID: 'grp001',
+    filter: shader2,
     insetScale: .6,
     // direction: Direction.All,
     // taken: true,
   })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
-    insetScale: .4,
-    // direction: Direction.None,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   insetScale: .4,
+  //   // direction: Direction.None,
+  //   // taken: true,
+  // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
-    insetScale: .2,
-    // direction: Direction.None,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   insetScale: .2,
+  //   // direction: Direction.None,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -505,13 +505,13 @@ function gridTests2() {
   //   taken: false,
   // })
 
-  grid.findIslands({
-    // groupID: 'grp002',
-    filter: shader0,
-    insetScale: .4,
-    // direction: Direction.All,
-    taken: false,
-  })
+  // grid.findIslands({
+  //   // groupID: 'grp002',
+  //   filter: shader0,
+  //   insetScale: .4,
+  //   // direction: Direction.All,
+  //   taken: false,
+  // })
 
   // grid.findIslands({
   //   // groupID: 'grp002',
