@@ -57,8 +57,76 @@ class ProtoSVG {
 
     URL.revokeObjectURL(url)
   }
+  // NOTE: Made with ClaudeAI on Oct 5, 2023
   //METH:
-  static exportPNG(svgMarkup, fileName, width, height, scale = 2) {
+  static async exportPNG16(svgMarkup, fileName, width, height) {
+
+    // Load SVG image
+    async function loadImage(svgMarkup) {
+      const img = await new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          resolve(img);
+        }
+        img.src = URL.createObjectURL(new Blob([svgMarkup], { type: 'image/svg+xml' }));
+      });
+      return img;
+    }
+
+    // Encode 16-bit PNG
+    function encodePNG16(data, width, height) {
+      const header = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+      const buf = new Uint16Array(width * height * 4);
+
+      for (let i = 0; i < data.length; i++) {
+        const high = (data[i] >> 8) & 0xFF;
+        const low = data[i] & 0xFF;
+        buf[i * 2] = low;
+        buf[i * 2 + 1] = high;
+      }
+
+      const png = new Uint8Array(header.length + buf.length * 2);
+      png.set(header);
+      png.set(buf, header.length);
+
+      return png;
+    }
+
+    // Export PNG file  
+    function downloadBlob(data, filename) {
+      const url = URL.createObjectURL(new Blob([data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    const canvas = new OffscreenCanvas(width, height);
+    const gl = canvas.getContext('webgl2', { pixelFormat: 'float16' });
+
+    if (!gl) {
+      throw new Error('WebGL 2 not supported');
+    }
+
+    const texture = gl.createTexture();
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.UNSIGNED_SHORT, null);
+
+    const img = await loadImage(svgMarkup);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_SHORT, img);
+
+    const data = new Uint16Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_SHORT, data);
+
+    const png = await encodePNG16(data, width, height);
+
+    downloadBlob(png, fileName);
+  }
+
+  // NOTE: Made with GPT-4 on April 14, 2023
+  //METH:
+  static exportPNG(svgMarkup, fileName, width, height, scale = 1) {
     // console.log("Starting exportPNG() function...")
 
     const canvas = document.createElement("canvas")
@@ -114,7 +182,7 @@ function lSegmentPathToRoundedSVGPath(
   { segments,
     curvature = bezCircleConst,
     straightness = 0,
-    bisector = 0.5,
+    bisector = .5,
     circularCaps = true,
     random = false
   } = {}) {
@@ -152,12 +220,6 @@ function lSegmentPathToRoundedSVGPath(
     }
     curves.push([control1, lineStart, lineEnd, control2])
   })
-  // print('curves')
-  // print(curves.map(e => e.map(f => f.string)))
-  // print('previousSegment')
-  // print(previousSegment)
-
-
 
   // create start and end coordinates
   let end, start
@@ -177,20 +239,14 @@ function lSegmentPathToRoundedSVGPath(
 
     circleCurve = min(last.length, segments[0].length) / 2
     if (last.length > segments[0].length) {
-      // print('seg.last > seg.first')
       lineEndLoc = 1 - circleCurve / last.length
       lineEnd = last.pointOnsegment(lineEndLoc)
       control2 = last.scaledEndPoint(bezCircleConst, lineEndLoc)
     } else {
-      // print('seg.first > seg.last')
       makeSegmentCircular(last, lineStartLoc)
     }
     start = [lineEnd, control2]
   }
-  // print('start')
-  // print(start.map(e => e.string))
-  // print('end')
-  // print(end.map(e => e.string))
 
   //convert curve segment coordinates into SVG instructions
   let curvesSVG = curves.map(e => `${e[0].array} ${e[1].array} L ${e[2].array} C ${e[3].array} `)
