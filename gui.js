@@ -2,7 +2,7 @@ let gui
 
 let testingControls = {
   hashNumber: 8,
-  lastHash: true,
+  lastHash: false,
   labels: true,
   borders: false,
   testColors: false,
@@ -108,8 +108,8 @@ function createGUI() {
 function keyPressed() {
   if (key === 's') {
     // console.log('s pressed')
-    const scale = 2
-    const rez = vert(1000, 1800)
+    const scale = 1
+    const rez = vert(8000, 14400)
     const scaledRez = rez.mult(scale)
     const rezString = `${scaledRez.x}x${scaledRez.y}`
     const date = getCurrentDateString()
