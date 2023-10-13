@@ -10,6 +10,7 @@
 // CLASS: ProtoLayer
 class ProtoLayer {
   protoParent // ProtoLayer
+  _type
   _insetScale
   _filter
   _filterLoft
@@ -36,6 +37,8 @@ class ProtoLayer {
 
   // MARK: View Properties
   // #region View Properties
+
+  get type() { return this._type }
   get padding() { return 20 }
 
   get testLook() { return SVGLook.test() }
@@ -103,10 +106,34 @@ class ProtoLayer {
   }
   get sides() {
     return {
-      up: new ProtoSegment(this.corners.upLeft, this.corners.upRight, this.id),
-      right: new ProtoSegment(this.corners.upRight, this.corners.downRight, this.id),
-      down: new ProtoSegment(this.corners.downRight, this.corners.downLeft, this.id),
-      left: new ProtoSegment(this.corners.downLeft, this.corners.upLeft, this.id),
+      up: protoSegment({
+        start: this.corners.upLeft,
+        end: this.corners.upRight,
+        parentID: this.id,
+        islandIDs: (this.type === 'Cell') ? this.islandIDs : undefined,
+        id: `${this.id}-upSide`
+      }),
+      right: protoSegment({
+        start: this.corners.upRight,
+        end: this.corners.downRight,
+        parentID: this.id,
+        islandIDs: (this.type === 'Cell') ? this.islandIDs : undefined,
+        id: `${this.id}-rightSide`
+      }),
+      down: protoSegment({
+        start: this.corners.downRight,
+        end: this.corners.downLeft,
+        parentID: this.id,
+        islandIDs: (this.type === 'Cell') ? this.islandIDs : undefined,
+        id: `${this.id}-downSide`
+      }),
+      left: protoSegment({
+        start: this.corners.downLeft,
+        end: this.corners.upLeft,
+        parentID: this.id,
+        islandIDs: (this.type === 'Cell') ? this.islandIDs : undefined,
+        id: `${this.id}-leftSide`
+      }),
     }
   }
   // #endregion
@@ -216,6 +243,7 @@ class Frame extends ProtoLayer {
 
   constructor(svgParent) {
     super({ protoParent: svgParent, insetScale: 1, drawRect: true })
+    this._type = 'Frame'
     this.finishSetup(S.Frame)
   }
 
@@ -684,6 +712,7 @@ class Grid extends ProtoLayer {
     super({ protoParent: protoParent, insetScale: insetScale, drawRect: false, drawSVG: true })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
+    this._type = 'Grid'
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
     this.cellRowsPref = this.transformedCellRows(transform)
@@ -704,8 +733,9 @@ class Grid extends ProtoLayer {
   get minCellWidth() { return min(this.cellSize.x, this.cellSize.y) }
   get cells() { return this.cellRows.flat() }
   get cellColumns() { return this.cellRowsFlipped() }
-  get availableCells() { return this.cells.filter(e => e.available) }
-  get takenCells() { return this.cells.filter(e => e.taken) }
+  get availableCells() { return this.cells.filter(cell => cell.available) }
+  get takenCells() { return this.cells.filter(cell => cell.taken) }
+  get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }
   get isFull() { return this.availableCells.length === 0 }
   get biggestGroup() {
     return this.groups.reduce((max, grp) => {
@@ -749,6 +779,10 @@ class Grid extends ProtoLayer {
   rowContains(rowIndex, cellIndex) { return this.coords(cellIndex).y === rowIndex }
   //METH: 
   columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }
+  //METH:
+  cellIsInAnIsland(cellIndex) {
+    return this.islands.some(isle => isle.cells.some(cell => cell.index === cellIndex))
+  }
   //METH: 
   cellSegmentBetween(indexA, indexB) {
     const indices = [indexA, indexB].sort((a, b) => a - b)
@@ -1066,27 +1100,96 @@ class Grid extends ProtoLayer {
   // MARK: Shape Methods
   // #region Shape Methods
   //METH:
-  customizeShapes() {
-    let shapes = this.islands
-      .sort((a, b) => a.cells.length - b.cells.length)
-      .map(isle => isle.shape)
+  customizeShapes(diagonals = false) {
+    // let shapes = this.islands
+    //   .sort((a, b) => a.cells.length - b.cells.length)
+    //   .map(isle => isle.shape)
 
-    shapes.forEach(shape => {
-      const isle = shape.island
+    // shapes.forEach(shape => {
+    //   const isle = shape.island
 
-      shape.assignCornerVerts()
-      if (isle.isRectangle) {
-        shape.assignRectangleVerts()
-        console.log('Neighbor Segs', shape.cells.map(cell => cell.neighborSegments))
-        return
-      }
-      shape.assignUTurnVerts()
-      shape.assignSingleStepVerts()
-    })
+    //   shape.assignCornerVerts()
+    //   if (isle.isRectangle) {
+    //     shape.assignRectangleVerts()
+    //     console.log('Neighbor Segs', shape.cells.map(cell => cell.neighborSegments))
+    //     return
+    //   }
+    //   shape.assignUTurnVerts()
+    //   shape.assignSingleStepVerts()
+    // })
     // console.log('shape sizes', shapes.map(e => e.cells.length))
     // console.log('shapes', shapes)
     // console.log('shapes verts', shapes.map(e => e.assignedVerts).flat())
     // console.log('shapes parts', shapes.map(e => e.parts).flat())
+
+
+
+
+    // SEGMENT LENGTH BASED //
+    // assign EdgeParts in every island
+    // sort allSegments into groups: (uTurns, stairs, flatsAndCorners)
+    // Simplify all segments in 'flatsAndCorners' to corners only/straight segments
+
+    const shapeCells = this.cellsInAnIsland
+    console.log(`shapeCells`, shapeCells)
+
+    let allSegments = shapeCells.map(cell => cell.segments).flat()
+    console.log(`allSegments`, allSegments.map(s => s.id))
+    let uTurnSegs = allSegments.filter(seg => seg.isUTurn)
+    // console.log(`uTurnSegs`, uTurnSegs.map(c => c.id))
+    const stepSegs = allSegments.filter(seg => seg.isStep)
+    // console.log(`stepSegs`, stepSegs.map(c => c.id))
+    const cornerSegs = allSegments.filter(seg => seg.isCorner)
+    console.log(`cornerSegs`, cornerSegs.map(c => c.id))
+    const flatSegs = allSegments.filter(seg => seg.isFlat)
+    console.log(`flatSegs`, flatSegs.map(c => c.id))
+
+    const remove = (segs) => {
+      allSegments = allSegments.exclude(segs, 'id')
+    }
+
+    const assignMids = (segs, edgeType) => {
+      segs.forEach(seg => {
+        seg.assignMid()
+        const startNeighbor = allSegments.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
+        if (startNeighbor) { startNeighbor.assignMid() }
+        const endNeighbor = allSegments.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
+        if (endNeighbor) { endNeighbor.assignMid() }
+        const shared = allSegments.find(s => s.equals(seg.opposite))
+        if (shared?.hasInsideTurn) { shared.assignMid() }
+        remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
+        segs = allSegments.filter(seg => seg.part.isBaseType(edgeType))
+        console.log(`allSegments`, allSegments.length)
+      })
+    }
+
+    assignMids(uTurnSegs, 'UTurn')
+    assignMids(stepSegs, 'Step')
+
+
+
+
+
+    // LOOP:
+    // filter simpleSegments to incomplete(computed) only 
+    // sort allSegments by availableLength(computed), shortest to longest
+    // for each segment:
+    // // find sharedSegment
+    // // find neighborSegments
+    // // for each unassigned controlVertex: 
+    // // if uTurn, follow uTurn rules
+    // // if stair, follow stair rules
+    // // else:
+    // // // on segment: assign lineStart/lineEnd vertex at availableLength from vertex
+    // // // // on sharedSegment: assign lineStart/lineEnd vertex at availableLength from vertex
+    // // // on neighborSegment: assign lineStart/lineEnd vertex at availableLength from vertex
+    // // // // on sharedSegment: assign lineStart/lineEnd vertex at availableLength from vertex
+    // 
+
+
+
+
+    // 
   }
   // #endregion
   // MARK: Setup Methods
@@ -1678,6 +1781,7 @@ class CellGroup extends ProtoLayer {
   constructor(protoParent, svgParent, grid) {
     super({ protoParent: protoParent, svgParent: svgParent, drawSVG: false, drawRect: false })
     this.grid = grid
+    this._type = 'Group'
     this.finishSetup(S.Groups)
     // this.color = R.random_hash(3, '#')
   }
@@ -1799,6 +1903,7 @@ class Cell extends ProtoLayer {
     this.coords = coords
     this.available = available
     // this.color = color
+    this._type = 'Cell'
     this.finishSetup(S.Cells)
   }
 
@@ -1826,6 +1931,11 @@ class Cell extends ProtoLayer {
   get x() { return this.coords.x }
   get y() { return this.coords.y }
   get taken() { return !this.available }
+  get isInAnIsland() { return this.grid.cellIsInAnIsland(this.index) }
+  get hasAUTurn() { return this.segments.some(seg => seg.isUTurn) }
+  get hasAStep() { return this.segments.some(seg => seg.isStep) }
+  get hasACorner() { return this.segments.some(seg => seg.isCorner) }
+  get hasAFlat() { return this.segments.some(seg => seg.isFlat) }
 
   get cardinalNeighbors() { return this.allNeighborsCoords(Direction.Cardinal.directions) }
   get neighborSegments() {
@@ -1907,6 +2017,7 @@ class Island extends ProtoLayer {
     this.groupID = groupID
     this.direction = direction
     this.parentIslandID = parentIslandID
+    this._type = 'Island'
     if (stored) { this.finishSetup(S.Islands) }
     // console.log('new Island', cells.map(e => e.id))
     // else { this.finishSetup() }
@@ -1995,6 +2106,7 @@ class Island extends ProtoLayer {
         // console.error(`END SUBSHAPE ${shapeIter}`)
         segments = segments.exclude(subShape, ['id'])
         subShapes.push(subShape)
+
         //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
         function findSubShape(seg, direction) {
           fillstack.push(seg)
@@ -2090,6 +2202,8 @@ class Shape extends ProtoLayer {
   subShapes
   turns
   parts
+  simpleSubShapes
+  finalSubShapes
   // color
   testVerts
   testColor
@@ -2101,8 +2215,9 @@ class Shape extends ProtoLayer {
     this.testColor = `${R.random_hash(3, '#')}8`
     this.createParts()
     this.assignSegments()
-    // console.log('allSegments', this.allSegments)
+    this._type = 'Shape'
     this.finishSetup(S.Shapes)
+    // this.createSimpleSubShapes()
   }
 
   get testLook() { return Look.test(this.size, 'shape') }
@@ -2178,6 +2293,10 @@ class Shape extends ProtoLayer {
     this.turns = turns
     this.parts = parts
   }
+  //METH: 
+  createSimpleSubShapes() {
+    this.simpleSubShapes = this.subShapes.map(subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id))
+  }
   //METH:
   assignSegments() {
     this.cells.forEach(cell => {
@@ -2193,6 +2312,7 @@ class Shape extends ProtoLayer {
   assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
   //METH:
   assignUTurnVerts() {
+    console.log("assignUTurnVerts called")
     this.subShapes.forEach(sub => sub.forEach((seg, i) => {
       const loop = range(0, sub.lastIndex)
       const prev = sub[loop.cycle(i - 1)]
@@ -2206,6 +2326,7 @@ class Shape extends ProtoLayer {
   }
   //METH:
   assignSingleStepVerts() {
+    console.log("assignSingleStepVerts called")
     this.subShapes.forEach(sub => sub.forEach((seg, i) => {
       // console.log('try assignSingleStep')
       const loop = range(0, sub.lastIndex)
@@ -2223,6 +2344,7 @@ class Shape extends ProtoLayer {
   }
   //METH:
   assignRectangleVerts() {
+    console.log("assignRectangleVerts called")
     const bounds = this.cellBounds
     const aspect = bounds.aspect
     const width = bounds.columnCount
@@ -2270,6 +2392,13 @@ class Shape extends ProtoLayer {
   // #endregion
   // MARK: Setup Methods
   // #region Setup Methods
+  //METH: 
+  finishSetup(store) {
+    this.storeObject(store)
+    this.assignElement()
+    this.createSimpleSubShapes()
+    this.drawElement()
+  }
   //METH:
   assignElement() {
     this.svgElt = createSVGElt().id(this.id)
@@ -2347,73 +2476,5 @@ class Shape extends ProtoLayer {
   }
   // #endregion
 }
-
-
-
-// MARK: DEPRECATE
-// #region DEPRECATE
-
-// CLASS: GOpt : grammar options
-class GOpt {
-  constructor() {
-    // Start: Frame
-    this.frame = new Option(['frame',
-      ['inset', 0.9,],
-      ['None', 0.1,],
-    ])
-
-    // Start: Layer
-    this.layer = new Option(['layer',
-      [
-        ['grid', 0.4,],
-        ['nest', 0.3,],
-        ['array', 0.2,],
-        ['asymNest', 0.05,],
-        ['asymSubdivide', 0.05,],
-      ]])
-
-    // Start: Empty Grid
-    this.grid = new Option(['grid',
-      [
-        ['snake', 0.2],
-        ['comb', 0.2],
-        ['randComb', 0.2],
-        ['randShape', 0.2],
-        ['openNest', 0.2], // "Wi-fi"
-      ]])
-
-    // Start: Partial Grid
-    this.cellgroup = new Option(['grid',
-      [
-        ['seperateIsles', 0.2,],
-        ['deleteIslesBy', 0.2,],
-        ['randDeleteIsles', 0.2,],
-        ['expandCellGroup', 0.2,],
-        ['contractCellGroup', 0.2,],
-        ['symmetrize', 0.2,],
-        ['subGrid', 0.2,],
-        ['snakeExtend', 0.2,],
-        ['bulbExtend', 0.2,],
-        ['randAbsorbNeighbors', 0.2,],
-        ['connectOrdinals', 0.2,],
-        ['randTRS', 0.1,],
-      ]])
-
-    // Start: CellGroup/Island
-    this.island = new Option(['grid',
-      [
-        ['curveShape', 0.2,],
-        ['weightedCurves', 0.2,],
-        ['expandShape', 0.2,],
-        ['contractShape', 0.2,],
-        ['nestShape', 0.2,],
-        ['maskedCornerShape', 0.2,],
-      ]])
-  }
-}
-// #endregion
-
-
-
 
 
