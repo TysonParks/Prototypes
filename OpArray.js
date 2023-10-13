@@ -1,6 +1,12 @@
 // MARK: INITIALIZATION
 // import { Direction } from './ProtoUtility.js'
 
+// CLASS: Set
+Set.prototype.equals = function (set, props) {
+  const thisArray = OpArray.from(this)
+  const thatArray = OpArray.from(set)
+  return thisArray.equals(thatArray, props)
+}
 
 // CLASS: Array
 // PROTOTYPE: Array extension last() function
