@@ -332,8 +332,8 @@ class EdgePart {
   static CSO = new EdgePart('CSO')     // SR              --> 'Corner Start Outside'
   static CEI = new EdgePart('CEI')     // LS              --> 'Corner End Inside'
   static CEO = new EdgePart('CEO')     // RS              --> 'Corner End Outside'
-  static StI = new EdgePart('StI')      // RL              --> 'Step In'
-  static StO = new EdgePart('StO')      // LR              --> 'Step Out'
+  static StI = new EdgePart('StI')     // RL              --> 'Step In'
+  static StO = new EdgePart('StO')     // LR              --> 'Step Out'
   static UI = new EdgePart('UI')       // LL              --> 'U-Turn Inside'
   static UO = new EdgePart('UO')       // RR              --> 'U-Turn Outside'
 
@@ -346,10 +346,10 @@ class EdgePart {
     this.name = this.#getName(value)
   }
 
-  get isFlat() { return this.value === 'F' }
-  get isUTurn() { return this.value === 'UI' || this.value === 'UO' }
-  get isStep() { return this.value === 'StI' || this.value === 'StO' }
-  get isCorner() { return this.value === 'CSI' || this.value === 'CSO' || this.value === 'CEI' || this.value === 'CEO' }
+  get isFlat() { return this.isBaseType('Flat') }
+  get isUTurn() { return this.isBaseType('UTurn') }
+  get isStep() { return this.isBaseType('Step') }
+  get isCorner() { return this.isBaseType('Corner') }
 
   get isCornerStart() { return this.value === 'CSI' || this.value === 'CSO' }
   get isCornerEnd() { return this.value === 'CEI' || this.value === 'CEO' }
@@ -357,6 +357,18 @@ class EdgePart {
   #getName(value) {
     return this.#turnNames[value]
     return 'unnamed'
+  }
+
+  isBaseType(type) {
+    const types = this.#baseTypes[type]
+    return types.some(t => this.value === t)
+  }
+
+  #baseTypes = {
+    'Flat': ['F'],
+    'Corner': ['CEI', 'CEO', 'CSI', 'CSO'],
+    'Step': ['StI', 'StO'],
+    'UTurn': ['UO', 'UI'],
   }
 
   #turnNames = {
