@@ -964,3 +964,72 @@ function unusedFeatures() {
     ['Octad', 0.2],
   ]
 }
+
+
+// MARK: DEPRECATE
+// #region DEPRECATE
+
+// CLASS: GOpt : grammar options
+class GOpt {
+  constructor() {
+    // Start: Frame
+    this.frame = new Option(['frame',
+      ['inset', 0.9,],
+      ['None', 0.1,],
+    ])
+
+    // Start: Layer
+    this.layer = new Option(['layer',
+      [
+        ['grid', 0.4,],
+        ['nest', 0.3,],
+        ['array', 0.2,],
+        ['asymNest', 0.05,],
+        ['asymSubdivide', 0.05,],
+      ]])
+
+    // Start: Empty Grid
+    this.grid = new Option(['grid',
+      [
+        ['snake', 0.2],
+        ['comb', 0.2],
+        ['randComb', 0.2],
+        ['randShape', 0.2],
+        ['openNest', 0.2], // "Wi-fi"
+      ]])
+
+    // Start: Partial Grid
+    this.cellgroup = new Option(['grid',
+      [
+        ['seperateIsles', 0.2,],
+        ['deleteIslesBy', 0.2,],
+        ['randDeleteIsles', 0.2,],
+        ['expandCellGroup', 0.2,],
+        ['contractCellGroup', 0.2,],
+        ['symmetrize', 0.2,],
+        ['subGrid', 0.2,],
+        ['snakeExtend', 0.2,],
+        ['bulbExtend', 0.2,],
+        ['randAbsorbNeighbors', 0.2,],
+        ['connectOrdinals', 0.2,],
+        ['randTRS', 0.1,],
+      ]])
+
+    // Start: CellGroup/Island
+    this.island = new Option(['grid',
+      [
+        ['curveShape', 0.2,],
+        ['weightedCurves', 0.2,],
+        ['expandShape', 0.2,],
+        ['contractShape', 0.2,],
+        ['nestShape', 0.2,],
+        ['maskedCornerShape', 0.2,],
+      ]])
+  }
+}
+// #endregion
+
+
+
+
+
