@@ -23,6 +23,23 @@ class ProtoSVG {
 
     return lSegmentPathToRoundedSVGPath({ segments: segments, random: random })
   }
+  //METH: refineProtoSegmentPath()
+  // remove colinear segments to reduce shape path to single segments connecting corners
+  static refineProtoSegmentPath(path = [], parentID) {
+    let newPath = new OpArray
+    let prevSeg = undefined
+    for (let i = 0; i < path.length; i++) {
+      let seg = path[i]
+      if (prevSeg !== undefined && seg.angle === prevSeg.angle) {
+        seg = protoSegment({ start: prevSeg.startPoint, end: seg.endPoint, parentID: parentID, id: `${parentID}-simpleSide-${i}` })
+        newPath.pop()
+      }
+      newPath.push(seg)
+      prevSeg = seg
+    }
+    return newPath
+  }
+
   // NOTE: Made with GPT-4 on May 23, 2023
   //METH:
   static arcControlPoints(a, b, c) {
@@ -184,7 +201,7 @@ function lSegmentPathToRoundedSVGPath(
     straightness = 0,
     bisector = .5,
     circularCaps = true,
-    random = false
+    random = false,
   } = {}) {
   segments = OpArray.from(segments)
   let last = segments.pop()
@@ -300,12 +317,12 @@ function roundedCornerShape({ shape = testShape2a, cornerRadius = '16px', weight
 
 // FUNC: segmentPathToVertsPath()
 function segmentPathToVertsPath(segmentPath) {
-  return segmentPath.map(e => [e.startPoint.x, e.startPoint.y])
+  return segmentPath.map(seg => [seg.startPoint.x, seg.startPoint.y])
 }
 
 // FUNC: vertsPathToSegmentPath()
 // convert array of verts to a shape path made of Segments
-function vertsPathToSegmentPath({ path = [], refine = true } = {}) {
+function vertsPathToSegmentPath({ path = [], refine = true, parentID } = {}) {
   // console.log('path', path)
   let vertCount = path.length
   if (vertCount < 3) { return }
@@ -314,19 +331,11 @@ function vertsPathToSegmentPath({ path = [], refine = true } = {}) {
   let segmentPath = []
   let previousSeg = undefined
   for (let i = 0; i < vertCount; i++) {
-    // let verts = [vert(path[i]), vert(path[i + 1])]
-    // let segment = new Segment({ start: verts[0], end: verts[1] })
-    let seg = protoSegment(vert(path[i]), vert(path[i + 1]))
-    // print('previousSeg')
-    // print(previousSeg)
-    // print('seg')
-    // print(seg)
+    let seg = protoSegment({ start: vert(path[i]), end: vert(path[i + 1]), parentID: parentID })
     if (refine === true && previousSeg !== undefined && seg.angle === previousSeg.angle) {
-
-      // verts = [previousSeg.verts[0], verts[1]]
-      seg = protoSegment(previousSeg.startPoint, seg.endPoint)
+      seg = protoSegment({ start: previousSeg.startPoint, end: seg.endPoint, parentID: parentID })
       segmentPath.pop()
-    }                                      // combine segments with same angle
+    } // combine segments with same angle
     segmentPath.push(seg)
     previousSeg = seg
   }
@@ -507,7 +516,7 @@ class Vertex extends p5.Vector {
     return -1 // not Cardinal or Ordinal
   }
 
-  equals(vert, accuracy) {
+  equals(vert, accuracy = 3) {
     let ax, ay, bx, by
     if (arguments.length === 2) {
       ax = this.x.toFixed(accuracy)
@@ -564,6 +573,7 @@ class Segment {
   get string() { return `[(${this.startPoint.string}), (${this.endPoint.string})]` }
 
   get lineVector() { return p5.Vector.sub(this.endPoint, this.startPoint) }
+  get opposite() { return segment(this.end, this.start) }
 
   get start() { return this.verts.start }
   get end() { return this.verts.end }
@@ -643,26 +653,32 @@ class Segment {
 }
 
 // CLASS: ProtoSegment
-function protoSegment(start, end) {
-  return new ProtoSegment(start, end)
+function protoSegment({ start, end, parentID, id, islandIDs } = {}) {
+  return new ProtoSegment(start, end, parentID, id, islandIDs)
 }
 
 class ProtoSegment extends Segment {
+  id
   parentID
+  islandIDs
   taken = false
   turns
   part
-  assignedVerts = new OpArray
+  cubicVerts = new OpArray
 
-  constructor(start, end, parentID) {
+  constructor(start, end, parentID, id, islandIDs) {
     super(start, end)
     this.parentID = parentID
+    this.islandIDs = islandIDs
+    this.id = id
   }
 
   get isUTurn() { return this.part.isUTurn }
   get isStep() { return this.part.isStep }
   get isFlat() { return this.part.isFlat }
   get isCorner() { return this.part.isCorner }
+
+  get hasInsideTurn() { return this.turns.start.value === 'L' || this.turns.end.value === 'L' }
 
   get cornerVerts() {
     let verts = new OpArray
@@ -673,31 +689,27 @@ class ProtoSegment extends Segment {
   }
 
   assignCornerVerts() {
-    if (this.turns.start.value !== 0) { this.assignVert(this.startPoint) }
-    if (this.turns.end.value !== 0) { this.assignVert(this.endPoint) }
+    if (this.turns.start.value !== 0) { this.assignCubicVert(this.startPoint) }
+    if (this.turns.end.value !== 0) { this.assignCubicVert(this.endPoint) }
   }
 
-  // assignUTurnVerts() {
-  //   if (this.part.isUTurn) { this}
-  // }
+  assignMid() { this.assignCubicVert('mid') }
 
-  assignVert(vert) {
+  assignCubicVert(vert) {
     if (typeof vert === 'string') {
       // console.log(`assign ${vert}`)
       vert = this.#vertNames[vert]
     }
     if (vert instanceof Vertex) {
-      this.assignedVerts.push(vert)
-      this.assignedVerts = this.assignedVerts.unique('x', 'y')
+      this.cubicVerts.push(vert)
+      this.cubicVerts = this.cubicVerts.unique('x', 'y')
       // console.log(`assigned ${vert}`)
     }
     if (vert instanceof Array && typeof vert[0] === 'string') {
       vert.forEach(v => {
-        console.log(`assigning ${v}`)
-        this.assignedVerts.push(this.#vertNames[v]
-        )
-      }
-      )
+        // console.log(`assigning ${v}`)
+        this.assignCubicVert(this.#vertNames[v])
+      })
     }
   }
 
