@@ -1100,6 +1100,8 @@ class Grid extends ProtoLayer {
   // MARK: Shape Methods
   // #region Shape Methods
   //METH:
+  createSimpleSubShapes() { this.islands.forEach(i => i.createSimpleSubShapes()) }
+  //METH:
   customizeShapes(diagonals = false) {
     // let shapes = this.islands
     //   .sort((a, b) => a.cells.length - b.cells.length)
@@ -1137,12 +1139,12 @@ class Grid extends ProtoLayer {
     console.log(`allSegments`, allSegments.map(s => s.id))
     let uTurnSegs = allSegments.filter(seg => seg.isUTurn)
     // console.log(`uTurnSegs`, uTurnSegs.map(c => c.id))
-    const stepSegs = allSegments.filter(seg => seg.isStep)
+    let stepSegs = allSegments.filter(seg => seg.isStep)
     // console.log(`stepSegs`, stepSegs.map(c => c.id))
-    const cornerSegs = allSegments.filter(seg => seg.isCorner)
-    console.log(`cornerSegs`, cornerSegs.map(c => c.id))
-    const flatSegs = allSegments.filter(seg => seg.isFlat)
-    console.log(`flatSegs`, flatSegs.map(c => c.id))
+    let cornerSegs = allSegments.filter(seg => seg.isCorner)
+    // console.log(`cornerSegs`, cornerSegs.map(c => c.id))
+    let flatSegs = allSegments.filter(seg => seg.isFlat)
+    // console.log(`flatSegs`, flatSegs.map(c => c.id))
 
     const remove = (segs) => {
       allSegments = allSegments.exclude(segs, 'id')
@@ -1156,8 +1158,13 @@ class Grid extends ProtoLayer {
         const endNeighbor = allSegments.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
         if (endNeighbor) { endNeighbor.assignMid() }
         const shared = allSegments.find(s => s.equals(seg.opposite))
-        if (shared?.hasInsideTurn) { shared.assignMid() }
-        remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
+        if (shared?.hasInsideTurn) {
+          // if (shared) {
+          console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
+          // console.log(`000000 shared has inside turn`, seg.id, shared.id)
+          shared.assignMid()
+        }
+        // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
         segs = allSegments.filter(seg => seg.part.isBaseType(edgeType))
         console.log(`allSegments`, allSegments.length)
       })
@@ -1165,10 +1172,11 @@ class Grid extends ProtoLayer {
 
     assignMids(uTurnSegs, 'UTurn')
     assignMids(stepSegs, 'Step')
+    this.createSimpleSubShapes()
 
 
 
-
+    console.log(`allSegments`, allSegments)
 
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
@@ -1184,11 +1192,6 @@ class Grid extends ProtoLayer {
     // // // // on sharedSegment: assign lineStart/lineEnd vertex at availableLength from vertex
     // // // on neighborSegment: assign lineStart/lineEnd vertex at availableLength from vertex
     // // // // on sharedSegment: assign lineStart/lineEnd vertex at availableLength from vertex
-    // 
-
-
-
-
     // 
   }
   // #endregion
@@ -2008,6 +2011,7 @@ class Island extends ProtoLayer {
   parentIslandID
   cells
   shape
+  shapes = new OpArray
   direction
   // color
   constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, insetScale = 1 } = {}) {
@@ -2089,7 +2093,8 @@ class Island extends ProtoLayer {
       island: this,
       insetScale: insetScale
     })
-    this.shape = thisShape
+    // this.shape = thisShape
+    this.shapes.push(thisShape)
 
     //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
     function findShape(direction) {
@@ -2152,6 +2157,8 @@ class Island extends ProtoLayer {
     }
     // print(`END Shape Test`)
   }
+  //METH:
+  createSimpleSubShapes() { this.shape.createSimpleSubShapes() }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
     return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, directions: directions })
@@ -2217,7 +2224,6 @@ class Shape extends ProtoLayer {
     this.assignSegments()
     this._type = 'Shape'
     this.finishSetup(S.Shapes)
-    // this.createSimpleSubShapes()
   }
 
   get testLook() { return Look.test(this.size, 'shape') }
@@ -2296,6 +2302,7 @@ class Shape extends ProtoLayer {
   //METH: 
   createSimpleSubShapes() {
     this.simpleSubShapes = this.subShapes.map(subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id))
+    console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
   assignSegments() {
@@ -2307,70 +2314,71 @@ class Shape extends ProtoLayer {
   }
   // #endregion
   // MARK: Vert Assignment Methods
+  // TODO: DEPRECATE
   // #region Vert Assignment Methods
   //METH:
   assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
   //METH:
-  assignUTurnVerts() {
-    console.log("assignUTurnVerts called")
-    this.subShapes.forEach(sub => sub.forEach((seg, i) => {
-      const loop = range(0, sub.lastIndex)
-      const prev = sub[loop.cycle(i - 1)]
-      const next = sub[loop.cycle(i + 1)]
-      if (seg.isUTurn) {
-        prev.assignVert('mid')
-        seg.assignVert('mid')
-        next.assignVert('mid')
-      }
-    }))
-  }
+  // assignUTurnVerts() {
+  //   console.log("assignUTurnVerts called")
+  //   this.subShapes.forEach(sub => sub.forEach((seg, i) => {
+  //     const loop = range(0, sub.lastIndex)
+  //     const prev = sub[loop.cycle(i - 1)]
+  //     const next = sub[loop.cycle(i + 1)]
+  //     if (seg.isUTurn) {
+  //       prev.assignVert('mid')
+  //       seg.assignVert('mid')
+  //       next.assignVert('mid')
+  //     }
+  //   }))
+  // }
   //METH:
-  assignSingleStepVerts() {
-    console.log("assignSingleStepVerts called")
-    this.subShapes.forEach(sub => sub.forEach((seg, i) => {
-      // console.log('try assignSingleStep')
-      const loop = range(0, sub.lastIndex)
-      const prev = sub[loop.cycle(i - 1)]
-      const next = sub[loop.cycle(i + 1)]
-      // console.log([prev, seg, next].map(e => e.part.value))
-      // case covers 1 or 2 consequetive steps
-      if (seg.isStep && !next.isStep) {
-        // console.log('found single step')
-        prev.assignVert('mid')
-        seg.assignVert('mid')
-        next.assignVert('mid')
-      }
-    }))
-  }
+  // assignSingleStepVerts() {
+  //   console.log("assignSingleStepVerts called")
+  //   this.subShapes.forEach(sub => sub.forEach((seg, i) => {
+  //     // console.log('try assignSingleStep')
+  //     const loop = range(0, sub.lastIndex)
+  //     const prev = sub[loop.cycle(i - 1)]
+  //     const next = sub[loop.cycle(i + 1)]
+  //     // console.log([prev, seg, next].map(e => e.part.value))
+  //     // case covers 1 or 2 consequetive steps
+  //     if (seg.isStep && !next.isStep) {
+  //       // console.log('found single step')
+  //       prev.assignVert('mid')
+  //       seg.assignVert('mid')
+  //       next.assignVert('mid')
+  //     }
+  //   }))
+  // }
   //METH:
-  assignRectangleVerts() {
-    console.log("assignRectangleVerts called")
-    const bounds = this.cellBounds
-    const aspect = bounds.aspect
-    const width = bounds.columnCount
-    const height = bounds.rowCount
-    let offsetLength, length, offset
-    let prevLength = 0
+  // assignRectangleVerts() {
+  //   console.log("assignRectangleVerts called")
+  //   const bounds = this.cellBounds
+  //   const aspect = bounds.aspect
+  //   const width = bounds.columnCount
+  //   const height = bounds.rowCount
+  //   let offsetLength, length, offset
+  //   let prevLength = 0
 
-    if (aspect.value === 2) { offsetLength = height } // landscape
-    else { offsetLength = width } // square/portrait
+  //   if (aspect.value === 2) { offsetLength = height } // landscape
+  //   else { offsetLength = width } // square/portrait
 
-    for (let i = 0; i < 4; i++) {
-      if (i % 2 === 0) { length = width } // top/bottom 
-      else { length = height } // left/right
+  //   for (let i = 0; i < 4; i++) {
+  //     if (i % 2 === 0) { length = width } // top/bottom 
+  //     else { length = height } // left/right
 
-      if (offsetLength % 2 === 0) { // even number of cells
-        offset = offsetLength / 2 - 1
-        this.subShapes[0][prevLength + offset].assignVert('end')
-        this.subShapes[0][prevLength + length - offset - 1].assignVert('start')
-      } else { // odd number of cells
-        offset = (offsetLength - 1) / 2
-        this.subShapes[0][prevLength + offset].assignVert('mid')
-        this.subShapes[0][prevLength + length - offset - 1].assignVert('mid')
-      }
-      prevLength += length
-    }
-  }
+  //     if (offsetLength % 2 === 0) { // even number of cells
+  //       offset = offsetLength / 2 - 1
+  //       this.subShapes[0][prevLength + offset].assignVert('end')
+  //       this.subShapes[0][prevLength + length - offset - 1].assignVert('start')
+  //     } else { // odd number of cells
+  //       offset = (offsetLength - 1) / 2
+  //       this.subShapes[0][prevLength + offset].assignVert('mid')
+  //       this.subShapes[0][prevLength + length - offset - 1].assignVert('mid')
+  //     }
+  //     prevLength += length
+  //   }
+  // }
   //METH:
   // assignSquareVerts() {
   //   const width = this.cellBounds.columnCount
@@ -2396,7 +2404,7 @@ class Shape extends ProtoLayer {
   finishSetup(store) {
     this.storeObject(store)
     this.assignElement()
-    this.createSimpleSubShapes()
+    // this.createSimpleSubShapes()
     this.drawElement()
   }
   //METH:
