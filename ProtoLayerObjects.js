@@ -1010,7 +1010,17 @@ class Grid extends ProtoLayer {
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
   //METH: findIslands()
-  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, filter, direction = Direction.Cardinal, taken = true, stored = true, insetScale = 1 } = {}) {
+  findIslands({
+    selection,
+    bounds = this.cellBounds(),
+    groupID,
+    islandID,
+    filter,
+    direction = Direction.Cardinal,
+    taken = true,
+    stored = true,
+    insetScale = 1
+  } = {}) {
     let cells, group, island
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
@@ -1091,7 +1101,7 @@ class Grid extends ProtoLayer {
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) { this.updateCells() }
     // else { 
-
+    //FIXME: should createShape() be called elsewhere? Maybe directly on grid?
     tempIslands.forEach(e => e.createShape())
     return tempIslands
     // }
@@ -1100,32 +1110,10 @@ class Grid extends ProtoLayer {
   // MARK: Shape Methods
   // #region Shape Methods
   //METH:
+  //FIXME: DEPRECATE and replace with createSimpleOutlines()
   createSimpleSubShapes() { this.islands.forEach(i => i.createSimpleSubShapes()) }
   //METH:
   customizeShapes(diagonals = false) {
-    // let shapes = this.islands
-    //   .sort((a, b) => a.cells.length - b.cells.length)
-    //   .map(isle => isle.shape)
-
-    // shapes.forEach(shape => {
-    //   const isle = shape.island
-
-    //   shape.assignCornerVerts()
-    //   if (isle.isRectangle) {
-    //     shape.assignRectangleVerts()
-    //     console.log('Neighbor Segs', shape.cells.map(cell => cell.neighborSegments))
-    //     return
-    //   }
-    //   shape.assignUTurnVerts()
-    //   shape.assignSingleStepVerts()
-    // })
-    // console.log('shape sizes', shapes.map(e => e.cells.length))
-    // console.log('shapes', shapes)
-    // console.log('shapes verts', shapes.map(e => e.assignedVerts).flat())
-    // console.log('shapes parts', shapes.map(e => e.parts).flat())
-
-
-
 
     // SEGMENT LENGTH BASED //
     // assign EdgeParts in every island
@@ -1146,9 +1134,7 @@ class Grid extends ProtoLayer {
     let flatSegs = allSegments.filter(seg => seg.isFlat)
     // console.log(`flatSegs`, flatSegs.map(c => c.id))
 
-    const remove = (segs) => {
-      allSegments = allSegments.exclude(segs, 'id')
-    }
+    const remove = (segs) => { allSegments = allSegments.exclude(segs, 'id') }
 
     const assignMids = (segs, edgeType) => {
       segs.forEach(seg => {
@@ -1158,12 +1144,7 @@ class Grid extends ProtoLayer {
         const endNeighbor = allSegments.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
         if (endNeighbor) { endNeighbor.assignMid() }
         const shared = allSegments.find(s => s.equals(seg.opposite))
-        if (shared?.hasInsideTurn) {
-          // if (shared) {
-          console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
-          // console.log(`000000 shared has inside turn`, seg.id, shared.id)
-          shared.assignMid()
-        }
+        if (shared?.hasInsideTurn) { shared.assignMid() }
         // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
         segs = allSegments.filter(seg => seg.part.isBaseType(edgeType))
         console.log(`allSegments`, allSegments.length)
@@ -1171,9 +1152,12 @@ class Grid extends ProtoLayer {
     }
 
     assignMids(uTurnSegs, 'UTurn')
+    // TODO: implement diaganol assignment rule and apply to stepSegs here
     assignMids(stepSegs, 'Step')
-    this.createSimpleSubShapes()
 
+    //FIXME: Replace with this.createSimpleOutlines()
+    this.createSimpleSubShapes()
+    // this.createSimpleOutlines()
 
 
     console.log(`allSegments`, allSegments)
@@ -2010,11 +1994,26 @@ class Island extends ProtoLayer {
   groupID
   parentIslandID
   cells
-  shape
+  turns
+  parts
+  outlines = new OpArray
+  simpleOutlines = new OpArray // could this be computed property instead? NO! This is called from Grid after Island setup
+  finalOutlines = new OpArray // could this be computed property instead?
+  shape // DEPRECATE
   shapes = new OpArray
   direction
   // color
-  constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, insetScale = 1 } = {}) {
+  constructor({
+    cells,
+    protoParent,
+    svgParent,
+    grid,
+    groupID,
+    parentIslandID,
+    direction = Direction.Cardinal,
+    stored = true,
+    insetScale = 1
+  } = {}) {
     super({ protoParent: protoParent, svgParent: svgParent, insetScale: insetScale, drawRect: false, drawSVG: false })
     this.cells = cells
     this.grid = grid
@@ -2022,6 +2021,8 @@ class Island extends ProtoLayer {
     this.direction = direction
     this.parentIslandID = parentIslandID
     this._type = 'Island'
+    //FIXME: assume createParts() should be called here, but need to think through it
+    // this.createParts()
     if (stored) { this.finishSetup(S.Islands) }
     // console.log('new Island', cells.map(e => e.id))
     // else { this.finishSetup() }
@@ -2043,12 +2044,8 @@ class Island extends ProtoLayer {
 
   get cellCount() { return this.cells.length }
 
-  get isSingle() {
-    return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index, Direction.All.directions))
-  }
-  get isCardinalSingle() {
-    return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index))
-  }
+  get isSingle() { return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index, Direction.All.directions)) }
+  get isCardinalSingle() { return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index)) }
   get isPill() { return this.cellCount === 2 && this.isCardinal }
   get isOrdinalCapsule() { return this.cellCount === 2 && this.isOrdinal }
 
@@ -2068,6 +2065,19 @@ class Island extends ProtoLayer {
   get isRectangle() { return !this.isLine && this.cellBounds.isFull }
   get isSquare() { return this.isRectangle && this.cellBounds.aspect.name === 'square' }
 
+  get allSegments() { return this.outlines.flat() }
+  // FIXME: this either is not necessary or probably needs to use finalOutlines
+  get assignedVerts() {
+    return this.outlines.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
+    // .flat()
+  }
+
+  get hasSubOutlines() { return this.outlines.length > 1 }
+
+  get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
+  // TODO: is shapeCorners used / necessary?
+  get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
+
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
   }
@@ -2077,6 +2087,60 @@ class Island extends ProtoLayer {
   // #endregion
   // MARK: Methods
   // #region Methods
+  //METH:
+  #createTurns(segments) {
+    let segs = OpArray.from(segments)
+    // let segs = this.allSegments
+    let turns = new OpArray
+    let prev = segs.last()
+    segs.forEach((e, i) => {
+      const turn = prev.direction.turnTo(e.direction)
+      turns.push(turn)
+      prev = e
+    })
+    return turns
+  }
+  //METH:
+  createParts() {
+    let turns = new OpArray
+    let parts = new OpArray
+    this.outlines.forEach(outline => {
+      let subTurns = this.#createTurns(outline)
+      subTurns.push(subTurns[0])
+      let prevTurn
+      let subParts = new OpArray
+
+      subTurns.forEach((turn, i) => {
+        if (prevTurn) {
+          const part = EdgePart.from([prevTurn, turn])
+          const seg = outline[i - 1]
+          seg.taken = true
+          seg.part = part
+          seg.turns = { start: prevTurn, end: turn }
+          subParts.push(part)
+        }
+        prevTurn = turn
+      })
+      subTurns.pop()
+      turns.push(subTurns)
+      parts.push(subParts)
+    })
+    this.turns = turns
+    this.parts = parts
+  }
+  //METH: 
+  createSimpleOutlines() {
+    this.simpleOutlines = this.outlines.map(outline => ProtoSVG.refineProtoSegmentPath(outline, this.id))
+    console.log(`${this.id} simpleOutlines`, this.simpleOutlines)
+  }
+  //METH:
+  assignSegments() {
+    this.cells.forEach(cell => {
+      const cellID = cell.id
+      const segs = this.allSegments.filter(s => s.parentID === cellID)
+      cell.segments = segs
+    })
+  }
   //METH:
   createShape(insetScale) {
     // console.log('createShape insetScale', insetScale)
@@ -2158,6 +2222,7 @@ class Island extends ProtoLayer {
     // print(`END Shape Test`)
   }
   //METH:
+  //FIXME: DEPRECATE in favor of createSimpleOutlines()
   createSimpleSubShapes() { this.shape.createSimpleSubShapes() }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
@@ -2259,6 +2324,7 @@ class Shape extends ProtoLayer {
   // MARK: methods
   // #region methods
   //METH:
+  // FIXME: DEPRECATE, migrated up to Island Class
   #createTurns(segments) {
     let segs = OpArray.from(segments)
     // let segs = this.allSegments
@@ -2272,6 +2338,7 @@ class Shape extends ProtoLayer {
     return turns
   }
   //METH:
+  // FIXME: DEPRECATE, migrated up to Island Class
   createParts() {
     let turns = new OpArray
     let parts = new OpArray
@@ -2300,11 +2367,13 @@ class Shape extends ProtoLayer {
     this.parts = parts
   }
   //METH: 
+  // FIXME: DEPRECATE, migrated up to Island Class
   createSimpleSubShapes() {
     this.simpleSubShapes = this.subShapes.map(subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id))
     console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
+  // FIXME: DEPRECATE, migrated up to Island Class
   assignSegments() {
     this.cells.forEach(cell => {
       const cellID = cell.id
@@ -2314,10 +2383,10 @@ class Shape extends ProtoLayer {
   }
   // #endregion
   // MARK: Vert Assignment Methods
-  // TODO: DEPRECATE
+  // TODO: DEPRECATE, this customizeShape() approach was abandoned in favor of segment/EdgePart vert assignments
   // #region Vert Assignment Methods
   //METH:
-  assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
+  // assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
   //METH:
   // assignUTurnVerts() {
   //   console.log("assignUTurnVerts called")
