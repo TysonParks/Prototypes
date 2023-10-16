@@ -557,10 +557,11 @@ function gridTests2() {
   console.log(`cell 0 is taken`, grid.cellAt(0).taken)
   console.log(`cell 1 is taken`, grid.cellAt(1).taken)
 
+
+
   console.log('all layers', S.allLayers)
-
-
   grid.customizeShapes()
+  console.log('all layers', S.allLayers)
 }
 
 // MARK: DRAWING FUNCS
