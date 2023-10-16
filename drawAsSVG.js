@@ -28,12 +28,44 @@ class ProtoSVG {
   static refineProtoSegmentPath(path = [], parentID) {
     let newPath = new OpArray
     let prevSeg = undefined
+    let length = 1
+    let firstID = undefined
     for (let i = 0; i < path.length; i++) {
       let seg = path[i]
       if (prevSeg !== undefined && seg.angle === prevSeg.angle) {
-        seg = protoSegment({ start: prevSeg.startPoint, end: seg.endPoint, parentID: parentID, id: `${parentID}-simpleSide-${i}` })
+        if (length === 1) { firstID = prevSeg.id }
+        length += 1
+        const prevIDs = OpArray.from(prevSeg.islandIDs)
+        const segIDs = OpArray.from(seg.islandIDs)
+        // console.log(`prevIDs`, prevIDs)
+        // console.log(`segIDs`, segIDs)
+        const idArray = prevIDs.union(segIDs)
+        // console.log(`idArray`, idArray)
+        const islandIDs = new Set(idArray)
+        const id = `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}`
+        let newSeg = protoSegment({
+          start: prevSeg.startPoint,
+          end: seg.endPoint,
+          parentID: parentID,
+          id: id,
+          islandIDs: islandIDs
+        })
+        // console.log(`previous ${prevSeg.id} cubicVerts`, prevSeg.cubicVerts.length, prevSeg.cubicVerts)
+        // console.log(`current ${seg.id} cubicVerts`, seg.cubicVerts.length, seg.cubicVerts)
+        const allVerts = prevSeg.cubicVerts.union(seg.cubicVerts, ['x', 'y'])
+        // console.log('allVerts', allVerts)
+        // newSeg.assignCubicVert(allVerts)
+        newSeg.assignCubicVert(prevSeg.cubicVerts)
+        newSeg.assignCubicVert(seg.cubicVerts)
+        // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
         newPath.pop()
+        seg = newSeg
+      } else {
+        length = 1
+        firstID = undefined
       }
+      // console.log(`END FLAT`, seg.parentID)
+
       newPath.push(seg)
       prevSeg = seg
     }
@@ -678,15 +710,27 @@ class ProtoSegment extends Segment {
   get isFlat() { return this.part.isFlat }
   get isCorner() { return this.part.isCorner }
 
-  get hasInsideTurn() { return this.turns.start.value === 'L' || this.turns.end.value === 'L' }
+  get hasInsideTurn() { return this.turns.start.name === 'Left' || this.turns.end.name === 'Left' }
 
   get cornerVerts() {
+    return {
+      start: (this.turns.start.value !== 0) ? this.start : undefined,
+      end: (this.turns.end.value !== 0) ? this.end : undefined,
+    }
+
     let verts = new OpArray
     // console.log(this.turns)
     if (this.turns.start.value !== 0) { verts.push(this.startPoint) }
     if (this.turns.end.value !== 0) { verts.push(this.endPoint) }
     return verts
   }
+
+  get availableStartLength() {
+    if (!this.cornerVerts.start) { return }
+    if (this.cubicVerts.length === 0) { return this.length / 2 }
+
+  }
+  get availableEndLength() { }
 
   assignCornerVerts() {
     if (this.turns.start.value !== 0) { this.assignCubicVert(this.startPoint) }
@@ -701,15 +745,21 @@ class ProtoSegment extends Segment {
       vert = this.#vertNames[vert]
     }
     if (vert instanceof Vertex) {
+      // console.log(`already assigned ${this.cubicVerts}`, this.cubicVerts.length)
       this.cubicVerts.push(vert)
       this.cubicVerts = this.cubicVerts.unique('x', 'y')
-      // console.log(`assigned ${vert}`)
+      // console.log(`just assigned ${vert}`)
+      // console.log(`now assigned ${this.cubicVerts}`, this.cubicVerts.length)
     }
-    if (vert instanceof Array && typeof vert[0] === 'string') {
-      vert.forEach(v => {
-        // console.log(`assigning ${v}`)
-        this.assignCubicVert(this.#vertNames[v])
-      })
+    if (vert instanceof Set) { vert = Array.from(vert) }
+    if (vert instanceof Array && vert.length > 0) {
+      // console.log(`!!vert from array`, vert)
+      if (typeof vert[0] === 'string') { vert = vert.map(v => this.#vertNames[v]) }
+      // console.log(`vert converted`, vert)
+      if (vert[0] instanceof Vertex) {
+        // console.error(`assignCubicVert vert is a Vertex`)
+        this.cubicVerts = this.cubicVerts.union(vert, ['x', 'y'])
+      }
     }
   }
 
