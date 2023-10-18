@@ -735,7 +735,7 @@ class Grid extends ProtoLayer {
   get cellColumns() { return this.cellRowsFlipped() }
   get availableCells() { return this.cells.filter(cell => cell.available) }
   get takenCells() { return this.cells.filter(cell => cell.taken) }
-  get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }
+  get allCellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }
   get isFull() { return this.availableCells.length === 0 }
   get biggestGroup() {
     return this.groups.reduce((max, grp) => {
@@ -1006,9 +1006,6 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: findIslands Method
   // #region findIslands Method
-  //TODO: add transform functionality
-  //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
-  //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
   //METH: findIslands()
   findIslands({
     selection,
@@ -1042,6 +1039,7 @@ class Grid extends ProtoLayer {
       cells = OpArray.from(selection)
     }
     if (cells.isEmpty) { return }
+    // const direction = omnidirectional ? Direction.All : Direction.Cardinal
     let tempIslands = new OpArray
     // console.log('cells', cells.map(e => e.id))
 
@@ -1110,8 +1108,10 @@ class Grid extends ProtoLayer {
   // MARK: Shape Methods
   // #region Shape Methods
   //METH:
-  //FIXME: DEPRECATE and replace with createSimpleOutlines()
+  //FIXME: DEPRECATE and replace with createSimplePerimeter()
   createSimpleSubShapes() { this.islands.forEach(i => i.createSimpleSubShapes()) }
+  //METH:
+  createSimplePerimeter() { this.islands.forEach(i => i.createSimplePerimeter()) }
   //METH:
   customizeShapes(diagonals = false) {
 
@@ -1120,7 +1120,7 @@ class Grid extends ProtoLayer {
     // sort allSegments into groups: (uTurns, stairs, flatsAndCorners)
     // Simplify all segments in 'flatsAndCorners' to corners only/straight segments
 
-    const shapeCells = this.cellsInAnIsland
+    const shapeCells = this.allCellsInAnIsland
     console.log(`shapeCells`, shapeCells)
 
     let allSegments = shapeCells.map(cell => cell.segments).flat()
@@ -1155,9 +1155,9 @@ class Grid extends ProtoLayer {
     // TODO: implement diaganol assignment rule and apply to stepSegs here
     assignMids(stepSegs, 'Step')
 
-    //FIXME: Replace with this.createSimpleOutlines()
-    this.createSimpleSubShapes()
-    // this.createSimpleOutlines()
+    //FIXME: Replace with this.createSimplePerimeter()
+    // this.createSimpleSubShapes()
+    this.createSimplePerimeter()
 
 
     console.log(`allSegments`, allSegments)
@@ -1993,15 +1993,16 @@ class Island extends ProtoLayer {
   grid
   groupID
   parentIslandID
+  omnidirectional
   cells
   turns
   parts
-  outlines = new OpArray
-  simpleOutlines = new OpArray // could this be computed property instead? NO! This is called from Grid after Island setup
-  finalOutlines = new OpArray // could this be computed property instead?
-  shape // DEPRECATE
+  perimeter = new OpArray
+  simplePerimeter = new OpArray // could this be computed property instead? NO! This is called from Grid after Island setup
+  finalPerimeter = new OpArray // could this be computed property instead?
+  // shape // DEPRECATE
   shapes = new OpArray
-  direction
+  // direction
   // color
   constructor({
     cells,
@@ -2010,7 +2011,8 @@ class Island extends ProtoLayer {
     grid,
     groupID,
     parentIslandID,
-    direction = Direction.Cardinal,
+    omnidirectional = false,
+    // direction = Direction.Cardinal,
     stored = true,
     insetScale = 1
   } = {}) {
@@ -2018,11 +2020,13 @@ class Island extends ProtoLayer {
     this.cells = cells
     this.grid = grid
     this.groupID = groupID
-    this.direction = direction
+    this.omnidirectional = omnidirectional
+    // this.direction = direction
     this.parentIslandID = parentIslandID
     this._type = 'Island'
     //FIXME: assume createParts() should be called here, but need to think through it
-    // this.createParts()
+    // this.createPerimeter()
+    this.createParts()
     if (stored) { this.finishSetup(S.Islands) }
     // console.log('new Island', cells.map(e => e.id))
     // else { this.finishSetup() }
@@ -2043,6 +2047,8 @@ class Island extends ProtoLayer {
   get boundsRect() { return this.cellBounds.boundsRect }
 
   get cellCount() { return this.cells.length }
+
+  get direction() { return this.omnidirectional ? Direction.All : Direction.Cardinal }
 
   get isSingle() { return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index, Direction.All.directions)) }
   get isCardinalSingle() { return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index)) }
@@ -2065,14 +2071,14 @@ class Island extends ProtoLayer {
   get isRectangle() { return !this.isLine && this.cellBounds.isFull }
   get isSquare() { return this.isRectangle && this.cellBounds.aspect.name === 'square' }
 
-  get allSegments() { return this.outlines.flat() }
-  // FIXME: this either is not necessary or probably needs to use finalOutlines
+  get allSegments() { return this.perimeter.flat() }
+  // FIXME: this either is not necessary or probably needs to use finalPerimeter
   get assignedVerts() {
-    return this.outlines.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
+    return this.perimeter.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
     // .flat()
   }
 
-  get hasSubOutlines() { return this.outlines.length > 1 }
+  get hasInnerPerimeter() { return this.perimeter.length > 1 }
 
   get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
   // TODO: is shapeCorners used / necessary?
@@ -2104,7 +2110,7 @@ class Island extends ProtoLayer {
   createParts() {
     let turns = new OpArray
     let parts = new OpArray
-    this.outlines.forEach(outline => {
+    this.perimeter.forEach(outline => {
       let subTurns = this.#createTurns(outline)
       subTurns.push(subTurns[0])
       let prevTurn
@@ -2128,11 +2134,6 @@ class Island extends ProtoLayer {
     this.turns = turns
     this.parts = parts
   }
-  //METH: 
-  createSimpleOutlines() {
-    this.simpleOutlines = this.outlines.map(outline => ProtoSVG.refineProtoSegmentPath(outline, this.id))
-    console.log(`${this.id} simpleOutlines`, this.simpleOutlines)
-  }
   //METH:
   assignSegments() {
     this.cells.forEach(cell => {
@@ -2141,15 +2142,27 @@ class Island extends ProtoLayer {
       cell.segments = segs
     })
   }
+  //METH: 
+  createSimplePerimeter() {
+    this.simplePerimeter = this.perimeter.map(outline => ProtoSVG.refineProtoSegmentPath(outline, this.id))
+    console.log(`${this.id} perimeter`, this.perimeter)
+    console.log(`${this.id} simplePerimeter`, this.simplePerimeter)
+  }
   //METH:
-  createShape(insetScale) {
+  createPerimeter() {
+    this.perimeter = this.createShape(this.direction)
+    console.log(`island perimeter`, this.perimeter)
+  }
+  //METH:
+  // FIXME: migrate some functionality to createPerimeter()
+  createShape(direction = this.direction, insetScale = 0,) {
     // console.log('createShape insetScale', insetScale)
     let segments = OpArray.format(this.exposedSegments)
     let subShapes = new OpArray
     let shapeIter = 0
     let subShapeIter = 0
 
-    findShape(this.direction)
+    findShape(direction)
     let thisShape = new Shape({
       subShapes: subShapes,
       protoParent: this,
@@ -2159,6 +2172,7 @@ class Island extends ProtoLayer {
     })
     // this.shape = thisShape
     this.shapes.push(thisShape)
+    return thisShape
 
     //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
     function findShape(direction) {
@@ -2171,7 +2185,6 @@ class Island extends ProtoLayer {
         let fillstack = []
 
         findSubShape(segment, direction)
-
         // console.error(`END SUBSHAPE ${shapeIter}`)
         segments = segments.exclude(subShape, ['id'])
         subShapes.push(subShape)
@@ -2222,8 +2235,8 @@ class Island extends ProtoLayer {
     // print(`END Shape Test`)
   }
   //METH:
-  //FIXME: DEPRECATE in favor of createSimpleOutlines()
-  createSimpleSubShapes() { this.shape.createSimpleSubShapes() }
+  //FIXME: DEPRECATE in favor of createSimplePerimeter()
+  createSimpleSubShapes() { this.shapes.forEach(s => s.createSimpleSubShapes()) }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
     return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, directions: directions })
@@ -2271,16 +2284,22 @@ class Island extends ProtoLayer {
 // CLASS: Shape
 class Shape extends ProtoLayer {
   island
+  perimeter
   subShapes
-  turns
-  parts
-  simpleSubShapes
-  finalSubShapes
+  turns // TODO: DEPRECATE, migrated to Island
+  parts // TODO: DEPRECATE, migrated to Island
+  simpleSubShapes // TODO: DEPRECATE, migrated to Island
+  finalSubShapes // TODO: DEPRECATE, migrated to Island
   // color
   testVerts
   testColor
 
-  constructor({ subShapes, protoParent, svgParent, island, insetScale } = {}) {
+  constructor({
+    subShapes,
+    protoParent,
+    svgParent,
+    island,
+    insetScale } = {}) {
     super({ protoParent: protoParent, svgParent: svgParent, insetScale: insetScale })
     this.subShapes = subShapes
     this.island = island
