@@ -20,7 +20,14 @@ class ProtoLayer {
   drawSVG
   drawRect
 
-  constructor({ protoParent, svgParent, insetScale, filter, drawSVG = true, drawRect = true } = {}) {
+  constructor({
+    protoParent,
+    svgParent,
+    insetScale,
+    filter,
+    drawSVG = true,
+    drawRect = false
+  } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
       this.svgParent = protoParent.svgElt
@@ -242,7 +249,11 @@ class Frame extends ProtoLayer {
   cornerRadius = 5
 
   constructor(svgParent) {
-    super({ protoParent: svgParent, insetScale: 1, drawRect: true })
+    super({
+      protoParent: svgParent,
+      insetScale: 1,
+      drawRect: true,
+    })
     this._type = 'Frame'
     this.finishSetup(S.Frame)
   }
@@ -709,7 +720,11 @@ class Grid extends ProtoLayer {
   islands = new OpArray
 
   constructor(protoParent, gridSize, insetScale, transform) {
-    super({ protoParent: protoParent, insetScale: insetScale, drawRect: false, drawSVG: true })
+    super({
+      protoParent: protoParent,
+      insetScale: insetScale,
+      drawSVG: true
+    })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this._type = 'Grid'
@@ -1010,7 +1025,17 @@ class Grid extends ProtoLayer {
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
   //METH: findIslands()
-  findIslands({ selection, bounds = this.cellBounds(), groupID, islandID, filter, direction = Direction.Cardinal, taken = true, stored = true, insetScale = 1 } = {}) {
+  findIslands({
+    selection,
+    bounds = this.cellBounds(),
+    groupID, islandID,
+    filter,
+    direction = Direction.Cardinal,
+    taken = true,
+    stored = true,
+    insetScale = 1,
+    isPerimeter = false
+  } = {}) {
     let cells, group, island
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
@@ -1121,7 +1146,7 @@ class Grid extends ProtoLayer {
     // })
     // console.log('shape sizes', shapes.map(e => e.cells.length))
     // console.log('shapes', shapes)
-    // console.log('shapes verts', shapes.map(e => e.assignedVerts).flat())
+    // console.log('shapes verts', shapes.map(e => e.assignedVerts).flat()) 
     // console.log('shapes parts', shapes.map(e => e.parts).flat())
 
 
@@ -1141,10 +1166,19 @@ class Grid extends ProtoLayer {
     // console.log(`uTurnSegs`, uTurnSegs.map(c => c.id))
     let stepSegs = allSegments.filter(seg => seg.isStep)
     // console.log(`stepSegs`, stepSegs.map(c => c.id))
+    let minCornerSegs = this.groups
+      .filter(g => g.perimeterType === 'minCorners')
+      .map(g => g.perimeterIslands).flat()
+      .map(isl => isl.cells).flat()
+      .map(cell => cell.segments)
+      .filter(seg => seg.isCorner)
+
+    console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
     let cornerSegs = allSegments.filter(seg => seg.isCorner)
     // console.log(`cornerSegs`, cornerSegs.map(c => c.id))
     let flatSegs = allSegments.filter(seg => seg.isFlat)
     // console.log(`flatSegs`, flatSegs.map(c => c.id))
+
 
     const remove = (segs) => {
       allSegments = allSegments.exclude(segs, 'id')
@@ -1172,6 +1206,7 @@ class Grid extends ProtoLayer {
 
     assignMids(uTurnSegs, 'UTurn')
     assignMids(stepSegs, 'Step')
+
     this.createSimpleSubShapes()
 
 
@@ -1687,6 +1722,12 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Assignment Methods
   // #region Grammar AssignmentMethods
   //METH:
+  assignGroupPerimeter(groupID, perimeterType) {
+    const group = this.groupNamed(groupID)
+    if (!group) { console.error(`groupID ${groupID} is invalid`) }
+    group.findPerimiters(perimeterType)
+  }
+  //METH:
   assignCells(selection, groupID) {
     // console.log('selection', selection)
     if (selection.isEmpty) { return }
@@ -1779,11 +1820,20 @@ class Grid extends ProtoLayer {
 class CellGroup extends ProtoLayer {
   grid
   cells = new OpArray
+  perimeterType
+  perimeterIslands // Island-Shapes defining outer boundaries of all Island shapes to be allowed within
+  islands
+  omnidirectional
   // color
 
-  constructor(protoParent, svgParent, grid) {
-    super({ protoParent: protoParent, svgParent: svgParent, drawSVG: false, drawRect: false })
+  constructor(protoParent, svgParent, grid, omnidirectional = false) {
+    super({
+      protoParent: protoParent,
+      svgParent: svgParent,
+      drawSVG: false,
+    })
     this.grid = grid
+    this.omnidirectional = omnidirectional
     this._type = 'Group'
     this.finishSetup(S.Groups)
     // this.color = R.random_hash(3, '#')
@@ -1801,7 +1851,6 @@ class CellGroup extends ProtoLayer {
   // #endregion
   // MARK: Grid Properties
   // #region Grid Properties
-
   get availableCells() { return this.grid.availableCells }
   get validNeighbors() { return this.grid.validNeighbors({ selection: this.cells }) }
   // get availableNeighbors() { return this.neighbors.filter(e => e.available) }
@@ -1810,7 +1859,32 @@ class CellGroup extends ProtoLayer {
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, groupID: this.id })
   }
-
+  // #endregion
+  // MARK: Setup Methods
+  // #region Setup Methods
+  //METH:
+  findPerimiters(perimeterType) {
+    this.perimeterType = perimeterType
+    let direction
+    switch (perimeterType) {
+      case 'omni':
+        direction = Direction.All
+        break
+      case 'cardinal':
+        direction = Direction.Cardinal
+        break
+      case 'minCorners':
+        direction = Direction.Horizontal
+      default:
+        this.perimeterType = undefined
+        console.error(`${perimeterType} is invalid Perimeter Type`)
+    }
+    this.perimeterIslands = this.grid.findIslands({
+      selection: this.cells,
+      groupID: this.id,
+      direction: direction,
+    })
+  }
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
@@ -1899,7 +1973,11 @@ class Cell extends ProtoLayer {
   segments
 
   constructor({ protoParent, svgParent, grid, index, coords, available = true, color = '888' } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent, drawSVG: false, drawRect: false })
+    super({
+      protoParent: protoParent,
+      svgParent: svgParent,
+      drawSVG: false,
+    })
     if (!(coords instanceof Vertex)) { coords = vert(coords) }
     this.grid = grid
     this.index = index
@@ -2010,12 +2088,28 @@ class Island extends ProtoLayer {
   groupID
   parentIslandID
   cells
-  shape
+  // shape
+  // perimeter
   shapes = new OpArray
   direction
   // color
-  constructor({ cells, protoParent, svgParent, grid, groupID, parentIslandID, direction = Direction.Cardinal, stored = true, insetScale = 1 } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent, insetScale: insetScale, drawRect: false, drawSVG: false })
+  constructor({
+    cells,
+    protoParent,
+    svgParent,
+    grid,
+    groupID,
+    parentIslandID,
+    direction = Direction.Cardinal,
+    stored = true,
+    insetScale = 1
+  } = {}) {
+    super({
+      protoParent: protoParent,
+      svgParent: svgParent,
+      insetScale: insetScale,
+      drawRect: false,
+    })
     this.cells = cells
     this.grid = grid
     this.groupID = groupID
@@ -2158,7 +2252,7 @@ class Island extends ProtoLayer {
     // print(`END Shape Test`)
   }
   //METH:
-  createSimpleSubShapes() { this.shape.createSimpleSubShapes() }
+  createSimpleSubShapes() { this.shapes.forEach(s => s.createSimpleSubShapes()) }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
     return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, directions: directions })
@@ -2215,8 +2309,18 @@ class Shape extends ProtoLayer {
   testVerts
   testColor
 
-  constructor({ subShapes, protoParent, svgParent, island, insetScale } = {}) {
-    super({ protoParent: protoParent, svgParent: svgParent, insetScale: insetScale })
+  constructor({
+    subShapes,
+    protoParent,
+    svgParent,
+    island,
+    insetScale
+  } = {}) {
+    super({
+      protoParent: protoParent,
+      svgParent: svgParent,
+      insetScale: insetScale,
+    })
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
