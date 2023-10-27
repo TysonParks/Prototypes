@@ -26,7 +26,7 @@ class ProtoLayer {
     insetScale,
     filter,
     drawSVG = true,
-    drawRect = false
+    drawRect = false,
   } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
@@ -304,7 +304,8 @@ class Frame extends ProtoLayer {
     this.bleed = createSVGElt().id('bleed')
       .parent(this.svgParent)
       .viewBox(-5, -10, 110, 220)
-      .attribute('preserveAspectRatio', 'xMidyMid')
+      // TODO: investigate 'xMidyMid' usage, commented out because it was throwing an error and swithing it off doesn't have a visual effect so far
+      // .attribute('preserveAspectRatio', 'xMidyMid')
       .attribute('width', `${frameSize.x}`)
       .attribute('height', `${frameSize.y}`)
       .look([
@@ -1028,7 +1029,8 @@ class Grid extends ProtoLayer {
   findIslands({
     selection,
     bounds = this.cellBounds(),
-    groupID, islandID,
+    groupID,
+    islandID,
     filter,
     direction = Direction.Cardinal,
     taken = true,
@@ -1036,6 +1038,8 @@ class Grid extends ProtoLayer {
     insetScale = 1,
     isPerimeter = false
   } = {}) {
+    console.log(`findIslands filter = ${filter.id}`)
+    console.log(`findIslands groupID = ${groupID.id}`)
     let cells, group, island
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
@@ -1046,6 +1050,7 @@ class Grid extends ProtoLayer {
       if (groupID) {
         group = this.groupNamed(groupID)
         cells = group?.cells || OpArray.empty
+        console.log(`group ${groupID} should have filter set to filter ${filter.id}`)
         group?.setFilter(filter)
       }
       if (islandID) {
@@ -1166,39 +1171,40 @@ class Grid extends ProtoLayer {
     // console.log(`uTurnSegs`, uTurnSegs.map(c => c.id))
     let stepSegs = allSegments.filter(seg => seg.isStep)
     // console.log(`stepSegs`, stepSegs.map(c => c.id))
-    let minCornerSegs = this.groups
-      .filter(g => g.perimeterType === 'minCorners')
-      .map(g => g.perimeterIslands).flat()
-      .map(isl => isl.cells).flat()
-      .map(cell => cell.segments)
-      .filter(seg => seg.isCorner)
 
-    console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
+
     let cornerSegs = allSegments.filter(seg => seg.isCorner)
     // console.log(`cornerSegs`, cornerSegs.map(c => c.id))
     let flatSegs = allSegments.filter(seg => seg.isFlat)
     // console.log(`flatSegs`, flatSegs.map(c => c.id))
 
+    let madeSegs = new OpArray
+    const saveSegs = (segs) => { madeSegs = madeSegs.union(segs, ['id']) }
 
     const remove = (segs) => {
       allSegments = allSegments.exclude(segs, 'id')
     }
 
-    const assignMids = (segs, edgeType) => {
+    //FIXME: implement neighbors use, minCorners should set 'shared' segments but not 'neighbor' segments
+    const assignMids = (segs, edgeType, assignNeighbors = true) => {
       segs.forEach(seg => {
         seg.assignMid()
-        const startNeighbor = allSegments.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
-        if (startNeighbor) { startNeighbor.assignMid() }
-        const endNeighbor = allSegments.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
-        if (endNeighbor) { endNeighbor.assignMid() }
+        let startNeighbor
+        let endNeighbor
+        if (assignNeighbors) {
+          startNeighbor = allSegments.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
+          if (startNeighbor) { startNeighbor.assignMid() }
+          endNeighbor = allSegments.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
+          if (endNeighbor) { endNeighbor.assignMid() }
+        }
         const shared = allSegments.find(s => s.equals(seg.opposite))
         if (shared?.hasInsideTurn) {
-          // if (shared) {
-          console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
+          // console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
           // console.log(`000000 shared has inside turn`, seg.id, shared.id)
           shared.assignMid()
         }
         // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
+        saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
         segs = allSegments.filter(seg => seg.part.isBaseType(edgeType))
         console.log(`allSegments`, allSegments.length)
       })
@@ -1207,9 +1213,24 @@ class Grid extends ProtoLayer {
     assignMids(uTurnSegs, 'UTurn')
     assignMids(stepSegs, 'Step')
 
+    if (this.groups.some(g => g.perimeterType === 'minCorners')) {
+      // console.log(`there is a minCorners Group`)
+      let minCornerSegs = this.groups
+        .filter(g => g.perimeterType === 'minCorners')
+        .map(g => g.perimeterIslands).flat()
+        .map(isl => isl.cells).flat()
+        .map(cell => cell.segments).flat()
+        .filter(seg => seg.isCorner)
+        // console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
+        // minCornerSegs = minCornerSegs.exclude(madeSegs, ['id'])
+        .exclude(madeSegs, ['id'])
+      // console.log(`madeSegs`, madeSegs.map(c => c.id))
+      // console.log(`minCornerSegs`, minCornerSegs.map(c => c.id)
+      assignMids(minCornerSegs, 'Corner', false)
+    }
+    // else { console.log(`there is NOT a minCorners Group`) }
+
     this.createSimpleSubShapes()
-
-
 
     console.log(`allSegments`, allSegments)
 
@@ -1722,10 +1743,10 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Assignment Methods
   // #region Grammar AssignmentMethods
   //METH:
-  assignGroupPerimeter(groupID, perimeterType) {
+  assignGroupPerimeter(groupID, perimeterType, filter) {
     const group = this.groupNamed(groupID)
     if (!group) { console.error(`groupID ${groupID} is invalid`) }
-    group.findPerimiters(perimeterType)
+    group.findPerimiters(perimeterType, filter)
   }
   //METH:
   assignCells(selection, groupID) {
@@ -1818,9 +1839,9 @@ class Grid extends ProtoLayer {
 
 // CLASS: CellGroup
 class CellGroup extends ProtoLayer {
+  perimeterType
   grid
   cells = new OpArray
-  perimeterType
   perimeterIslands // Island-Shapes defining outer boundaries of all Island shapes to be allowed within
   islands
   omnidirectional
@@ -1863,7 +1884,9 @@ class CellGroup extends ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   //METH:
-  findPerimiters(perimeterType) {
+  findPerimiters(perimeterType, filter) {
+    console.log(`findPerimeters filter = ${filter.id}`)
+    console.log(`this is`, this.id)
     this.perimeterType = perimeterType
     let direction
     switch (perimeterType) {
@@ -1875,14 +1898,17 @@ class CellGroup extends ProtoLayer {
         break
       case 'minCorners':
         direction = Direction.Horizontal
+        break
       default:
         this.perimeterType = undefined
         console.error(`${perimeterType} is invalid Perimeter Type`)
     }
+    const groupID = this.id
     this.perimeterIslands = this.grid.findIslands({
-      selection: this.cells,
-      groupID: this.id,
+      // selection: this.cells,
+      groupID: groupID,
       direction: direction,
+      filter: filter,
     })
   }
   // #endregion
@@ -2324,7 +2350,7 @@ class Shape extends ProtoLayer {
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
-    this.createParts()
+    this.createParts(subShapes)
     this.assignSegments()
     this._type = 'Shape'
     this.finishSetup(S.Shapes)
@@ -2376,10 +2402,10 @@ class Shape extends ProtoLayer {
     return turns
   }
   //METH:
-  createParts() {
+  createParts(subShapes) {
     let turns = new OpArray
     let parts = new OpArray
-    this.subShapes.forEach(shape => {
+    subShapes.forEach(shape => {
       let subTurns = this.#createTurns(shape)
       subTurns.push(subTurns[0])
       let prevTurn
