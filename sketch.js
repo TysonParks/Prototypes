@@ -279,6 +279,9 @@ function gridTests2() {
   const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * -.125 * 4 })
   const shader3 = createFilter().dropShadow(shadeStack3)
 
+  const shadeStackEmpty = Shade.neuShadeSVGFactory({ mag: 0 })
+  const emptyShader = createFilter().dropShadow(shadeStackEmpty)
+
   // const frameInset = R.random_num(0.02, 0.18)
   FRAME.setInsetScale(.95)
   grid.setInsetScale(.9)
@@ -314,6 +317,7 @@ function gridTests2() {
   // grid.randGroup(0.6)
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
   grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  // grid.randGroup(0.2)
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, directioqn: Direction.Right, newGroup: true, amount: 1 })
@@ -373,9 +377,10 @@ function gridTests2() {
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
-  // grid.assignGroupPerimeter('grp000', 'omni')
-  // grid.assignGroupPerimeter('grp001', 'cardinal')
-  // grid.assignGroupPerimeter('grp002', 'cardinal')
+  grid.assignGroupPerimeter('grp000', 'omni', emptyShader)
+  grid.assignGroupPerimeter('grp001', 'minCorners', emptyShader)
+  grid.assignGroupPerimeter('grp002', 'cardinal', emptyShader)
+  console.log(`groups`, grid.groups)
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -396,7 +401,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp000',
     filter: shader1,
-    insetScale: .9,
+    insetScale: .8,
     direction: Direction.All,
     // taken: true,
   })
@@ -436,7 +441,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp001',
     filter: shader2,
-    insetScale: .9,
+    insetScale: .8,
     // direction: Direction.All,
     // taken: true,
   })
@@ -512,7 +517,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp002',
     filter: shader0,
-    insetScale: .9,
+    insetScale: .8,
     // direction: Direction.All,
     // taken: false,
   })
