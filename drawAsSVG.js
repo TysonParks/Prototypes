@@ -564,6 +564,11 @@ class Vertex extends p5.Vector {
     return ax === bx && ay === by
   }
 
+  add(vert) { return Vertex.add(this, vert) }
+  sub(vert) { return Vertex.sub(this, vert) }
+  mult(vert) { return Vertex.mult(this, vert) }
+  div(vert) { return Vertex.div(this, vert) }
+
   static add(a, b) { return vert(p5.Vector.add(a, b)) }
   static sub(a, b) { return vert(p5.Vector.sub(a, b)) }
   static mult(a, b) {
@@ -725,6 +730,11 @@ class ProtoSegment extends Segment {
     return verts
   }
 
+  get cubicVertsToStartLengths() { return this.cubicVerts.map(vert => this.start.sub(vert).mag) }
+  get cubicVertsToEndLengths() { return this.cubicVerts.map(vert => this.end.sub(vert).mag) }
+  get cubicVertClosestToStart() { return this.cubicVerts.sort((a, b) => this.start.sub(a).mag - this.start.sub(b).mag)[0] }
+  get cubicVertClosestToEnd() { return this.cubicVerts.sort((a, b) => this.end.sub(a).mag - this.end.sub(b).mag)[0] }
+  //FIXME: Finish implementations!
   get availableStartLength() {
     if (!this.cornerVerts.start) { return }
     if (this.cubicVerts.length === 0) { return this.length / 2 }
