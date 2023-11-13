@@ -260,7 +260,7 @@ function gridTests2() {
   // console.log('Grid:', gridX)
 
   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
-  // console.log('minCellSize', minCellSize)
+  console.log('minCellSize', minCellSize)
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
@@ -279,7 +279,7 @@ function gridTests2() {
   const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * -.125 * 4 })
   const shader3 = createFilter().dropShadow(shadeStack3)
 
-  const shadeStackEmpty = Shade.neuShadeSVGFactory({ mag: 0 })
+  const shadeStackEmpty = Shade.neuShadeSVGFactory({ mag: -1 })
   const emptyShader = createFilter().dropShadow(shadeStackEmpty)
 
   // const frameInset = R.random_num(0.02, 0.18)
@@ -400,10 +400,11 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp000',
-    filter: shader1,
+    filter: shader0,
     insetScale: .8,
     direction: Direction.All,
     // taken: true,
+    // isPerimeter: true,
   })
 
   // grid.findIslands({
