@@ -765,6 +765,13 @@ class Grid extends ProtoLayer {
     })
   }
   get lastGroup() { return this.groups.last() }
+  // FIXME: need to reconfigure the formation of perimeters before this will work properly
+  // NOTE: because currently D.None/Hor/Vert makes many islands instead of 1
+  get allSimpleSubShapes() {
+    return this.groups
+      .map(g => g.perimeterIslands).flat()
+    // .map(s => s.simpleSubShapes).flat()
+  }
   // get islands() { return this.findIslands({ selection: this.cells }) }
   // #endregion
   // MARK: Geometry Methods
@@ -1239,6 +1246,8 @@ class Grid extends ProtoLayer {
     // else { console.log(`there is NOT a minCorners Group`) }
 
     this.createSimpleSubShapes()
+
+
 
     console.log(`allSegments`, allSegments)
 
