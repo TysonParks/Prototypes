@@ -19,6 +19,7 @@ class ProtoLayer {
   rect // 'rect' p5.Element
   drawSVG
   drawRect
+  drawFilter
 
   constructor({
     protoParent,
@@ -27,6 +28,7 @@ class ProtoLayer {
     filter,
     drawSVG = true,
     drawRect = false,
+    drawFilter = true,
   } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
@@ -39,6 +41,7 @@ class ProtoLayer {
     this._filter = filter
     this.drawSVG = drawSVG
     this.drawRect = drawRect
+    this.drawFilter = drawFilter
     this.assignUID()
   }
 
@@ -204,8 +207,10 @@ class ProtoLayer {
         .attribute('rx', `${this.cornerRadius}`)
         .attribute('ry', `${this.cornerRadius}`)
 
-      if (this.filter) {
-        this.rect.applyFilter(this.filter, 2)
+      if (this.drawFilter) {
+        if (this.filter) {
+          this.rect.applyFilter(this.filter, 2)
+        }
       }
     }
   }
@@ -1036,10 +1041,8 @@ class Grid extends ProtoLayer {
     taken = true,
     stored = true,
     insetScale = 1,
-    isPerimeter = false
+    isPerimeter = false,
   } = {}) {
-    console.log(`findIslands filter = ${filter.id}`)
-    console.log(`findIslands groupID = ${groupID.id}`)
     let cells, group, island
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
@@ -1050,13 +1053,14 @@ class Grid extends ProtoLayer {
       if (groupID) {
         group = this.groupNamed(groupID)
         cells = group?.cells || OpArray.empty
-        console.log(`group ${groupID} should have filter set to filter ${filter.id}`)
+        // console.log(`2nd if: group ${groupID} should have filter set to filter ${filter.id}`)
         group?.setFilter(filter)
       }
       if (islandID) {
         island = this.islandNamed(islandID)
         cells = island?.cells || OpArray.empty
         island?.setFilter(filter)
+        group?.setFilter(filter)
       }
     } else {
       cells = OpArray.from(selection)
@@ -1083,8 +1087,12 @@ class Grid extends ProtoLayer {
         parentIslandID: islandID,
         direction: direction,
         stored: stored,
+        isPerimeter: isPerimeter,
       })
-      if (stored) { this.islands.push(island) }
+      if (stored) {
+        island.setFilter(filter)
+        this.islands.push(island)
+      }
       // else { 
       tempIslands.push(island)
       // }
@@ -1121,7 +1129,7 @@ class Grid extends ProtoLayer {
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) { this.updateCells() }
     // else { 
-
+    //FIXME: filter Islands the isPerimeter === false, only creating shapes for non-perimeters
     tempIslands.forEach(e => e.createShape())
     return tempIslands
     // }
@@ -1743,10 +1751,10 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Assignment Methods
   // #region Grammar AssignmentMethods
   //METH:
-  assignGroupPerimeter(groupID, perimeterType, filter) {
+  assignGroupPerimeter(groupID, perimeterType) {
     const group = this.groupNamed(groupID)
     if (!group) { console.error(`groupID ${groupID} is invalid`) }
-    group.findPerimiters(perimeterType, filter)
+    group.findPerimiters(perimeterType)
   }
   //METH:
   assignCells(selection, groupID) {
@@ -1884,9 +1892,8 @@ class CellGroup extends ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   //METH:
-  findPerimiters(perimeterType, filter) {
-    console.log(`findPerimeters filter = ${filter.id}`)
-    console.log(`this is`, this.id)
+  findPerimiters(perimeterType) {
+    console.log(`findPerimiters this.id`, this.id)
     this.perimeterType = perimeterType
     let direction
     switch (perimeterType) {
@@ -1904,11 +1911,12 @@ class CellGroup extends ProtoLayer {
         console.error(`${perimeterType} is invalid Perimeter Type`)
     }
     const groupID = this.id
+    console.log(`findPerimiters groupID`, groupID)
     this.perimeterIslands = this.grid.findIslands({
       // selection: this.cells,
       groupID: groupID,
       direction: direction,
-      filter: filter,
+      isPerimeter: true,
     })
   }
   // #endregion
@@ -2128,13 +2136,15 @@ class Island extends ProtoLayer {
     parentIslandID,
     direction = Direction.Cardinal,
     stored = true,
-    insetScale = 1
+    insetScale = 1,
+    isPerimeter = false,
   } = {}) {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
       drawRect: false,
+      drawFilter: !isPerimeter,
     })
     this.cells = cells
     this.grid = grid
@@ -2346,6 +2356,7 @@ class Shape extends ProtoLayer {
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
+      drawFilter: protoParent.drawFilter,
     })
     this.subShapes = subShapes
     this.island = island
@@ -2551,40 +2562,42 @@ class Shape extends ProtoLayer {
   drawElement() {
     const path = createSVGElt('path')
     // console.log(this.filter.id)
-    path
-      .attribute('d', this.svg)
-      .parent(this.svgElt)
-      .addToClassList(this.id)
-      .addToClassList(this.svgParent.elt.classList.value)
-      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
-
-    if (S.Effects.db[0][1]) {
-      let maxWidthDivisor = 20
-      // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.25 }
-      let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
-      strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
-
-      // console.log('shape insetScale', this.insetScale)
-      const insetScaleX = this.insetScale.x
-      const posInset = insetScaleX >= 0
-      strokeMaskWidth = 1 * (posInset ? 1 - insetScaleX : insetScaleX) * this.grid.cellSize.x
-      // strokeMaskWidth = -.6 * this.grid.cellSize.x
-      // console.log('insetScaleX', insetScaleX)
-      // console.log('strokeMaskWidth', strokeMaskWidth)
-      // console.log('cellSize', this.grid.cellSize.x)
-      // const posStrokeMask = strokeMaskWidth >= 0
-
+    if (this.drawFilter) {
       path
-        .attribute('fill', protoColor(230))
-        .attribute('fill-opacity', 1)
-        // .attribute('stroke', protoColor(230))
-        // .attribute('stroke-opacity', 1)
-        // .attribute('stroke-width', '7')
-        .attribute('fill', protoColor(255))
-        .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
-        // .applyStrokeMask(protoColor(128), strokeMaskWidth)
-        // .applyFilter(S.Effects.db[0][1], 3)
-        .applyFilter(this.filter, 2)
+        .attribute('d', this.svg)
+        .parent(this.svgElt)
+        .addToClassList(this.id)
+        .addToClassList(this.svgParent.elt.classList.value)
+        .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+
+      if (S.Effects.db[0][1]) {
+        let maxWidthDivisor = 20
+        // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.25 }
+        let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
+        strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
+
+        // console.log('shape insetScale', this.insetScale)
+        const insetScaleX = this.insetScale.x
+        const posInset = insetScaleX >= 0
+        strokeMaskWidth = 1 * (posInset ? 1 - insetScaleX : insetScaleX) * this.grid.cellSize.x
+        // strokeMaskWidth = -.6 * this.grid.cellSize.x
+        // console.log('insetScaleX', insetScaleX)
+        // console.log('strokeMaskWidth', strokeMaskWidth)
+        // console.log('cellSize', this.grid.cellSize.x)
+        // const posStrokeMask = strokeMaskWidth >= 0
+
+        path
+          .attribute('fill', protoColor(230))
+          .attribute('fill-opacity', 1)
+          // .attribute('stroke', protoColor(230))
+          // .attribute('stroke-opacity', 1)
+          // .attribute('stroke-width', '7')
+          .attribute('fill', protoColor(255))
+          .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
+          // .applyStrokeMask(protoColor(128), strokeMaskWidth)
+          // .applyFilter(S.Effects.db[0][1], 3)
+          .applyFilter(this.filter, 2)
+      }
     }
     // .svgLook(SVGLook.trendyCactus(path))
 
