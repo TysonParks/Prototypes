@@ -710,17 +710,17 @@ class ProtoSegment extends Segment {
     this.id = id
   }
 
-  get isUTurn() { return this.part.isUTurn }
-  get isStep() { return this.part.isStep }
-  get isFlat() { return this.part.isFlat }
-  get isCorner() { return this.part.isCorner }
+  get isUTurn() { return this.part?.isUTurn }
+  get isStep() { return this.part?.isStep }
+  get isFlat() { return this.part?.isFlat }
+  get isCorner() { return this.part?.isCorner }
 
-  get hasInsideTurn() { return this.turns.start.name === 'Left' || this.turns.end.name === 'Left' }
+  get hasInsideTurn() { return this.turns?.start.name === 'Left' || this.turns?.end.name === 'Left' }
 
   get cornerVerts() {
     return {
-      start: (this.turns.start.value !== 0) ? this.start : undefined,
-      end: (this.turns.end.value !== 0) ? this.end : undefined,
+      start: (this.turns?.start.value !== 0) ? this.start : undefined,
+      end: (this.turns?.end.value !== 0) ? this.end : undefined,
     }
 
     let verts = new OpArray
@@ -730,10 +730,14 @@ class ProtoSegment extends Segment {
     return verts
   }
 
-  get cubicVertsToStartLengths() { return this.cubicVerts.map(vert => this.start.sub(vert).mag) }
-  get cubicVertsToEndLengths() { return this.cubicVerts.map(vert => this.end.sub(vert).mag) }
-  get cubicVertClosestToStart() { return this.cubicVerts.sort((a, b) => this.start.sub(a).mag - this.start.sub(b).mag)[0] }
-  get cubicVertClosestToEnd() { return this.cubicVerts.sort((a, b) => this.end.sub(a).mag - this.end.sub(b).mag)[0] }
+  get cubicVertsToStartLengths() { return this.cubicVerts.map(vert => this.start.sub(vert).mag()) }
+  get cubicVertsToEndLengths() { return this.cubicVerts.map(vert => this.end.sub(vert).mag()) }
+  get cubicVertClosestToStart() {
+    return this.cubicVerts.sort((a, b) => this.start.sub(a).mag() - this.start.sub(b).mag())[0]
+  }
+  get cubicVertClosestToEnd() {
+    return this.cubicVerts.sort((a, b) => this.end.sub(a).mag() - this.end.sub(b).mag())[0]
+  }
   //FIXME: Finish implementations!
   get availableStartLength() {
     if (!this.cornerVerts.start) { return }
