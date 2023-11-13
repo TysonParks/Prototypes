@@ -1041,7 +1041,7 @@ class Grid extends ProtoLayer {
     taken = true,
     stored = true,
     insetScale = 1,
-    isPerimeter = false,
+    drawFilter = true,
   } = {}) {
     let cells, group, island
     if (!groupID && !islandID && !selection) {
@@ -1087,7 +1087,7 @@ class Grid extends ProtoLayer {
         parentIslandID: islandID,
         direction: direction,
         stored: stored,
-        isPerimeter: isPerimeter,
+        drawFilter: drawFilter,
       })
       if (stored) {
         island.setFilter(filter)
@@ -1916,7 +1916,7 @@ class CellGroup extends ProtoLayer {
       // selection: this.cells,
       groupID: groupID,
       direction: direction,
-      isPerimeter: true,
+      drawFilter: false,
     })
   }
   // #endregion
@@ -2137,14 +2137,14 @@ class Island extends ProtoLayer {
     direction = Direction.Cardinal,
     stored = true,
     insetScale = 1,
-    isPerimeter = false,
+    drawFilter = true,
   } = {}) {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
       drawRect: false,
-      drawFilter: !isPerimeter,
+      drawFilter: drawFilter,
     })
     this.cells = cells
     this.grid = grid
