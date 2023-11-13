@@ -38,6 +38,22 @@ function functionTestPrint() {
   // similarSlicedNeighborsIndices(16)
   // similarGridNeighbors(16)
 
+  // NOTE: ProtoSegment Tests
+  console.log(`ProtoSegment Tests`)
+
+  const vert0 = vert(0, 0)
+  const vert1 = vert(1, 0)
+  const vert2 = vert(.25, 0)
+  const vert3 = vert(.75, 0)
+  const seg1 = protoSegment({ start: vert0, end: vert1, id: `seg1` })
+  seg1.assignCubicVert(vert2)
+  seg1.assignCubicVert(vert3)
+  console.log(`seg1`, seg1)
+  console.log(`seg1.cubicVerts`, seg1.cubicVerts)
+
+  console.log(`subtest01`, vert0.sub(vert1).mag())
+  console.log(`subtest02`, vert1.sub(vert0).mag())
+
   // NOTE: hash display
   // print(printInputToGridRows(values32x8bit, 4, 8))
   // print(pointsToHex5s(similarGridNeighbors(32, 4, 8, values32x8bit)))
@@ -236,15 +252,15 @@ function functionTestPrint() {
   // print(S)
 
   // NOTE: Direction Multiples Tests
-  console.log('Direction Multiples Tests')
-  const dirA = Direction.Up
-  const dirB = Direction.DownRight
-  const dirC = Direction.Horizontal
-  const dirD = Direction.Cardinal
+  // console.log('Direction Multiples Tests')
+  // const dirA = Direction.Up
+  // const dirB = Direction.DownRight
+  // const dirC = Direction.Horizontal
+  // const dirD = Direction.Cardinal
 
-  console.log('dirA', dirA)
-  console.log('dirC', dirC)
-  console.log('dirD', dirD)
+  // console.log('dirA', dirA)
+  // console.log('dirC', dirC)
+  // console.log('dirD', dirD)
   // print(dirA.directions)
   // print(dirC.directions)
 
@@ -266,18 +282,18 @@ function functionTestPrint() {
   // print(dirC.adjacents)
   // print('')
   // print('is tests')
-  console.log('dirA.isHorizontal', dirA.isHorizontal)
-  console.log('dirC.isHorizontal', dirC.isHorizontal)
-  console.log('dirA.isVertical', dirA.isVertical)
-  console.log('dirC.isVertical', dirC.isVertical)
-  console.log('dirA.isCardinal', dirA.isCardinal)
-  console.log('dirC.isCardinal', dirC.isCardinal)
-  console.log('dirD.isCardinal', dirD.isCardinal)
-  console.log('dirA.equals Cardinal', dirA.equals(Direction.Cardinal))
-  console.log('dirC.equals Cardinal', dirC.equals(Direction.Cardinal))
-  console.log('dirD.equals Cardinal', dirD.equals(Direction.Cardinal))
+  // console.log('dirA.isHorizontal', dirA.isHorizontal)
+  // console.log('dirC.isHorizontal', dirC.isHorizontal)
+  // console.log('dirA.isVertical', dirA.isVertical)
+  // console.log('dirC.isVertical', dirC.isVertical)
+  // console.log('dirA.isCardinal', dirA.isCardinal)
+  // console.log('dirC.isCardinal', dirC.isCardinal)
+  // console.log('dirD.isCardinal', dirD.isCardinal)
+  // console.log('dirA.equals Cardinal', dirA.equals(Direction.Cardinal))
+  // console.log('dirC.equals Cardinal', dirC.equals(Direction.Cardinal))
+  // console.log('dirD.equals Cardinal', dirD.equals(Direction.Cardinal))
 
-  console.log('dirA.opposites', dirA.opposites)
+  // console.log('dirA.opposites', dirA.opposites)
   // print(dirA.isOrdinal)
   // print(dirC.isOrdinal)
   // print('')
