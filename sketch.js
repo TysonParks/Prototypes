@@ -581,6 +581,7 @@ function gridTests2() {
   console.log('all layers', S.allLayers)
   grid.customizeShapes()
   console.log('all layers', S.allLayers)
+  console.log(`grid`, grid)
 }
 
 // MARK: DRAWING FUNCS
