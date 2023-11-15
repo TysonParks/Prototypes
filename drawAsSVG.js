@@ -25,16 +25,21 @@ class ProtoSVG {
   }
   //METH: refineProtoSegmentPath()
   // remove colinear segments to reduce shape path to single segments connecting corners
-  static refineProtoSegmentPath(path = [], parentID) {
+  static refineProtoSegmentPath(path = [], parentID, minCorners = false) {
     let newPath = new OpArray
     let prevSeg = undefined
+    let prevMid = undefined
     let length = 1
     let firstID = undefined
     for (let i = 0; i < path.length; i++) {
       let seg = path[i]
       if (prevSeg !== undefined && seg.angle === prevSeg.angle) {
-        if (length === 1) { firstID = prevSeg.id }
+        if (length === 1) {
+          firstID = prevSeg.id
+          if (minCorners) { prevSeg.assignMid() }
+        }
         length += 1
+        if (minCorners) { prevMid = seg.mid }
         const prevIDs = OpArray.from(prevSeg.islandIDs)
         const segIDs = OpArray.from(seg.islandIDs)
         // console.log(`prevIDs`, prevIDs)
@@ -63,6 +68,7 @@ class ProtoSVG {
       } else {
         length = 1
         firstID = undefined
+        if (minCorners) { prevSeg.assignCubicVert(prevMid) }
       }
       // console.log(`END FLAT`, seg.parentID)
 
