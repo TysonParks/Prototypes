@@ -1901,6 +1901,11 @@ class CellGroup extends ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   //METH:
+  //FIXME: finish implementation to make findPerimiters work with min-corners
+  createSimpleSubShapes(minCorners = false) { }
+  //METH:
+  //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
+  //FIXME: so "omni-min", "omni-max", "cardinal-min", "cardinal-max"
   findPerimiters(perimeterType) {
     console.log(`findPerimiters this.id`, this.id)
     this.perimeterType = perimeterType
@@ -2297,7 +2302,7 @@ class Island extends ProtoLayer {
     // print(`END Shape Test`)
   }
   //METH:
-  createSimpleSubShapes() { this.shapes.forEach(s => s.createSimpleSubShapes()) }
+  createSimpleSubShapes(minCorners = false) { this.shapes.forEach(s => s.createSimpleSubShapes(minCorners)) }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
     return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, directions: directions })
@@ -2450,8 +2455,10 @@ class Shape extends ProtoLayer {
     this.parts = parts
   }
   //METH: 
-  createSimpleSubShapes() {
-    this.simpleSubShapes = this.subShapes.map(subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id))
+  createSimpleSubShapes(minCorners = false) {
+    this.simpleSubShapes = this.subShapes.map(
+      subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id, minCorners)
+    )
     console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
