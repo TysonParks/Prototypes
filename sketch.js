@@ -378,9 +378,9 @@ function gridTests2() {
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
-  grid.assignGroupPerimeter('grp000', 'omni', emptyShader)
-  grid.assignGroupPerimeter('grp001', 'minCorners', emptyShader)
-  grid.assignGroupPerimeter('grp002', 'cardinal', emptyShader)
+  grid.assignGroupPerimeter('grp000', 'omni')
+  grid.assignGroupPerimeter('grp001', 'minCorners')
+  grid.assignGroupPerimeter('grp002', 'cardinal')
   console.log(`groups`, grid.groups)
 
   // grid.findIslands({
