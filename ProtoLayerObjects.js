@@ -1904,6 +1904,16 @@ class CellGroup extends ProtoLayer {
   //FIXME: finish implementation to make findPerimiters work with min-corners
   createSimpleSubShapes(minCorners = false) { }
   //METH:
+  findIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
+    return this.grid.findIslands({
+      groupID: this.id,
+      direction: direction,
+      filter: filter,
+      insetScale: insetScale,
+      drawFilter: drawFilter,
+    })
+  }
+  //METH:
   //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
   //FIXME: so "omni-min", "omni-max", "cardinal-min", "cardinal-max"
   findPerimiters(perimeterType) {
