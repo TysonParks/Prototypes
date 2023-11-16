@@ -723,7 +723,7 @@ class Grid extends ProtoLayer {
   cellRows
   cellRowsPref
   groups = new OpArray
-  islands = new OpArray
+  // islands = new OpArray
 
   constructor(protoParent, gridSize, insetScale, transform) {
     super({
@@ -764,7 +764,7 @@ class Grid extends ProtoLayer {
       else { return max }
     })
   }
-  // get islands() { return this.groups.map(g => g.islands).flat() }
+  get islands() { return this.groups.map(g => g.islands).flat() }
   get lastGroup() { return this.groups.last() }
   // FIXME: need to reconfigure the formation of perimeters before this will work properly
   // NOTE: because currently D.None/Hor/Vert makes many islands instead of 1
