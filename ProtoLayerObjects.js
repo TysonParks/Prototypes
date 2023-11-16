@@ -764,6 +764,7 @@ class Grid extends ProtoLayer {
       else { return max }
     })
   }
+  // get islands() { return this.groups.map(g => g.islands).flat() }
   get lastGroup() { return this.groups.last() }
   // FIXME: need to reconfigure the formation of perimeters before this will work properly
   // NOTE: because currently D.None/Hor/Vert makes many islands instead of 1
@@ -1045,6 +1046,7 @@ class Grid extends ProtoLayer {
     islandID,
     filter,
     direction = Direction.Cardinal,
+    perimeterType = `maxCorners`,
     taken = true,
     stored = true,
     insetScale = 1,
@@ -1093,12 +1095,14 @@ class Grid extends ProtoLayer {
         groupID: groupID,
         parentIslandID: islandID,
         direction: direction,
+        perimeterType: perimeterType,
         stored: stored,
         drawFilter: drawFilter,
       })
       if (stored) {
         island.setFilter(filter)
-        this.islands.push(island)
+        // this.islands.push(island)
+        if (group) { group.islands.push(island) }
       }
       // else { 
       tempIslands.push(island)
@@ -1857,24 +1861,21 @@ class Grid extends ProtoLayer {
 // CLASS: CellGroup
 class CellGroup extends ProtoLayer {
   perimeterType
+  direction
   grid
   cells = new OpArray
   perimeterIslands // Island-Shapes defining outer boundaries of all Island shapes to be allowed within
-  islands
-  omnidirectional
-  // color
+  islands = new OpArray
 
-  constructor(protoParent, svgParent, grid, omnidirectional = false) {
+  constructor(protoParent, svgParent, grid) {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
       drawSVG: false,
     })
     this.grid = grid
-    this.omnidirectional = omnidirectional
     this._type = 'Group'
     this.finishSetup(S.Groups)
-    // this.color = R.random_hash(3, '#')
   }
 
   // MARK: Computed Properties
@@ -1916,19 +1917,13 @@ class CellGroup extends ProtoLayer {
   //METH:
   //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
   //FIXME: so "omni-min", "omni-max", "cardinal-min", "cardinal-max"
-  findPerimiters(perimeterType) {
+  findPerimiters(perimeterType = `maxCorners`, direction = Direction.Cardinal) {
     console.log(`findPerimiters this.id`, this.id)
     this.perimeterType = perimeterType
-    let direction
     switch (perimeterType) {
-      case 'omni':
-        direction = Direction.All
-        break
-      case 'cardinal':
-        direction = Direction.Cardinal
+      case 'maxCorners':
         break
       case 'minCorners':
-        direction = Direction.Horizontal
         break
       default:
         this.perimeterType = undefined
@@ -1936,10 +1931,9 @@ class CellGroup extends ProtoLayer {
     }
     const groupID = this.id
     console.log(`findPerimiters groupID`, groupID)
-    this.perimeterIslands = this.grid.findIslands({
-      // selection: this.cells,
-      groupID: groupID,
+    this.perimeterIslands = this.findIslands({
       direction: direction,
+      perimeterType: perimeterType,
       drawFilter: false,
     })
   }
@@ -2146,11 +2140,10 @@ class Island extends ProtoLayer {
   groupID
   parentIslandID
   cells
-  // shape
-  // perimeter
   shapes = new OpArray
   direction
-  // color
+  perimeterType
+
   constructor({
     cells,
     protoParent,
@@ -2159,6 +2152,7 @@ class Island extends ProtoLayer {
     groupID,
     parentIslandID,
     direction = Direction.Cardinal,
+    perimeterType = `maxCorners`,
     stored = true,
     insetScale = 1,
     drawFilter = true,
@@ -2174,6 +2168,7 @@ class Island extends ProtoLayer {
     this.grid = grid
     this.groupID = groupID
     this.direction = direction
+    this.perimeterType = perimeterType
     this.parentIslandID = parentIslandID
     this._type = 'Island'
     if (stored) { this.finishSetup(S.Islands) }
@@ -2365,7 +2360,7 @@ class Shape extends ProtoLayer {
   parts
   simpleSubShapes
   finalSubShapes
-  // color
+
   testVerts
   testColor
 
