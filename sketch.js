@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  gridX = 6
+  gridX = 10
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -325,7 +325,7 @@ function gridTests2() {
 
   // grid.randGroup(0.6)
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  grid.squares({ coverage: 0.4, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
   // grid.randGroup(0.2)
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -435,13 +435,13 @@ function gridTests2() {
     // isPerimeter: true,
   })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader0,
-    insetScale: .0001,
-    // direction: Direction.Cardinal,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader0,
+  //   insetScale: .0001,
+  //   // direction: Direction.Cardinal,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -459,13 +459,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
-  //   groupID: 'grp000',
-  //   filter: shader0,
-  //   insetScale: .1,
-  //   // direction: Direction.Cardinal,
-  //   // taken: true,
-  // })
+  grid.findIslands({
+    groupID: 'grp000',
+    filter: shader2,
+    insetScale: .7,
+    direction: Direction.None,
+    // taken: true,
+  })
 
   grid.findIslands({
     groupID: 'grp001',
