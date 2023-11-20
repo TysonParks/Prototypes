@@ -1378,6 +1378,30 @@ class Grid extends ProtoLayer {
       case 10:
         maxSize = 6
         break
+      case 11:
+      case 12:
+        maxSize = 7
+        break
+      case 13:
+        maxSize = 8
+        break
+      case 14:
+      case 15:
+        maxSize = 9
+        break
+      case 16:
+        maxSize = 10
+        break
+      case 17:
+      case 18:
+        maxSize = 11
+        break
+      case 19:
+        maxSize = 12
+        break
+      case 20:
+        maxSize = 13
+        break
     }
 
     // randomly generate squares within size range that add up to coverage
