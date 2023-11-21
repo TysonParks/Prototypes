@@ -256,8 +256,8 @@ class ProtoMill {
 // FUNC: gridTests2()
 function gridTests2() {
 
-  let gridX = R.random_int(4, 10)
-  gridX = 6
+  let gridX = R.random_int(4, 20)
+  // gridX = 8
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -273,7 +273,7 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.8 * 2 })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.8 * 32 })
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
@@ -285,7 +285,7 @@ function gridTests2() {
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
-  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * -.2 * 2 })
+  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * .2 * 4 })
   const shader3 = createFilter().dropShadow(shadeStack3)
 
   const shadeStackEmpty = Shade.neuShadeSVGFactory({ mag: -1 })
@@ -293,7 +293,7 @@ function gridTests2() {
 
   // const frameInset = R.random_num(0.02, 0.18)
   FRAME.setInsetScale(.95)
-  grid.setInsetScale(.9)
+  grid.setInsetScale(.8)
   FRAME.setFilter(shader3)
   // grid.setFilter(shader1)
   console.log('FRAME Filter', FRAME.filter.id)
@@ -373,13 +373,13 @@ function gridTests2() {
   // console.log('half 3', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
   console.log('pre-symmetrized cellRows', grid.cellRows)
 
-  grid.symmetrize({
-    direction: Direction.Horizontal,
-    reflection: true,
-    // useEmptyuseAssign, 
-    // useEmpty, 
-    // groupIDs, 
-  })
+  // grid.symmetrize({
+  //   direction: Direction.Horizontal,
+  //   reflection: true,
+  //   // useEmptyuseAssign, 
+  //   // useEmpty, 
+  //   // groupIDs, 
+  // })
 
   console.log('post-symmetrized cellRows', grid.cellRows)
 
@@ -584,6 +584,14 @@ function gridTests2() {
     // taken: true,
   })
 
+  grid.findIslands({
+    groupID: 'grp001',
+    filter: shader3,
+    insetScale: 1,
+    direction: Direction.All,
+    // taken: true,
+  })
+
   // grid.findIslands({
   //   groupID: 'grp001',
   //   filter: shader2,
@@ -614,8 +622,8 @@ function gridTests2() {
 
   // grid.findIslands({
   //   groupID: 'grp002',
-  //   filter: shader1,
-  //   insetScale: .75,
+  //   filter: shader0,
+  //   insetScale: .95,
   //   // direction: Direction.All,
   //   // taken: false,
   // })
