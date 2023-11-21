@@ -157,7 +157,7 @@ class Direction {
   random(amount = 1) {
     const reducer = min(amount / this.vals.length, 0.999999)
     //NOTE: when 'copy' is removed here it creates a cool shadow stacking effect with findIslands (see Aug 2,2023 captures)
-    // return new Direction(this.vals.copy.randReduce(reducer))
+    return new Direction(this.vals.copy.randReduce(reducer))
     return new Direction(this.vals.randReduce(reducer))
   }
 
