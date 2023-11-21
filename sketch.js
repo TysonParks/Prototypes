@@ -305,7 +305,7 @@ function gridTests2() {
       // .rotated2D(90)
       .flipped2D(Direction.Vertical)
       .flat()),
-    keepRange: range(1, gridX / 2),
+    keepRange: range(1, gridX / 4),
     dropRange: range(gridX * 2, gridX * 4),
     start: 0
   })
@@ -436,14 +436,14 @@ function gridTests2() {
     // isPerimeter: true,
   })
 
-  // grid.findIslands({
-  //   groupID: 'grp000',
-  //   filter: shader1,
-  //   insetScale: .75,
-  //   // direction: Direction.Cardinal,
-  //   // taken: true,
-  //   // isPerimeter: true,
-  // })
+  grid.findIslands({
+    groupID: 'grp000',
+    filter: shader2,
+    insetScale: .25,
+    // direction: Direction.Cardinal,
+    // taken: true,
+    // isPerimeter: true,
+  })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -616,6 +616,14 @@ function gridTests2() {
     groupID: 'grp002',
     filter: shader1,
     insetScale: .75,
+    // direction: Direction.All,
+    // taken: false,
+  })
+
+  grid.findIslands({
+    groupID: 'grp002',
+    filter: shader1,
+    insetScale: .25,
     // direction: Direction.All,
     // taken: false,
   })
