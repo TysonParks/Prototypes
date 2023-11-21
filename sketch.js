@@ -281,11 +281,11 @@ function gridTests2() {
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.125 * 4 })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.125 * 8 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
-  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * .2 * 4 })
+  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * -.2 * 4 })
   const shader3 = createFilter().dropShadow(shadeStack3)
 
   const shadeStackEmpty = Shade.neuShadeSVGFactory({ mag: -1 })
@@ -580,7 +580,7 @@ function gridTests2() {
     groupID: 'grp001',
     filter: shader0,
     insetScale: 1,
-    // direction: Direction.All,
+    direction: Direction.All,
     // taken: true,
   })
 
@@ -588,7 +588,7 @@ function gridTests2() {
     groupID: 'grp001',
     filter: shader3,
     insetScale: 1,
-    direction: Direction.All,
+    direction: Direction.Horizontal,
     // taken: true,
   })
 
