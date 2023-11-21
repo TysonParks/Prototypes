@@ -1365,7 +1365,7 @@ class Grid extends ProtoLayer {
     let maxSize // allowable max square based on 'Square and Rect Generation' study
     let newCount = this.columnCount
 
-    if (this.columnCount > 4) {
+    if (this.columnCount > 3) {
       switch ((this.columnCount + 1) % 3) {
         case 0:
           newCount = newCount + 1
