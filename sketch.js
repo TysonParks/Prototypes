@@ -346,7 +346,7 @@ function gridTests2() {
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
-  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 2), newGroup: false })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 2), newGroup: false })
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
@@ -385,13 +385,13 @@ function gridTests2() {
   // console.log('half 3', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
   console.log('pre-symmetrized cellRows', grid.cellRows)
 
-  // grid.symmetrize({
-  //   direction: Direction.Cardinal,
-  //   reflection: false,
-  //   // useEmptyuseAssign, 
-  //   // useEmpty, 
-  //   // groupIDs, 
-  // })
+  grid.symmetrize({
+    direction: Direction.Cardinal,
+    reflection: false,
+    // useEmptyuseAssign, 
+    // useEmpty, 
+    // groupIDs, 
+  })
 
   console.log('post-symmetrized cellRows', grid.cellRows)
 
