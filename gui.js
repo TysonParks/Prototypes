@@ -109,7 +109,7 @@ function keyPressed() {
   if (key === 's') {
     // console.log('s pressed')
     const scale = 1
-    const rez = vert(2000, 3600)
+    const rez = vert(4000, 7200)
     const scaledRez = rez.mult(scale)
     const rezString = `${scaledRez.x}x${scaledRez.y}`
     const date = getCurrentDateString()
