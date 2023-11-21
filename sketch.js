@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  gridX = 24
+  gridX = 20
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -273,19 +273,19 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.8 * 1 })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.8 * 3 })
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.1 * 4 })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.2 * 4 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.1 * 4 })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.2 * 4 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
-  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * -.125 * 2 })
+  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * -.2 * 2 })
   const shader3 = createFilter().dropShadow(shadeStack3)
 
   const shadeStackEmpty = Shade.neuShadeSVGFactory({ mag: -1 })
@@ -325,7 +325,7 @@ function gridTests2() {
 
   // grid.randGroup(0.6)
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 15, uniform: false, overlapping: 'never' })
+  grid.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 3, uniform: false, overlapping: 'never' })
   // grid.randGroup(0.2)
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -362,7 +362,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
-  // grid.groupAvail()
+  grid.groupAvail()
 
   // const bounds = grid.cellBounds({ selection: grid.cells })
   // const bounds2 = grid.gridCellBounds
@@ -429,56 +429,56 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp000',
-    filter: shader1,
-    insetScale: 1,
-    // direction: Direction.Cardinal,
-    // taken: true,
-    // isPerimeter: true,
-  })
-
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
-    insetScale: .75,
-    // direction: Direction.Cardinal,
-    // taken: true,
-    // isPerimeter: true,
-  })
-
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
+    filter: shader0,
     insetScale: .5,
     // direction: Direction.Cardinal,
     // taken: true,
     // isPerimeter: true,
   })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
-    insetScale: .25,
-    // direction: Direction.Cardinal,
-    // taken: true,
-    // isPerimeter: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   insetScale: .75,
+  //   // direction: Direction.Cardinal,
+  //   // taken: true,
+  //   // isPerimeter: true,
+  // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader1,
-    insetScale: .0001,
-    // direction: Direction.Cardinal,
-    // taken: true,
-    // isPerimeter: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   insetScale: .5,
+  //   // direction: Direction.Cardinal,
+  //   // taken: true,
+  //   // isPerimeter: true,
+  // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader3,
-    insetScale: 1,
-    direction: Direction.None,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   insetScale: .25,
+  //   // direction: Direction.Cardinal,
+  //   // taken: true,
+  //   // isPerimeter: true,
+  // })
+
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader1,
+  //   insetScale: .0001,
+  //   // direction: Direction.Cardinal,
+  //   // taken: true,
+  //   // isPerimeter: true,
+  // })
+
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader3,
+  //   insetScale: 1,
+  //   direction: Direction.None,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -488,13 +488,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader3,
-    insetScale: .75,
-    direction: Direction.None,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader3,
+  //   insetScale: .75,
+  //   direction: Direction.None,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -504,13 +504,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader3,
-    insetScale: .5,
-    direction: Direction.None,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader3,
+  //   insetScale: .5,
+  //   direction: Direction.None,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -520,13 +520,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader3,
-    insetScale: .25,
-    direction: Direction.None,
-    // taken: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader3,
+  //   insetScale: .25,
+  //   direction: Direction.None,
+  //   // taken: true,
+  // })
 
   // grid.findIslands({
   //   groupID: 'grp000',
@@ -576,13 +576,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
-  //   groupID: 'grp001',
-  //   filter: shader2,
-  //   insetScale: .75,
-  //   // direction: Direction.All,
-  //   // taken: true,
-  // })
+  grid.findIslands({
+    groupID: 'grp001',
+    filter: shader2,
+    insetScale: .75,
+    // direction: Direction.All,
+    // taken: true,
+  })
 
   // grid.findIslands({
   //   groupID: 'grp001',
@@ -614,19 +614,19 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp002',
-    filter: shader3,
-    insetScale: 1,
+    filter: shader1,
+    insetScale: .75,
     direction: Direction.All,
     // taken: false,
   })
 
-  // grid.findIslands({
-  //   groupID: 'grp002',
-  //   filter: shader2,
-  //   insetScale: .9,
-  //   // direction: Direction.All,
-  //   // taken: false,
-  // })
+  grid.findIslands({
+    groupID: 'grp003',
+    filter: shader2,
+    insetScale: .75,
+    // direction: Direction.All,
+    // taken: false,
+  })
 
   // grid.findIslands({
   //   groupID: 'grp002',
