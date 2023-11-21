@@ -373,13 +373,13 @@ function gridTests2() {
   // console.log('half 3', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
   console.log('pre-symmetrized cellRows', grid.cellRows)
 
-  // grid.symmetrize({
-  //   direction: Direction.Horizontal,
-  //   reflection: true,
-  //   // useEmptyuseAssign, 
-  //   // useEmpty, 
-  //   // groupIDs, 
-  // })
+  grid.symmetrize({
+    direction: Direction.Horizontal,
+    reflection: true,
+    // useEmptyuseAssign, 
+    // useEmpty, 
+    // groupIDs, 
+  })
 
   console.log('post-symmetrized cellRows', grid.cellRows)
 
