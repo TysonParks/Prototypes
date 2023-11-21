@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  gridX = 15
+  gridX = 25
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -277,7 +277,7 @@ function gridTests2() {
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.1 * 4 })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.125 * 4 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
@@ -427,14 +427,14 @@ function gridTests2() {
   // })
 
 
-  grid.findIslands({
-    groupID: 'grp000',
-    filter: shader2,
-    insetScale: .75,
-    direction: Direction.All,
-    // taken: true,
-    // isPerimeter: true,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp000',
+  //   filter: shader2,
+  //   insetScale: .75,
+  //   direction: Direction.All,
+  //   // taken: true,
+  //   // isPerimeter: true,
+  // })
 
   grid.findIslands({
     groupID: 'grp000',
@@ -612,13 +612,13 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Ordinal)
   // grid.groupNamed('grp002')?.setFilter(shader2)
 
-  grid.findIslands({
-    groupID: 'grp002',
-    filter: shader1,
-    insetScale: .75,
-    // direction: Direction.All,
-    // taken: false,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp002',
+  //   filter: shader1,
+  //   insetScale: .75,
+  //   // direction: Direction.All,
+  //   // taken: false,
+  // })
 
   grid.findIslands({
     groupID: 'grp002',
