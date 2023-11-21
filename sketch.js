@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  gridX = 12
+  gridX = 8
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -300,22 +300,22 @@ function gridTests2() {
   console.log('gridFilter', grid.filter.id)
 
   // grid.randGroup(1 / grid.cellCount)
-  // grid.randomComb({
-  //   selection: (grid.cellRows
-  //     // .rotated2D(90)
-  //     .flipped2D(Direction.Vertical)
-  //     .flat()),
-  //   keepRange: range(1, gridX / 2),
-  //   dropRange: range(gridX * 2, gridX * 4),
-  //   start: 0
-  // })
+  grid.randomComb({
+    selection: (grid.cellRows
+      // .rotated2D(90)
+      .flipped2D(Direction.Vertical)
+      .flat()),
+    keepRange: range(1, gridX / 2),
+    dropRange: range(gridX * 2, gridX * 4),
+    start: 0
+  })
 
   // grid.comb({
   //   selection: (grid.cellRows
   //     .rotated2D(90)
   //     .flipped2D(Direction.Horizontal)
   //     .flat()),
-  //   keep: 2, drop: 8, start: 0
+  //   keep: 2, drop: 7, start: 0
   // })
   // grid.randGroup(0.2)
 
@@ -323,9 +323,9 @@ function gridTests2() {
   // grid.outlineTaken({ direction: Direction.Up, newGroup: false })
   // grid.outlineTaken({ direction: Direction.All, amount: 1, newGroup: false })
 
-  // grid.randGroup(0.6)
+  // grid.randGroup(0.2)
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
+  // grid.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 3, uniform: false, overlapping: 'never' })
   // grid.randGroup(0.2)
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -334,7 +334,7 @@ function gridTests2() {
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
-  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 1), newGroup: true })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 3), newGroup: false })
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: 1 })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
