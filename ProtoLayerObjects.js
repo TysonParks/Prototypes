@@ -1363,45 +1363,22 @@ class Grid extends ProtoLayer {
   squares({ coverage, direction = Direction.DownRight, minSize = 1, uniform = false, overlapping = true } = {}) {
     // console.log('columnCount', this.columnCount)
     let maxSize // allowable max square based on 'Square and Rect Generation' study
-    switch (this.columnCount) {
-      case 5:
-      case 6:
-        maxSize = 3
-        break
-      case 7:
-        maxSize = 4
-        break
-      case 8:
-      case 9:
-        maxSize = 5
-        break
-      case 10:
-        maxSize = 6
-        break
-      case 11:
-      case 12:
-        maxSize = 7
-        break
-      case 13:
-        maxSize = 8
-        break
-      case 14:
-      case 15:
-        maxSize = 9
-        break
-      case 16:
-        maxSize = 10
-        break
-      case 17:
-      case 18:
-        maxSize = 11
-        break
-      case 19:
-        maxSize = 12
-        break
-      case 20:
-        maxSize = 13
-        break
+    let newCount = this.columnCount
+
+    if (this.columnCount > 4) {
+      switch ((this.columnCount + 1) % 3) {
+        case 0:
+          newCount = newCount + 1
+        // console.log(`using case 0`)
+        case 1:
+          // console.log(`using case 1`)
+          maxSize = newCount - (newCount / 3 + 1)
+          break
+        case 2:
+          // console.log(`using case 2`)
+          maxSize = this.columnCount - ((this.columnCount - 1) / 3 + 1)
+          break
+      }
     }
 
     // randomly generate squares within size range that add up to coverage
