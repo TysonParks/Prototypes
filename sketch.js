@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  gridX = 8
+  gridX = 15
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -277,11 +277,11 @@ function gridTests2() {
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.2 * 4 })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.1 * 4 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.2 * 4 })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.125 * 4 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
@@ -335,10 +335,10 @@ function gridTests2() {
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), amount: R.random_int(1, 3), newGroup: false })
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: 1 })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: 2 })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 3) })
 
   // grid.randGroup(.5)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
@@ -375,7 +375,7 @@ function gridTests2() {
 
   // grid.symmetrize({
   //   direction: Direction.Horizontal,
-  //   reflection: true,
+  //   reflection: false,
   //   // useEmptyuseAssign, 
   //   // useEmpty, 
   //   // groupIDs, 
