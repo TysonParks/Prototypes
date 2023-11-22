@@ -534,7 +534,7 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp001',
-    filter: shader3,
+    filter: shader7,
     insetScale: 1,
     // direction: Direction.Horizontal,
     // taken: false,
