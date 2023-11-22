@@ -532,26 +532,26 @@ function gridTests2() {
   //   // taken: false,
   // })
 
-  // grid.findIslands({
-  //   groupID: 'grp001',
-  //   filter: shader2,
-  //   insetScale: .25,
-  //   direction: Direction.Horizontal,
-  //   // taken: false,
-  // })
+  grid.findIslands({
+    groupID: 'grp001',
+    filter: shader3,
+    insetScale: 1,
+    // direction: Direction.Horizontal,
+    // taken: false,
+  })
 
   grid.findIslands({
     groupID: 'grp001',
     filter: shader4,
-    insetScale: .5,
+    insetScale: .75,
     direction: Direction.Vertical,
     // taken: false,
   })
 
   grid.findIslands({
     groupID: 'grp001',
-    filter: shader2,
-    insetScale: .25,
+    filter: shader3,
+    insetScale: .5,
     direction: Direction.Horizontal,
     // taken: false,
   })
