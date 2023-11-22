@@ -40,7 +40,7 @@ function setup() {
   sizeFrame()
   noCanvas(frameSize.x, frameSize.y)
 
-  // functionTestPrint()
+  functionTestPrint()
 
   setupPrefs()
   setupColors()
@@ -51,7 +51,7 @@ function setup() {
   // mill.mkProtoType()
 
   //TESTING
-  functionTestPrint()
+  // functionTestPrint()
   createGUI()
   console.log('random R useage', R.useage)
   console.log('random RuID useage', RuID.useage)
@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(3, 10)
-  // gridX = 15
+  gridX = 4
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -486,7 +486,7 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp002',
-    filter: shader4,
+    filter: shader1,
     insetScale: .5,
     // direction: Direction.Ordinal,
     // taken: false,
@@ -534,7 +534,7 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp001',
-    filter: shader7,
+    filter: shader0,
     insetScale: .5,
     // direction: Direction.Horizontal,
     // taken: false,
