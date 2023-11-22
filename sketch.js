@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(3, 10)
-  gridX = 4
+  gridX = 6
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -352,7 +352,7 @@ function gridTests2() {
 
   // grid.randGroup(0.2)
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
+  grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never' })
   // grid.randGroup(0.2)
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -365,7 +365,7 @@ function gridTests2() {
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 23) })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
 
   // grid.randGroup(.5)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
@@ -423,7 +423,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp000',
     filter: shader2,
-    insetScale: .5,
+    insetScale: .9,
     // direction: Direction.All,
     // taken: true,
   })
@@ -487,7 +487,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp002',
     filter: shader1,
-    insetScale: .5,
+    insetScale: .9,
     // direction: Direction.Ordinal,
     // taken: false,
   })
@@ -535,7 +535,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp001',
     filter: shader0,
-    insetScale: .5,
+    insetScale: .9,
     // direction: Direction.Horizontal,
     // taken: false,
   })
