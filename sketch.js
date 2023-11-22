@@ -312,7 +312,10 @@ function gridTests2() {
   })
   const shader7 = createFilter().dropShadow(shadeStack7)
 
-  const shadeStackEmpty = Shade.neuShadeSVGFactory({ mag: -1 })
+  const shadeStackEmpty = Shade.neuShadeSVGFactory({
+    mag: -2,
+    vector: createVector(1, 0).rotate(180)
+  })
   const emptyShader = createFilter().dropShadow(shadeStackEmpty)
 
   // const frameInset = R.random_num(0.02, 0.18)
@@ -420,7 +423,7 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp000',
     filter: shader0,
-    insetScale: .75,
+    insetScale: 1,
     direction: Direction.All,
     // taken: true,
   })
@@ -443,8 +446,8 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp000',
-    filter: shader4,
-    insetScale: .5,
+    filter: emptyShader,
+    insetScale: .25,
     // direction: Direction.All,
     // taken: true,
   })
@@ -484,18 +487,18 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp001',
     filter: shader0,
-    insetScale: .6,
+    insetScale: .95,
     // direction: Direction.Ordinal,
     // taken: false,
   })
 
-  // grid.findIslands({
-  //   groupID: 'grp001',
-  //   filter: shader7,
-  //   insetScale: .6,
-  //   // direction: Direction.Ordinal,
-  //   // taken: false,
-  // })
+  grid.findIslands({
+    groupID: 'grp001',
+    filter: shader7,
+    insetScale: .95,
+    // direction: Direction.Ordinal,
+    // taken: false,
+  })
 
   // grid.findIslands({
   //   groupID: 'grp002',
