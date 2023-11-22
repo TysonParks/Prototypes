@@ -416,7 +416,7 @@ function gridTests2() {
   insetScale = .8
 
   grid.assignGroupPerimeter('grp000', 'maxCorners', Direction.Cardinal)
-  grid.assignGroupPerimeter('grp001', 'minCorners', Direction.Cardinal)
+  grid.assignGroupPerimeter('grp001', 'maxCorners', Direction.Cardinal)
   grid.assignGroupPerimeter('grp002', 'maxCorners', Direction.All)
   console.log(`groups`, grid.groups)
 
