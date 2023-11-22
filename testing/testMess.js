@@ -39,20 +39,20 @@ function functionTestPrint() {
   // similarGridNeighbors(16)
 
   // NOTE: ProtoSegment Tests
-  console.log(`ProtoSegment Tests`)
+  // console.log(`ProtoSegment Tests`)
 
-  const vert0 = vert(0, 0)
-  const vert1 = vert(1, 0)
-  const vert2 = vert(.25, 0)
-  const vert3 = vert(.75, 0)
-  const seg1 = protoSegment({ start: vert0, end: vert1, id: `seg1` })
-  seg1.assignCubicVert(vert2)
-  seg1.assignCubicVert(vert3)
-  console.log(`seg1`, seg1)
-  console.log(`seg1.cubicVerts`, seg1.cubicVerts)
+  // const vert0 = vert(0, 0)
+  // const vert1 = vert(1, 0)
+  // const vert2 = vert(.25, 0)
+  // const vert3 = vert(.75, 0)
+  // const seg1 = protoSegment({ start: vert0, end: vert1, id: `seg1` })
+  // seg1.assignCubicVert(vert2)
+  // seg1.assignCubicVert(vert3)
+  // console.log(`seg1`, seg1)
+  // console.log(`seg1.cubicVerts`, seg1.cubicVerts)
 
-  console.log(`subtest01`, vert0.sub(vert1).mag())
-  console.log(`subtest02`, vert1.sub(vert0).mag())
+  // console.log(`subtest01`, vert0.sub(vert1).mag())
+  // console.log(`subtest02`, vert1.sub(vert0).mag())
 
   // NOTE: hash display
   // print(printInputToGridRows(values32x8bit, 4, 8))
