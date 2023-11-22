@@ -540,21 +540,21 @@ function gridTests2() {
     // taken: false,
   })
 
-  grid.findIslands({
-    groupID: 'grp001',
-    filter: shader4,
-    insetScale: .75,
-    direction: Direction.Vertical,
-    // taken: false,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp001',
+  //   filter: shader4,
+  //   insetScale: .75,
+  //   direction: Direction.Vertical,
+  //   // taken: false,
+  // })
 
-  grid.findIslands({
-    groupID: 'grp001',
-    filter: shader3,
-    insetScale: .5,
-    direction: Direction.Horizontal,
-    // taken: false,
-  })
+  // grid.findIslands({
+  //   groupID: 'grp001',
+  //   filter: shader3,
+  //   insetScale: .5,
+  //   direction: Direction.Horizontal,
+  //   // taken: false,
+  // })
 
 
   console.log(`cell 0 is in an island`, grid.cellIsInAnIsland(0))
