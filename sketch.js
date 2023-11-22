@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(3, 10)
-  gridX = 6
+  gridX = 7
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -350,9 +350,9 @@ function gridTests2() {
   // grid.outlineTaken({ direction: Direction.Up, newGroup: false })
   // grid.outlineTaken({ direction: Direction.All, amount: 1, newGroup: false })
 
-  // grid.randGroup(0.2)
+
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never' })
+  grid.squares({ coverage: 0.45, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
   // grid.randGroup(0.2)
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -361,8 +361,10 @@ function gridTests2() {
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
+  // grid.randGroup(0.1)
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(1, 2), newGroup: false })
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
+
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
@@ -557,10 +559,10 @@ function gridTests2() {
   // })
 
 
-  console.log(`cell 0 is in an island`, grid.cellIsInAnIsland(0))
-  console.log(`cell 1 is in an island`, grid.cellIsInAnIsland(1))
-  console.log(`cell 0 is taken`, grid.cellAt(0).taken)
-  console.log(`cell 1 is taken`, grid.cellAt(1).taken)
+  // console.log(`cell 0 is in an island`, grid.cellIsInAnIsland(0))
+  // console.log(`cell 1 is in an island`, grid.cellIsInAnIsland(1))
+  // console.log(`cell 0 is taken`, grid.cellAt(0).taken)
+  // console.log(`cell 1 is taken`, grid.cellAt(1).taken)
 
 
 
