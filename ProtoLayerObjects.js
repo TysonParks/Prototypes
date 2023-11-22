@@ -1768,7 +1768,7 @@ class Grid extends ProtoLayer {
   assignGroupPerimeter(groupID, perimeterType) {
     const group = this.groupNamed(groupID)
     if (!group) { console.error(`groupID ${groupID} is invalid`) }
-    group.findPerimiters(perimeterType)
+    group?.findPerimiters(perimeterType)
   }
   //METH:
   assignCells(selection, groupID) {
