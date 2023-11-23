@@ -736,6 +736,7 @@ class ProtoSegment extends Segment {
     return verts
   }
 
+  get has2CubicVerts() { return this.cubicVerts.length === 2 }
   get cubicVertsToStartLengths() { return this.cubicVerts.map(vert => this.start.sub(vert).mag()) }
   get cubicVertsToEndLengths() { return this.cubicVerts.map(vert => this.end.sub(vert).mag()) }
   get cubicVertClosestToStart() {
@@ -744,13 +745,16 @@ class ProtoSegment extends Segment {
   get cubicVertClosestToEnd() {
     return this.cubicVerts.sort((a, b) => this.end.sub(a).mag() - this.end.sub(b).mag())[0]
   }
-  //FIXME: Finish implementations!
   get availableStartLength() {
-    if (!this.cornerVerts.start) { return }
-    if (this.cubicVerts.length === 0) { return this.length / 2 }
-
+    if (!this.cornerVerts.start) { return } // needs to have cornerVerts to calculate
+    if (this.cubicVerts.length === 0) { return this.length } // assume entire length available
+    return this.cubicVertClosestToStart.sub(this.start).mag()
   }
-  get availableEndLength() { }
+  get availableEndLength() {
+    if (!this.cornerVerts.end) { return } // needs to have cornerVerts to calculate
+    if (this.cubicVerts.length === 0) { return this.length } // assume entire length available
+    return this.cubicVertClosestToEnd.sub(this.end).mag()
+  }
 
   assignCornerVerts() {
     if (this.turns.start.value !== 0) { this.assignCubicVert(this.startPoint) }
