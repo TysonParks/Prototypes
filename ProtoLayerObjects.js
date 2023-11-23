@@ -771,7 +771,8 @@ class Grid extends ProtoLayer {
   get allSimpleSubShapes() {
     return this.groups
       .map(g => g.perimeterIslands).flat()
-    // .map(s => s.simpleSubShapes).flat()
+      .map(i => i.shapes).flat()
+      .map(s => s.simpleSubShapes).flat()
   }
   // get islands() { return this.findIslands({ selection: this.cells }) }
   // #endregion
@@ -1201,8 +1202,6 @@ class Grid extends ProtoLayer {
     const saveSegs = (segs) => { madeSegs = madeSegs.union(segs, ['id']) }
     //METH: remove(segs) : method removes segs from allSegments
     const remove = (segs) => { allSegments = allSegments.exclude(segs, 'id') }
-
-    //FIXME: implement neighbors use, minCorners should set 'shared' segments but not 'neighbor' segments
     //METH: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
     const assignMids = (segs, edgeType, assignNeighbors = true) => {
       segs.forEach(seg => {
@@ -1225,8 +1224,9 @@ class Grid extends ProtoLayer {
         // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
         saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted) // save modified segs to madeSegs
         segs = allSegments.filter(seg => seg.part.isBaseType(edgeType))
-        console.log(`allSegments`, allSegments.length)
+        // console.log(`madeSegs`, madeSegs.length)
       })
+
     }
 
     assignMids(uTurnSegs, 'UTurn') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
@@ -1241,20 +1241,25 @@ class Grid extends ProtoLayer {
         .map(isl => isl.cells).flat() // cells within those perimiterIslands
         .map(cell => cell.segments).flat() // segments within those cells
         .filter(seg => seg.isCorner) // corner segments within those segments
-        // console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
-        // minCornerSegs = minCornerSegs.exclude(madeSegs, ['id'])
         .exclude(madeSegs, ['id']) // exclude segments already made in previous steps
-      // console.log(`madeSegs`, madeSegs.map(c => c.id))
       console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
       assignMids(minCornerSegs, 'Corner', false) // assign midpoints to these segs + shared segs with inside turns
     }
     // else { console.log(`there is NOT a minCorners Group`) }
 
-    this.createSimpleSubShapes()
+    this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
+    console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
+    let simpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
+    console.log(`simpleSegments`, simpleSegments)
+    simpleSegments = simpleSegments.exclude(madeSegs, ['id']) // remove uturn and step segments as they are already finalized 
+    console.log(`simpleSegments`, simpleSegments)
 
+    simpleSegments = simpleSegments.filter(s => !s.has2CubicVerts)
+    // .sort((a,b) => ) // sort by smallest availableEndLength
 
-
+    // console.log(`madeSegs`, madeSegs)
+    console.log(`simpleSegments`, simpleSegments)
     console.log(`allSegments`, allSegments)
 
     // LOOP:
