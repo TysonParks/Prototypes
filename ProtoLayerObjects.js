@@ -1274,16 +1274,51 @@ class Grid extends ProtoLayer {
       // edgeType,
       // assignNeighbors = true
     } = {}) => {
+      let minLength = this.minCellWidth / 2 // min length already process
       segs.forEach(seg => {
-        // seg.assignMid() // assign midpoint on this segment
+        const segSL = seg.availableStartLength
+        const segEL = seg.availableEndLength
+        let segStartData = [seg, segSL, seg.cubicVertClosestToStart]
+        let segEndData = [seg, segEL, seg.cubicVertClosestToEnd]
+
         let startNeighbor = sourcesSegs.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
         if (!startNeighbor) { console.error(`no neighbor found for ${seg.id}`) }
+        let startNeighborData = [startNeighbor, startNeighbor.availableEndLength, startNeighbor.cubicVertClosestToEnd]
+
         let endNeighbor = sourcesSegs.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
         if (!endNeighbor) { console.error(`no neighbor found for ${seg.id}`) }
+        let endNeighborData = [endNeighbor, endNeighbor.availableStartLength, endNeighbor.cubicVertClosestToStart]
 
 
-        const startNeighborAvailable = startNeighbor.availableEndLength
-        const endNeighborAvailable = endNeighbor.availableStartLength
+        if (segSL === segEL && segSL > minLength) { // startLength and endLength are EQUAL
+          //TODO: will probably need to test to find best result for this, but 'half' should be default
+          //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
+        }
+        else {
+          let useStart, segCompData, neighborCompData
+          if (segSL < segEL) { // start length is smaller
+            useStart = segSL > minLength // startLength is above min
+          }
+          if (segEL < segSL) { // end length is smaller
+            useStart = segEL < minLength // endLength is less than min (flip the switch back!)
+          }
+
+          if (useStart) { // assign start and it's neighbor (end vert)
+            segCompData = segStartData
+            neighborCompData = startNeighborData
+          } else {// assign end and it's neighbor (start vert)
+            segCompData = segEndData
+            neighborCompData = endNeighborData
+          }
+          //FIXME: this won't work, need to assign new vert using length and pointOnsegment(), scaledStartPoint(), or scaledEndPoint() methods
+          if (segCompData[1] < neighborCompData[1]) { // segment length is less than neighbor length
+            neighborCompData[0].assignCubicVerts(segCompData[2])
+          } else {// neighbor length is less than segment length
+            segCompData[0].assignCubicVerts(neighborCompData[2])
+          }
+
+
+        }
 
 
         const shared = sourcesSegs.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
