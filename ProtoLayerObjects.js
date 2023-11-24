@@ -1253,14 +1253,19 @@ class Grid extends ProtoLayer {
     const allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
     let currentSimples = allSimpleSegments.copy // deflationary working copy
     console.log(`currentSimples`, currentSimples)
-    currentSimples = currentSimples.exclude(madeSegs, ['id']) // remove uturn and step segments as they are already finalized 
+    currentSimples = currentSimples.exclude(madeSegs, ['id']) // remove uturn and step segments as they are already finalized. Although madeSegs includes neighbors and shared, only UTurn and Step segs made it through the createSimpleSubShapes process while neighbors and shared fused with other segments
     console.log(`currentSimples`, currentSimples)
-    currentSimples = currentSimples.filter(s => !s.has2CubicVerts) // remove 
+    currentSimples = currentSimples
+      .filter(s => !s.has2CubicVerts) // remove 
       .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
       .sort((a, b) => a.hasInsideTurn - b.hasInsideTurn) // sort by outside corners first (!hasInsideCorner)
     //TODO: I don't think I need to sort by 'has1Vert' or delete edges with 'has2Verts' - some will have 3+ verts! 
     // Just let them have many verts and then the available-Lengths and minCubicLength should keep them sorted
     // Might need to adjust something at final path conversion to ignore these middle verts
+
+    // console.log(`madeSegs`, madeSegs)
+    console.log(`currentSimples`, currentSimples)
+    // console.log(`allSegments`, allSegments)
 
     //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
     const assignCubicVerts = ({
@@ -1296,9 +1301,7 @@ class Grid extends ProtoLayer {
 
     }
 
-    // console.log(`madeSegs`, madeSegs)
-    console.log(`currentSimples`, currentSimples)
-    // console.log(`allSegments`, allSegments)
+
 
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
