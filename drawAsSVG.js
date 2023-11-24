@@ -755,6 +755,7 @@ class ProtoSegment extends Segment {
     if (this.cubicVerts.length === 0) { return this.length } // assume entire length available
     return this.cubicVertClosestToEnd.sub(this.end).mag()
   }
+  get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
   assignCornerVerts() {
     if (this.turns.start.value !== 0) { this.assignCubicVert(this.startPoint) }
