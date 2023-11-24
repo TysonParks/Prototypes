@@ -1198,11 +1198,11 @@ class Grid extends ProtoLayer {
     // console.log(`flatSegs`, flatSegs.map(c => c.id))
 
     let madeSegs = new OpArray
-    //METH: saveSegs(segs) : save segs tp madeSegs
+    //FUNC: saveSegs(segs) : save segs tp madeSegs
     const saveSegs = (segs) => { madeSegs = madeSegs.union(segs, ['id']) }
-    //METH: remove(segs) : method removes segs from allSegments
+    //FUNC: remove(segs) : method removes segs from allSegments
     const remove = (segs) => { allSegments = allSegments.exclude(segs, 'id') }
-    //METH: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
+    //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
     const assignMids = (segs, edgeType, assignNeighbors = true) => {
       segs.forEach(seg => {
         seg.assignMid() // assign midpoint on this segment
@@ -1257,9 +1257,12 @@ class Grid extends ProtoLayer {
     console.log(`currentSimples`, currentSimples)
     currentSimples = currentSimples.filter(s => !s.has2CubicVerts) // remove 
       .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-      .sort((a, b) => a.hasInsideTurn - b.hasInsideTurn)
+      .sort((a, b) => a.hasInsideTurn - b.hasInsideTurn) // sort by outside corners first (!hasInsideCorner)
+    //TODO: I don't think I need to sort by 'has1Vert' or delete edges with 'has2Verts' - some will have 3+ verts! 
+    // Just let them have many verts and then the available-Lengths and minCubicLength should keep them sorted
+    // Might need to adjust something at final path conversion to ignore these middle verts
 
-    //METH: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
+    //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
     const assignCubicVerts = ({
       segs,
       sourcesSegs,
