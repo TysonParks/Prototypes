@@ -1250,17 +1250,52 @@ class Grid extends ProtoLayer {
     this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
     console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
-    let simpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
-    console.log(`simpleSegments`, simpleSegments)
-    simpleSegments = simpleSegments.exclude(madeSegs, ['id']) // remove uturn and step segments as they are already finalized 
-    console.log(`simpleSegments`, simpleSegments)
+    const allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
+    let currentSimples = allSimpleSegments.copy // deflationary working copy
+    console.log(`currentSimples`, currentSimples)
+    currentSimples = currentSimples.exclude(madeSegs, ['id']) // remove uturn and step segments as they are already finalized 
+    console.log(`currentSimples`, currentSimples)
+    currentSimples = currentSimples.filter(s => !s.has2CubicVerts) // remove 
+      .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+      .sort((a, b) => a.hasInsideTurn - b.hasInsideTurn)
 
-    simpleSegments = simpleSegments.filter(s => !s.has2CubicVerts)
-    // .sort((a,b) => ) // sort by smallest availableEndLength
+    //METH: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
+    const assignCubicVerts = ({
+      segs,
+      sourcesSegs,
+      // edgeType,
+      // assignNeighbors = true
+    } = {}) => {
+      segs.forEach(seg => {
+        // seg.assignMid() // assign midpoint on this segment
+        let startNeighbor = sourcesSegs.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
+        if (!startNeighbor) { console.error(`no neighbor found for ${seg.id}`) }
+        let endNeighbor = sourcesSegs.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
+        if (!endNeighbor) { console.error(`no neighbor found for ${seg.id}`) }
+
+
+        const startNeighborAvailable = startNeighbor.availableEndLength
+        const endNeighborAvailable = endNeighbor.availableStartLength
+
+
+        const shared = sourcesSegs.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
+        if (shared?.hasInsideTurn) { // if this segment is inside an outside turn, it should force shared curve
+          // console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
+          // console.log(`000000 shared has inside turn`, seg.id, shared.id)
+          shared.assignMid()
+        }
+        //TODO: need to revisit this remove call later to see if can remove 
+        // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
+        saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted) // save modified segs to madeSegs
+        segs = sourcesSegs.filter(seg => seg.part.isBaseType(edgeType))
+        // console.log(`madeSegs`, madeSegs.length)
+      })
+
+    }
 
     // console.log(`madeSegs`, madeSegs)
-    console.log(`simpleSegments`, simpleSegments)
-    console.log(`allSegments`, allSegments)
+    console.log(`currentSimples`, currentSimples)
+    // console.log(`allSegments`, allSegments)
 
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
@@ -2388,7 +2423,9 @@ class Shape extends ProtoLayer {
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
-    this.createParts(subShapes)
+    const [turns, parts] = this.createParts(subShapes)
+    this.turns = turns
+    this.parts = parts
     this.assignSegments()
     this._type = 'Shape'
     this.finishSetup(S.Shapes)
@@ -2464,14 +2501,15 @@ class Shape extends ProtoLayer {
       turns.push(subTurns)
       parts.push(subParts)
     })
-    this.turns = turns
-    this.parts = parts
+    return [turns, parts]
   }
   //METH: 
   createSimpleSubShapes(minCorners = false) {
-    this.simpleSubShapes = this.subShapes.map(
+    const simpleSubShapes = this.subShapes.map(
       subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id, minCorners)
     )
+    this.createParts(simpleSubShapes)
+    this.simpleSubShapes = simpleSubShapes
     console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
