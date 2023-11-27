@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(3, 10)
-  gridX = 7
+  gridX = 10
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -363,8 +363,8 @@ function gridTests2() {
   // console.log('outlineDir2', outlineDir2)
   // grid.randGroup(0.1)
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(1, 2), newGroup: false })
-
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  grid.randGroup(0.5)
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
@@ -488,7 +488,7 @@ function gridTests2() {
 
   grid.findIslands({
     groupID: 'grp002',
-    filter: shader1,
+    filter: shader4,
     insetScale: .9,
     // direction: Direction.Ordinal,
     // taken: false,
@@ -537,6 +537,14 @@ function gridTests2() {
   grid.findIslands({
     groupID: 'grp001',
     filter: shader0,
+    insetScale: .9,
+    // direction: Direction.Horizontal,
+    // taken: false,
+  })
+
+  grid.findIslands({
+    groupID: 'grp003',
+    filter: shader7,
     insetScale: .9,
     // direction: Direction.Horizontal,
     // taken: false,
