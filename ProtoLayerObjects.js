@@ -769,10 +769,16 @@ class Grid extends ProtoLayer {
   // FIXME: need to reconfigure the formation of perimeters before this will work properly
   // NOTE: because currently D.None/Hor/Vert makes many islands instead of 1
   get allSimpleSubShapes() {
-    return this.groups
+    // console.log(`this.groups`, this.groups)
+    let simpShapes = this.groups
       .map(g => g.perimeterIslands).flat()
+      .compacted // must compact because only groups that have assignPerimeters called on them will have islands?!?
+    // console.log(`simpShapes 1`, simpShapes)
+    simpShapes = simpShapes
       .map(i => i.shapes).flat()
       .map(s => s.simpleSubShapes).flat()
+
+    return simpShapes
   }
   // get islands() { return this.findIslands({ selection: this.cells }) }
   // #endregion
@@ -1249,7 +1255,7 @@ class Grid extends ProtoLayer {
 
     this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
-    console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
+    // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
     const allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
     let currentSimples = allSimpleSegments.copy // deflationary working copy
     console.log(`currentSimples`, currentSimples)
@@ -1278,16 +1284,16 @@ class Grid extends ProtoLayer {
       segs.forEach(seg => {
         const segSL = seg.availableStartLength
         const segEL = seg.availableEndLength
-        let segStartData = [seg, segSL, seg.cubicVertClosestToStart]
-        let segEndData = [seg, segEL, seg.cubicVertClosestToEnd]
+        let segStartData = [seg, segSL]
+        let segEndData = [seg, segEL]
 
         let startNeighbor = sourcesSegs.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
         if (!startNeighbor) { console.error(`no neighbor found for ${seg.id}`) }
-        let startNeighborData = [startNeighbor, startNeighbor.availableEndLength, startNeighbor.cubicVertClosestToEnd]
+        let startNeighborData = [startNeighbor, startNeighbor.availableEndLength]
 
         let endNeighbor = sourcesSegs.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
         if (!endNeighbor) { console.error(`no neighbor found for ${seg.id}`) }
-        let endNeighborData = [endNeighbor, endNeighbor.availableStartLength, endNeighbor.cubicVertClosestToStart]
+        let endNeighborData = [endNeighbor, endNeighbor.availableStartLength]
 
 
         if (segSL === segEL && segSL > minLength) { // startLength and endLength are EQUAL
@@ -1295,14 +1301,16 @@ class Grid extends ProtoLayer {
           //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
         }
         else {
-          let useStart, segCompData, neighborCompData
+          let useStart
+          // compare seg lengths to compute 'useStart'
           if (segSL < segEL) { // start length is smaller
             useStart = segSL > minLength // startLength is above min
           }
           if (segEL < segSL) { // end length is smaller
             useStart = segEL < minLength // endLength is less than min (flip the switch back!)
           }
-
+          // assign comparison data
+          let segCompData, neighborCompData
           if (useStart) { // assign start and it's neighbor (end vert)
             segCompData = segStartData
             neighborCompData = startNeighborData
@@ -1311,10 +1319,13 @@ class Grid extends ProtoLayer {
             neighborCompData = endNeighborData
           }
           //FIXME: this won't work, need to assign new vert using length and pointOnsegment(), scaledStartPoint(), or scaledEndPoint() methods
+          // compare min length and assign new cubic vert to appropriate segment
           if (segCompData[1] < neighborCompData[1]) { // segment length is less than neighbor length
-            neighborCompData[0].assignCubicVerts(segCompData[2])
+            // vert = 
+            // neighborCompData[0].assignCubicVerts()
           } else {// neighbor length is less than segment length
-            segCompData[0].assignCubicVerts(neighborCompData[2])
+            // vert = 
+            // seg.assignCubicVerts()
           }
 
 
