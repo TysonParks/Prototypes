@@ -1221,10 +1221,9 @@ class Grid extends ProtoLayer {
           if (endNeighbor) { endNeighbor.assignMid() }
         }
         const shared = allSegments.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
-        if (shared?.hasInsideTurn) { // if this segment is inside an outside turn, it should force shared curve
-          // console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
-          // console.log(`000000 shared has inside turn`, seg.id, shared.id)
+        if (shared?.hasInsideTurn) { // if seg is inside an outside turn, it should force that outside curve
           shared.assignMid()
+          // const adjShared = 
         }
         //TODO: need to revisit this remove call later to see if can remove 
         // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
@@ -1271,6 +1270,7 @@ class Grid extends ProtoLayer {
 
     // console.log(`madeSegs`, madeSegs)
     console.log(`currentSimples`, currentSimples)
+    console.log(`currentSimples turns`, currentSimples.map(s => s.part.value))
     // console.log(`allSegments`, allSegments)
 
     //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
