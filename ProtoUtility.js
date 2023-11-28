@@ -349,6 +349,8 @@ class EdgePart {
 
   get isFlat() { return this.isBaseType('Flat') }
   get isUTurn() { return this.isBaseType('UTurn') }
+  get isUTurnOut() { return this.isType('UO') }
+  get isUTurnIn() { return this.isType('UI') }
   get isStep() { return this.isBaseType('Step') }
   get isCorner() { return this.isBaseType('Corner') }
 
@@ -360,8 +362,10 @@ class EdgePart {
     return 'unnamed'
   }
 
-  isBaseType(type) {
-    const types = this.#baseTypes[type]
+  isType(type) { return this.name === type }
+
+  isBaseType(baseType) {
+    const types = this.#baseTypes[baseType]
     return types.some(t => this.value === t)
   }
 
