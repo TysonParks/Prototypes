@@ -27,6 +27,8 @@ class ProtoSVG {
   // remove colinear segments to reduce shape path to single segments connecting corners
   static refineProtoSegmentPath(path = [], parentID, minCorners = false) {
     let newPath = new OpArray
+    // let firstNeighbor = undefined
+    // let startNeighbor = undefined
     let prevSeg = undefined
     let prevMid = undefined
     let length = 1
@@ -35,6 +37,7 @@ class ProtoSVG {
       let seg = path[i]
       if (prevSeg !== undefined && seg.angle === prevSeg.angle) {
         if (length === 1) {
+          // startNeighbor = 
           firstID = prevSeg.id
           if (minCorners) { prevSeg.assignMid() }
         }
@@ -72,7 +75,12 @@ class ProtoSVG {
         }
       }
       // console.log(`END FLAT`, seg.parentID)
-
+      //TODO: finish implementing NEIGHBOR ASSIGNMENTS!!!
+      //FIXME: finish implementing NEIGHBOR ASSIGNMENTS!!!
+      if (prevSeg) {
+        // prevSeg.assignNeighbors({ end: seg })
+        seg.assignNeighbors({ start: prevSeg })
+      }
       newPath.push(seg)
       prevSeg = seg
     }
