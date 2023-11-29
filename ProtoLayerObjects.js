@@ -1288,7 +1288,7 @@ class Grid extends ProtoLayer {
         const segEL = seg.availableEndLength
         let segStartData = [seg, segSL]
         let segEndData = [seg, segEL]
-        console.log(`seg`, seg)
+        // console.log(`seg`, seg)
 
         let startNeighbor = sourcesSegs.find(s =>
           s.end.equals(seg.start, 1)
@@ -1299,7 +1299,7 @@ class Grid extends ProtoLayer {
           console.error(`no startNeighbor found for ${seg.id}`)
         }
         let startNeighborData = [startNeighbor, startNeighbor.availableEndLength]
-        console.log(`startNeighbor`, startNeighbor)
+        // console.log(`startNeighbor`, startNeighbor)
 
         let endNeighbor = sourcesSegs.find(s =>
           s.start.equals(seg.end, 1)
@@ -1307,7 +1307,7 @@ class Grid extends ProtoLayer {
         )
         if (!endNeighbor) { console.error(`no endNeighbor found for ${seg.id}`) }
         let endNeighborData = [endNeighbor, endNeighbor.availableStartLength]
-        console.log(`endNeighbor`, endNeighbor)
+        // console.log(`endNeighbor`, endNeighbor)
 
         if (segSL === segEL && segSL > minLength) { // startLength and endLength are EQUAL
           //TODO: will probably need to test to find best result for this, but 'half' should be default
@@ -2360,18 +2360,20 @@ class Island extends ProtoLayer {
 
           while (fillstack.length > 0) {
             subShapeIter += 1
-            let current = fillstack.pop()
+            let thisSeg = fillstack.pop()
             let nextSeg
             //find next segments (could be 2 if allowing ordinal island connections)
             let next = segments
-              .filter(s => current.endPoint.equals(s.startPoint, 4))
+              .filter(s => thisSeg.endPoint.equals(s.startPoint, 4))
               .compacted
             if (next.length === 0) {
-              if (current.endPoint.equals(subShape[0].startPoint, 4)) {
-                subShape.push(current)
+              if (thisSeg.endPoint.equals(subShape[0].startPoint, 4)) {
+                thisSeg.assignNeighbors({ end: subShape[0] })
+                subShape[0].assignNeighbors({ start: thisSeg })
+                subShape.push(thisSeg)
                 return
               } else {
-                console.log('current.endPoint', current.endPoint)
+                console.log('thisSeg.endPoint', thisSeg.endPoint)
                 console.log('subShape[0].startPoint', subShape[0].startPoint)
                 console.error('cannot continue segmentShape')
               }
@@ -2382,16 +2384,17 @@ class Island extends ProtoLayer {
               console.error('next has 2 segments')
               let nextDirection
               if (this.direction.someAreOrdinal) {
-                nextDirection = current.direction.previous(2)
+                nextDirection = thisSeg.direction.previous(2)
               } else {
-                nextDirection = current.direction.next(2)
+                nextDirection = thisSeg.direction.next(2)
               }
               nextSeg = next.find(e => e.direction.equals(nextDirection))
               if (nextSeg === undefined) { console.error('unexpected 2nd segment') }
             }
-
+            thisSeg.assignNeighbors({ end: nextSeg })
+            nextSeg.assignNeighbors({ start: thisSeg })
             fillstack.push(nextSeg)
-            subShape.push(current)
+            subShape.push(thisSeg)
             segments = segments.exclude(subShape, ['id'])
           }
         }
