@@ -1276,7 +1276,7 @@ class Grid extends ProtoLayer {
     // console.log(`allSegments`, allSegments)
 
     //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
-    const assignCubicVerts = ({
+    const findCubicVerts = ({
       segs,
       sourcesSegs,
       // edgeType,
@@ -1360,7 +1360,7 @@ class Grid extends ProtoLayer {
 
     }
 
-    assignCubicVerts({
+    findCubicVerts({
       segs: currentSimples,
       sourcesSegs: allSimpleSegments,
     })
@@ -2593,7 +2593,7 @@ class Shape extends ProtoLayer {
   // TODO: DEPRECATE
   // #region Vert Assignment Methods
   //METH:
-  assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
+  // assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
   //METH:
   // assignUTurnVerts() {
   //   console.log("assignUTurnVerts called")
