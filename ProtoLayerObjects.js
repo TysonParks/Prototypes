@@ -2345,20 +2345,8 @@ class Island extends ProtoLayer {
     let shapeIter = 0
     let subShapeIter = 0
 
-    findShape(this.direction)
-    let thisShape = new Shape({
-      subShapes: subShapes,
-      protoParent: this,
-      svgParent: this.svgParent,
-      island: this,
-      insetScale: insetScale
-    })
-    // this.shape = thisShape
-    this.shapes.push(thisShape)
-
-    //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
-    function findShape(direction) {
-      let segLength = segments.length
+    //FUNC: findShape(seg) : find each shape within an island
+    const findShape = () => {
       let subShape
       while (segments.length > 0) {
         shapeIter += 1
@@ -2366,14 +2354,8 @@ class Island extends ProtoLayer {
         subShape = new OpArray
         let fillstack = []
 
-        findSubShape(segment, direction)
-
-        // console.error(`END SUBSHAPE ${shapeIter}`)
-        segments = segments.exclude(subShape, ['id'])
-        subShapes.push(subShape)
-
-        //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
-        function findSubShape(seg, direction) {
+        //FUNC: findSubShape(seg) : find each subShape within a shape
+        const findSubShape = (seg) => {
           fillstack.push(seg)
 
           while (fillstack.length > 0) {
@@ -2399,7 +2381,7 @@ class Island extends ProtoLayer {
             if (next.length === 2) {
               console.error('next has 2 segments')
               let nextDirection
-              if (direction.someAreOrdinal) {
+              if (this.direction.someAreOrdinal) {
                 nextDirection = current.direction.previous(2)
               } else {
                 nextDirection = current.direction.next(2)
@@ -2413,8 +2395,23 @@ class Island extends ProtoLayer {
             segments = segments.exclude(subShape, ['id'])
           }
         }
+
+        findSubShape(segment)
+        segments = segments.exclude(subShape, ['id'])
+        subShapes.push(subShape)
       }
     }
+
+    findShape(this.direction)
+    let thisShape = new Shape({
+      subShapes: subShapes,
+      protoParent: this,
+      svgParent: this.svgParent,
+      island: this,
+      insetScale: insetScale
+    })
+    // this.shape = thisShape
+    this.shapes.push(thisShape)
     // print(`END Shape Test`)
   }
   //METH:
