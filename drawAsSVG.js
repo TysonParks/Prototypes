@@ -709,6 +709,7 @@ class ProtoSegment extends Segment {
   turns
   part
   cubicVerts = { start: new OpArray, end: new OpArray }
+  neighbors = { start: undefined, end: undefined }
 
   constructor(start, end, parentID, id, islandIDs) {
     super(start, end)
@@ -716,6 +717,13 @@ class ProtoSegment extends Segment {
     this.islandIDs = islandIDs
     this.id = id
   }
+
+  // get turns() {
+  //   return {
+  //     start: undefined,
+  //     end: undefined
+  //   }
+  // }
 
   get isUTurn() { return this.part?.isUTurn }
   get isUTurnIn() { return this.part?.isUTurnIn }
@@ -756,6 +764,14 @@ class ProtoSegment extends Segment {
   }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
+  //METH: assignNeighbors()
+  //NOTE: be sure to assign neighbors by reference instead of value to avoid infinite tree
+  assignNeighbors({ start, end } = {}) {
+    if (start) { this.neighbors.start = start }
+    if (end) { this.neighbors.end = end }
+  }
+
+  //TODO: do I actually want/need this?
   assignMid() {
     this.addCubicStartVert('mid')
     this.addCubicEndVert('mid')
@@ -792,8 +808,6 @@ class ProtoSegment extends Segment {
       }
     }
   }
-
-
 
   #vertNames = {
     'start': this.startPoint,
