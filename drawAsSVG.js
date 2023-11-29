@@ -55,20 +55,21 @@ class ProtoSVG {
           id: id,
           islandIDs: islandIDs
         })
-        // console.log(`previous ${prevSeg.id} cubicVerts`, prevSeg.cubicVerts.length, prevSeg.cubicVerts)
-        // console.log(`current ${seg.id} cubicVerts`, seg.cubicVerts.length, seg.cubicVerts)
-        const allVerts = prevSeg.cubicVerts.union(seg.cubicVerts, ['x', 'y'])
-        // console.log('allVerts', allVerts)
-        // newSeg.assignCubicVert(allVerts)
-        newSeg.assignCubicVert(prevSeg.cubicVerts)
-        newSeg.assignCubicVert(seg.cubicVerts)
+        // add cubicVerts from prevSeg and seg to newSeg
+        newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
+        newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
+        newSeg.addCubicStartVert(seg.cubicVerts.start)
+        newSeg.addCubicEndVert(seg.cubicVerts.end)
+
         // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
         newPath.pop()
         seg = newSeg
       } else {
         length = 1
         firstID = undefined
-        if (minCorners) { prevSeg.assignCubicVert(prevMid) }
+        if (minCorners) {
+          prevSeg.addCubicEndVert(prevMid)
+        }
       }
       // console.log(`END FLAT`, seg.parentID)
 
@@ -707,7 +708,7 @@ class ProtoSegment extends Segment {
   taken = false
   turns
   part
-  cubicVerts = new OpArray
+  cubicVerts = { start: new OpArray, end: new OpArray }
 
   constructor(start, end, parentID, id, islandIDs) {
     super(start, end)
@@ -732,45 +733,53 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get has2CubicVerts() { return this.cubicVerts.length === 2 }
-  get cubicVertsToStartLengths() { return this.cubicVerts.map(vert => this.start.sub(vert).mag()) }
-  get cubicVertsToEndLengths() { return this.cubicVerts.map(vert => this.end.sub(vert).mag()) }
-  get cubicVertClosestToStart() {
-    return this.cubicVerts.sort((a, b) => this.start.sub(a).mag() - this.start.sub(b).mag())[0]
+  // get cubicVerts() { return this.cubicVerts.start.union(this.cubicVerts.end) }
+
+  get hasBothCubicVerts() { return this.cubicVerts.start.length > 1 && this.cubicVerts.end.length > 1 }
+  get cubicVertsToStartLengths() { return this.cubicVerts.start.map(vert => this.start.sub(vert).mag()) }
+  get cubicVertsToEndLengths() { return this.cubicVerts.end.map(vert => this.end.sub(vert).mag()) }
+  get closestCubicStartVert() {
+    return this.cubicVerts.start.sort((a, b) => this.start.sub(a).mag() - this.start.sub(b).mag())[0]
   }
-  get cubicVertClosestToEnd() {
-    return this.cubicVerts.sort((a, b) => this.end.sub(a).mag() - this.end.sub(b).mag())[0]
+  get closestCubicEndVert() {
+    return this.cubicVerts.end.sort((a, b) => this.end.sub(a).mag() - this.end.sub(b).mag())[0]
   }
   get availableStartLength() {
     if (!this.cornerVerts.start) { return } // needs to have cornerVerts to calculate
-    if (this.cubicVerts.length === 0) { return this.length / 2 } // assume entire length available
-    return this.cubicVertClosestToStart.sub(this.start).mag()
+    if (this.cubicVerts.start.length === 0) { return this.length / 2 } // assume entire length available
+    return this.closestCubicStartVert.sub(this.start).mag()
   }
   get availableEndLength() {
     if (!this.cornerVerts.end) { return } // needs to have cornerVerts to calculate
-    if (this.cubicVerts.length === 0) { return this.length / 2 } // assume entire length available
-    return this.cubicVertClosestToEnd.sub(this.end).mag()
+    if (this.cubicVerts.end.length === 0) { return this.length / 2 } // assume entire length available
+    return this.closestCubicEndVert.sub(this.end).mag()
   }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
-  assignCornerVerts() {
-    if (this.turns.start.value !== 0) { this.assignCubicVert(this.startPoint) }
-    if (this.turns.end.value !== 0) { this.assignCubicVert(this.endPoint) }
+  assignMid() {
+    this.addCubicStartVert('mid')
+    this.addCubicEndVert('mid')
   }
 
-  assignMid() { this.assignCubicVert('mid') }
+  addCubicStartVert(vert) { this.#addCubicVert(vert, true) }
+  addCubicEndVert(vert) { this.#addCubicVert(vert, false) }
+  addBothCubicVerts(vert) {
+    this.addCubicStartVert(vert)
+    this.addCubicEndVert(vert)
+  }
 
-  assignCubicVert(vert) {
+  #addCubicVert(vert, start) {
+    let cubicVerts = start ? this.cubicVerts.start : this.cubicVerts.end
     if (typeof vert === 'string') {
       // console.log(`assign ${vert}`)
       vert = this.#vertNames[vert]
     }
     if (vert instanceof Vertex) {
-      // console.log(`already assigned ${this.cubicVerts}`, this.cubicVerts.length)
-      this.cubicVerts.push(vert)
-      this.cubicVerts = this.cubicVerts.unique('x', 'y')
+      // console.log(`already assigned ${cubicVerts}`, cubicVerts.length)
+      cubicVerts.push(vert)
+      cubicVerts = cubicVerts.unique('x', 'y')
       // console.log(`just assigned ${vert}`)
-      // console.log(`now assigned ${this.cubicVerts}`, this.cubicVerts.length)
+      // console.log(`now assigned ${cubicVerts}`, cubicVerts.length)
     }
     if (vert instanceof Set) { vert = Array.from(vert) }
     if (vert instanceof Array && vert.length > 0) {
@@ -778,11 +787,13 @@ class ProtoSegment extends Segment {
       if (typeof vert[0] === 'string') { vert = vert.map(v => this.#vertNames[v]) }
       // console.log(`vert converted`, vert)
       if (vert[0] instanceof Vertex) {
-        // console.error(`assignCubicVert vert is a Vertex`)
-        this.cubicVerts = this.cubicVerts.union(vert, ['x', 'y'])
+        // console.error(`addCubicVert vert is a Vertex`)
+        cubicVerts = cubicVerts.union(vert, ['x', 'y'])
       }
     }
   }
+
+
 
   #vertNames = {
     'start': this.startPoint,
