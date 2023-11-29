@@ -717,6 +717,8 @@ class ProtoSegment extends Segment {
   }
 
   get isUTurn() { return this.part?.isUTurn }
+  get isUTurnIn() { return this.part?.isUTurnIn }
+  get isUTurnOut() { return this.part?.isUTurnOut }
   get isStep() { return this.part?.isStep }
   get isFlat() { return this.part?.isFlat }
   get isCorner() { return this.part?.isCorner }
