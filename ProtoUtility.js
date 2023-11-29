@@ -357,12 +357,9 @@ class EdgePart {
   get isCornerStart() { return this.value === 'CSI' || this.value === 'CSO' }
   get isCornerEnd() { return this.value === 'CEI' || this.value === 'CEO' }
 
-  #getName(value) {
-    return this.#turnNames[value]
-    return 'unnamed'
-  }
+  #getName(value) { return this.#turnNames[value] }
 
-  isType(type) { return this.name === type }
+  isType(type) { return this.value === type }
 
   isBaseType(baseType) {
     const types = this.#baseTypes[baseType]
