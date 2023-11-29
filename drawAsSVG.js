@@ -626,7 +626,7 @@ class Segment {
   get endPoint() { return this.verts.end } // DEPRECATE usage of -point???
   get angle() { return this.lineVector.heading() }
   get direction() { return Direction.atAngle(this.angle) }
-  get length() { return this.lineVector.mag() }
+  get length() { return roundToDec(this.lineVector.mag(), 4) }
   get width() { return this.startPoint.widthTo(this.endPoint) }
   get height() { return this.startPoint.heightTo(this.endPoint) }
 
@@ -646,8 +646,8 @@ class Segment {
     return t >= 0 && t <= 1
   }
 
-  equals(segment) {
-    return this.startPoint.equals(segment.startPoint) && this.endPoint.equals(segment.endPoint)
+  equals(segment, accuracy = 3) {
+    return this.startPoint.equals(segment.startPoint, accuracy) && this.endPoint.equals(segment.endPoint, accuracy)
   }
 
   // lerp along segment 0-1, 0 = startPoint, 1 = endPoint
@@ -730,12 +730,6 @@ class ProtoSegment extends Segment {
       start: (this.turns?.start.value !== 0) ? this.start : undefined,
       end: (this.turns?.end.value !== 0) ? this.end : undefined,
     }
-
-    let verts = new OpArray
-    // console.log(this.turns)
-    if (this.turns.start.value !== 0) { verts.push(this.startPoint) }
-    if (this.turns.end.value !== 0) { verts.push(this.endPoint) }
-    return verts
   }
 
   get has2CubicVerts() { return this.cubicVerts.length === 2 }
@@ -749,12 +743,12 @@ class ProtoSegment extends Segment {
   }
   get availableStartLength() {
     if (!this.cornerVerts.start) { return } // needs to have cornerVerts to calculate
-    if (this.cubicVerts.length === 0) { return this.length } // assume entire length available
+    if (this.cubicVerts.length === 0) { return this.length / 2 } // assume entire length available
     return this.cubicVertClosestToStart.sub(this.start).mag()
   }
   get availableEndLength() {
     if (!this.cornerVerts.end) { return } // needs to have cornerVerts to calculate
-    if (this.cubicVerts.length === 0) { return this.length } // assume entire length available
+    if (this.cubicVerts.length === 0) { return this.length / 2 } // assume entire length available
     return this.cubicVertClosestToEnd.sub(this.end).mag()
   }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
