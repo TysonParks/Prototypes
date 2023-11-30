@@ -1193,6 +1193,7 @@ class Grid extends ProtoLayer {
 
     let allSegments = shapeCells.map(cell => cell.segments).flat() // all segments contained in shapeCells
     console.log(`allSegments`, allSegments.map(s => s.id))
+    console.log(`allSegments`, allSegments)
     let uTurnSegs = allSegments.filter(seg => seg.isUTurn)
     // console.log(`uTurnSegs`, uTurnSegs.map(c => c.id))
     let stepSegs = allSegments.filter(seg => seg.isStep)
@@ -2467,8 +2468,8 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
-  turns
-  parts
+  // turns
+  // parts
   simpleSubShapes
   finalSubShapes
 
@@ -2491,9 +2492,9 @@ class Shape extends ProtoLayer {
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
-    const [turns, parts] = this.createParts(subShapes)
-    this.turns = turns
-    this.parts = parts
+    // const [turns, parts] = this.createParts(subShapes)
+    // this.turns = turns
+    // this.parts = parts
     this.assignSegments()
     this._type = 'Shape'
     this.finishSetup(S.Shapes)
@@ -2511,7 +2512,10 @@ class Shape extends ProtoLayer {
   get hasSubShapes() { return this.subShapes.length > 1 }
   get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
   get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
-
+  // TODO: possibly DEPRECATE? Currently unused
+  get turns() { return this.subShapes.map(sub => sub.map(seg => seg.turns)) }
+  // TODO: possibly DEPRECATE? Currently unused
+  get parts() { return this.subShapes.map(sub => sub.map(seg => seg.part)) }
   get allSegments() { return this.subShapes.flat() }
   get assignedVerts() {
     return this.subShapes.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
@@ -2531,53 +2535,53 @@ class Shape extends ProtoLayer {
 
   // MARK: methods
   // #region methods
-  //METH:
-  #createTurns(segments) {
-    let segs = OpArray.from(segments)
-    // let segs = this.allSegments
-    let turns = new OpArray
-    let prev = segs.last()
-    segs.forEach((e, i) => {
-      const turn = prev.direction.turnTo(e.direction)
-      turns.push(turn)
-      prev = e
-    })
-    return turns
-  }
-  //METH:
-  createParts(subShapes) {
-    let turns = new OpArray
-    let parts = new OpArray
-    subShapes.forEach(shape => {
-      let subTurns = this.#createTurns(shape)
-      subTurns.push(subTurns[0])
-      let prevTurn
-      let subParts = new OpArray
+  //TODO: DEPRECATE #createTurns(segments), now computed within every ProtoSegment
+  // //METH:
+  // #createTurns(segments) {
+  //   let segs = OpArray.from(segments)
+  //   // let segs = this.allSegments
+  //   let turns = new OpArray
+  //   let prev = segs.last()
+  //   segs.forEach((e, i) => {
+  //     const turn = prev.direction.turnTo(e.direction)
+  //     turns.push(turn)
+  //     prev = e
+  //   })
+  //   return turns
+  // }
+  //TODO: DEPRECATE createParts(subShapes), now computed within every ProtoSegment
+  // //METH:
+  // createParts(subShapes) {
+  //   let turns = new OpArray
+  //   let parts = new OpArray
+  //   subShapes.forEach(shape => {
+  //     let subTurns = this.#createTurns(shape)
+  //     subTurns.push(subTurns[0])
+  //     let prevTurn
+  //     let subParts = new OpArray
 
-      subTurns.forEach((turn, i) => {
-        if (prevTurn) {
-          const part = EdgePart.from([prevTurn, turn])
-          const seg = shape[i - 1]
-          seg.taken = true
-          seg.part = part
-          seg.turns = { start: prevTurn, end: turn }
-          subParts.push(part)
-        }
-        prevTurn = turn
-      })
-      subTurns.pop()
-      turns.push(subTurns)
-      parts.push(subParts)
-    })
-    return [turns, parts]
-  }
+  //     subTurns.forEach((turn, i) => {
+  //       if (prevTurn) {
+  //         const part = EdgePart.from([prevTurn, turn])
+  //         const seg = shape[i - 1]
+  //         seg.taken = true
+  //         seg.part = part
+  //         seg.turns = { start: prevTurn, end: turn }
+  //         subParts.push(part)
+  //       }
+  //       prevTurn = turn
+  //     })
+  //     subTurns.pop()
+  //     turns.push(subTurns)
+  //     parts.push(subParts)
+  //   })
+  //   return [turns, parts]
+  // }
   //METH: 
   createSimpleSubShapes(minCorners = false) {
-    const simpleSubShapes = this.subShapes.map(
+    this.simpleSubShapes = this.subShapes.map(
       subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id, minCorners)
     )
-    this.createParts(simpleSubShapes)
-    this.simpleSubShapes = simpleSubShapes
     console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
