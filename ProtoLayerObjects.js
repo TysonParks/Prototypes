@@ -1159,29 +1159,6 @@ class Grid extends ProtoLayer {
   createSimpleSubShapes() { this.islands.forEach(i => i.createSimpleSubShapes()) }
   //METH:
   customizeShapes(diagonals = false) {
-    // let shapes = this.islands
-    //   .sort((a, b) => a.cells.length - b.cells.length)
-    //   .map(isle => isle.shape)
-
-    // shapes.forEach(shape => {
-    //   const isle = shape.island
-
-    //   shape.assignCornerVerts()
-    //   if (isle.isRectangle) {
-    //     shape.assignRectangleVerts()
-    //     console.log('Neighbor Segs', shape.cells.map(cell => cell.neighborSegments))
-    //     return
-    //   }
-    //   shape.assignUTurnVerts()
-    //   shape.assignSingleStepVerts()
-    // })
-    // console.log('shape sizes', shapes.map(e => e.cells.length))
-    // console.log('shapes', shapes)
-    // console.log('shapes verts', shapes.map(e => e.assignedVerts).flat()) 
-    // console.log('shapes parts', shapes.map(e => e.parts).flat())
-
-
-
 
     // SEGMENT LENGTH BASED //
     // assign EdgeParts in every island
@@ -1240,6 +1217,7 @@ class Grid extends ProtoLayer {
 
     // assignMids(uTurnSegs, 'UTurn') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
     // assignMids(stepSegs, 'Step') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
+
 
     //TODO: can minCorners be handled elsewhere?
     // handle 'minCorners' perimeter types
