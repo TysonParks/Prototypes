@@ -1204,6 +1204,7 @@ class Grid extends ProtoLayer {
     let flatSegs = allSegments.filter(seg => seg.isFlat)
     // console.log(`flatSegs`, flatSegs.map(c => c.id))
 
+    //TODO: might be able to remove assignMids() and all supporting funcs/props
     let madeSegs = new OpArray
     //FUNC: saveSegs(segs) : save segs tp madeSegs
     const saveSegs = (segs) => { madeSegs = madeSegs.union(segs, ['id']) }
@@ -1213,6 +1214,8 @@ class Grid extends ProtoLayer {
     const assignMids = (segs, edgeType, assignNeighbors = true) => {
       segs.forEach(seg => {
         seg.assignMid() // assign midpoint on this segment
+
+        //TODO: remove all neighbor finding logic, ProtoSegments store their own neighbors now!!!
         let startNeighbor // segment connected before this segment
         let endNeighbor // segment connected after this segment
         if (assignNeighbors) {
@@ -1238,6 +1241,7 @@ class Grid extends ProtoLayer {
     // assignMids(uTurnSegs, 'UTurn') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
     // assignMids(stepSegs, 'Step') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
 
+    //TODO: can minCorners be handled elsewhere?
     // handle 'minCorners' perimeter types
     if (this.groups.some(g => g.perimeterType === 'minCorners')) {
       // console.log(`there is a minCorners Group`)
@@ -1253,6 +1257,7 @@ class Grid extends ProtoLayer {
     }
     // else { console.log(`there is NOT a minCorners Group`) }
 
+
     this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
     // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
@@ -1266,17 +1271,14 @@ class Grid extends ProtoLayer {
       .sort((a, b) => b.isStep - a.isStep) // sort Steps first
       .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
       .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-    // .sort((a, b) => a.hasInsideTurn - b.hasInsideTurn) // sort by outside corners first (!hasInsideCorner)
-    //TODO: I don't think I need to sort by 'has1Vert' or delete edges with 'has2Verts' - some will have 3+ verts! 
-    // Just let them have many verts and then the available-Lengths and minCubicLength should keep them sorted
-    // Might need to adjust something at final path conversion to ignore these middle verts
+
 
     // console.log(`madeSegs`, madeSegs)
     console.log(`currentSimples`, currentSimples.map(s => s.id))
     console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value,]))
     // console.log(`allSegments`, allSegments)
 
-    //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
+    //FUNC: findCubicVerts(segs, sourceSegs)
     const findCubicVerts = ({
       segs,
       sourcesSegs,
@@ -1291,6 +1293,7 @@ class Grid extends ProtoLayer {
         let segEndData = [seg, segEL]
         // console.log(`seg`, seg)
 
+        //TODO: remove all neighbor finding logic, ProtoSegments store their own neighbors now!!!
         let startNeighbor = sourcesSegs.find(s =>
           s.end.equals(seg.start, 1)
           && s.islandIDs.equals(seg.islandIDs)
