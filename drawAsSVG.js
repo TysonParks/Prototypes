@@ -714,8 +714,7 @@ class ProtoSegment extends Segment {
   parentID
   islandIDs
   taken = false
-  turns
-  part
+
   cubicVerts = { start: new OpArray, end: new OpArray }
   neighbors = { start: undefined, end: undefined }
 
@@ -726,12 +725,14 @@ class ProtoSegment extends Segment {
     this.id = id
   }
 
-  // get turns() {
-  //   return {
-  //     start: undefined,
-  //     end: undefined
-  //   }
-  // }
+  get turns() {
+    return {
+      start: this.neighbors.start.direction.turnTo(this.direction),
+      end: this.direction.turnTo(this.neighbors.end.direction)
+    }
+  }
+
+  get part() { return EdgePart.from([this.turns.start, this.turns.end]) }
 
   get isUTurn() { return this.part?.isUTurn }
   get isUTurnIn() { return this.part?.isUTurnIn }
