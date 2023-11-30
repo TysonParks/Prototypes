@@ -750,8 +750,6 @@ class ProtoSegment extends Segment {
     }
   }
 
-  // get cubicVerts() { return this.cubicVerts.start.union(this.cubicVerts.end) }
-
   get hasBothCubicVerts() { return this.cubicVerts.start.length > 1 && this.cubicVerts.end.length > 1 }
   get cubicVertsToStartLengths() { return this.cubicVerts.start.map(vert => this.start.sub(vert).mag()) }
   get cubicVertsToEndLengths() { return this.cubicVerts.end.map(vert => this.end.sub(vert).mag()) }
