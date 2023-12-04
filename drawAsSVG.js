@@ -750,7 +750,17 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get hasBothCubicVerts() { return this.cubicVerts.start.length > 1 && this.cubicVerts.end.length > 1 }
+  get hasCubicStartVert() { return this.cubicVerts.start.length > 1 }
+  get hasCubicEndVert() { return this.cubicVerts.end.length > 1 }
+  get hasSomeCubicVerts() { return this.hasCubicStartVert || this.hasCubicEndVert }
+  get hasOneCubicVert() { return (this.hasCubicStartVert || this.hasCubicEndVert) && !(this.hasBothCubicVerts) }
+  get hasBothCubicVerts() { return this.hasCubicStartVert && this.hasCubicEndVert }
+  get cubicVertCount() {
+    if (!this.hasSomeCubicVerts) { return 0 }
+    if (this.hasOneCubicVert) { return 1 }
+    if (this.hasBothCubicVerts) { return 2 }
+  }
+
   get cubicVertsToStartLengths() { return this.cubicVerts.start.map(vert => this.start.sub(vert).mag()) }
   get cubicVertsToEndLengths() { return this.cubicVerts.end.map(vert => this.end.sub(vert).mag()) }
   get closestCubicStartVert() {
