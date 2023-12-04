@@ -1422,7 +1422,7 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Generators
   // #region Grammar Generators
   //METH:
-  randGroup(amount) { this.assignCells(this.availableCells.randReduce(amount)) }
+  randGroup({ selection = this.availableCells, amount } = {}) { this.assignCells(selection.randReduce(amount)) }
   //METH:
   randomSelection(amount, selection = this.availableCells) { return selection.copy.randReduce(amount) }
   //METH:
@@ -2111,6 +2111,7 @@ class Cell extends ProtoLayer {
   index
   coords
   available
+  //TODO: in order to populate inside/over, need to make groupIDs a Set/Array. Need to fix symmetrize first though
   groupID = -1
   islandIDs = new Set()
   islandChecked = false
