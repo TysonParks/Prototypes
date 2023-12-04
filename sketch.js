@@ -261,27 +261,26 @@ function gridTests2() {
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
   let gridInset = R.random_num(0.75, 0.95)
-  // grid.inset(gridInset)
 
-  // grid.insetCells(R.random_num(0.1, .4))
-  // grid.insetCells(.8, 'grp000')r
+  FRAME.setInsetScale(.95)
+  grid.setInsetScale(.85)
 
-  // console.log('Grid:', gridX)
-
+  const minCellSWidth = grid.minCellWidth
   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
   console.log('minCellSize', minCellSize)
+  console.log('minCellSWidth', minCellSWidth)
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -1.8 * 1 })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -2 * 1 })
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.125 * 4 })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.15 * 4 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.125 * 2 })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.15 * 2 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
@@ -319,14 +318,13 @@ function gridTests2() {
   const emptyShader = createFilter().dropShadow(shadeStackEmpty)
 
   // const frameInset = R.random_num(0.02, 0.18)
-  FRAME.setInsetScale(.95)
-  grid.setInsetScale(.85)
+
   FRAME.setFilter(shader3)
   // grid.setFilter(shader1)
   console.log('FRAME Filter', FRAME.filter.id)
   console.log('gridFilter', grid.filter.id)
 
-  // grid.randGroup(1 / grid.cellCount)
+  // grid.randGroup({amount:1 / grid.cellCount})
   // grid.randomComb({
   //   selection: (grid.cellRows
   //     .rotated2D(90)
@@ -344,7 +342,7 @@ function gridTests2() {
   //     .flat()),
   //   keep: 2, drop: 7, start: 0
   // })
-  // grid.randGroup(0.2)
+  // grid.randGroup({amount:0.2})
 
   // grid.outlineTaken({ direction: Direction.Right, newGroup: false })
   // grid.outlineTaken({ direction: Direction.Up, newGroup: false })
@@ -353,7 +351,7 @@ function gridTests2() {
 
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
   grid.squares({ coverage: 0.45, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
-  // grid.randGroup(0.2)
+  // grid.randGroup({amount:0.2})
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
   // grid.outlineGroup({ groupID: grid.lastGroup.id, directioqn: Direction.Right, newGroup: false, amount: 1 })
@@ -361,25 +359,25 @@ function gridTests2() {
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
-  // grid.randGroup(0.1)
+  // grid.randGroup({amount:0.1})
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(1, 2), newGroup: false })
-  grid.randGroup(0.5)
+  grid.randGroup({ amount: 0.5 })
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
 
-  // grid.randGroup(.5)
+  // grid.randGroup({amount:0.5})
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
   // console.log('right adj', Direction.Right.adjacents)
   // console.log('right and adj', Direction.Right.andAdjacents)
   // console.log('right opposite', Direction.Right.opposites)
-  // grid.randGroup(.3)
+  // grid.randGroup({amount:0.3})
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
 
-  // grid.randGroup(1 / grid.cellCount)
+  // grid.randGroup({amount:1 / grid.cellCount})
   // grid.outlineTaken({ direction: Direction.All, newGroup: true })
   // grid.outlineTaken({ direction: Direction.Right, newGroup: false })
 
