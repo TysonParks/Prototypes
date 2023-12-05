@@ -1240,60 +1240,53 @@ class Grid extends ProtoLayer {
 
     // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
     const allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
-    let currentSimples = allSimpleSegments.copy // deflationary working copy
-    console.log(`currentSimples`, currentSimples)
-    // currentSimples = currentSimples.exclude(madeSegs, ['id']) // remove uturn and step segments as they are already finalized. Although madeSegs includes neighbors and shared, only UTurn and Step segs made it through the createSimpleSubShapes process while neighbors and shared fused with other segments
-    console.log(`currentSimples`, currentSimples)
-    currentSimples = currentSimples
-      // .filter(s => !s.has2CubicVerts) // remove 
-      .sort((a, b) => b.isStep - a.isStep) // sort Steps first
-      .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
-      .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+    // let currentSimples = allSimpleSegments.copy // deflationary working copy
+    console.log(`allSimpleSegments`, allSimpleSegments.map(s => s.id))
+    console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
 
+    //FUNC: reorderSimples : reorders currentSimples
+    const reorderSimples = (allSimpleSegments) => {
+      let currentSimples = allSimpleSegments
+        .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+        .sort((a, b) => b.isStep - a.isStep) // sort Steps first
+        .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
+        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+      return currentSimples
+    }
 
-    // console.log(`madeSegs`, madeSegs)
+    let currentSimples = reorderSimples(allSimpleSegments)
     console.log(`currentSimples`, currentSimples.map(s => s.id))
-    console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value,]))
-    // console.log(`allSegments`, allSegments)
+    console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
 
     //FUNC: findCubicVerts(segs, sourceSegs)
     const findCubicVerts = ({
-      segs,
-      sourcesSegs,
+      // segs,
+      // sourcesSegs,
       // edgeType,
       // assignNeighbors = true
     } = {}) => {
-      let minLength = this.minCellWidth / 2 // min length already processed
-      segs.forEach(seg => {
+      let minLength = this.minCellWidth / 2 // might remove this as cubicVertCount might move things along instead
+      let currentSimples = reorderSimples(allSimpleSegments)
+      while (currentSimples.length > 0) {
+        const seg = currentSimples[0]
         const segSL = seg.availableStartLength
         const segEL = seg.availableEndLength
         let segStartData = [seg, segSL]
         let segEndData = [seg, segEL]
         // console.log(`seg`, seg)
 
-        //TODO: remove all neighbor finding logic, ProtoSegments store their own neighbors now!!!
-        let startNeighbor = sourcesSegs.find(s =>
-          s.end.equals(seg.start, 1)
-          && s.islandIDs.equals(seg.islandIDs)
-        )
-        if (!startNeighbor) {
-          console.log(sourcesSegs)
-          console.error(`no startNeighbor found for ${seg.id}`)
-        }
+        let startNeighbor = seg.neighbors.start
         let startNeighborData = [startNeighbor, startNeighbor.availableEndLength]
-        // console.log(`startNeighbor`, startNeighbor)
 
-        let endNeighbor = sourcesSegs.find(s =>
-          s.start.equals(seg.end, 1)
-          && s.islandIDs.equals(seg.islandIDs)
-        )
-        if (!endNeighbor) { console.error(`no endNeighbor found for ${seg.id}`) }
+        let endNeighbor = seg.neighbors.end
         let endNeighborData = [endNeighbor, endNeighbor.availableStartLength]
-        // console.log(`endNeighbor`, endNeighbor)
 
         if (segSL === segEL && segSL > minLength) { // startLength and endLength are EQUAL
           //TODO: will probably need to test to find best result for this, but 'half' should be default
           //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
+
+
         }
         else {
           let useStart
@@ -1338,14 +1331,16 @@ class Grid extends ProtoLayer {
         // saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted) // save modified segs to madeSegs
         // segs = sourcesSegs.filter(seg => seg.part.isBaseType(edgeType))
         // console.log(`madeSegs`, madeSegs.length)
-      })
+
+        currentSimples = reorderSimples(allSimpleSegments)
+      }
 
     }
 
-    findCubicVerts({
-      segs: currentSimples,
-      sourcesSegs: allSimpleSegments,
-    })
+    // findCubicVerts({
+    //   segs: currentSimples,
+    //   sourcesSegs: allSimpleSegments,
+    // })
 
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
