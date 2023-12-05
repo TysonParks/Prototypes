@@ -1239,14 +1239,18 @@ class Grid extends ProtoLayer {
     this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
     // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
-    const allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
+    let allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
     // let currentSimples = allSimpleSegments.copy // deflationary working copy
     console.log(`allSimpleSegments`, allSimpleSegments.map(s => s.id))
     console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
 
     //FUNC: reorderSimples : reorders currentSimples
-    const reorderSimples = (allSimpleSegments) => {
-      let currentSimples = allSimpleSegments
+    const sortedSimples = (allSimpleSubShapes) => {
+      let currentSimples = allSimpleSubShapes
+        .flat() // flatten subShapes into allSegments
+        .filter(s => !s.hasSomeCubicVerts)
+        .filter(s => !s.isStep)
+        .filter(s => !s.isUTurnIn)
         .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
         .sort((a, b) => b.isStep - a.isStep) // sort Steps first
         .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
@@ -1255,21 +1259,25 @@ class Grid extends ProtoLayer {
       return currentSimples
     }
 
-    let currentSimples = reorderSimples(allSimpleSegments)
+    let currentSimples = sortedSimples(this.allSimpleSubShapes)
     console.log(`currentSimples`, currentSimples.map(s => s.id))
     console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
 
     //FUNC: findCubicVerts(segs, sourceSegs)
     const findCubicVerts = ({
-      // segs,
-      // sourcesSegs,
-      // edgeType,
-      // assignNeighbors = true
+      preferSnuggles = false,
     } = {}) => {
       let minLength = this.minCellWidth / 2 // might remove this as cubicVertCount might move things along instead
-      let currentSimples = reorderSimples(allSimpleSegments)
-      while (currentSimples.length > 0) {
+      let currentSimples = sortedSimples(this.allSimpleSubShapes)
+      let limit = 20
+      while (currentSimples.length > 0 && limit > 0) {
+        limit -= 1
+        console.log(`limit`, limit)
+        console.log(`currentSimples.length`, currentSimples.length)
+
         const seg = currentSimples[0]
+        console.log(`seg`, seg)
+        console.log(`seg stats`, seg.minCubicLength, seg.part.value, seg.cubicVertCount, seg.id)
         const segSL = seg.availableStartLength
         const segEL = seg.availableEndLength
         let segStartData = [seg, segSL]
@@ -1282,13 +1290,21 @@ class Grid extends ProtoLayer {
         let endNeighbor = seg.neighbors.end
         let endNeighborData = [endNeighbor, endNeighbor.availableStartLength]
 
-        if (segSL === segEL && segSL > minLength) { // startLength and endLength are EQUAL
+        if (
+          segSL === segEL
+          // && segSL > minLength
+        ) { // startLength and endLength are EQUAL
           //TODO: will probably need to test to find best result for this, but 'half' should be default
           //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
-
-
+          console.log(`seg midPoint`, seg.midPoint)
+          seg.addCubicStartVert(seg.midPoint)
+          // seg.assignMid()
+          console.log(`segSL === segEL`)
         }
         else {
+          console.log(`segSL !== segEL`)
+
+
           let useStart
           // compare seg lengths to compute 'useStart'
           if (segSL < segEL) { // start length is smaller
@@ -1320,27 +1336,24 @@ class Grid extends ProtoLayer {
         }
 
 
-        const shared = sourcesSegs.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
-        if (shared?.hasInsideTurn) { // if this segment is inside an outside turn, it should force shared curve
-          // console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
-          // console.log(`000000 shared has inside turn`, seg.id, shared.id)
-          // shared.assignMid()
-        }
+        // const shared = sourcesSegs.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
+        // if (shared?.hasInsideTurn) { // if this segment is inside an outside turn, it should force shared curve
+        // console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
+        // console.log(`000000 shared has inside turn`, seg.id, shared.id)
+        // shared.assignMid()
+        // }
         //TODO: need to revisit this remove call later to see if can remove 
         // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
         // saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted) // save modified segs to madeSegs
         // segs = sourcesSegs.filter(seg => seg.part.isBaseType(edgeType))
         // console.log(`madeSegs`, madeSegs.length)
 
-        currentSimples = reorderSimples(allSimpleSegments)
+        currentSimples = sortedSimples(this.allSimpleSubShapes)
       }
 
     }
 
-    // findCubicVerts({
-    //   segs: currentSimples,
-    //   sourcesSegs: allSimpleSegments,
-    // })
+    findCubicVerts()
 
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
@@ -1562,7 +1575,8 @@ class Grid extends ProtoLayer {
     islandID,
     direction = Direction.All,
     amount = 1,
-    newGroup = true } = {}) {
+    newGroup = true
+  } = {}) {
     // if (amount < 1) { return }
     if ((selection && groupID) || (selection && islandID) || (groupID && islandID)) {
       console.error('Grid.outline can only use one selection method')
