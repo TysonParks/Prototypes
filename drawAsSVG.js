@@ -753,12 +753,13 @@ class ProtoSegment extends Segment {
   get hasCubicStartVert() { return this.cubicVerts.start.length > 0 }
   get hasCubicEndVert() { return this.cubicVerts.end.length > 0 }
   get hasSomeCubicVerts() { return this.hasCubicStartVert + this.hasCubicEndVert === 1 }
+  get hasNoCubicVerts() { return !this.hasSomeCubicVerts }
   get hasOneCubicVert() { return (this.hasCubicStartVert || this.hasCubicEndVert) && !(this.hasBothCubicVerts) }
   get hasBothCubicVerts() { return this.hasCubicStartVert && this.hasCubicEndVert }
   get cubicVertCount() {
-    if (!this.hasSomeCubicVerts) { return 0 }
-    if (this.hasOneCubicVert) { return 1 }
     if (this.hasBothCubicVerts) { return 2 }
+    if (this.hasOneCubicVert) { return 1 }
+    if (!this.hasSomeCubicVerts) { return 0 }
   }
 
   get cubicVertsToStartLengths() { return this.cubicVerts.start.map(vert => this.start.sub(vert).mag()) }
