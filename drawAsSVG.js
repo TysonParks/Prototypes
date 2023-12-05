@@ -750,9 +750,9 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get hasCubicStartVert() { return this.cubicVerts.start.length > 1 }
-  get hasCubicEndVert() { return this.cubicVerts.end.length > 1 }
-  get hasSomeCubicVerts() { return this.hasCubicStartVert || this.hasCubicEndVert }
+  get hasCubicStartVert() { return this.cubicVerts.start.length > 0 }
+  get hasCubicEndVert() { return this.cubicVerts.end.length > 0 }
+  get hasSomeCubicVerts() { return this.hasCubicStartVert + this.hasCubicEndVert === 1 }
   get hasOneCubicVert() { return (this.hasCubicStartVert || this.hasCubicEndVert) && !(this.hasBothCubicVerts) }
   get hasBothCubicVerts() { return this.hasCubicStartVert && this.hasCubicEndVert }
   get cubicVertCount() {
@@ -790,8 +790,8 @@ class ProtoSegment extends Segment {
 
   //TODO: do I actually want/need this?
   assignMid() {
-    this.addCubicStartVert('mid')
-    this.addCubicEndVert('mid')
+    this.addCubicStartVert(this.midPoint)
+    this.addCubicEndVert(this.midPoint)
   }
 
   addCubicStartVert(vert) { this.#addCubicVert(vert, true) }
