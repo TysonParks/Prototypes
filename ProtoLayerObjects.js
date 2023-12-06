@@ -1173,8 +1173,8 @@ class Grid extends ProtoLayer {
     console.log(`allSegments`, allSegments)
     let uTurnSegs = allSegments.filter(seg => seg.isUTurn)
     // console.log(`uTurnSegs`, uTurnSegs.map(c => c.id))
-    let stepSegs = allSegments.filter(seg => seg.isStep)
-    // console.log(`stepSegs`, stepSegs.map(c => c.id))
+    let stairSegs = allSegments.filter(seg => seg.isStair)
+    // console.log(`stairSegs`, stairSegs.map(c => c.id))
 
     let cornerSegs = allSegments.filter(seg => seg.isCorner)
     // console.log(`cornerSegs`, cornerSegs.map(c => c.id))
@@ -1216,7 +1216,7 @@ class Grid extends ProtoLayer {
     }
 
     // assignMids(uTurnSegs, 'UTurn') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
-    // assignMids(stepSegs, 'Step') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
+    // assignMids(stairSegs, 'Stair') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
 
 
     //TODO: can minCorners be handled elsewhere?
@@ -1229,7 +1229,7 @@ class Grid extends ProtoLayer {
         .map(isl => isl.cells).flat() // cells within those perimiterIslands
         .map(cell => cell.segments).flat() // segments within those cells
         .filter(seg => seg.isCorner) // corner segments within those segments
-        .exclude(madeSegs, ['id']) // exclude segments already made in previous steps
+        .exclude(madeSegs, ['id']) // exclude segments already made in previous stairs
       console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
       assignMids(minCornerSegs, 'Corner', false) // assign midpoints to these segs + shared segs with inside turns
     }
@@ -1249,10 +1249,10 @@ class Grid extends ProtoLayer {
       let currentSimples = allSimpleSubShapes
         .flat() // flatten subShapes into allSegments
         // .filter(s => !s.hasSomeCubicVerts)
-        .filter(s => !s.isStep)
+        .filter(s => !s.isStair)
         .filter(s => !s.isUTurnIn)
         .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-        .sort((a, b) => b.isStep - a.isStep) // sort Steps first
+        .sort((a, b) => b.isStair - a.isStair) // sort Stairs first
         .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
         .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
         .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
@@ -1261,12 +1261,22 @@ class Grid extends ProtoLayer {
 
     let currentSimples = sortedSimples(this.allSimpleSubShapes)
     console.log(`currentSimples`, currentSimples.map(s => s.id))
-    console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
-
+    console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
+    //FUNC: simpleSegFromID(id) : find segment inside of allSimpleSubShapes
     const simpleSegFromID = (id) => {
       for (const sub of this.allSimpleSubShapes) {
         for (const seg of sub) {
           if (seg.id === id) { return seg }
+        }
+      }
+      return null
+    }
+
+    //FUNC: simpleSegShared(seg)
+    const simpleSegShared = (segment) => {
+      for (const sub of this.allSimpleSubShapes) {
+        for (const seg of sub) {
+          if (seg.equals(segment.opposite)) { return seg }
         }
       }
       return null
@@ -1293,17 +1303,19 @@ class Grid extends ProtoLayer {
         let segEndData = [seg, segEL]
         // console.log(`seg`, seg)
 
-        let startNeighbor = seg.neighbors.start
+        let startNeighbor = seg.neighbors.start // neighbor attached before seg's start
         let startNeighborData = [startNeighbor, startNeighbor.availableEndLength]
 
-        let endNeighbor = seg.neighbors.end
+        let endNeighbor = seg.neighbors.end // neighbor attached after seg's end
         let endNeighborData = [endNeighbor, endNeighbor.availableStartLength]
 
-        let triplet = [startNeighbor, seg, endNeighbor]
+        let segTriplet = [startNeighbor, seg, endNeighbor]
 
-        // if (triplet.every(s => s.hasNoCubicVerts)) { // if all 3 segs are unassigned
-        //   console.log(`triplet lengths`, triplet.map(s => s.minCubicLength))
-        //   let smallest = triplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
+        let shared = simpleSegShared(seg)
+
+        // if (segTriplet.every(s => s.hasNoCubicVerts)) { // if all 3 segs are unassigned
+        //   console.log(`segTriplet lengths`, segTriplet.map(s => s.minCubicLength))
+        //   let smallest = segTriplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
         //   console.log(`smallest`, smallest)
         //   startNeighbor.addCubicEndVert(startNeighbor.distancedEndPoint(smallest))
         //   seg.addCubicStartVert(seg.distancedStartPoint(smallest))
@@ -1311,17 +1323,40 @@ class Grid extends ProtoLayer {
         //   endNeighbor.addCubicStartVert(endNeighbor.distancedStartPoint(smallest))
         // }
 
-        if (segSL === segEL) { // startLength and endLength are EQUAL
-          //TODO: will probably need to test to find best result for this, but 'half' should be default
-          //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
-          let smallest = triplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
-          console.log(`smallest`, smallest)
-          startNeighbor.addCubicEndVert(startNeighbor.distancedEndPoint(smallest))
-          seg.addCubicStartVert(seg.distancedStartPoint(smallest))
-          seg.addCubicEndVert(seg.distancedEndPoint(smallest))
-          endNeighbor.addCubicStartVert(endNeighbor.distancedStartPoint(smallest))
+        if (seg.isUTurnOut) {
+          if (segSL === segEL) { // if startLength and endLength are EQUAL
+            //TODO: will probably need to test to find best result for this, but 'half' should be default
+            //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
+            // calculate shortest length available in segTriplet
+            const segShortest = segTriplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
+            console.log(`segShortest`, segShortest)
+            //1. assign both UTurn OUT segment cubicVerts and it's neighboring cubicVerts
+            startNeighbor.addCubicEndVert(startNeighbor.distancedEndPoint(segShortest))
+            seg.addCubicStartVert(seg.distancedStartPoint(segShortest))
+            seg.addCubicEndVert(seg.distancedEndPoint(segShortest))
+            endNeighbor.addCubicStartVert(endNeighbor.distancedStartPoint(segShortest))
+            //2. if seg shares a side
+            if (shared) { // if seg shares a side
+              console.log('** shared', shared)
+              const startShortest = min(segShortest, shared.neighbors.start.availableEndLength)
+              console.log(`startShortest`, startShortest)
+              const endShortest = min(segShortest, shared.neighbors.end.availableStartLength)
+              console.log(`endShortest`, endShortest)
+              // if (shared.isUTurnIn) { // if shared triplet wraps this uTurnOut seg
+              //   shared.addCubicStartVert(seg.distancedEndPoint(shortest))
+              //   shared.addCubicEndVert(seg.distancedStartPoint(shortest))
+              // }
+              if (shared.turns.start.isLeft) { // start turn wraps this uTurnOut seg
+
+              }
+              if (shared.turns.end.isLeft) { // end turn wraps this uTurnOut seg
+
+              }
+            }
+          }
         }
-        else {
+
+        if (segSL !== segEL) {
           console.log(`segSL !== segEL`)
 
 
@@ -1370,7 +1405,7 @@ class Grid extends ProtoLayer {
 
         currentSimples = sortedSimples(this.allSimpleSubShapes)
       }
-
+      console.log(`currentSimples after`, currentSimples.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
     }
 
     console.log(`allSimpleSubShapes before`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
@@ -1378,7 +1413,7 @@ class Grid extends ProtoLayer {
     findCubicVerts()
 
     console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
-    console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
+    console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
     // sort allSegments by availableLength(computed), shortest to longest
@@ -2193,7 +2228,7 @@ class Cell extends ProtoLayer {
   get taken() { return !this.available }
   get isInAnIsland() { return this.grid.cellIsInAnIsland(this.index) }
   get hasAUTurn() { return this.segments.some(seg => seg.isUTurn) }
-  get hasAStep() { return this.segments.some(seg => seg.isStep) }
+  get hasAStair() { return this.segments.some(seg => seg.isStair) }
   get hasACorner() { return this.segments.some(seg => seg.isCorner) }
   get hasAFlat() { return this.segments.some(seg => seg.isFlat) }
 
@@ -2628,17 +2663,17 @@ class Shape extends ProtoLayer {
   //   }))
   // }
   //METH:
-  // assignSingleStepVerts() {
-  //   console.log("assignSingleStepVerts called")
+  // assignSingleStairVerts() {
+  //   console.log("assignSingleStairVerts called")
   //   this.subShapes.forEach(sub => sub.forEach((seg, i) => {
-  //     // console.log('try assignSingleStep')
+  //     // console.log('try assignSingleStair')
   //     const loop = range(0, sub.lastIndex)
   //     const prev = sub[loop.cycle(i - 1)]
   //     const next = sub[loop.cycle(i + 1)]
   //     // console.log([prev, seg, next].map(e => e.part.value))
-  //     // case covers 1 or 2 consequetive steps
-  //     if (seg.isStep && !next.isStep) {
-  //       // console.log('found single step')
+  //     // case covers 1 or 2 consequetive stairs
+  //     if (seg.isStair && !next.isStair) {
+  //       // console.log('found single stair')
   //       prev.assignVert('mid')
   //       seg.assignVert('mid')
   //       next.assignVert('mid')
