@@ -546,6 +546,8 @@ class Vertex extends p5.Vector {
 
   }
 
+  roundedMag(decimal = 4) { return roundToDec(this.mag(), decimal) }
+
   widthTo(vert) { return abs(this.x - vert.x) }
   heightTo(vert) { return abs(this.y - vert.y) }
   slopeTo(vert) { return (this.y - vert.y) / (this.x - vert.x) }
@@ -740,7 +742,11 @@ class ProtoSegment extends Segment {
   get isUTurn() { return this.part?.isUTurn }
   get isUTurnIn() { return this.part?.isUTurnIn }
   get isUTurnOut() { return this.part?.isUTurnOut }
-  get isStep() { return this.part?.isStep }
+
+  get isStair() { return this.part?.isStair }
+  get isStairIn() { return this.part?.isStairIn }
+  get isStairOut() { return this.part?.isStairOut }
+
   get isFlat() { return this.part?.isFlat }
   get isCorner() { return this.part?.isCorner }
 
@@ -765,24 +771,24 @@ class ProtoSegment extends Segment {
     if (!this.hasSomeCubicVerts) { return 0 }
   }
 
-  get cubicVertsToStartLengths() { return this.cubicVerts.start.map(vert => this.start.sub(vert).mag()).numsorted }
-  get cubicVertsToEndLengths() { return this.cubicVerts.end.map(vert => this.end.sub(vert).mag()).numsorted }
+  get cubicVertsToStartLengths() { return this.cubicVerts.start.map(vert => this.start.sub(vert).roundedMag()).numsorted }
+  get cubicVertsToEndLengths() { return this.cubicVerts.end.map(vert => this.end.sub(vert).roundedMag()).numsorted }
   get closestCubicStartVert() {
-    return this.cubicVerts.start.sort((a, b) => this.start.sub(a).mag() - this.start.sub(b).mag())[0]
+    return this.cubicVerts.start.sort((a, b) => this.start.sub(a).roundedMag() - this.start.sub(b).roundedMag())[0]
   }
   get closestCubicEndVert() {
-    return this.cubicVerts.end.sort((a, b) => this.end.sub(a).mag() - this.end.sub(b).mag())[0]
+    return this.cubicVerts.end.sort((a, b) => this.end.sub(a).roundedMag() - this.end.sub(b).roundedMag())[0]
   }
   get availableStartLength() {
     if (!this.cornerVerts.start) { return } // needs to have cornerVerts to calculate
     if (this.hasNoCubicVerts) { return this.length / 2 } // assume entire length available
-    if (this.hasCubicStartVert) { return this.closestCubicStartVert.sub(this.start).mag() }
+    if (this.hasCubicStartVert) { return this.closestCubicStartVert.sub(this.start).roundedMag() }
     if (this.hasCubicEndVert) { return this.length - this.availableEndLength }
   }
   get availableEndLength() {
     if (!this.cornerVerts.end) { return } // needs to have cornerVerts to calculate
     if (this.hasNoCubicVerts) { return this.length / 2 } // assume entire length available
-    if (this.hasCubicEndVert) { return this.closestCubicEndVert.sub(this.end).mag() }
+    if (this.hasCubicEndVert) { return this.closestCubicEndVert.sub(this.end).roundedMag() }
     if (this.hasCubicStartVert) { return this.length - this.availableStartLength }
   }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
