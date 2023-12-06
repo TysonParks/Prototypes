@@ -297,6 +297,9 @@ class Turn {
   }
 
   get shortName() { return this.#letterName[`${this.value}`] }
+  get isLeft() { return this.value === -1 }
+  get isStraight() { return this.value === 0 }
+  get isRight() { return this.value === 1 }
 
   #getName(value) { return this.#name[`${this.value}`] }
   #name = {
@@ -315,13 +318,13 @@ class Turn {
 class EdgePart {
   // static Flat = new EdgePart(0)     // SS
   // static Corner = new EdgePart(10)  // LS, RS, SL, SR
-  // static Step = new EdgePart(20)    // RL, LR
+  // static Stair = new EdgePart(20)    // RL, LR
   // static UTurn = new EdgePart(30)   // RR, LL
 
   static F = new EdgePart('F')         // SS              --> 'Flat'
 
   // static C = new EdgePart('C')         // LS, RS, SL, SR  --> 'Corner'
-  // static S = new EdgePart('S')         // RL, LR          --> 'Step'
+  // static S = new EdgePart('S')         // RL, LR          --> 'Stair'
   // static U = new EdgePart('U')         // RR, LL          --> 'U-Turn'
 
   // static CI = new EdgePart('CI')       // LS, SL          --> 'Corner Inside'
@@ -333,8 +336,8 @@ class EdgePart {
   static CSO = new EdgePart('CSO')     // SR              --> 'Corner Start Outside'
   static CEI = new EdgePart('CEI')     // LS              --> 'Corner End Inside'
   static CEO = new EdgePart('CEO')     // RS              --> 'Corner End Outside'
-  static StI = new EdgePart('StI')     // RL              --> 'Step In'
-  static StO = new EdgePart('StO')     // LR              --> 'Step Out'
+  static StI = new EdgePart('StI')     // RL              --> 'Stair In'
+  static StO = new EdgePart('StO')     // LR              --> 'Stair Out'
   static UI = new EdgePart('UI')       // LL              --> 'U-Turn Inside'
   static UO = new EdgePart('UO')       // RR              --> 'U-Turn Outside'
 
@@ -348,12 +351,16 @@ class EdgePart {
   }
 
   get isFlat() { return this.isBaseType('Flat') }
-  get isUTurn() { return this.isBaseType('UTurn') }
-  get isUTurnOut() { return this.isType('UO') }
-  get isUTurnIn() { return this.isType('UI') }
-  get isStep() { return this.isBaseType('Step') }
-  get isCorner() { return this.isBaseType('Corner') }
 
+  get isUTurn() { return this.isBaseType('UTurn') }
+  get isUTurnIn() { return this.isType('UI') }
+  get isUTurnOut() { return this.isType('UO') }
+
+  get isStair() { return this.isBaseType('Stair') }
+  get isStairIn() { return this.isType('I') }
+  get isStairOut() { return this.isType('O') }
+
+  get isCorner() { return this.isBaseType('Corner') }
   get isCornerStart() { return this.value === 'CSI' || this.value === 'CSO' }
   get isCornerEnd() { return this.value === 'CEI' || this.value === 'CEO' }
 
@@ -369,7 +376,7 @@ class EdgePart {
   #baseTypes = {
     'Flat': ['F'],
     'Corner': ['CEI', 'CEO', 'CSI', 'CSO'],
-    'Step': ['StI', 'StO'],
+    'Stair': ['StI', 'StO'],
     'UTurn': ['UO', 'UI'],
   }
 
@@ -379,8 +386,8 @@ class EdgePart {
     'CSO': 'Corner Start Out',
     'CEI': 'Corner End In',
     'CEO': 'Corner End Out',
-    'StI': 'Step In',
-    'StO': 'Step Out',
+    'StI': 'Stair In',
+    'StO': 'Stair Out',
     'UI': 'U-Turn In',
     'UO': 'U-Turn Out',
   }
@@ -424,7 +431,7 @@ class EdgePart {
     switch (absSum) {
       case 0:             // LS, RS, SL, SR -> Corner
         return EdgePart.S
-      case 1:             // LR, RL -> Step
+      case 1:             // LR, RL -> Stair
         return EdgePart.C
       case 2:           // LL, RR -> U
         return EdgePart.U
