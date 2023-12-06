@@ -1248,7 +1248,7 @@ class Grid extends ProtoLayer {
     const sortedSimples = (allSimpleSubShapes) => {
       let currentSimples = allSimpleSubShapes
         .flat() // flatten subShapes into allSegments
-        .filter(s => !s.hasSomeCubicVerts)
+        // .filter(s => !s.hasSomeCubicVerts)
         .filter(s => !s.isStep)
         .filter(s => !s.isUTurnIn)
         .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
@@ -1263,19 +1263,28 @@ class Grid extends ProtoLayer {
     console.log(`currentSimples`, currentSimples.map(s => s.id))
     console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
 
+    const simpleSegFromID = (id) => {
+      for (const sub of this.allSimpleSubShapes) {
+        for (const seg of sub) {
+          if (seg.id === id) { return seg }
+        }
+      }
+      return null
+    }
+
     //FUNC: findCubicVerts(segs, sourceSegs)
     const findCubicVerts = ({
       preferSnuggles = false,
     } = {}) => {
       let minLength = this.minCellWidth / 2 // might remove this as cubicVertCount might move things along instead
       let currentSimples = sortedSimples(this.allSimpleSubShapes)
-      let limit = 20
+      let limit = 40
       while (currentSimples.length > 0 && limit > 0) {
         limit -= 1
         console.log(`limit`, limit)
         console.log(`currentSimples.length`, currentSimples.length)
 
-        const seg = currentSimples[0]
+        const seg = simpleSegFromID(currentSimples[0].id)
         console.log(`seg`, seg)
         console.log(`seg stats`, seg.minCubicLength, seg.part.value, seg.cubicVertCount, seg.id)
         const segSL = seg.availableStartLength
@@ -1290,16 +1299,27 @@ class Grid extends ProtoLayer {
         let endNeighbor = seg.neighbors.end
         let endNeighborData = [endNeighbor, endNeighbor.availableStartLength]
 
-        if (
-          segSL === segEL
-          // && segSL > minLength
-        ) { // startLength and endLength are EQUAL
+        let triplet = [startNeighbor, seg, endNeighbor]
+
+        // if (triplet.every(s => s.hasNoCubicVerts)) { // if all 3 segs are unassigned
+        //   console.log(`triplet lengths`, triplet.map(s => s.minCubicLength))
+        //   let smallest = triplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
+        //   console.log(`smallest`, smallest)
+        //   startNeighbor.addCubicEndVert(startNeighbor.distancedEndPoint(smallest))
+        //   seg.addCubicStartVert(seg.distancedStartPoint(smallest))
+        //   seg.addCubicEndVert(seg.distancedEndPoint(smallest))
+        //   endNeighbor.addCubicStartVert(endNeighbor.distancedStartPoint(smallest))
+        // }
+
+        if (segSL === segEL) { // startLength and endLength are EQUAL
           //TODO: will probably need to test to find best result for this, but 'half' should be default
           //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
-          console.log(`seg midPoint`, seg.midPoint)
-          seg.addCubicStartVert(seg.midPoint)
-          // seg.assignMid()
-          console.log(`segSL === segEL`)
+          let smallest = triplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
+          console.log(`smallest`, smallest)
+          startNeighbor.addCubicEndVert(startNeighbor.distancedEndPoint(smallest))
+          seg.addCubicStartVert(seg.distancedStartPoint(smallest))
+          seg.addCubicEndVert(seg.distancedEndPoint(smallest))
+          endNeighbor.addCubicStartVert(endNeighbor.distancedStartPoint(smallest))
         }
         else {
           console.log(`segSL !== segEL`)
@@ -1353,8 +1373,12 @@ class Grid extends ProtoLayer {
 
     }
 
+    console.log(`allSimpleSubShapes before`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
+
     findCubicVerts()
 
+    console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
+    console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
     // sort allSegments by availableLength(computed), shortest to longest
