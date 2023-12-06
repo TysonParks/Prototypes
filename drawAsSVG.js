@@ -676,6 +676,9 @@ class Segment {
     return this.pointOnsegment(midPoint + lerp * (1 - midPoint))
   }
 
+  distancedStartPoint(distance) { return this.pointOnsegment(distance / this.length) }
+  distancedEndPoint(distance) { return this.pointOnsegment(1 - distance / this.length) }
+
   #assignVerts(start, end, args) {
     if (args.length === 1) {
       if (start instanceof Array) {
@@ -762,8 +765,8 @@ class ProtoSegment extends Segment {
     if (!this.hasSomeCubicVerts) { return 0 }
   }
 
-  get cubicVertsToStartLengths() { return this.cubicVerts.start.map(vert => this.start.sub(vert).mag()) }
-  get cubicVertsToEndLengths() { return this.cubicVerts.end.map(vert => this.end.sub(vert).mag()) }
+  get cubicVertsToStartLengths() { return this.cubicVerts.start.map(vert => this.start.sub(vert).mag()).numsorted }
+  get cubicVertsToEndLengths() { return this.cubicVerts.end.map(vert => this.end.sub(vert).mag()).numsorted }
   get closestCubicStartVert() {
     return this.cubicVerts.start.sort((a, b) => this.start.sub(a).mag() - this.start.sub(b).mag())[0]
   }
@@ -772,13 +775,15 @@ class ProtoSegment extends Segment {
   }
   get availableStartLength() {
     if (!this.cornerVerts.start) { return } // needs to have cornerVerts to calculate
-    if (this.cubicVerts.start.length === 0) { return this.length / 2 } // assume entire length available
-    return this.closestCubicStartVert.sub(this.start).mag()
+    if (this.hasNoCubicVerts) { return this.length / 2 } // assume entire length available
+    if (this.hasCubicStartVert) { return this.closestCubicStartVert.sub(this.start).mag() }
+    if (this.hasCubicEndVert) { return this.length - this.availableEndLength }
   }
   get availableEndLength() {
     if (!this.cornerVerts.end) { return } // needs to have cornerVerts to calculate
-    if (this.cubicVerts.end.length === 0) { return this.length / 2 } // assume entire length available
-    return this.closestCubicEndVert.sub(this.end).mag()
+    if (this.hasNoCubicVerts) { return this.length / 2 } // assume entire length available
+    if (this.hasCubicEndVert) { return this.closestCubicEndVert.sub(this.end).mag() }
+    if (this.hasCubicStartVert) { return this.length - this.availableStartLength }
   }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
