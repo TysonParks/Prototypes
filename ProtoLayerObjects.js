@@ -784,6 +784,8 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
+  //METH:
+  cellNamed(id) { return this.cells.find(c => c.id = id) }
   //METH: 
   cellAnchor(x, y) { return Vertex.mult(this.cellSize, vert(x, y)).add(this.insetAnchor) }
   //METH: 
@@ -1272,7 +1274,7 @@ class Grid extends ProtoLayer {
       return null
     }
 
-    //FUNC: simpleSegShared(seg)
+    //FUNC: simpleSegShared(segment)
     const simpleSegShared = (segment) => {
       for (const sub of this.allSimpleSubShapes) {
         for (const seg of sub) {
@@ -1280,6 +1282,19 @@ class Grid extends ProtoLayer {
         }
       }
       return null
+    }
+
+    //FUNC: simpleShapeContainingSeg(segment)
+    const simpleShapeContainingSeg = (segment) => {
+      return this.allSimpleSubShapes.find(sub => sub.includes(seg => seg.id === segment.id))
+    }
+
+    //FUNC: simpleSegAdjacent(seg)
+    const simpleSegAdjacent = (segment) => {
+      let sub = simpleShapeContainingSeg(segment)
+      let adjacents = sub
+        .filter(seg => segment.direction.opposites.equals(seg.direction))
+      console.log('adjacents', adjacents)
     }
 
     //FUNC: findCubicVerts(segs, sourceSegs)
@@ -1335,24 +1350,30 @@ class Grid extends ProtoLayer {
             seg.addCubicStartVert(seg.distancedStartPoint(segShortest))
             seg.addCubicEndVert(seg.distancedEndPoint(segShortest))
             endNeighbor.addCubicStartVert(endNeighbor.distancedStartPoint(segShortest))
-            //2. if seg shares a side
+
+            //TODO: this probably needs to become a func itself that can be called (non) recursively
+            //2. if seg has shared corners (2 sides wrapping), assign matching verts if shortest
             if (shared) { // if seg shares a side
               console.log('** shared', shared)
-              const startShortest = min(segShortest, shared.neighbors.start.availableEndLength)
-              console.log(`startShortest`, startShortest)
-              const endShortest = min(segShortest, shared.neighbors.end.availableStartLength)
-              console.log(`endShortest`, endShortest)
-              // if (shared.isUTurnIn) { // if shared triplet wraps this uTurnOut seg
-              //   shared.addCubicStartVert(seg.distancedEndPoint(shortest))
-              //   shared.addCubicEndVert(seg.distancedStartPoint(shortest))
-              // }
               if (shared.turns.start.isLeft) { // start turn wraps this uTurnOut seg
-
+                const neighbor = shared.neighbors.start
+                const shortest = min(segShortest, neighbor.availableEndLength)
+                console.log(`start shortest`, shortest)
+                shared.addCubicStartVert(shared.distancedStartPoint(shortest))
+                neighbor.addCubicEndVert(neighbor.distancedEndPoint(shortest))
               }
               if (shared.turns.end.isLeft) { // end turn wraps this uTurnOut seg
-
+                const neighbor = shared.neighbors.end
+                const shortest = min(segShortest, neighbor.availableStartLength)
+                console.log(`end shortest`, shortest)
+                shared.addCubicEndVert(shared.distancedEndPoint(shortest))
+                neighbor.addCubicStartVert(neighbor.distancedStartPoint(shortest))
               }
+              //3. if sharedTriplet has adjacents that wrap, assign adjacent verts if shortest
+
             }
+
+
           }
         }
 
