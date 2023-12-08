@@ -723,7 +723,6 @@ class Grid extends ProtoLayer {
   cellRows
   cellRowsPref
   groups = new OpArray
-  // islands = new OpArray
 
   constructor(protoParent, gridSize, insetScale, transform) {
     super({
@@ -767,11 +766,12 @@ class Grid extends ProtoLayer {
   get islands() { return this.groups.map(g => g.islands).flat() }
   get lastGroup() { return this.groups.last() }
   // FIXME: need to reconfigure the formation of perimeters before this will work properly
-  // NOTE: because currently D.None/Hor/Vert makes many islands instead of 1
+  // NOTE: created a minCorners function that might fix this? Need to re-evaluate.
   get allSimpleSubShapes() {
     // console.log(`this.groups`, this.groups)
     let simpShapes = this.groups
       .map(g => g.perimeterIslands).flat()
+      //FIXME: ultimately perimeters must be created for every group and all it's shapes! 
       .compacted // must compact because only groups that have assignPerimeters called on them will have islands?!?
     // console.log(`simpShapes 1`, simpShapes)
     simpShapes = simpShapes
@@ -1245,10 +1245,31 @@ class Grid extends ProtoLayer {
     // let currentSimples = allSimpleSegments.copy // deflationary working copy
     console.log(`allSimpleSegments`, allSimpleSegments.map(s => s.id))
     console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
+    //TODO: Add a first stage in which 4-sided shapes are processed. It's here where I can vary the outcomes.
+    //NOTE: Modes: 0-Normal, 1-reflective offset, 2-rotational offset, 3-Random
+    const formQuadShapes = (mode) => {
+      const addSides = (sides) => sides.reduce((a, b) => a + b)
+      let quads = this.allSimpleSubShapes
+        .filter(sub => sub.length === 4)// filter for 4-sided shapes
+        .sort((a, b) => addSides(b) - addSides(a))
+      console.log(`this.allSimpleSubShapes`, this.allSimpleSubShapes)
+      console.log('quads', quads)
+
+      switch (mode) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        default:
+      }
+    }
+
+    formQuadShapes()
 
     //FUNC: reorderSimples : reorders currentSimples
     const sortedSimples = (allSimpleSubShapes) => {
       let currentSimples = allSimpleSubShapes
+        // .sort() // 
         .flat() // flatten subShapes into allSegments
         // .filter(s => !s.hasSomeCubicVerts)
         .filter(s => !s.isStair)
