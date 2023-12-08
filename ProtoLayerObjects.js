@@ -773,8 +773,8 @@ class Grid extends ProtoLayer {
       .map(g => g.perimeterIslands).flat()
       //FIXME: ultimately perimeters must be created for every group and all it's shapes! 
       .compacted // must compact because only groups that have assignPerimeters called on them will have islands?!?
-    // console.log(`simpShapes 1`, simpShapes)
-    simpShapes = simpShapes
+      // console.log(`simpShapes 1`, simpShapes)
+      // simpShapes = simpShapes
       .map(i => i.shapes).flat()
       .map(s => s.simpleSubShapes).flat()
 
@@ -1247,6 +1247,7 @@ class Grid extends ProtoLayer {
     console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
     //TODO: Add a first stage in which 4-sided shapes are processed. It's here where I can vary the outcomes.
     //NOTE: Modes: 0-Normal, 1-reflective offset, 2-rotational offset, 3-Random
+    //FUNC: formQuadShapes(mode) : 
     const formQuadShapes = (mode) => {
       const addSides = (sides) => sides.reduce((a, b) => a + b)
       let quads = this.allSimpleSubShapes
@@ -2560,8 +2561,6 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
-  // turns
-  // parts
   simpleSubShapes
   finalSubShapes
 
@@ -2584,9 +2583,6 @@ class Shape extends ProtoLayer {
     this.subShapes = subShapes
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
-    // const [turns, parts] = this.createParts(subShapes)
-    // this.turns = turns
-    // this.parts = parts
     this.assignSegments()
     this._type = 'Shape'
     this.finishSetup(S.Shapes)
@@ -2627,48 +2623,6 @@ class Shape extends ProtoLayer {
 
   // MARK: methods
   // #region methods
-  //TODO: DEPRECATE #createTurns(segments), now computed within every ProtoSegment
-  // //METH:
-  // #createTurns(segments) {
-  //   let segs = OpArray.from(segments)
-  //   // let segs = this.allSegments
-  //   let turns = new OpArray
-  //   let prev = segs.last()
-  //   segs.forEach((e, i) => {
-  //     const turn = prev.direction.turnTo(e.direction)
-  //     turns.push(turn)
-  //     prev = e
-  //   })
-  //   return turns
-  // }
-  //TODO: DEPRECATE createParts(subShapes), now computed within every ProtoSegment
-  // //METH:
-  // createParts(subShapes) {
-  //   let turns = new OpArray
-  //   let parts = new OpArray
-  //   subShapes.forEach(shape => {
-  //     let subTurns = this.#createTurns(shape)
-  //     subTurns.push(subTurns[0])
-  //     let prevTurn
-  //     let subParts = new OpArray
-
-  //     subTurns.forEach((turn, i) => {
-  //       if (prevTurn) {
-  //         const part = EdgePart.from([prevTurn, turn])
-  //         const seg = shape[i - 1]
-  //         seg.taken = true
-  //         seg.part = part
-  //         seg.turns = { start: prevTurn, end: turn }
-  //         subParts.push(part)
-  //       }
-  //       prevTurn = turn
-  //     })
-  //     subTurns.pop()
-  //     turns.push(subTurns)
-  //     parts.push(subParts)
-  //   })
-  //   return [turns, parts]
-  // }
   //METH: 
   createSimpleSubShapes(minCorners = false) {
     this.simpleSubShapes = this.subShapes.map(
