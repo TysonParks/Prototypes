@@ -296,7 +296,7 @@ class Frame extends ProtoLayer {
   // MARK: Frame modifiers
   //METH:
   setCornerRadii(corners, padding) {
-    const radius = corners.upLeft.x + padding.x
+    const radius = corners.upLeft.x + 1.4 * padding.x
     this.cornerRadius = min(radius, 50)
     // this.cornerRadius = 50
     this.drawElement()
