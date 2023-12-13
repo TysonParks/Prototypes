@@ -7,13 +7,7 @@
 //CLASS: ProtoSVG
 class ProtoSVG {
   //METH:
-  static segsToSVG(
-    { segments,
-      refine = true,
-      // cornerRadius = '16px',
-      // weights = [],
-      random = false,
-    } = {}) {
+  static segsToSVG({ segments, refine = true, random = false, } = {}) {
     if (refine) {
       let verts = segmentPathToVertsPath(segments)
       segments = vertsPathToSegmentPath({ path: verts, refine: true })
