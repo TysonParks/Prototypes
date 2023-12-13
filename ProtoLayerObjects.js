@@ -765,6 +765,7 @@ class Grid extends ProtoLayer {
   }
   get islands() { return this.groups.map(g => g.islands).flat() }
   get lastGroup() { return this.groups.last() }
+  get shapes() { return this.islands.map(i => i.shapes).flat() }
   // FIXME: need to reconfigure the formation of perimeters before this will work properly
   // NOTE: created a minCorners function that might fix this? Need to re-evaluate.
   get allSimpleSubShapes() {
@@ -1091,7 +1092,37 @@ class Grid extends ProtoLayer {
       let cell = cells[0]
       let islanders = OpArray.from([cell])
       let fillstack = []
-      findIslanders({ cell: cell, grid: this, bounds: bounds, directions: direction.directions, groupID: groupID, islandID: islandID, taken: taken })
+
+      //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
+      //NOTE: Non-recursive flood-fill implementation from: https://codeguppy.com/blog/flood-fill/index.html
+      const findIslanders = () => {
+        fillstack.push(cell)
+
+        while (fillstack.length > 0) {
+          let current = fillstack.pop()
+          if (current.islandChecked) { continue }
+          let neighbors = this.validNeighbors({ selection: [current], bounds: bounds, directions: direction.directions })
+            .filter(e => !e.islandChecked)
+          if (taken) {
+            if (groupID) { neighbors = neighbors.filter(e => e.groupID === groupID) }
+            if (islandID) { neighbors = neighbors.filter(e => e.islandIDs.has(islandID)) }
+            else { neighbors = neighbors.filter(e => e.taken) }
+          } else {
+            if (groupID) { neighbors = neighbors.filter(e => e.groupID !== groupID) }
+            if (islandID) { neighbors = neighbors.filter(e => !(e.islandIDs.has(islandID))) }
+            else { neighbors = neighbors.filter(e => e.available) }
+          }
+
+          neighbors.forEach(e => fillstack.push(e))
+          current.islandChecked = true
+          islanders.push(current)
+          islanders = islanders
+            .unique(['id'])
+            .sort((a, b) => a.y - b.y || a.x - b.x) // sort by y then x values
+        }
+      }
+
+      findIslanders()
       cells = cells.exclude(islanders, ['id'])
       islanders.forEach(e => e.islandChecked = false)
 
@@ -1117,35 +1148,9 @@ class Grid extends ProtoLayer {
       tempIslands.push(island)
       // }
 
-      //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
-      //NOTE: Non-recursive flood-fill implementation from: https://codeguppy.com/blog/flood-fill/index.html
-      function findIslanders({ cell, grid, bounds: bounds, directions, groupID, islandID, taken } = {}) {
-        fillstack.push(cell)
-
-        while (fillstack.length > 0) {
-          let current = fillstack.pop()
-          if (current.islandChecked) { continue }
-          let neighbors = grid.validNeighbors({ selection: [current], bounds: bounds, directions: directions })
-            .filter(e => !e.islandChecked)
-          if (taken) {
-            if (groupID) { neighbors = neighbors.filter(e => e.groupID === groupID) }
-            if (islandID) { neighbors = neighbors.filter(e => e.islandIDs.has(islandID)) }
-            else { neighbors = neighbors.filter(e => e.taken) }
-          } else {
-            if (groupID) { neighbors = neighbors.filter(e => e.groupID !== groupID) }
-            if (islandID) { neighbors = neighbors.filter(e => !(e.islandIDs.has(islandID))) }
-            else { neighbors = neighbors.filter(e => e.available) }
-          }
-
-          neighbors.forEach(e => fillstack.push(e))
-          current.islandChecked = true
-          islanders.push(current)
-          islanders = islanders
-            .unique(['id'])
-            .sort((a, b) => a.y - b.y || a.x - b.x) // sort by y then x values
-        }
-      }
     }
+
+
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) { this.updateCells() }
     // else { 
@@ -1159,6 +1164,10 @@ class Grid extends ProtoLayer {
   // #region Shape Methods
   //METH:
   createSimpleSubShapes() { this.islands.forEach(i => i.createSimpleSubShapes()) }
+  //METH: drawShapes()
+  drawShapes() {
+    this.shapes.forEach(s => s.drawElement())
+  }
   //METH:
   customizeShapes(diagonals = false) {
 
@@ -1454,6 +1463,9 @@ class Grid extends ProtoLayer {
     console.log(`allSimpleSubShapes before`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
 
     findCubicVerts()
+    console.log(`current islands`, this.islands)
+    console.log(`current shapes`, this.shapes)
+    // this.drawShapes()
 
     console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
     console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
@@ -2119,6 +2131,10 @@ class CellGroup extends ProtoLayer {
     })
   }
   //METH:
+  findSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
+
+  }
+  //METH:
   //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
   //FIXME: so "omni-min", "omni-max", "cardinal-min", "cardinal-max"
   findPerimiters(perimeterType = `maxCorners`, direction = Direction.Cardinal) {
@@ -2345,6 +2361,7 @@ class Island extends ProtoLayer {
   groupID
   parentIslandID
   cells
+  subIslands = new OpArray
   shapes = new OpArray
   direction
   perimeterType
@@ -2563,7 +2580,6 @@ class Shape extends ProtoLayer {
   subShapes
   simpleSubShapes
   finalSubShapes
-
   testVerts
   testColor
 
@@ -2611,6 +2627,8 @@ class Shape extends ProtoLayer {
   }
 
   get svg() {
+    console.log(`current subShapes`, this.id, this.subShapes)
+    console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
     let result = this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e }))
     if (result instanceof Array) {
       result = result.join(' ')
@@ -2628,6 +2646,7 @@ class Shape extends ProtoLayer {
     this.simpleSubShapes = this.subShapes.map(
       subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id, minCorners)
     )
+    this.drawElement()
     console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
@@ -2745,6 +2764,7 @@ class Shape extends ProtoLayer {
 
   //METH:
   drawElement() {
+    console.log('drawElement: ', this.id, this)
     const path = createSVGElt('path')
     // console.log(this.filter.id)
     if (this.drawFilter) {
