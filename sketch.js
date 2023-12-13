@@ -418,15 +418,17 @@ function gridTests2() {
   grid.assignGroupPerimeter('grp000', 'maxCorners', Direction.Cardinal)
   grid.assignGroupPerimeter('grp001', 'maxCorners', Direction.Cardinal)
   grid.assignGroupPerimeter('grp002', 'maxCorners', Direction.All)
+  grid.assignGroupPerimeter('grp003', 'maxCorners', Direction.Cardinal)
   console.log(`groups`, grid.groups)
 
   grid.customizeShapes()
 
+  console.log(`when does this happen?`)
   grid.findIslands({
     groupID: 'grp000',
     filter: shader2,
-    insetScale: .9,
-    // direction: Direction.All,
+    insetScale: .4,
+    // direction: Direction.Horizontal,
     // taken: true,
   })
 
@@ -579,8 +581,8 @@ function gridTests2() {
   // console.log(`cell 1 is in an island`, grid.cellIsInAnIsland(1))
   // console.log(`cell 0 is taken`, grid.cellAt(0).taken)
   // console.log(`cell 1 is taken`, grid.cellAt(1).taken)
-
-
+  console.log(`okay and when does this happen?`)
+  // grid.drawShapes()
 
   // console.log('all layers', S.allLayers)
   // grid.customizeShapes()
