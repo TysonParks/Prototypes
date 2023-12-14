@@ -254,13 +254,14 @@ function functionTestPrint() {
   // NOTE: Direction Multiples Tests
   // console.log('Direction Multiples Tests')
   // const dirA = Direction.Up
-  // const dirB = Direction.DownRight
+  // const dirB = Direction.Vertical
   // const dirC = Direction.Horizontal
   // const dirD = Direction.Cardinal
 
-  // console.log('dirA', dirA)
-  // console.log('dirC', dirC)
-  // console.log('dirD', dirD)
+  // console.log('dirA: ', dirA.name, dirA.vals)
+  // console.log('dirB: ', dirB.name, dirB.vals)
+  // console.log('dirC: ', dirC.name, dirC.vals)
+  // console.log('dirD: ', dirD.name, dirD.vals)
   // print(dirA.directions)
   // print(dirC.directions)
 
@@ -283,7 +284,13 @@ function functionTestPrint() {
   // print('')
   // print('is tests')
   // console.log('dirA.isHorizontal', dirA.isHorizontal)
+  // console.log('dirB.isHorizontal', dirB.isHorizontal)
   // console.log('dirC.isHorizontal', dirC.isHorizontal)
+  // console.log('dirD.isHorizontal', dirD.isHorizontal)
+  // console.log('dirA.isEachHorizontal', dirA.isEachHorizontal)
+  // console.log('dirB.isEachHorizontal', dirB.isEachHorizontal)
+  // console.log('dirC.isEachHorizontal', dirC.isEachHorizontal)
+  // console.log('dirD.isEachHorizontal', dirD.isEachHorizontal)
   // console.log('dirA.isVertical', dirA.isVertical)
   // console.log('dirC.isVertical', dirC.isVertical)
   // console.log('dirA.isCardinal', dirA.isCardinal)
@@ -292,6 +299,11 @@ function functionTestPrint() {
   // console.log('dirA.equals Cardinal', dirA.equals(Direction.Cardinal))
   // console.log('dirC.equals Cardinal', dirC.equals(Direction.Cardinal))
   // console.log('dirD.equals Cardinal', dirD.equals(Direction.Cardinal))
+
+  // console.log('dirA.isTwoOpposites', dirA.isTwoOpposites)
+  // console.log('dirB.isTwoOpposites', dirB.isTwoOpposites)
+  // console.log('dirC.isTwoOpposites', dirC.isTwoOpposites)
+  // console.log('dirD.isTwoOpposites', dirD.isTwoOpposites)
 
   // console.log('dirA.opposites', dirA.opposites)
   // print(dirA.isOrdinal)
