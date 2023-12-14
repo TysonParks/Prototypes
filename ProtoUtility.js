@@ -95,7 +95,7 @@ class Direction {
     this.vals = OpArray.from(this.vals)
   }
 
-  get isSingle() { return this.vals.length === 1 }
+
   get directions() { return OpArray.from(this.vals.map(a => new Direction(a))) }
   get names() { return OpArray.from(this.vals.map(a => this.#getName(a))) }
   get value() { return this.valOp(a => a) }
@@ -128,25 +128,36 @@ class Direction {
   }
   get andOpposites() { return new Direction(this.vals.union(this.opposites.vals, 'vals')) }
 
-  get isHorizontal() { return this.valOp(a => a % 2 === 1) }
-  get isVertical() { return this.valOp(a => a % 2 === 0) }
-  get isCardinal() { return this.directOp(a => a.isHorizontal || a.isVertical) }
-  get isOrdinal() { return this.valOp(a => a % 1 === 0.5) }
+  get isAll() { return this.vals.length === 8 }
   get isNone() { return this.vals.length === 0 }
 
-  // get isUp() { return this.isSingle && this.vals[0] === 0 }
-  // get isRight() { return this.isSingle && this.vals[0] === 1 }
-  // get isDown() { return this.isSingle && this.vals[0] === 2 }
-  // get isLeft() { return this.isSingle && this.vals[0] === 3 }
+  get isSingle() { return this.vals.length === 1 }
+  get isDouble() { return this.vals.length === 2 }
+  get isTwoOpposites() { return this.isDouble && this.equals(this.andOpposites) } //is Horizontal, Vertical, PosOrdinal, or NegOrdinal
+
+  get isUp() { return this.equals(Direction.Up) }
+  get isRight() { return this.equals(Direction.Right) }
+  get isDown() { return this.equals(Direction.Down) }
+  get isLeft() { return this.equals(Direction.Left) }
+
+  get isHorizontal() { return this.equals(Direction.Horizontal) }
+  get isVertical() { return this.equals(Direction.Vertical) }
+  get isCardinal() { return this.equals(Direction.Cardinal) }
+  get isOrdinal() { return this.equals(Direction.Ordinal) }
+
+  get isEachHorizontal() { return this.valOp(a => a % 2 === 1) }
+  get isEachVertical() { return this.valOp(a => a % 2 === 0) }
+  get isEachCardinal() { return this.directOp(a => a.isEachHorizontal || a.isEachVertical) }
+  get isEachOrdinal() { return this.valOp(a => a % 1 === 0.5) }
 
   get allAreHorizontal() { return this.vals.every(a => a % 2 === 1) }
   get allAreVertical() { return this.vals.every(a => a % 2 === 0) }
-  get allAreCardinal() { return this.directions.every(a => a.isHorizontal || a.isVertical) }
+  get allAreCardinal() { return this.directions.every(a => a.isEachHorizontal || a.isEachVertical) }
   get allAreOrdinal() { return this.vals.every(a => a % 1 === 0.5) }
 
   get someAreHorizontal() { return this.vals.some(a => a % 2 === 1) }
   get someAreVertical() { return this.vals.some(a => a % 2 === 0) }
-  get someAreCardinal() { return this.directions.some(a => a.isHorizontal || a.isVertical) }
+  get someAreCardinal() { return this.directions.some(a => a.isEachHorizontal || a.isEachVertical) }
   get someAreOrdinal() { return this.vals.some(a => a % 1 === 0.5) }
 
   get angleKeys() { return Object.keys(this.#angles) }
