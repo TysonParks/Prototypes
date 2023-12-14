@@ -497,7 +497,7 @@ class SelectionBounds {
   //METH: takes an Ordinal Direction and returns a row selection of corresponding quadrant of the cellBounds
   quadrant(direction) {
     console.log('')
-    if (!direction.isOrdinal || !direction.isSingle) { console.error('direction must be single Ordinal') }
+    if (!direction.allAreOrdinal || !direction.isSingle) { console.error('direction must be single Ordinal') }
     if (this.rowCount < 2 || this.columnCount < 2) { console.error('this grid is too small to get a quadrant') }
     const val = direction.vals[0]
 
@@ -514,7 +514,7 @@ class SelectionBounds {
   // TODO: DEPRECATE old implementation
   // quadrant(direction) {
   //   console.log('')
-  //   if (!direction.isOrdinal || !direction.isSingle) { console.error('direction must be single Ordinal') }
+  //   if (!direction.allAreOrdinal || !direction.isSingle) { console.error('direction must be single Ordinal') }
   //   if (this.rowCount < 2 || this.columnCount < 2) { console.error('this grid is too small to get a quadrant') }
   //   let start, end
   //   let evenMid = {}
@@ -906,7 +906,7 @@ class Grid extends ProtoLayer {
   //TODO: add sort??
   exposedSides({ cellIndex, groupID, islandID } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID })
-      .filter(e => e.isCardinal)
+      .filter(e => e.allAreCardinal)
       .map(f => this.cellAt(cellIndex).side(f))
 
   }
@@ -914,7 +914,7 @@ class Grid extends ProtoLayer {
   //TODO: add sort??
   exposedCorners({ cellIndex, groupID, islandID } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID })
-      .filter(e => e.isOrdinal)
+      .filter(e => e.allAreOrdinal)
       .map(f => this.cellAt(cellIndex).corner(f))
     // .sort((a, b) => a.y - b.y || a.x - b.x)
   }
@@ -1092,9 +1092,8 @@ class Grid extends ProtoLayer {
       let cell = cells[0]
       let islanders = OpArray.from([cell])
       let fillstack = []
-
-      //TODO: re-implement as an arrow function in order to remove extra parameter passthroughs
       //NOTE: Non-recursive flood-fill implementation from: https://codeguppy.com/blog/flood-fill/index.html
+      //FUNC: findIslanders : 
       const findIslanders = () => {
         fillstack.push(cell)
 
@@ -1149,7 +1148,6 @@ class Grid extends ProtoLayer {
       // }
 
     }
-
 
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) { this.updateCells() }
@@ -1800,7 +1798,7 @@ class Grid extends ProtoLayer {
     useAvailable = true,
     groupIDs,
   } = {}) {
-    if (!direction.isCardinal && direction.vals.length % 2 !== 0) { console.error('only Hor, Vert, and Cardinal allowed') }
+    if (!direction.allAreCardinal && direction.vals.length % 2 !== 0) { console.error('only Hor, Vert, and Cardinal allowed') }
     const isQuad = direction.equals(Direction.Cardinal) // Horizontal/Vertical = HALF, Cardinal = QUAD
     console.log('isQuad', isQuad)
     if (!selection.is2D) { selection = this.toCellRows(selection) }
@@ -2198,37 +2196,37 @@ class CellGroup extends ProtoLayer {
 
   }
 
-  // TODO: migrate these methods to grid as well
-  fullContractShape(distance = 1) {
-    this.contractShapeHor(distance)
-    this.contractShapeVert(distance)
-  }
+  // TODO: DEPRECATE!!!
+  // fullContractShape(distance = 1) {
+  //   this.contractShapeHor(distance)
+  //   this.contractShapeVert(distance)
+  // }
 
-  contractShapeHor(distance = 1) {
-    this.contractShape(1, distance)
-    this.contractShape(3, distance)
-  }
+  // contractShapeHor(distance = 1) {
+  //   this.contractShape(1, distance)
+  //   this.contractShape(3, distance)
+  // }
 
-  contractShapeVert(distance = 1) {
-    this.contractShape(0, distance)
-    this.contractShape(2, distance)
-  }
+  // contractShapeVert(distance = 1) {
+  //   this.contractShape(0, distance)
+  //   this.contractShape(2, distance)
+  // }
 
-  contractShape(direction = 2, distance = 1) {
-    if (isHorizontal(direction) && this.columnCount - distance < 1) {
-      return
-    }
-    if (!isHorizontal(direction) && this.rowCount - distance < 1) {
-      return
-    }
-    for (let i = 1; i <= distance; i++) {
-      let borderCells = this.borderCells(direction)
-      let newCells = cells.map(e => !borderCells.includes(e))
-      this.cells = newCells
-    }
-  }
+  // contractShape(direction = 2, distance = 1) {
+  //   if (isHorizontal(direction) && this.columnCount - distance < 1) {
+  //     return
+  //   }
+  //   if (!isHorizontal(direction) && this.rowCount - distance < 1) {
+  //     return
+  //   }
+  //   for (let i = 1; i <= distance; i++) {
+  //     let borderCells = this.borderCells(direction)
+  //     let newCells = cells.map(e => !borderCells.includes(e))
+  //     this.cells = newCells
+  //   }
+  // }
 
-  borderCells(direction = 0) { return this.boundsCells[direction] }
+  // borderCells(direction = 0) { return this.boundsCells[direction] }
   // #endregion
 }
 
@@ -2392,7 +2390,7 @@ class Island extends ProtoLayer {
     this.direction = direction
     this.perimeterType = perimeterType
     this.parentIslandID = parentIslandID
-    this._type = 'Island'
+    this._type = parentIslandID ? 'SubIsland' : 'Island'
     if (stored) { this.finishSetup(S.Islands) }
     // console.log('new Island', cells.map(e => e.id))
     // else { this.finishSetup() }
@@ -2439,6 +2437,12 @@ class Island extends ProtoLayer {
   get isRectangle() { return !this.isLine && this.cellBounds.isFull }
   get isSquare() { return this.isRectangle && this.cellBounds.aspect.name === 'square' }
 
+  get directionHierarchy() {
+    if (this.direction.isAll) { return 3 }
+    if (this.direction.isCardinal) { return 2 }
+    // if (this.direction.)
+  }
+
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
   }
@@ -2448,6 +2452,10 @@ class Island extends ProtoLayer {
   // #endregion
   // MARK: Methods
   // #region Methods
+  //METH:
+  findSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
+
+  }
   //METH:
   createShape(insetScale) {
     // console.log('createShape insetScale', insetScale)
