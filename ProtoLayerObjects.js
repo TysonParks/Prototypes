@@ -20,7 +20,7 @@ class ProtoLayer {
   drawSVG
   drawRect
   drawFilter
-  allowProtoErrors
+  allowsProtoErrors
 
   constructor({
     protoParent,
@@ -30,7 +30,7 @@ class ProtoLayer {
     drawSVG = true,
     drawRect = false,
     drawFilter = true,
-    allowProtoErrors = false
+    allowsProtoErrors = false
   } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
@@ -2378,7 +2378,7 @@ class Island extends ProtoLayer {
     stored = true,
     insetScale = 1,
     drawFilter = true,
-    allowProtoErrors = false,
+    allowsProtoErrors = false,
   } = {}) {
     super({
       protoParent: protoParent,
@@ -2386,7 +2386,7 @@ class Island extends ProtoLayer {
       insetScale: insetScale,
       drawRect: false,
       drawFilter: drawFilter,
-      allowProtoErrors: allowProtoErrors,
+      allowsProtoErrors: allowsProtoErrors,
     })
     this.cells = cells
     this.grid = grid
@@ -2441,7 +2441,7 @@ class Island extends ProtoLayer {
   get isRectangle() { return !this.isLine && this.cellBounds.isFull }
   get isSquare() { return this.isRectangle && this.cellBounds.aspect.name === 'square' }
 
-  get directionHierarchy() { return this.hierarchyfromDirection(this.direction) }
+  get directionHierarchy() { return this.hierarchyFrom(this.direction) }
 
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
@@ -2454,14 +2454,55 @@ class Island extends ProtoLayer {
   // #region Methods
   //METH:
   findSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
-    if (!this.allowProtoErrors) {
-      if (this.hierarchyfromDirection(direction) > this.directionHierarchy) {
-        console.error(`trying to create SubIslands out of hierarchy. auto-matching this direction`)
+    let subIslands
+    if (!this.allowsProtoErrors) { // protect Island stacking from visual errors
+      if (this.hierarchyFrom(direction) > this.directionHierarchy) {
+        console.error(`trying to create SubIslands out of hierarchy. changing direction to this.direction`)
         direction = this.direction
       }
+      if (direction.isAll && insetScale < 0.75) { // ordinal corner connecters visually disconnect with inset< 0.75
+        console.error(`trying to create SubIslands with All and inset < 0.75. changing direction to Cardinal`)
+        direction = Direction.Cardinal
+      }
+      if (direction.equals(this.direction)) { // safest/fastest to copy Island,esp calculated Shape for straight inset
+        // copy this island but change inset
+        subIslands = this.copy(insetScale)
+      }
+      if (this.hierarchyFrom(direction) > 1 && this.directionHierarchy < 2) { // hierarchy > 1 curves can crop cells
+        // recalculate cells based upon current shape/inset vs. intended shape/inset
+      }
 
+    } else {
+      subIslands = this.grid.findIslands({
+        islandID: this.id,
+        direction: direction,
+        filter: filter,
+        insetScale: insetScale,
+        drawFilter: drawFilter,
+      })
     }
+    this.subIslands = subIslands
   }
+  //METH: copy(insetScale) : create copy 
+  copy(
+    insetScale,
+    protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
+  ) {
+    return new Island({
+      cells: this.cells,
+      protoParent: protoParent,
+      svgParent: protoParent.svgElt, // Test this!!!
+      insetScale: insetScale,
+      grid: this.grid,
+      groupID: this.groupID,
+      parentIslandID: this.id,
+      direction: this.direction,
+      perimeterType: this.perimeterType,
+      stored: this.stored,
+      drawFilter: this.drawFilter
+    })
+  }
+
   //METH:
   createShape(insetScale) {
     // console.log('createShape insetScale', insetScale)
@@ -2542,15 +2583,15 @@ class Island extends ProtoLayer {
     this.shapes.push(thisShape)
     // print(`END Shape Test`)
   }
-  //METH:
-  hierarchyfromDirection(direction) {
+  //METH: hierarchyFrom(direction) : hierarchy weight used to prevent overlaps in island stacks
+  hierarchyFrom(direction) {
     if (direction.isAll) { return 3 }
     if (direction.isCardinal) { return 2 }
     if (direction.isTwoOpposites) { return 1 }
     if (direction.isNone) { return 0 }
     console.error('Undefined directionHierachy')
   }
-  //METH:
+  //METH: createSimpleSubShapes(minCorners) : direct all shapes to createSimpleSubShapes 
   createSimpleSubShapes(minCorners = false) { this.shapes.forEach(s => s.createSimpleSubShapes(minCorners)) }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
