@@ -20,6 +20,7 @@ class ProtoLayer {
   drawSVG
   drawRect
   drawFilter
+  allowProtoErrors
 
   constructor({
     protoParent,
@@ -29,6 +30,7 @@ class ProtoLayer {
     drawSVG = true,
     drawRect = false,
     drawFilter = true,
+    allowProtoErrors = false
   } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
@@ -2376,6 +2378,7 @@ class Island extends ProtoLayer {
     stored = true,
     insetScale = 1,
     drawFilter = true,
+    allowProtoErrors = false,
   } = {}) {
     super({
       protoParent: protoParent,
@@ -2383,6 +2386,7 @@ class Island extends ProtoLayer {
       insetScale: insetScale,
       drawRect: false,
       drawFilter: drawFilter,
+      allowProtoErrors: allowProtoErrors,
     })
     this.cells = cells
     this.grid = grid
@@ -2440,7 +2444,9 @@ class Island extends ProtoLayer {
   get directionHierarchy() {
     if (this.direction.isAll) { return 3 }
     if (this.direction.isCardinal) { return 2 }
-    // if (this.direction.)
+    if (this.direction.isTwoOpposites) { return 1 }
+    if (this.direction.isNone) { return 0 }
+    console.error('Island has undefined directionHierachy')
   }
 
   get exposedSegments() {
