@@ -2441,13 +2441,7 @@ class Island extends ProtoLayer {
   get isRectangle() { return !this.isLine && this.cellBounds.isFull }
   get isSquare() { return this.isRectangle && this.cellBounds.aspect.name === 'square' }
 
-  get directionHierarchy() {
-    if (this.direction.isAll) { return 3 }
-    if (this.direction.isCardinal) { return 2 }
-    if (this.direction.isTwoOpposites) { return 1 }
-    if (this.direction.isNone) { return 0 }
-    console.error('Island has undefined directionHierachy')
-  }
+  get directionHierarchy() { return this.hierarchyfromDirection(this.direction) }
 
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
@@ -2460,7 +2454,13 @@ class Island extends ProtoLayer {
   // #region Methods
   //METH:
   findSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
+    if (!this.allowProtoErrors) {
+      if (this.hierarchyfromDirection(direction) > this.directionHierarchy) {
+        console.error(`trying to create SubIslands out of hierarchy. auto-matching this direction`)
+        direction = this.direction
+      }
 
+    }
   }
   //METH:
   createShape(insetScale) {
@@ -2541,6 +2541,14 @@ class Island extends ProtoLayer {
     // this.shape = thisShape
     this.shapes.push(thisShape)
     // print(`END Shape Test`)
+  }
+  //METH:
+  hierarchyfromDirection(direction) {
+    if (direction.isAll) { return 3 }
+    if (direction.isCardinal) { return 2 }
+    if (direction.isTwoOpposites) { return 1 }
+    if (direction.isNone) { return 0 }
+    console.error('Undefined directionHierachy')
   }
   //METH:
   createSimpleSubShapes(minCorners = false) { this.shapes.forEach(s => s.createSimpleSubShapes(minCorners)) }
