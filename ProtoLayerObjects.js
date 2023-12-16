@@ -2502,7 +2502,36 @@ class Island extends ProtoLayer {
       drawFilter: this.drawFilter
     })
   }
+  //METH: recalcCells(shapes, newInsetScale) : 
+  recalcCells(shapes, newInsetScale) {
+    if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
+    //TODO: replace simpSubShapes with finalSubShapes once finalSubShapes has been reached
+    // if (!this.shapes.finalSubShapes) { console.error(`cannot recalcCells because shape has no finalSubShapes`) }
+    if (!this.shapes.simpleSubShapes) { console.error(`cannot simpleSubShapes because shape has no finalSubShapes`) }
+    const cellRadius = this.grid.minCellWidth / 2
+    let corners = this.shapes.simpleSubShapes
+      .filter(seg => // filter unfinished Corners
+        !seg.neighbors.start.availableEndLength && !seg.availableStartLength // remove once finalSubShapes implemented!!
+      )
+      .filter(seg => // filter corners with minimum curvature
+        seg.neighbors.start.availableEndLength <= cellRadius || seg.availableStartLength <= cellRadius
+      )
+      .map(seg =>
+        [
+          seg.availableStartLength,
+          seg.neighbors.start.closestCubicEndVert,
+          seg.start,
+          seg.closesCubicStartVert
+        ])
 
+
+
+    // filter for cells affected by corners (within bounds created by each corner's cubicVerts)
+    // create origin for each corner arc from the intersection of normals through each cubicVert
+    // use origin to calculate radius of arc
+    // filter out all cells whose (distance from arc origin to cellCenter + 1/2 cellWidth) < arcRadius
+    // then address remaining border cells!?!
+  }
   //METH:
   createShape(insetScale) {
     // console.log('createShape insetScale', insetScale)
