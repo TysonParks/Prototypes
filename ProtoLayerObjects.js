@@ -1053,12 +1053,13 @@ class Grid extends ProtoLayer {
   //METH: findIslands()
   findIslands({
     selection,
-    bounds = this.cellBounds(),
     groupID,
     islandID,
     filter,
     direction = Direction.Cardinal,
     perimeterType = `maxCorners`,
+    protoParent = this,
+    bounds = this.cellBounds(),
     taken = true,
     stored = true,
     insetScale = 1,
@@ -1074,14 +1075,14 @@ class Grid extends ProtoLayer {
       if (groupID) {
         group = this.groupNamed(groupID)
         cells = group?.cells || OpArray.empty
-        // console.log(`2nd if: group ${groupID} should have filter set to filter ${filter.id}`)
         group?.setFilter(filter)
+        if (group) { protoParent = group }
       }
       if (islandID) {
         island = this.islandNamed(islandID)
         cells = island?.cells || OpArray.empty
         island?.setFilter(filter)
-        group?.setFilter(filter)
+        if (island) { protoParent = island }
       }
     } else {
       cells = OpArray.from(selection)
@@ -1127,9 +1128,9 @@ class Grid extends ProtoLayer {
       cells = cells.exclude(islanders, ['id'])
       islanders.forEach(e => e.islandChecked = false)
 
-      let island = new Island({
+      let newIsland = new Island({
         cells: islanders,
-        protoParent: groupID ? this.groupNamed(groupID) : this,
+        protoParent: protoParent,
         svgParent: this.protoParent.svgElt,
         insetScale: insetScale,
         grid: this,
@@ -1141,12 +1142,12 @@ class Grid extends ProtoLayer {
         drawFilter: drawFilter,
       })
       if (stored) {
-        island.setFilter(filter)
-        // this.islands.push(island)
-        if (group) { group.islands.push(island) }
+        newIsland.setFilter(filter)
+        // this.islands.push(newIsland)
+        if (group) { group.islands.push(newIsland) }
       }
       // else { 
-      tempIslands.push(island)
+      tempIslands.push(newIsland)
       // }
 
     }
@@ -1544,11 +1545,11 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Generators
   // #region Grammar Generators
   //METH:
-  randGroup({ selection = this.availableCells, amount } = {}) { this.assignCells(selection.randReduce(amount)) }
+  randGroup({ selection = this.availableCells, amount } = {}) { return this.assignCells(selection.randReduce(amount)) }
   //METH:
   randomSelection(amount, selection = this.availableCells) { return selection.copy.randReduce(amount) }
   //METH:
-  groupAvail() { this.assignCells(this.availableCells) }
+  groupAvail() { return this.assignCells(this.availableCells) }
 
   //METH:
   randomComb({
@@ -1558,11 +1559,11 @@ class Grid extends ProtoLayer {
     start = 0
   } = {}) {
     const reduced = selection.randCombReduce({ keepRange: keepRange, dropRange: dropRange, start: start, })
-    this.assignCells(reduced)
+    return this.assignCells(reduced)
   }
   //METH:
   comb({ selection = this.availableCells, keep = 2, drop = 1, start = 0 } = {}) {
-    this.randomComb({
+    return this.randomComb({
       selection: selection,
       keepRange: range(keep, keep),
       dropRange: range(drop, drop),
@@ -1668,12 +1669,7 @@ class Grid extends ProtoLayer {
       // console.log('available', available.map(e => e.id))
     })
 
-    this.assignCells(selection)
-
-    //create new group and assign collected squares to it
-    // const group = new CellGroup(this, this.svgElt, this)
-    // this.assignCells(selection, group)
-    // }
+    return this.assignCells(selection)
   }
   //METH:
   triangles(coverage) { }
@@ -2010,7 +2006,8 @@ class Grid extends ProtoLayer {
 
     }
     this.updateCells({ groupID: group.id })
-    return this
+    return group
+    // return this
   }
   //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
@@ -2470,6 +2467,15 @@ class Island extends ProtoLayer {
       }
       if (this.hierarchyFrom(direction) > 1 && this.directionHierarchy < 2) { // hierarchy > 1 curves can crop cells
         // recalculate cells based upon current shape/inset vs. intended shape/inset
+        const newCells = this.recalcCells(insetScale)
+        subIslands = this.grid.findIslands({
+          selection: newCells,
+          islandID: this.id,
+          direction: direction,
+          filter: filter,
+          insetScale: insetScale,
+          drawFilter: drawFilter,
+        })
       }
 
     } else {
@@ -2503,7 +2509,7 @@ class Island extends ProtoLayer {
     })
   }
   //METH: recalcCells(shapes, newInsetScale) : 
-  recalcCells(shapes, newInsetScale) {
+  recalcCells(newInsetScale, shapes = this.shapes) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
     //TODO: replace simpSubShapes with finalSubShapes once finalSubShapes has been reached
     // if (!this.shapes.finalSubShapes) { console.error(`cannot recalcCells because shape has no finalSubShapes`) }
