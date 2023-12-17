@@ -588,6 +588,7 @@ function gridTests2() {
   // grid.customizeShapes()
   console.log('all layers', S.allLayers)
   console.log(`grid`, grid)
+  console.log(grid.cellRows.flat().map(cell => cell.center))
 }
 
 // MARK: DRAWING FUNCS
