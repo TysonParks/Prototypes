@@ -1030,7 +1030,7 @@ class Grid extends ProtoLayer {
   allExposedSides({ selection, groupID, islandID } = {}) {
     return selection
       .flatMap(e => this.exposedSides({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
-      .sort((a, b) => a.verts.start.y - b.verts.start.y || a.verts.start.x - b.verts.start.x) // sort by y, x 
+      .sort((a, b) => a.start.y - b.start.y || a.start.x - b.start.x) // sort by y, x 
   }
   //METH: 
   allExposedCorners({ selection, groupID, islandID } = {}) {
@@ -2507,29 +2507,58 @@ class Island extends ProtoLayer {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
     //TODO: replace simpSubShapes with finalSubShapes once finalSubShapes has been reached
     // if (!this.shapes.finalSubShapes) { console.error(`cannot recalcCells because shape has no finalSubShapes`) }
-    if (!this.shapes.simpleSubShapes) { console.error(`cannot simpleSubShapes because shape has no finalSubShapes`) }
+    if (!shapes.simpleSubShapes) { console.error(`cannot simpleSubShapes because shape has no finalSubShapes`) }
     const cellRadius = this.grid.minCellWidth / 2
-    let corners = this.shapes.simpleSubShapes
+    // let newCells = this.cells
+    let corners = shapes.simpleSubShapes
       .filter(seg => // filter unfinished Corners
         !seg.neighbors.start.availableEndLength && !seg.availableStartLength // remove once finalSubShapes implemented!!
       )
       .filter(seg => // filter corners with minimum curvature
         seg.neighbors.start.availableEndLength <= cellRadius || seg.availableStartLength <= cellRadius
       )
-      .map(seg =>
-        [
-          seg.availableStartLength,
-          seg.neighbors.start.closestCubicEndVert,
-          seg.start,
-          seg.closesCubicStartVert
-        ])
+    let removeCells = new OpArray // cells to remove
+    let addCells = new OpArray // cells to add
+    corners.forEach(seg => {
+      const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
+      const neighbor = seg.neighbors.start
+      const arcRadius = seg.availableStartLength // arcRadius : only correct if corner is circular arc. use min otherwise
+      const startCorner = neighbor.closestCubicEndVert// startCorner of arc
+      const normalCorner = seg.start // normal pointer of arc
+      const endCorner = seg.closesCubicStartVert // endCorner of arc
+      const origin = startCorner.add(seg.lineVector)// origin of arc
+      const squareVerts = [startCorner, normalCorner, endCorner, origin].sort((a, b) => a.y - b.y || a.x - b.x)
+      let cornerCells = this.grid.cells.filter(cell => // find cells within arc square
+        cell.center.x > squareVerts[0].x
+        && cell.center.y > squareVerts[0].y
+        && cell.center.x < squareVerts[3].x
+        && cell.center.y < squareVerts[3].y
+      )
+      //FIXME: cellRadius should be replaced with something that takes insetScale into account
+      if (isOutsideCorner) {
+        cornerCells.forEach(cell => {
+          const length = segment(origin, cell.center).length + cellRadius
+          if (length > arcRadius) { removeCells.push(cell) }
+        })
+      } else {
+        //FIXME: this is probably wrong, maybe sketch it out
+        cornerCells.forEach(cell => {
+          const length = segment(origin, cell.center).length - cellRadius
+          if (length > arcRadius) { addCells.push(cell) }
+        })
+      }
 
+    })
+    let newCells = this.cells
+      .union(addCells, 'id')
+      .exclude(removeCells, 'id')
 
+    return newCells
 
     // filter for cells affected by corners (within bounds created by each corner's cubicVerts)
     // create origin for each corner arc from the intersection of normals through each cubicVert
     // use origin to calculate radius of arc
-    // filter out all cells whose (distance from arc origin to cellCenter + 1/2 cellWidth) < arcRadius
+    // filter out all cells whose (distance from arc origin to cellCenter + cellRadius) < arcRadius
     // then address remaining border cells!?!
   }
   //METH:
