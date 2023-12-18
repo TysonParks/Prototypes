@@ -1069,27 +1069,27 @@ class Grid extends ProtoLayer {
     if (!groupID && !islandID && !selection) {
       if (taken) { cells = this.takenCells }
       else { cells = this.availableCells }
-      if (filter) { this.setFilter(filter) }
+      // if (filter) { this.setFilter(filter) }
     }
     if (!selection) {
       if (groupID) {
         group = this.groupNamed(groupID)
         cells = group?.cells || OpArray.empty
-        group?.setFilter(filter)
+        // group?.setFilter(filter)
         if (group) { protoParent = group }
       }
       if (islandID) {
         island = this.islandNamed(islandID)
         cells = island?.cells || OpArray.empty
-        island?.setFilter(filter)
+        // island?.setFilter(filter)
         if (island) { protoParent = island }
       }
     } else {
       cells = OpArray.from(selection)
     }
     if (cells.isEmpty) { return }
+
     let tempIslands = new OpArray
-    // console.log('cells', cells.map(e => e.id))
 
     while (cells.length > 0) {
       let cell = cells[0]
@@ -1105,6 +1105,8 @@ class Grid extends ProtoLayer {
           if (current.islandChecked) { continue }
           let neighbors = this.validNeighbors({ selection: [current], bounds: bounds, directions: direction.directions })
             .filter(e => !e.islandChecked)
+          //NOTE: I can't remember why I wrote this logic to work with goupID and islandID. Else case makes sense. This might be a source of problems down the road, or an avenue for something interesting. 
+          //TODO: Actually, I wonder if this might be affecting symmetrize bugs? INVESTIGATE!!!
           if (taken) {
             if (groupID) { neighbors = neighbors.filter(e => e.groupID === groupID) }
             if (islandID) { neighbors = neighbors.filter(e => e.islandIDs.has(islandID)) }
@@ -1141,24 +1143,19 @@ class Grid extends ProtoLayer {
         stored: stored,
         drawFilter: drawFilter,
       })
+
       if (stored) {
         newIsland.setFilter(filter)
-        // this.islands.push(newIsland)
         if (group) { group.islands.push(newIsland) }
       }
-      // else { 
       tempIslands.push(newIsland)
-      // }
-
     }
 
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) { this.updateCells() }
-    // else { 
     //FIXME: filter Islands the isPerimeter === false, only creating shapes for non-perimeters
     tempIslands.forEach(e => e.createShape())
     return tempIslands
-    // }
   }
   // #endregion
   // MARK: Shape Methods
@@ -2470,7 +2467,7 @@ class Island extends ProtoLayer {
         const newCells = this.recalcCells(insetScale)
         subIslands = this.grid.findIslands({
           selection: newCells,
-          islandID: this.id,
+          protoParent: this,
           direction: direction,
           filter: filter,
           insetScale: insetScale,
