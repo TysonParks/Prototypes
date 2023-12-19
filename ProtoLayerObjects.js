@@ -1146,6 +1146,11 @@ class Grid extends ProtoLayer {
 
       if (stored) {
         newIsland.setFilter(filter)
+        //FIXME: DO
+        //FIXME: THIS
+        //FIXME: FIRST!!!
+        //FIXME:
+        //FIXME: Need to delete next line and just have islands do nested stacking, but it breaks createShapes
         if (group) { group.islands.push(newIsland) }
       }
       tempIslands.push(newIsland)
@@ -1976,7 +1981,7 @@ class Grid extends ProtoLayer {
   assignGroupPerimeter(groupID, perimeterType) {
     const group = this.groupNamed(groupID)
     if (!group) { console.error(`groupID ${groupID} is invalid`) }
-    group?.findPerimiters(perimeterType)
+    group?.createPerimiters(perimeterType)
   }
   //METH:
   assignCells(selection, groupID) {
@@ -2112,10 +2117,10 @@ class CellGroup extends ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   //METH:
-  //FIXME: finish implementation to make findPerimiters work with min-corners
+  //FIXME: finish implementation to make createPerimiters work with min-corners
   createSimpleSubShapes(minCorners = false) { }
   //METH:
-  createSubIslands({ direction, filter, insetScale = 1 } = {}) {
+  createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     if (this.islands.isEmpty) {
       this.perimeterIslands.forEach(i =>
         i.createSubIslands({
@@ -2129,8 +2134,8 @@ class CellGroup extends ProtoLayer {
   //METH:
   //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
   //FIXME: so "omni-min", "omni-max", "cardinal-min", "cardinal-max"
-  findPerimiters(perimeterType = `maxCorners`, direction = Direction.Cardinal) {
-    console.log(`findPerimiters this.id`, this.id)
+  createPerimiters(perimeterType = `maxCorners`, direction = Direction.Cardinal) {
+    console.log(`createPerimiters this.id`, this.id)
     this.perimeterType = perimeterType
     switch (perimeterType) {
       case 'maxCorners':
@@ -2142,7 +2147,7 @@ class CellGroup extends ProtoLayer {
         console.error(`${perimeterType} is invalid Perimeter Type`)
     }
     const groupID = this.id
-    console.log(`findPerimiters groupID`, groupID)
+    console.log(`createPerimiters groupID`, groupID)
     this.perimeterIslands = this.grid.createIslands({
       groupID: this.id,
       direction: direction,
@@ -2354,7 +2359,8 @@ class Island extends ProtoLayer {
   groupID
   parentIslandID
   cells
-  subIslands = new OpArray
+  subIslands
+  islandLevel
   shapes = new OpArray
   direction
   perimeterType
@@ -2387,6 +2393,7 @@ class Island extends ProtoLayer {
     this.direction = direction
     this.perimeterType = perimeterType
     this.parentIslandID = parentIslandID
+    this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
     this._type = parentIslandID ? 'SubIsland' : 'Island'
     if (stored) { this.finishSetup(S.Islands) }
     // console.log('new Island', cells.map(e => e.id))
@@ -2447,6 +2454,13 @@ class Island extends ProtoLayer {
   // #region Methods
   //METH:
   createSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
+    if (this.subIslands) {
+      this.subIslands.forEach(isle =>
+        isle.createSubIslands({ direction: direction, filter: filter, insetScale: insetScale, drawFilter: drawFilter })
+      )
+      return
+    }
+
     let subIslands
     if (!this.allowsProtoErrors) { // protect Island stacking from visual errors
       if (this.hierarchyFrom(direction) > this.directionHierarchy) {
@@ -2474,7 +2488,7 @@ class Island extends ProtoLayer {
         })
       }
 
-    } else {
+    } else { // create unprotected Island stacks with potential visual errors
       subIslands = this.grid.createIslands({
         islandID: this.id,
         direction: direction,
@@ -2556,13 +2570,9 @@ class Island extends ProtoLayer {
       .exclude(removeCells, 'id')
 
     return newCells
-
-    // filter for cells affected by corners (within bounds created by each corner's cubicVerts)
-    // create origin for each corner arc from the intersection of normals through each cubicVert
-    // use origin to calculate radius of arc
-    // filter out all cells whose (distance from arc origin to cellCenter + cellRadius) < arcRadius
-    // then address remaining border cells!?!
   }
+  //METH:
+
   //METH:
   createShape(insetScale) {
     // console.log('createShape insetScale', insetScale)
@@ -2617,6 +2627,9 @@ class Island extends ProtoLayer {
               nextSeg = next.find(e => e.direction.equals(nextDirection))
               if (nextSeg === undefined) { console.error('unexpected 2nd segment') }
             }
+            console.log(`subShape iter ${subShapeIter}`, segments)
+            console.log(`thisSeg`, thisSeg)
+            console.log(`nextSeg`, nextSeg)
             thisSeg.assignNeighbors({ end: nextSeg })
             nextSeg.assignNeighbors({ start: thisSeg })
             fillstack.push(nextSeg)
