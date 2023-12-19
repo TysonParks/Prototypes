@@ -562,7 +562,7 @@ class SelectionBounds {
   //METH: 
   innerCellIslands({ taken = true, stored = false, direction = Direction.Horizontal } = {}) {
     console.log('innerCellIslands called')
-    return this.grid.findIslands({
+    return this.grid.createIslands({
       selection: taken ? this.selection : this.availableCells,
       bounds: this,
       groupID: this.groupID,
@@ -783,7 +783,7 @@ class Grid extends ProtoLayer {
 
     return simpShapes
   }
-  // get islands() { return this.findIslands({ selection: this.cells }) }
+  // get islands() { return this.createIslands({ selection: this.cells }) }
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
@@ -1045,13 +1045,13 @@ class Grid extends ProtoLayer {
     // .sort()
   }
   // #endregion
-  // MARK: findIslands Method
-  // #region findIslands Method
+  // MARK: createIslands Method
+  // #region createIslands Method
   //TODO: add transform functionality
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
   //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
-  //METH: findIslands()
-  findIslands({
+  //METH: createIslands()
+  createIslands({
     selection,
     groupID,
     islandID,
@@ -2115,18 +2115,16 @@ class CellGroup extends ProtoLayer {
   //FIXME: finish implementation to make findPerimiters work with min-corners
   createSimpleSubShapes(minCorners = false) { }
   //METH:
-  findIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
-    return this.grid.findIslands({
-      groupID: this.id,
-      direction: direction,
-      filter: filter,
-      insetScale: insetScale,
-      drawFilter: drawFilter,
-    })
-  }
-  //METH:
-  findSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
-
+  createSubIslands({ direction, filter, insetScale = 1 } = {}) {
+    if (this.islands.isEmpty) {
+      this.perimeterIslands.forEach(i =>
+        i.createSubIslands({
+          direction: direction,
+          filter: filter,
+          insetScale: insetScale,
+          // drawFilter: drawFilter,
+        }))
+    }
   }
   //METH:
   //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
@@ -2145,7 +2143,8 @@ class CellGroup extends ProtoLayer {
     }
     const groupID = this.id
     console.log(`findPerimiters groupID`, groupID)
-    this.perimeterIslands = this.findIslands({
+    this.perimeterIslands = this.grid.createIslands({
+      groupID: this.id,
       direction: direction,
       perimeterType: perimeterType,
       drawFilter: false,
@@ -2447,7 +2446,7 @@ class Island extends ProtoLayer {
   // MARK: Methods
   // #region Methods
   //METH:
-  findSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
+  createSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
     let subIslands
     if (!this.allowsProtoErrors) { // protect Island stacking from visual errors
       if (this.hierarchyFrom(direction) > this.directionHierarchy) {
@@ -2465,7 +2464,7 @@ class Island extends ProtoLayer {
       if (this.hierarchyFrom(direction) > 1 && this.directionHierarchy < 2) { // hierarchy > 1 curves can crop cells
         // recalculate cells based upon current shape/inset vs. intended shape/inset
         const newCells = this.recalcCells(insetScale)
-        subIslands = this.grid.findIslands({
+        subIslands = this.grid.createIslands({
           selection: newCells,
           protoParent: this,
           direction: direction,
@@ -2476,7 +2475,7 @@ class Island extends ProtoLayer {
       }
 
     } else {
-      subIslands = this.grid.findIslands({
+      subIslands = this.grid.createIslands({
         islandID: this.id,
         direction: direction,
         filter: filter,
