@@ -242,7 +242,7 @@ class ProtoMill {
   }
   //METH:
   setShaders() {
-    //TODO: assign shaders and insets using Grid.findIslands()
+    //TODO: assign shaders and insets using Grid.createIslands()
   }
   //METH:
   mkFinal() { }
@@ -424,7 +424,7 @@ function gridTests2() {
   grid.customizeShapes()
 
   console.log(`when does this happen?`)
-  grid.findIslands({
+  grid.createIslands({
     groupID: 'grp000',
     filter: shader2,
     insetScale: .4,
@@ -432,7 +432,7 @@ function gridTests2() {
     // taken: true,
   })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp000',
   //   filter: shader5,
   //   insetScale: .5,
@@ -440,7 +440,7 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp000',
   //   filter: shader5,
   //   insetScale: 1,
@@ -448,7 +448,7 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp000',
   //   filter: emptyShader,
   //   insetScale: .25,
@@ -456,7 +456,7 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp000',
   //   filter: shader5,
   //   insetScale: .5,
@@ -464,7 +464,7 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp000',
   //   filter: shader4,
   //   insetScale: .0001,
@@ -472,7 +472,7 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp000',
   //   filter: shader5,
   //   insetScale: .0001,
@@ -480,7 +480,7 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp001',
   //   filter: shader2,
   //   insetScale: .75,
@@ -488,7 +488,7 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  grid.findIslands({
+  grid.createIslands({
     groupID: 'grp002',
     filter: shader4,
     insetScale: .9,
@@ -496,7 +496,7 @@ function gridTests2() {
     // taken: false,
   })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp002',
   //   filter: shader5,
   //   insetScale: .5,
@@ -504,7 +504,7 @@ function gridTests2() {
   //   // taken: false,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp002',
   //   filter: shader2,
   //   insetScale: .9,
@@ -512,7 +512,7 @@ function gridTests2() {
   //   // taken: false,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp001',
   //   filter: shader0,
   //   insetScale: .6,
@@ -520,7 +520,7 @@ function gridTests2() {
   //   // taken: false,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp001',
   //   filter: shader2,
   //   insetScale: .8,
@@ -528,7 +528,7 @@ function gridTests2() {
   //   // taken: false,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp001',
   //   filter: shader2,
   //   insetScale: .5,
@@ -536,7 +536,7 @@ function gridTests2() {
   //   // taken: false,
   // })
 
-  grid.findIslands({
+  grid.createIslands({
     groupID: 'grp001',
     filter: shader0,
     insetScale: .9,
@@ -544,7 +544,7 @@ function gridTests2() {
     // taken: false,
   })
 
-  grid.findIslands({
+  grid.createIslands({
     groupID: 'grp003',
     filter: shader7,
     insetScale: .9,
@@ -552,7 +552,7 @@ function gridTests2() {
     // taken: false,
   })
 
-  grid.findIslands({
+  grid.createIslands({
     groupID: 'grp004',
     filter: shader5,
     insetScale: .9,
@@ -560,7 +560,7 @@ function gridTests2() {
     // taken: false,
   })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp001',
   //   filter: shader4,
   //   insetScale: .75,
@@ -568,7 +568,7 @@ function gridTests2() {
   //   // taken: false,
   // })
 
-  // grid.findIslands({
+  // grid.createIslands({
   //   groupID: 'grp001',
   //   filter: shader3,
   //   insetScale: .5,
