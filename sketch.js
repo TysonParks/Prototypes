@@ -351,7 +351,7 @@ function gridTests2() {
 
 
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  grid.squares({ coverage: 0.15, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
+  let group000 = grid.squares({ coverage: 0.15, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
   // grid.randGroup({amount:0.2})
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -366,8 +366,8 @@ function gridTests2() {
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  let group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
 
   // grid.randGroup({amount:0.5})
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
@@ -391,7 +391,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
-  grid.groupAvail()
+  let group003 = grid.groupAvail()
 
   // const bounds = grid.cellBounds({ selection: grid.cells })
   // const bounds2 = grid.gridCellBounds
@@ -424,13 +424,20 @@ function gridTests2() {
   grid.customizeShapes()
 
   console.log(`when does this happen?`)
-  grid.createIslands({
-    groupID: 'grp000',
-    filter: shader2,
-    insetScale: .4,
-    // direction: Direction.Horizontal,
-    // taken: true,
-  })
+
+  // group000.createSubIslands({
+  //   // direction: Direction.Horizontal,
+  //   filter: shader2,
+  //   insetScale: .4,
+  // })
+
+  // grid.createIslands({
+  //   groupID: 'grp000',
+  //   filter: shader2,
+  //   insetScale: .4,
+  //   // direction: Direction.Horizontal,
+  //   // taken: true,
+  // })
 
   // grid.createIslands({
   //   groupID: 'grp000',
