@@ -423,7 +423,7 @@ function gridTests2() {
 
   grid.customizeShapes()
 
-  console.log(`when does this happen?`)
+  // console.log(`when does this happen?`)
 
   // group000.createSubIslands({
   //   // direction: Direction.Horizontal,
@@ -431,13 +431,13 @@ function gridTests2() {
   //   insetScale: .4,
   // })
 
-  // grid.createIslands({
-  //   groupID: 'grp000',
-  //   filter: shader2,
-  //   insetScale: .4,
-  //   // direction: Direction.Horizontal,
-  //   // taken: true,
-  // })
+  grid.createIslands({
+    groupID: 'grp000',
+    filter: shader2,
+    insetScale: .4,
+    // direction: Direction.Horizontal,
+    // taken: true,
+  })
 
   // grid.createIslands({
   //   groupID: 'grp000',
@@ -588,7 +588,7 @@ function gridTests2() {
   // console.log(`cell 1 is in an island`, grid.cellIsInAnIsland(1))
   // console.log(`cell 0 is taken`, grid.cellAt(0).taken)
   // console.log(`cell 1 is taken`, grid.cellAt(1).taken)
-  console.log(`okay and when does this happen?`)
+  // console.log(`okay and when does this happen?`)
   // grid.drawShapes()
 
   // console.log('all layers', S.allLayers)
