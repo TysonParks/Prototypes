@@ -1151,7 +1151,7 @@ class Grid extends ProtoLayer {
         //FIXME: FIRST!!!
         //FIXME:
         //FIXME: Need to delete next line and just have islands do nested stacking, but it breaks createShapes
-        if (group) { group.islands.push(newIsland) }
+        // if (group) { group.islands.push(newIsland) }
       }
       tempIslands.push(newIsland)
     }
@@ -1180,11 +1180,11 @@ class Grid extends ProtoLayer {
     // Simplify all segments in 'flatsAndCorners' to corners only/straight segments
 
     const shapeCells = this.cellsInAnIsland // get all cells assigned to an island
-    console.log(`shapeCells`, shapeCells)
+    // console.log(`shapeCells`, shapeCells)
 
     let allSegments = shapeCells.map(cell => cell.segments).flat() // all segments contained in shapeCells
-    console.log(`allSegments`, allSegments.map(s => s.id))
-    console.log(`allSegments`, allSegments)
+    // console.log(`allSegments`, allSegments.map(s => s.id))
+    // console.log(`allSegments`, allSegments)
     let uTurnSegs = allSegments.filter(seg => seg.isUTurn)
     // console.log(`uTurnSegs`, uTurnSegs.map(c => c.id))
     let stairSegs = allSegments.filter(seg => seg.isStair)
@@ -1244,7 +1244,7 @@ class Grid extends ProtoLayer {
         .map(cell => cell.segments).flat() // segments within those cells
         .filter(seg => seg.isCorner) // corner segments within those segments
         .exclude(madeSegs, ['id']) // exclude segments already made in previous stairs
-      console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
+      // console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
       assignMids(minCornerSegs, 'Corner', false) // assign midpoints to these segs + shared segs with inside turns
     }
     // else { console.log(`there is NOT a minCorners Group`) }
@@ -1255,8 +1255,8 @@ class Grid extends ProtoLayer {
     // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
     let allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
     // let currentSimples = allSimpleSegments.copy // deflationary working copy
-    console.log(`allSimpleSegments`, allSimpleSegments.map(s => s.id))
-    console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
+    // console.log(`allSimpleSegments`, allSimpleSegments.map(s => s.id))
+    // console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
     //TODO: Add a first stage in which 4-sided shapes are processed. It's here where I can vary the outcomes.
     //NOTE: Modes: 0-Normal, 1-reflective offset, 2-rotational offset, 3-Random
     //FUNC: formQuadShapes(mode) : 
@@ -1265,8 +1265,8 @@ class Grid extends ProtoLayer {
       let quads = this.allSimpleSubShapes
         .filter(sub => sub.length === 4)// filter for 4-sided shapes
         .sort((a, b) => addSides(b) - addSides(a))
-      console.log(`this.allSimpleSubShapes`, this.allSimpleSubShapes)
-      console.log('quads', quads)
+      // console.log(`this.allSimpleSubShapes`, this.allSimpleSubShapes)
+      // console.log('quads', quads)
 
       switch (mode) {
         case 0:
@@ -1296,8 +1296,8 @@ class Grid extends ProtoLayer {
     }
 
     let currentSimples = sortedSimples(this.allSimpleSubShapes)
-    console.log(`currentSimples`, currentSimples.map(s => s.id))
-    console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
+    // console.log(`currentSimples`, currentSimples.map(s => s.id))
+    // console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
     //FUNC: simpleSegFromID(id) : find segment inside of allSimpleSubShapes
     const simpleSegFromID = (id) => {
       for (const sub of this.allSimpleSubShapes) {
@@ -1340,12 +1340,12 @@ class Grid extends ProtoLayer {
       let limit = 40
       while (currentSimples.length > 0 && limit > 0) {
         limit -= 1
-        console.log(`limit`, limit)
-        console.log(`currentSimples.length`, currentSimples.length)
+        // console.log(`limit`, limit)
+        // console.log(`currentSimples.length`, currentSimples.length)
 
         const seg = simpleSegFromID(currentSimples[0].id)
-        console.log(`seg`, seg)
-        console.log(`seg stats`, seg.minCubicLength, seg.part.value, seg.cubicVertCount, seg.id)
+        // console.log(`seg`, seg)
+        // console.log(`seg stats`, seg.minCubicLength, seg.part.value, seg.cubicVertCount, seg.id)
         const segSL = seg.availableStartLength
         const segEL = seg.availableEndLength
         let segStartData = [seg, segSL]
@@ -1378,7 +1378,7 @@ class Grid extends ProtoLayer {
             //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
             // calculate shortest length available in segTriplet
             const segShortest = segTriplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
-            console.log(`segShortest`, segShortest)
+            // console.log(`segShortest`, segShortest)
             //1. assign both UTurn OUT segment cubicVerts and it's neighboring cubicVerts
             startNeighbor.addCubicEndVert(startNeighbor.distancedEndPoint(segShortest))
             seg.addCubicStartVert(seg.distancedStartPoint(segShortest))
@@ -1388,18 +1388,18 @@ class Grid extends ProtoLayer {
             //TODO: this probably needs to become a func itself that can be called (non) recursively
             //2. if seg has shared corners (2 sides wrapping), assign matching verts if shortest
             if (shared) { // if seg shares a side
-              console.log('** shared', shared)
+              // console.log('** shared', shared)
               if (shared.turns.start.isLeft) { // start turn wraps this uTurnOut seg
                 const neighbor = shared.neighbors.start
                 const shortest = min(segShortest, neighbor.availableEndLength)
-                console.log(`start shortest`, shortest)
+                // console.log(`start shortest`, shortest)
                 shared.addCubicStartVert(shared.distancedStartPoint(shortest))
                 neighbor.addCubicEndVert(neighbor.distancedEndPoint(shortest))
               }
               if (shared.turns.end.isLeft) { // end turn wraps this uTurnOut seg
                 const neighbor = shared.neighbors.end
                 const shortest = min(segShortest, neighbor.availableStartLength)
-                console.log(`end shortest`, shortest)
+                // console.log(`end shortest`, shortest)
                 shared.addCubicEndVert(shared.distancedEndPoint(shortest))
                 neighbor.addCubicStartVert(neighbor.distancedStartPoint(shortest))
               }
@@ -1412,7 +1412,7 @@ class Grid extends ProtoLayer {
         }
 
         if (segSL !== segEL) {
-          console.log(`segSL !== segEL`)
+          // console.log(`segSL !== segEL`)
 
 
           let useStart
@@ -1460,18 +1460,18 @@ class Grid extends ProtoLayer {
 
         currentSimples = sortedSimples(this.allSimpleSubShapes)
       }
-      console.log(`currentSimples after`, currentSimples.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
+      // console.log(`currentSimples after`, currentSimples.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
     }
 
-    console.log(`allSimpleSubShapes before`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
+    // console.log(`allSimpleSubShapes before`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
 
     findCubicVerts()
-    console.log(`current islands`, this.islands)
-    console.log(`current shapes`, this.shapes)
+    // console.log(`current islands`, this.islands)
+    // console.log(`current shapes`, this.shapes)
     // this.drawShapes()
 
-    console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
-    console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
+    // console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
+    // console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
     // sort allSegments by availableLength(computed), shortest to longest
@@ -2060,9 +2060,9 @@ class Grid extends ProtoLayer {
     if (selection.isEmpty) { return }
     selection.forEach(cell => {
       const thisCell = this.cells[cell.index]
-      console.log('thisCell id', thisCell.id)
-      console.log('thisCell groupID', thisCell.groupID)
-      console.log('thisCell available', thisCell.available)
+      // console.log('thisCell id', thisCell.id)
+      // console.log('thisCell groupID', thisCell.groupID)
+      // console.log('thisCell available', thisCell.available)
       const thisGroup = this.groupNamed(thisCell.groupID)
       // console.log('thisGroup', thisGroup)
       if (thisGroup) { thisGroup.cells = thisGroup.cells.filter(cell => cell.id !== thisCell.id) }
@@ -2135,7 +2135,7 @@ class CellGroup extends ProtoLayer {
   //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
   //FIXME: so "omni-min", "omni-max", "cardinal-min", "cardinal-max"
   createPerimiters(perimeterType = `maxCorners`, direction = Direction.Cardinal) {
-    console.log(`createPerimiters this.id`, this.id)
+    // console.log(`createPerimiters this.id`, this.id)
     this.perimeterType = perimeterType
     switch (perimeterType) {
       case 'maxCorners':
@@ -2147,7 +2147,7 @@ class CellGroup extends ProtoLayer {
         console.error(`${perimeterType} is invalid Perimeter Type`)
     }
     const groupID = this.id
-    console.log(`createPerimiters groupID`, groupID)
+    // console.log(`createPerimiters groupID`, groupID)
     this.perimeterIslands = this.grid.createIslands({
       groupID: this.id,
       direction: direction,
@@ -2763,8 +2763,8 @@ class Shape extends ProtoLayer {
   }
 
   get svg() {
-    console.log(`current subShapes`, this.id, this.subShapes)
-    console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
+    // console.log(`current subShapes`, this.id, this.subShapes)
+    // console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
     let result = this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e }))
     if (result instanceof Array) {
       result = result.join(' ')
@@ -2900,7 +2900,7 @@ class Shape extends ProtoLayer {
 
   //METH:
   drawElement() {
-    console.log('drawElement: ', this.id, this)
+    // console.log('drawElement: ', this.id, this)
     const path = createSVGElt('path')
     // console.log(this.filter.id)
     if (this.drawFilter) {
