@@ -918,7 +918,7 @@ class Grid extends ProtoLayer {
     return this.exposedDirections({ cellIndex, groupID, islandID })
       .filter(e => e.allAreOrdinal)
       .map(f => this.cellAt(cellIndex).corner(f))
-    // .sort((a, b) => a.y - b.y || a.x - b.x)
+    // .gridVertSorted
   }
   //METH: 
   cellIsIsolated({ cellIndex, groupID, islandID, directions = Direction.Cardinal.directions } = {}) {
@@ -1021,7 +1021,7 @@ class Grid extends ProtoLayer {
   validNeighbors({ selection = this.cells, bounds = this.cellBounds(), directions = Direction.All.directions } = {}) {
     let cells = OpArray.from(new Set(selection.flatMap(e => e.validNeighborsCoords(directions, bounds))))
       .unique(['x', 'y']) // unique based upon x and y values
-      .sort((a, b) => a.y - b.y || a.x - b.x) // sort by y then x values
+      .gridVertSorted // sort by y then x values
       .map(e => this.cellAtCoords(e.x, e.y)) // map to cells
       .exclude(selection, ['x', 'y']) // exclude objects with same x and y values
     return cells
@@ -1036,7 +1036,7 @@ class Grid extends ProtoLayer {
   allExposedCorners({ selection, groupID, islandID } = {}) {
     return selection
       .flatMap(e => this.exposedCorners({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
-      .sort((a, b) => a.y - b.y || a.x - b.x) // sort by y, x 
+      .gridVertSorted // sort by y, x 
   }
   //METH: 
   allVertNormals({ selection, groupID, islandID } = {}) {
@@ -1088,8 +1088,8 @@ class Grid extends ProtoLayer {
       cells = OpArray.from(selection)
     }
     if (cells.isEmpty) { return }
-
     let tempIslands = new OpArray
+
 
     while (cells.length > 0) {
       let cell = cells[0]
@@ -1122,13 +1122,14 @@ class Grid extends ProtoLayer {
           islanders.push(current)
           islanders = islanders
             .unique(['id'])
-            .sort((a, b) => a.y - b.y || a.x - b.x) // sort by y then x values
+            .gridVertSorted // sort by y then x values
         }
       }
 
       findIslanders()
       cells = cells.exclude(islanders, ['id'])
       islanders.forEach(e => e.islandChecked = false)
+      console.log(`cells`, cells.map(c => c.id))
 
       let newIsland = new Island({
         cells: islanders,
@@ -1146,20 +1147,30 @@ class Grid extends ProtoLayer {
 
       if (stored) {
         newIsland.setFilter(filter)
+        // this.updateCells({ islandID: islandID })
         //FIXME: DO
         //FIXME: THIS
         //FIXME: FIRST!!!
         //FIXME:
         //FIXME: Need to delete next line and just have islands do nested stacking, but it breaks createShapes
-        // if (group) { group.islands.push(newIsland) }
+        if (group) { group.islands.push(newIsland) }
       }
       tempIslands.push(newIsland)
     }
-
+    console.log(`  $$$  `)
+    console.log(`tempIslands`, tempIslands)
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
-    if (stored) { this.updateCells() }
+    if (stored) {
+      this.updateCells(
+        { islandID: islandID }
+      )
+    }
     //FIXME: filter Islands the isPerimeter === false, only creating shapes for non-perimeters
-    tempIslands.forEach(e => e.createShape())
+    tempIslands.forEach(e => {
+      // this.updateCells({ islandID: islandID })
+      e.createShape()
+    }
+    )
     return tempIslands
   }
   // #endregion
@@ -2014,6 +2025,7 @@ class Grid extends ProtoLayer {
   //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
   updateCells({ groupID, islandID } = {}) {
+    console.log(`updating Cells ${islandID}`)
     if (arguments.length === 0) {
       this.cells.forEach(cell => cell.drawElement())
     }
@@ -2042,6 +2054,7 @@ class Grid extends ProtoLayer {
   }
   //METH:
   updateIsland(island) {
+    console.log(`updating Island ${island}`)
     island.cells.forEach(cell => {
       let thisCell = this.cells[cell.index]
       if (thisCell) {
@@ -2543,7 +2556,7 @@ class Island extends ProtoLayer {
       const normalCorner = seg.start // normal pointer of arc
       const endCorner = seg.closesCubicStartVert // endCorner of arc
       const origin = startCorner.add(seg.lineVector)// origin of arc
-      const squareVerts = [startCorner, normalCorner, endCorner, origin].sort((a, b) => a.y - b.y || a.x - b.x)
+      const squareVerts = [startCorner, normalCorner, endCorner, origin].gridVertSorted
       let cornerCells = this.grid.cells.filter(cell => // find cells within arc square
         cell.center.x > squareVerts[0].x
         && cell.center.y > squareVerts[0].y
@@ -2577,6 +2590,7 @@ class Island extends ProtoLayer {
   createShape(insetScale) {
     // console.log('createShape insetScale', insetScale)
     let segments = OpArray.format(this.exposedSegments)
+    console.log(`segments`, segments)
     let subShapes = new OpArray
     let shapeIter = 0
     let subShapeIter = 0
@@ -2620,14 +2634,21 @@ class Island extends ProtoLayer {
               console.error('next has 2 segments')
               let nextDirection
               if (this.direction.someAreOrdinal) {
+                console.log(`this.direction.someAreOrdinal`)
                 nextDirection = thisSeg.direction.previous(2)
               } else {
+                console.log(`!this.direction.someAreOrdinal`)
                 nextDirection = thisSeg.direction.next(2)
               }
               nextSeg = next.find(e => e.direction.equals(nextDirection))
+              console.log(`thisSeg here`, thisSeg)
+              console.log(`nextSeg here`, nextSeg)
               if (nextSeg === undefined) { console.error('unexpected 2nd segment') }
             }
-            console.log(`subShape iter ${subShapeIter}`, segments)
+            console.log(``)
+            console.log(this.grid.groups)
+            console.log(this)
+            console.log(`subShape ${this.id} iter ${subShapeIter}`, segments)
             console.log(`thisSeg`, thisSeg)
             console.log(`nextSeg`, nextSeg)
             thisSeg.assignNeighbors({ end: nextSeg })
@@ -2714,6 +2735,7 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
+  insetSubShapes
   simpleSubShapes
   finalSubShapes
   testVerts
