@@ -53,6 +53,7 @@ class OpArray extends Array {
   get compacted() { return this.filter(e => e !== undefined && e !== null && e !== '') } // from lodash?
   get reversed() { return this.copy.reverse() }
   get numSorted() { return this.copy.sort((a, b) => a - b) }
+  get gridVertSorted() { return this.copy.sort((a, b) => a.y - b.y || a.x - b.x) } // sort by y then x values 
 
   // MARK: 2D operations
   get is2D() {
