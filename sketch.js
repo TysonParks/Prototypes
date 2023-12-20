@@ -257,7 +257,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(3, 10)
-  gridX = 10
+  gridX = 4
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
@@ -415,10 +415,10 @@ function gridTests2() {
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
-  grid.assignGroupPerimeter('grp000', 'maxCorners', Direction.Cardinal)
-  grid.assignGroupPerimeter('grp001', 'maxCorners', Direction.Cardinal)
-  grid.assignGroupPerimeter('grp002', 'maxCorners', Direction.All)
-  grid.assignGroupPerimeter('grp003', 'maxCorners', Direction.Cardinal)
+  // grid.assignGroupPerimeter('grp000', 'maxCorners', Direction.Cardinal)
+  // grid.assignGroupPerimeter('grp001', 'maxCorners', Direction.Cardinal)
+  // grid.assignGroupPerimeter('grp002', 'maxCorners', Direction.All)
+  // grid.assignGroupPerimeter('grp003', 'maxCorners', Direction.Cardinal)
   console.log(`groups`, grid.groups)
 
   grid.customizeShapes()
