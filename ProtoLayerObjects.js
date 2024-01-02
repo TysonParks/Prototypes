@@ -1262,7 +1262,7 @@ class Grid extends ProtoLayer {
     // else { console.log(`there is NOT a minCorners Group`) }
 
 
-    this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
+    // this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
     // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
     let allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
@@ -2499,14 +2499,11 @@ class Island extends ProtoLayer {
         console.log(`copying island for new island`)
         // copy this island but change inset, set filter, set drawFilter
         const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
-        // this.grid.updateCells({ islandID: subIsland.id })
-        // subIsland.createShape()
         subIslands = OpArray.from([subIsland])
-        // subIsland.createShape()
-        // subIslands.forEach
       }
-      if (this.hierarchyFrom(direction) > 1 && this.directionHierarchy < 2) { // hierarchy > 1 curves can crop cells
+      if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) { // hierarchy > 1 curves can crop cells
         // recalculate cells based upon current shape/inset vs. intended shape/inset
+        console.log(`  triggering a recalcCells on ${this.id}`)
         const newCells = this.recalcCells(insetScale)
         subIslands = this.grid.createIslands({
           selection: newCells,
@@ -2528,8 +2525,6 @@ class Island extends ProtoLayer {
       })
     }
     this.subIslands = subIslands
-    // this.grid.updateCells()
-    // this.subIslands.forEach(i => i.createShape())
   }
   //METH: copy(insetScale) : create copy 
   copy({
@@ -2760,7 +2755,7 @@ class Shape extends ProtoLayer {
   island
   subShapes
   insetSubShapes
-  simpleSubShapes
+  // simpleSubShapes
   finalSubShapes
   testVerts
   testColor
@@ -2806,6 +2801,12 @@ class Shape extends ProtoLayer {
   get assignedVerts() {
     return this.subShapes.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
     // .flat()
+  }
+
+  get simpleSubShapes() {
+    return this.subShapes?.map(
+      subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id, this.island.perimeterType === 'minCorners')
+    )
   }
 
   get svg() {
