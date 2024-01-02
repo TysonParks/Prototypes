@@ -1734,6 +1734,7 @@ class Grid extends ProtoLayer {
       }
       amount -= 1
     }
+    return group
   }
   //METH: outline a group and assign
   outlineGroup({ groupID, direction = Direction.All, amount = 1, newGroup = true } = {}) {
@@ -2036,7 +2037,11 @@ class Grid extends ProtoLayer {
     else { groups = this.groups }
     groups.forEach(group => this.updateGroup(group))
 
-    if (islandID) { islands = [this.islandNamed(groupID)] }
+    if (islandID) {
+      islands = [this.islandNamed(groupID)]
+      console.log(`all islands: `, this.islands)
+      console.log(`islands found: `, islands)
+    }
     else { islands = this.islands }
     islands.forEach(island => this.updateIsland(island))
     console.log(`islands`, islands)
@@ -2493,7 +2498,12 @@ class Island extends ProtoLayer {
       if (direction.equals(this.direction)) { // safest/fastest to copy Island,esp calculated Shape for straight inset
         console.log(`copying island for new island`)
         // copy this island but change inset, set filter, set drawFilter
-        subIslands = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
+        const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
+        // this.grid.updateCells({ islandID: subIsland.id })
+        // subIsland.createShape()
+        subIslands = OpArray.from([subIsland])
+        // subIsland.createShape()
+        // subIslands.forEach
       }
       if (this.hierarchyFrom(direction) > 1 && this.directionHierarchy < 2) { // hierarchy > 1 curves can crop cells
         // recalculate cells based upon current shape/inset vs. intended shape/inset
@@ -2518,6 +2528,8 @@ class Island extends ProtoLayer {
       })
     }
     this.subIslands = subIslands
+    // this.grid.updateCells()
+    // this.subIslands.forEach(i => i.createShape())
   }
   //METH: copy(insetScale) : create copy 
   copy({
@@ -2526,7 +2538,7 @@ class Island extends ProtoLayer {
     drawFilter = this.drawFilter,
     protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
   } = {}) {
-    return new Island({
+    const newIsland = new Island({
       cells: this.cells,
       filter: filter,
       protoParent: protoParent,
@@ -2540,6 +2552,8 @@ class Island extends ProtoLayer {
       stored: this.stored,
       drawFilter: drawFilter
     })
+    newIsland.shapes = this.shapes.map(s => s.copy({ insetScale: insetScale, protoParent: newIsland, island: newIsland }))
+    return newIsland
   }
   //METH: recalcCells(shapes, newInsetScale) : 
   recalcCells(newInsetScale, shapes = this.shapes) {
@@ -2824,6 +2838,20 @@ class Shape extends ProtoLayer {
       const segs = this.allSegments.filter(s => s.parentID === cellID)
       cell.segments = segs
     })
+  }
+  copy({
+    insetScale,
+    protoParent,
+    island,
+  } = {}) {
+    const newShape = new Shape({
+      subShapes: this.subShapes,
+      protoParent: protoParent,
+      svgParent: protoParent.svgParent,
+      island: island,
+      insetScale: insetScale,
+    })
+    return newShape
   }
   // #endregion
   // MARK: Vert Assignment Methods
