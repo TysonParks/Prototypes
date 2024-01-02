@@ -44,6 +44,7 @@ class ProtoLayer {
     this.drawSVG = drawSVG
     this.drawRect = drawRect
     this.drawFilter = drawFilter
+    this.allowsProtoErrors = allowsProtoErrors
     this.assignUID()
   }
 
@@ -229,6 +230,7 @@ class ProtoLayer {
   }
   //METH: 
   setFilter(filter) {
+    console.log(`setting filter of ${this.id} to ${filter?.id}`)
     this._filter = filter
     this.drawElement()
   }
@@ -765,7 +767,8 @@ class Grid extends ProtoLayer {
       else { return max }
     })
   }
-  get islands() { return this.groups.map(g => g.islands).flat() }
+  get perimeterIslands() { return this.groups.map(g => g.perimeterIslands).flat() }
+  get islands() { return this.groups.map(g => g.islands.union(g.perimeterIslands)).flat() }
   get lastGroup() { return this.groups.last() }
   get shapes() { return this.islands.map(i => i.shapes).flat() }
   // FIXME: need to reconfigure the formation of perimeters before this will work properly
@@ -1147,13 +1150,13 @@ class Grid extends ProtoLayer {
 
       if (stored) {
         newIsland.setFilter(filter)
-        // this.updateCells({ islandID: islandID })
-        //FIXME: DO
-        //FIXME: THIS
-        //FIXME: FIRST!!!
-        //FIXME:
-        //FIXME: Need to delete next line and just have islands do nested stacking, but it breaks createShapes
-        if (group) { group.islands.push(newIsland) }
+        //FIXME: Need to figure out how to properly assign/add subIslands from Island.CreateSubIsland() call to createIslands
+        if (group) { group.perimeterIslands.push(newIsland) }
+        if (protoParent?.type === 'Island' || protoParent?.type === 'SubIsland') {
+          // protoParent.setFilter(filter)
+          protoParent.subIslands.push(newIsland)
+        }
+        // if ()
       }
       tempIslands.push(newIsland)
     }
@@ -1161,9 +1164,7 @@ class Grid extends ProtoLayer {
     console.log(`tempIslands`, tempIslands)
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) {
-      this.updateCells(
-        { islandID: islandID }
-      )
+      this.updateCells()
     }
     //FIXME: filter Islands the isPerimeter === false, only creating shapes for non-perimeters
     tempIslands.forEach(e => {
@@ -2025,7 +2026,7 @@ class Grid extends ProtoLayer {
   //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
   updateCells({ groupID, islandID } = {}) {
-    console.log(`updating Cells ${islandID}`)
+    console.log(`updating Cells ${groupID}, ${islandID}`)
     if (arguments.length === 0) {
       this.cells.forEach(cell => cell.drawElement())
     }
@@ -2038,10 +2039,11 @@ class Grid extends ProtoLayer {
     if (islandID) { islands = [this.islandNamed(groupID)] }
     else { islands = this.islands }
     islands.forEach(island => this.updateIsland(island))
+    console.log(`islands`, islands)
   }
   //METH:
   updateGroup(group) {
-    // console.log('group', group)
+    console.log(`updating Group ${group.id}`)
     group.cells.forEach(cell => {
       // console.log('this Cell', cell)
       let thisCell = this.cells[cell.index]
@@ -2054,7 +2056,7 @@ class Grid extends ProtoLayer {
   }
   //METH:
   updateIsland(island) {
-    console.log(`updating Island ${island}`)
+    console.log(`updating Island ${island.id}`)
     island.cells.forEach(cell => {
       let thisCell = this.cells[cell.index]
       if (thisCell) {
@@ -2092,7 +2094,7 @@ class CellGroup extends ProtoLayer {
   direction
   grid
   cells = new OpArray
-  perimeterIslands // Island-Shapes defining outer boundaries of all Island shapes to be allowed within
+  perimeterIslands = new OpArray // Island-Shapes defining outer boundaries of all Island shapes to be allowed within
   islands = new OpArray
 
   constructor(protoParent, svgParent, grid) {
@@ -2135,6 +2137,7 @@ class CellGroup extends ProtoLayer {
   //METH:
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     if (this.islands.isEmpty) {
+      console.log(`creating subIslands`)
       this.perimeterIslands.forEach(i =>
         i.createSubIslands({
           direction: direction,
@@ -2380,6 +2383,7 @@ class Island extends ProtoLayer {
 
   constructor({
     cells,
+    filter,
     protoParent,
     svgParent,
     grid,
@@ -2401,6 +2405,7 @@ class Island extends ProtoLayer {
       allowsProtoErrors: allowsProtoErrors,
     })
     this.cells = cells
+    this._filter = filter
     this.grid = grid
     this.groupID = groupID
     this.direction = direction
@@ -2466,7 +2471,8 @@ class Island extends ProtoLayer {
   // MARK: Methods
   // #region Methods
   //METH:
-  createSubIslands({ direction, filter, insetScale = 1, drawFilter } = {}) {
+  createSubIslands({ direction, filter, insetScale = 1, drawFilter = true } = {}) {
+    console.log(`Island ${this.id} createSubIslands`)
     if (this.subIslands) {
       this.subIslands.forEach(isle =>
         isle.createSubIslands({ direction: direction, filter: filter, insetScale: insetScale, drawFilter: drawFilter })
@@ -2477,7 +2483,7 @@ class Island extends ProtoLayer {
     let subIslands
     if (!this.allowsProtoErrors) { // protect Island stacking from visual errors
       if (this.hierarchyFrom(direction) > this.directionHierarchy) {
-        console.error(`trying to create SubIslands out of hierarchy. changing direction to this.direction`)
+        console.error(`trying to create SubIslands out of hierarchy. changing direction to "${this.direction.name}"`)
         direction = this.direction
       }
       if (direction.isAll && insetScale < 0.75) { // ordinal corner connecters visually disconnect with inset< 0.75
@@ -2485,8 +2491,9 @@ class Island extends ProtoLayer {
         direction = Direction.Cardinal
       }
       if (direction.equals(this.direction)) { // safest/fastest to copy Island,esp calculated Shape for straight inset
-        // copy this island but change inset
-        subIslands = this.copy(insetScale)
+        console.log(`copying island for new island`)
+        // copy this island but change inset, set filter, set drawFilter
+        subIslands = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
       }
       if (this.hierarchyFrom(direction) > 1 && this.directionHierarchy < 2) { // hierarchy > 1 curves can crop cells
         // recalculate cells based upon current shape/inset vs. intended shape/inset
@@ -2513,12 +2520,15 @@ class Island extends ProtoLayer {
     this.subIslands = subIslands
   }
   //METH: copy(insetScale) : create copy 
-  copy(
+  copy({
     insetScale,
+    filter = this.filter,
+    drawFilter = this.drawFilter,
     protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
-  ) {
+  } = {}) {
     return new Island({
       cells: this.cells,
+      filter: filter,
       protoParent: protoParent,
       svgParent: protoParent.svgElt, // Test this!!!
       insetScale: insetScale,
@@ -2528,7 +2538,7 @@ class Island extends ProtoLayer {
       direction: this.direction,
       perimeterType: this.perimeterType,
       stored: this.stored,
-      drawFilter: this.drawFilter
+      drawFilter: drawFilter
     })
   }
   //METH: recalcCells(shapes, newInsetScale) : 
