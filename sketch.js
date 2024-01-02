@@ -432,6 +432,32 @@ function gridTests2() {
     insetScale: .4,
   })
 
+  // console.log(`group001`, group001)
+
+  group001.createSubIslands({
+    // direction: Direction.All,
+    filter: shader0,
+    insetScale: .9,
+  })
+
+  group002.createSubIslands({
+    // direction: Direction.All,
+    filter: shader4,
+    insetScale: .9,
+  })
+
+  group003.createSubIslands({
+    // direction: Direction.All,
+    filter: shader7,
+    insetScale: .9,
+  })
+
+  // group004.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader5,
+  //   insetScale: .9,
+  // })
+
   console.log(`  ######################   `)
   // grid.createIslands({
   //   groupID: 'grp000',
@@ -497,13 +523,13 @@ function gridTests2() {
   //   // taken: true,
   // })
 
-  grid.createIslands({
-    groupID: 'grp002',
-    filter: shader4,
-    insetScale: .9,
-    // direction: Direction.Ordinal,
-    // taken: false,
-  })
+  // grid.createIslands({
+  //   groupID: 'grp002',
+  //   filter: shader4,
+  //   insetScale: .9,
+  //   // direction: Direction.Ordinal,
+  //   // taken: false,
+  // })
 
   // grid.createIslands({
   //   groupID: 'grp002',
@@ -545,29 +571,29 @@ function gridTests2() {
   //   // taken: false,
   // })
 
-  grid.createIslands({
-    groupID: 'grp001',
-    filter: shader0,
-    insetScale: .9,
-    // direction: Direction.Horizontal,
-    // taken: false,
-  })
+  // grid.createIslands({
+  //   groupID: 'grp001',
+  //   filter: shader0,
+  //   insetScale: .9,
+  //   // direction: Direction.Horizontal,
+  //   // taken: false,
+  // })
 
-  grid.createIslands({
-    groupID: 'grp003',
-    filter: shader7,
-    insetScale: .9,
-    // direction: Direction.Horizontal,
-    // taken: false,
-  })
+  // grid.createIslands({
+  //   groupID: 'grp003',
+  //   filter: shader7,
+  //   insetScale: .9,
+  //   // direction: Direction.Horizontal,
+  //   // taken: false,
+  // })
 
-  grid.createIslands({
-    groupID: 'grp004',
-    filter: shader5,
-    insetScale: .9,
-    // direction: Direction.Horizontal,
-    // taken: false,
-  })
+  // grid.createIslands({
+  //   groupID: 'grp004',
+  //   filter: shader5,
+  //   insetScale: .9,
+  //   // direction: Direction.Horizontal,
+  //   // taken: false,
+  // })
 
   // grid.createIslands({
   //   groupID: 'grp001',
