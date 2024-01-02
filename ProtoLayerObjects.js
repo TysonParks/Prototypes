@@ -2935,14 +2935,15 @@ class Shape extends ProtoLayer {
     // console.log('drawElement: ', this.id, this)
     const path = createSVGElt('path')
     // console.log(this.filter.id)
-    if (this.drawFilter) {
-      path
-        .attribute('d', this.svg)
-        .parent(this.svgElt)
-        .addToClassList(this.id)
-        .addToClassList(this.svgParent.elt.classList.value)
-        .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
 
+    path
+      .attribute('d', this.svg)
+      .parent(this.svgElt)
+      .addToClassList(this.id)
+      .addToClassList(this.svgParent.elt.classList.value)
+      .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+
+    if (this.drawFilter) {
       if (S.Effects.db[0][1]) {
         let maxWidthDivisor = 20
         // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.25 }
@@ -2962,15 +2963,13 @@ class Shape extends ProtoLayer {
         path
           .attribute('fill', protoColor(230))
           .attribute('fill-opacity', 1)
-          // .attribute('stroke', protoColor(230))
-          // .attribute('stroke-opacity', 1)
-          // .attribute('stroke-width', '7')
           .attribute('fill', protoColor(255))
           .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
-          // .applyStrokeMask(protoColor(128), strokeMaskWidth)
-          // .applyFilter(S.Effects.db[0][1], 3)
           .applyFilter(this.filter, 2)
       }
+    } else {
+      path
+        .attribute('fill', protoColor(0, 0))
     }
     // .svgLook(SVGLook.trendyCactus(path))
 
