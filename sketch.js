@@ -415,29 +415,31 @@ function gridTests2() {
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
-  // grid.assignGroupPerimeter('grp000', 'maxCorners', Direction.Cardinal)
-  // grid.assignGroupPerimeter('grp001', 'maxCorners', Direction.Cardinal)
-  // grid.assignGroupPerimeter('grp002', 'maxCorners', Direction.All)
-  // grid.assignGroupPerimeter('grp003', 'maxCorners', Direction.Cardinal)
+  grid.assignGroupPerimeter('grp000', 'maxCorners', Direction.Cardinal)
+  grid.assignGroupPerimeter('grp001', 'maxCorners', Direction.Cardinal)
+  grid.assignGroupPerimeter('grp002', 'maxCorners', Direction.All)
+  grid.assignGroupPerimeter('grp003', 'maxCorners', Direction.Cardinal)
   console.log(`groups`, grid.groups)
 
   grid.customizeShapes()
 
-  // console.log(`when does this happen?`)
+  console.log(`  ######################   `)
+  console.log(`when does this happen?`)
 
-  // group000.createSubIslands({
-  //   // direction: Direction.Horizontal,
-  //   filter: shader2,
-  //   insetScale: .4,
-  // })
-
-  grid.createIslands({
-    groupID: 'grp000',
+  group000.createSubIslands({
+    direction: Direction.All,
     filter: shader2,
     insetScale: .4,
-    // direction: Direction.Horizontal,
-    // taken: true,
   })
+
+  console.log(`  ######################   `)
+  // grid.createIslands({
+  //   groupID: 'grp000',
+  //   filter: shader2,
+  //   insetScale: .4,
+  //   // direction: Direction.Horizontal,
+  //   // taken: true,
+  // })
 
   // grid.createIslands({
   //   groupID: 'grp000',
