@@ -312,6 +312,17 @@ class Turn {
   get isStraight() { return this.value === 0 }
   get isRight() { return this.value === 1 }
 
+  get normalRotAngle() {
+    switch (this.value) {
+      case -1: // Left
+        return PI * 3 / 4
+      case 0: // Straight
+        return PI / 2
+      case 1: // Right
+        return PI / 4
+    }
+  }
+
   #getName(value) { return this.#name[`${this.value}`] }
   #name = {
     '-1': 'Left',
