@@ -7,7 +7,7 @@
 //CLASS: ProtoSVG
 class ProtoSVG {
   //METH:
-  static segsToSVG({ segments, refine = true, random = false, } = {}) {
+  static segsToSVG({ segments, refine = true, random = false, straightness = 0 } = {}) {
     if (refine) {
       let verts = segmentPathToVertsPath(segments)
       segments = vertsPathToSegmentPath({ path: verts, refine: true })
@@ -15,7 +15,7 @@ class ProtoSVG {
       // print(segments.map(e => e.string))
     }
 
-    return lSegmentPathToRoundedSVGPath({ segments: segments, random: random })
+    return lSegmentPathToRoundedSVGPath({ segments: segments, random: random, straightness: straightness })
   }
   //METH: refineProtoSegmentPath()
   // remove colinear segments to reduce shape path to single segments connecting corners
