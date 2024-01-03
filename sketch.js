@@ -427,7 +427,7 @@ function gridTests2() {
   console.log(`when does this happen?`)
 
   group000.createSubIslands({
-    direction: Direction.All,
+    // direction: Direction.All,
     filter: shader2,
     insetScale: .4,
   })
@@ -435,7 +435,7 @@ function gridTests2() {
   // console.log(`group001`, group001)
 
   group001.createSubIslands({
-    // direction: Direction.All,
+    // direction: Direction.Horizontal,
     filter: shader0,
     insetScale: .9,
   })
