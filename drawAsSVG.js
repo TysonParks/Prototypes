@@ -635,13 +635,6 @@ class Segment {
   get width() { return this.startPoint.widthTo(this.endPoint) }
   get height() { return this.startPoint.heightTo(this.endPoint) }
 
-  // get normal() {
-  //   let copy = this.lineVector.copy().rotate(-PI / 4)
-  //   copy.rotate(-PI / 4)
-  //   let end = this.midPoint.add(copy)
-  //   return segment(this.midPoint, end)
-  // }
-
   //NOTE: made with ChatGPT4.0 on May26, 2023
   // check to see if Vertex point is on Segment line
   vertIsOnLine(vert) {
@@ -802,6 +795,15 @@ class ProtoSegment extends Segment {
   }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
+  //METH: insetCopy
+  insetCopy(insetScale, minCellWidth) {
+    if (insetScale <= 0) { return }
+    if (insetScale > 2) { insetScale = 2 }
+    //FIXME: test that div(2) works, might need to make it vert(2,2)
+    const offset = (insetScale - 1) * minCellWidth / 2
+    const startOffset = offset
+    const insetStart = this.start.add()
+  }
   //METH: assignNeighbors()
   //NOTE: be sure to assign neighbors by reference instead of value to avoid infinite tree
   assignNeighbors({ start, end } = {}) {
