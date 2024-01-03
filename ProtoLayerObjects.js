@@ -2476,7 +2476,7 @@ class Island extends ProtoLayer {
   // MARK: Methods
   // #region Methods
   //METH:
-  createSubIslands({ direction, filter, insetScale = 1, drawFilter = true } = {}) {
+  createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
     console.log(`Island ${this.id} createSubIslands`)
     if (this.subIslands) {
       this.subIslands.forEach(isle =>
@@ -2487,6 +2487,10 @@ class Island extends ProtoLayer {
 
     let subIslands
     if (!this.allowsProtoErrors) { // protect Island stacking from visual errors
+      console.log(`parent direction: `, this.direction.name)
+      console.log(`child direction: `, direction.name)
+      console.log(`parent direction hierarchy: `, this.directionHierarchy)
+      console.log(`child direction hierarchy: `, this.hierarchyFrom(direction))
       if (this.hierarchyFrom(direction) > this.directionHierarchy) {
         console.error(`trying to create SubIslands out of hierarchy. changing direction to "${this.direction.name}"`)
         direction = this.direction
@@ -2503,8 +2507,8 @@ class Island extends ProtoLayer {
       }
       if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) { // hierarchy > 1 curves can crop cells
         // recalculate cells based upon current shape/inset vs. intended shape/inset
-        console.log(`  triggering a recalcCells on ${this.id}`)
-        const newCells = this.recalcCells(insetScale)
+        console.log(`  triggering a recalcdCells on ${this.id}`)
+        const newCells = this.recalcdCells(insetScale)
         subIslands = this.grid.createIslands({
           selection: newCells,
           protoParent: this,
@@ -2550,58 +2554,71 @@ class Island extends ProtoLayer {
     newIsland.shapes = this.shapes.map(s => s.copy({ insetScale: insetScale, protoParent: newIsland, island: newIsland }))
     return newIsland
   }
-  //METH: recalcCells(shapes, newInsetScale) : 
-  recalcCells(newInsetScale, shapes = this.shapes) {
+  //METH: recalcdCells(shapes, newInsetScale) : 
+  recalcdCells(newInsetScale, shapes = this.shapes) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
     //TODO: replace simpSubShapes with finalSubShapes once finalSubShapes has been reached
-    // if (!this.shapes.finalSubShapes) { console.error(`cannot recalcCells because shape has no finalSubShapes`) }
-    if (!shapes.simpleSubShapes) { console.error(`cannot simpleSubShapes because shape has no finalSubShapes`) }
+    // if (!this.shapes.finalSubShapes) { console.error(`cannot recalcdCells because shape has no finalSubShapes`) }
+    console.log(`shapes`, shapes)
+    if (shapes.every(s => s.simpleSubShapes.isEmpty)) { console.error(`cannot recalcdCells because shape has no simpleSubShapes`) }
     const cellRadius = this.grid.minCellWidth / 2
     // let newCells = this.cells
-    let corners = shapes.simpleSubShapes
-      .filter(seg => // filter unfinished Corners
-        !seg.neighbors.start.availableEndLength && !seg.availableStartLength // remove once finalSubShapes implemented!!
-      )
-      .filter(seg => // filter corners with minimum curvature
-        seg.neighbors.start.availableEndLength <= cellRadius || seg.availableStartLength <= cellRadius
-      )
-    let removeCells = new OpArray // cells to remove
-    let addCells = new OpArray // cells to add
-    corners.forEach(seg => {
-      const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
-      const neighbor = seg.neighbors.start
-      const arcRadius = seg.availableStartLength // arcRadius : only correct if corner is circular arc. use min otherwise
-      const startCorner = neighbor.closestCubicEndVert// startCorner of arc
-      const normalCorner = seg.start // normal pointer of arc
-      const endCorner = seg.closesCubicStartVert // endCorner of arc
-      const origin = startCorner.add(seg.lineVector)// origin of arc
-      const squareVerts = [startCorner, normalCorner, endCorner, origin].gridVertSorted
-      let cornerCells = this.grid.cells.filter(cell => // find cells within arc square
-        cell.center.x > squareVerts[0].x
-        && cell.center.y > squareVerts[0].y
-        && cell.center.x < squareVerts[3].x
-        && cell.center.y < squareVerts[3].y
-      )
-      //FIXME: cellRadius should be replaced with something that takes insetScale into account
-      if (isOutsideCorner) {
-        cornerCells.forEach(cell => {
-          const length = segment(origin, cell.center).length + cellRadius
-          if (length > arcRadius) { removeCells.push(cell) }
-        })
-      } else {
-        //FIXME: this is probably wrong, maybe sketch it out
-        cornerCells.forEach(cell => {
-          const length = segment(origin, cell.center).length - cellRadius
-          if (length > arcRadius) { addCells.push(cell) }
-        })
-      }
+    let corners = shapes.flat().map(s => {
+      console.log(`s.simpleSubShapes`, s.simpleSubShapes)
+      const corners = s.simpleSubShapes.map(sub => {
+        console.log(`sub`, sub)
+        return sub
+          .filter(seg => // filter unfinished Corners
+            !seg.neighbors.start.availableEndLength && !seg.availableStartLength // remove once finalSubShapes implemented!!
+          )
+          .filter(seg => // filter corners with minimum curvature
+            seg.neighbors.start.availableEndLength <= cellRadius || seg.availableStartLength <= cellRadius
+          )
+      })
+      return corners
+    }).flat(2)
+    console.log(`corners`, corners)
+    if (corners.isEmpty) {
+      return this.cells
+    } else {
+      let removeCells = new OpArray // cells to remove
+      let addCells = new OpArray // cells to add
+      corners.forEach(seg => {
+        const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
+        const neighbor = seg.neighbors.start
+        const arcRadius = seg.availableStartLength // arcRadius : only correct if corner is circular arc. use min otherwise
+        const startCorner = neighbor.closestCubicEndVert// startCorner of arc
+        const normalCorner = seg.start // normal pointer of arc
+        const endCorner = seg.closesCubicStartVert // endCorner of arc
+        const origin = startCorner.add(seg.lineVector)// origin of arc
+        const squareVerts = [startCorner, normalCorner, endCorner, origin].gridVertSorted
+        let cornerCells = this.grid.cells.filter(cell => // find cells within arc square
+          cell.center.x > squareVerts[0].x
+          && cell.center.y > squareVerts[0].y
+          && cell.center.x < squareVerts[3].x
+          && cell.center.y < squareVerts[3].y
+        )
+        //FIXME: cellRadius should be replaced with something that takes insetScale into account
+        if (isOutsideCorner) {
+          cornerCells.forEach(cell => {
+            const length = segment(origin, cell.center).length + cellRadius
+            if (length > arcRadius) { removeCells.push(cell) }
+          })
+        } else {
+          //FIXME: this is probably wrong, maybe sketch it out
+          cornerCells.forEach(cell => {
+            const length = segment(origin, cell.center).length - cellRadius
+            if (length > arcRadius) { addCells.push(cell) }
+          })
+        }
 
-    })
-    let newCells = this.cells
-      .union(addCells, 'id')
-      .exclude(removeCells, 'id')
+      })
+      let newCells = this.cells
+        .union(addCells, 'id')
+        .exclude(removeCells, 'id')
 
-    return newCells
+      return newCells
+    }
   }
   //METH:
 
@@ -2754,7 +2771,7 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
-  insetSubShapes
+  // insetSubShapes
   // simpleSubShapes
   finalSubShapes
   testVerts
@@ -2803,9 +2820,12 @@ class Shape extends ProtoLayer {
     // .flat()
   }
 
+  get insetSubShapes() {
+    return this.subShapes?.map(sub => ProtoSVG.insetSegments(sub, this.insetScale))
+  }
   get simpleSubShapes() {
-    return this.subShapes?.map(
-      subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id, this.island.perimeterType === 'minCorners')
+    return this.subShapes?.map(sub =>
+      ProtoSVG.refineProtoSegmentPath(sub, this.id, this.island.perimeterType === 'minCorners')
     )
   }
 
@@ -2820,6 +2840,18 @@ class Shape extends ProtoLayer {
   }
   // get svg() { return ProtoSVG.segsToSVG({ segments: this.subShapes[0] }) }
   get svgPath() { return `path('${this.svg}')` }
+
+  get perimeter() {
+    let result = this.subShapes.map(e =>
+      ProtoSVG.segsToSVG({ segments: e, refine: false, straightness: 1 })
+    )
+    if (result instanceof Array) {
+      result = result.join(' ')
+    }
+    return result
+  }
+  get perimeterPath() { return `path('${this.perimeter}')` }
+
   get extractedVerts() { return extractVerts(this.svg) }
 
   // MARK: methods
@@ -2997,8 +3029,14 @@ class Shape extends ProtoLayer {
           .applyFilter(this.filter, 2)
       }
     } else {
+      const randHue = ProtoColor.randomShadHue()
+      const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
       path
+        .attribute('d', this.perimeter)
         .attribute('fill', protoColor(0, 0))
+        .attribute('stroke', randHue)
+        .attribute('stroke-width', `.25`)
+        .attribute('stroke-dasharray', `1 1`)
     }
     // .svgLook(SVGLook.trendyCactus(path))
 
