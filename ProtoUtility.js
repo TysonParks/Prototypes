@@ -271,14 +271,14 @@ class Direction {
   }
 
   #angles = {
-    'up': (Math.PI / -2),
-    'upRight': (Math.PI / -4),
+    'up': (PI / -2),
+    'upRight': (PI / -4),
     'right': (0),
-    'downRight': (Math.PI / 4),
-    'down': (Math.PI / 2),
-    'downLeft': (Math.PI * 3 / 4),
-    'left': (Math.PI),
-    'upLeft': (Math.PI * -3 / 4),
+    'downRight': (PI / 4),
+    'down': (PI / 2),
+    'downLeft': (PI * 3 / 4),
+    'left': (PI),
+    'upLeft': (PI * -3 / 4),
   }
 
 }
@@ -540,7 +540,7 @@ function rotateCoords(x, y, degree) {
 
 // FUNC: radiansToDegrees() convert radians to degrees
 function radianToDegree(radians) {
-  return (radians * 180) / Math.PI
+  return (radians * 180) / PI
 }
 
 // FUNC: normalizeDegree() normalize any positive or negative degree to 0-360 range
