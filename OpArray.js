@@ -1,6 +1,9 @@
 // MARK: INITIALIZATION
 // import { Direction } from './ProtoUtility.js'
 
+//MARK: Constants
+const PI = Math.PI
+
 // CLASS: Set
 Set.prototype.equals = function (set, props) {
   const thisArray = OpArray.from(this)
