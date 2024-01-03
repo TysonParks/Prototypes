@@ -725,9 +725,24 @@ class ProtoSegment extends Segment {
   }
 
   get turns() {
+    if (!this.neighbors.start || !this.neighbors.end) {
+      console.error(`segment ${this.id} without neighbors has no turns`)
+      return
+    }
     return {
       start: this.neighbors.start.direction.turnTo(this.direction),
       end: this.direction.turnTo(this.neighbors.end.direction)
+    }
+  }
+
+  get normals() {
+    if (!this.neighbors.start || !this.neighbors.end) {
+      console.error(`segment ${this.id} without neighbors has no normals`)
+      return
+    }
+    return {
+      start: (this.neighbors.start.angle + this.turns.start.normalRotAngle) % PI,
+      end: (this.angle + this.turns.end.normalRotAngle) % PI
     }
   }
 
