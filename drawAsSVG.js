@@ -575,10 +575,11 @@ class Vertex extends p5.Vector {
     return ax === bx && ay === by
   }
 
-  add(vert) { return Vertex.add(this, vert) }
-  sub(vert) { return Vertex.sub(this, vert) }
-  mult(vert) { return Vertex.mult(this, vert) }
-  div(vert) { return Vertex.div(this, vert) }
+  //TODO: If we run into Vertex arithemtic errors, test this
+  // add(vert) { return Vertex.add(this, vert) }
+  // sub(vert) { return Vertex.sub(this, vert) }
+  // mult(vert) { return Vertex.mult(this, vert) }
+  // div(vert) { return Vertex.div(this, vert) }
 
   static add(a, b) { return vert(p5.Vector.add(a, b)) }
   static sub(a, b) { return vert(p5.Vector.sub(a, b)) }
@@ -735,7 +736,8 @@ class ProtoSegment extends Segment {
     }
     return {
       start: Direction.atAngle((this.neighbors.start.angle + this.turns.start.normalRotAngle) % PI),
-      end: Direction.atAngle((this.angle + this.turns.end.normalRotAngle) % PI)
+      end: Direction.atAngle((this.angle + this.turns.end.normalRotAngle) % PI),
+      cubic: Direction.atAngle((this.angle + PI / 2) % PI)
     }
   }
 
@@ -796,13 +798,27 @@ class ProtoSegment extends Segment {
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
   //METH: insetCopy
-  insetCopy(insetScale, minCellWidth) {
-    if (insetScale <= 0) { return }
-    if (insetScale > 2) { insetScale = 2 }
-    //FIXME: FINISH Implementation!!!
-    const offset = (insetScale - 1) * minCellWidth / 2
-    const startOffset = offset
-    const insetStart = this.start.add()
+  insetCopy(insetScale, minCellWidth, islandIDs = new OpArray) {
+    // if (insetScale <= 0) { return }
+    // if (insetScale > 2) { insetScale = 2 }
+    const offset = (insetScale - 1) * minCellWidth / 2 // create offset basis
+    const startMove = Vector.mult(this.normals.start.moveCoord, offset) // startMove vector
+    const insetStart = Vector.add(this.start, startMove) // new inset segment start
+    const endMove = Vector.mult(this.normals.end.moveCoord, offset) // endMove vector
+    const insetEnd = Vector.add(this.end, endMove) // new inset segment end
+    const insetCopy = protoSegment({ // new inset segment 
+      start: insetStart,
+      end: insetEnd,
+      parentID: this.id,
+      id: `${this.id}-inset(${roundToDec(insetScale, 2)})`,
+      islandIDs: this.islandIDs.union(islandIDs)
+    })
+
+    const cubicMove = Vector.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
+    const insetCubicStarts = this.cubicVerts.start.map(v => Vector.add(v, cubicMove))
+    const insetCubicEnds = this.cubicVerts.end.map(v => Vector.add(v, cubicMove))
+    insetCopy.cubicVerts = { start: insetCubicStarts, end: insetCubicEnds } // assign new inset cubicVerts
+    return insetCopy
   }
   //METH: assignNeighbors()
   //NOTE: be sure to assign neighbors by reference instead of value to avoid infinite tree
