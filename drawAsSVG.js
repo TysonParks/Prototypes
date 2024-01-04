@@ -734,8 +734,8 @@ class ProtoSegment extends Segment {
       return
     }
     return {
-      start: (this.neighbors.start.angle + this.turns.start.normalRotAngle) % PI,
-      end: (this.angle + this.turns.end.normalRotAngle) % PI
+      start: Direction.atAngle((this.neighbors.start.angle + this.turns.start.normalRotAngle) % PI),
+      end: Direction.atAngle((this.angle + this.turns.end.normalRotAngle) % PI)
     }
   }
 
@@ -799,7 +799,7 @@ class ProtoSegment extends Segment {
   insetCopy(insetScale, minCellWidth) {
     if (insetScale <= 0) { return }
     if (insetScale > 2) { insetScale = 2 }
-    //FIXME: test that div(2) works, might need to make it vert(2,2)
+    //FIXME: FINISH Implementation!!!
     const offset = (insetScale - 1) * minCellWidth / 2
     const startOffset = offset
     const insetStart = this.start.add()
