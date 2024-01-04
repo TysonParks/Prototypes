@@ -292,6 +292,13 @@ class Turn {
   static S = new Turn(0)
   static R = new Turn(1)
 
+  // static UL = new Turn(-2)     // U-Turn Left 
+  // static HL = new Turn(-1.5)   // Hard Left 
+  // static SL = new Turn(-0.5)   // Soft Left 
+  // static SR = new Turn(0.5)    // Soft Right
+  // static HR = new Turn(1.5)    // Hard Right
+  // static UR = new Turn(2)      // U-Turn Right
+
   static from(segPair) {
     if (segPair.length !== 2) { console.error('expected 2 segments') }
     let d1 = segPair[0].direction
