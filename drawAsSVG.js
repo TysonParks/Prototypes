@@ -798,7 +798,7 @@ class ProtoSegment extends Segment {
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
   //METH: insetCopy
-  insetCopy(insetScale, minCellWidth, islandIDs = new OpArray) {
+  insetCopy(insetScale, minCellWidth) {
     // if (insetScale <= 0) { return }
     // if (insetScale > 2) { insetScale = 2 }
     const offset = (insetScale - 1) * minCellWidth / 2 // create offset basis
@@ -811,7 +811,7 @@ class ProtoSegment extends Segment {
       end: insetEnd,
       parentID: this.id,
       id: `${this.id}-inset(${roundToDec(insetScale, 2)})`,
-      islandIDs: this.islandIDs.union(islandIDs)
+      islandIDs: this.islandIDs
     })
 
     const cubicMove = Vector.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
