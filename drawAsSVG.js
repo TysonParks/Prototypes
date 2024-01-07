@@ -585,21 +585,21 @@ class Vertex extends p5.Vector {
   static sub(a, b) { return vert(p5.Vector.sub(a, b)) }
   static mult(a, b) {
     if (b instanceof Vertex) {
-      // print(`${b} is vertex`)
+      if (!a || !b) {
+        console.error(`Vertex.mult issue:`, a, b)
+        return
+      }
       return vert(a.x * b.x, a.y * b.y)
     }
     if (typeof b === 'number') {
-      // print(`${b} is Number`)
       return vert(a.x * b, a.y * b)
     }
   }
   static div(a, b) {
     if (b instanceof Vertex) {
-      // print(`${b} is vertex`)
       return vert(a.x / b.x, a.y / b.y)
     }
     if (typeof b === 'number') {
-      // print(`${b} is Number`)
       return vert(a.x / b, a.y / b)
     }
   }
@@ -734,11 +734,14 @@ class ProtoSegment extends Segment {
       console.error(`segment ${this.id} without neighbors has no normals`)
       return
     }
-    return {
-      start: Direction.atAngle((this.neighbors.start.angle + this.turns.start.normalRotAngle) % PI),
-      end: Direction.atAngle((this.angle + this.turns.end.normalRotAngle) % PI),
-      cubic: Direction.atAngle((this.angle + PI / 2) % PI)
+    if (this.angle === undefined) { console.error(`segment ${this.id} has no angle!`, this) }
+    const normals =
+    {
+      start: this.neighbors.start.angle - this.turns.start.normalRotAngle,
+      end: this.angle - this.turns.end.normalRotAngle,
+      cubic: this.angle - PI / 2
     }
+    return normals.map(a => Direction.atAngle(a))
   }
 
   get part() { return EdgePart.from([this.turns.start, this.turns.end]) }
@@ -801,22 +804,23 @@ class ProtoSegment extends Segment {
   insetCopy(insetScale, minCellWidth) {
     // if (insetScale <= 0) { return }
     // if (insetScale > 2) { insetScale = 2 }
-    const offset = (insetScale - 1) * minCellWidth / 2 // create offset basis
-    const startMove = Vector.mult(this.normals.start.moveCoord, offset) // startMove vector
-    const insetStart = Vector.add(this.start, startMove) // new inset segment start
-    const endMove = Vector.mult(this.normals.end.moveCoord, offset) // endMove vector
-    const insetEnd = Vector.add(this.end, endMove) // new inset segment end
+    const scaleToOffset = Vertex.sub(insetScale, vert(1))  // create scaleToOffset 
+    const offset = Vertex.mult(scaleToOffset, minCellWidth / 2)
+    const startMove = Vertex.mult(this.normals.start.moveCoord, offset) // startMove vector
+    const insetStart = Vertex.add(this.start, startMove) // new inset segment start
+    const endMove = Vertex.mult(this.normals.end.moveCoord, offset) // endMove vector
+    const insetEnd = Vertex.add(this.end, endMove) // new inset segment end
     const insetCopy = protoSegment({ // new inset segment 
       start: insetStart,
       end: insetEnd,
       parentID: this.id,
-      id: `${this.id}-inset(${roundToDec(insetScale, 2)})`,
+      id: `${this.id}-inset(${roundToDec(insetScale.x, 2)})`,
       islandIDs: this.islandIDs
     })
 
-    const cubicMove = Vector.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
-    const insetCubicStarts = this.cubicVerts.start.map(v => Vector.add(v, cubicMove))
-    const insetCubicEnds = this.cubicVerts.end.map(v => Vector.add(v, cubicMove))
+    const cubicMove = Vertex.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
+    const insetCubicStarts = this.cubicVerts.start.map(v => Vertex.add(v, cubicMove))
+    const insetCubicEnds = this.cubicVerts.end.map(v => Vertex.add(v, cubicMove))
     insetCopy.cubicVerts = { start: insetCubicStarts, end: insetCubicEnds } // assign new inset cubicVerts
     return insetCopy
   }
