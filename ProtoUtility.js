@@ -207,6 +207,7 @@ class Direction {
   }
 
   static atAngle(angle) {
+    angle = constrainAngle(angle)
     let direction = Direction.Up
     let name = direction.angleKeys.find(key => direction.#angles[key] === angle)
     let index = direction.#descriptions.findIndex(e => e === name)
@@ -581,6 +582,14 @@ function getKeyByValue(object, value) {
 }
 
 //MARK: Number Utilities
+// FUNC: constrainAngle(angle) : keep angle between -PI and PI
+const constrainAngle = (angle) => {
+  angle = angle % (2 * PI)
+  if (angle > PI) { angle -= 2 * PI }
+  if (angle <= -PI) { angle += 2 * PI }
+  return angle
+}
+
 //NOTE: made with ChatGPT 4.0 June30.2023
 // FUNC: getDivisors() get array of prime divisors
 function getDivisors(number, prime = false) {
