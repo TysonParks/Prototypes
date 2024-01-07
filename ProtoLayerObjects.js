@@ -2858,7 +2858,7 @@ class Shape extends ProtoLayer {
   get svg() {
     // console.log(`current subShapes`, this.id, this.subShapes)
     // console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
-    let result = this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e }))
+    let result = this.insetSubShapes.map(e => ProtoSVG.segsToSVG({ segments: e, refine: false, straightness: 0 }))
     if (result instanceof Array) {
       result = result.join(' ')
     }
@@ -2880,7 +2880,7 @@ class Shape extends ProtoLayer {
 
   get insetSVG() {
     let result = this.insetSubShapes.map(e =>
-      ProtoSVG.segsToSVG({ segments: e, refine: true, straightness: 0 })
+      ProtoSVG.segsToSVG({ segments: e, refine: false, straightness: 0 })
     )
     if (result instanceof Array) {
       result = result.join(' ')
@@ -3061,22 +3061,29 @@ class Shape extends ProtoLayer {
         path
           .attribute('fill', protoColor(230))
           .attribute('fill-opacity', 1)
-          .attribute('fill', protoColor(255))
-          .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
+          // .attribute('fill', protoColor(255))
+          // .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
           .applyFilter(this.filter, 2)
       }
     } else {
-      const randHue = ProtoColor.randomHighHue()
-      const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
-      path
-        .attribute('d', this.perimeter)
-        .attribute('fill', protoColor(0, 0))
-        .attribute('stroke', randHue)
-        .attribute('stroke-width', `.25`)
-        .attribute('stroke-dasharray', `4 1`)
+      this.drawPerimeterDeBug = false
+      if (this.drawPerimeterDeBug) {
+        const randHue = ProtoColor.randomHighHue()
+        const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
+        path
+          .attribute('d', this.perimeter)
+          .attribute('fill', protoColor(0, 0))
+          .attribute('stroke', randHue)
+          .attribute('stroke-width', `.25`)
+          .attribute('stroke-dasharray', `4 1`)
+      } else {
+        path
+          .attribute('d', this.perimeter)
+          .attribute('fill', protoColor(0, 0))
+      }
     }
-    this.drawInset = true
-    if (this.drawInset && this.drawFilter) {
+    this.drawInsetDeBug = false
+    if (this.drawInsetDeBug && this.drawFilter) {
       const insetPath = createSVGElt('path')
       insetPath
         .parent(this.svgElt)
