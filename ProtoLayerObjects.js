@@ -2821,8 +2821,29 @@ class Shape extends ProtoLayer {
   }
 
   get insetSubShapes() {
-    return this.subShapes?.map(sub => ProtoSVG.insetSegments(sub, this.insetScale))
+    let insetSubShapes = this.subShapes?.map(sub => {
+      let insetSubShape = new OpArray
+      let prevInsetSeg
+      console.log(``)
+      console.log(`next subshape`)
+      sub.forEach((seg, i) => {
+        let newInsetSeg = seg.insetCopy(this.insetScale, this.grid.minCellWidth) //create inset segment
+        if (prevInsetSeg) { // only assignNeighbors once there are two inset segments
+          prevInsetSeg.assignNeighbors({ end: newInsetSeg })
+          newInsetSeg.assignNeighbors({ start: prevInsetSeg })
+        }
+        if (i === sub.lastIndex) { // last inset segment is neghbors with first inset segment
+          newInsetSeg.assignNeighbors({ end: insetSubShape[0] })
+          insetSubShape[0].assignNeighbors({ start: newInsetSeg })
+        }
+        insetSubShape.push(newInsetSeg)
+        prevInsetSeg = newInsetSeg
+      })
+      return insetSubShape
+    })
+    return insetSubShapes
   }
+
   get simpleSubShapes() {
     return this.subShapes?.map(sub =>
       ProtoSVG.refineProtoSegmentPath(sub, this.id, this.island.perimeterType === 'minCorners')
@@ -2851,6 +2872,17 @@ class Shape extends ProtoLayer {
     return result
   }
   get perimeterPath() { return `path('${this.perimeter}')` }
+
+  get insetSVG() {
+    let result = this.insetSubShapes.map(e =>
+      ProtoSVG.segsToSVG({ segments: e, refine: true, straightness: 0 })
+    )
+    if (result instanceof Array) {
+      result = result.join(' ')
+    }
+    return result
+  }
+  get insetSVGPath() { return `path('${this.insetSVG}')` }
 
   get extractedVerts() { return extractVerts(this.svg) }
 
@@ -3029,15 +3061,34 @@ class Shape extends ProtoLayer {
           .applyFilter(this.filter, 2)
       }
     } else {
-      const randHue = ProtoColor.randomShadHue()
+      const randHue = ProtoColor.randomHighHue()
       const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
       path
         .attribute('d', this.perimeter)
         .attribute('fill', protoColor(0, 0))
         .attribute('stroke', randHue)
         .attribute('stroke-width', `.25`)
+        .attribute('stroke-dasharray', `4 1`)
+    }
+    this.drawInset = true
+    if (this.drawInset && this.drawFilter) {
+      const insetPath = createSVGElt('path')
+      insetPath
+        .parent(this.svgElt)
+        .addToClassList(this.id)
+        .addToClassList(this.svgParent.elt.classList.value)
+        .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+
+      const randHue = ProtoColor.randomShadHue()
+      const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 256)
+      insetPath
+        .attribute('d', this.insetSVG)
+        .attribute('fill', protoColor(0, 0))
+        .attribute('stroke', randHue)
+        .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
+
     // .svgLook(SVGLook.trendyCactus(path))
 
     this.svgElt
