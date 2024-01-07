@@ -2771,8 +2771,6 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
-  // insetSubShapes
-  // simpleSubShapes
   finalSubShapes
   testVerts
   testColor
@@ -2820,12 +2818,24 @@ class Shape extends ProtoLayer {
     // .flat()
   }
 
+  //MARK: SubShape Transforms
+  //NOTE: the order of transforms: subShapes-->simpleSubshapes-->insetSubShapes can be rearranged
+  //NOTE: simple first: inset transform is expensive, so better to call at end as allSimpleSubShapes is called a lot!
+  //NOTE: inset first: 1. possibility of knowing that opposite-walled cells will disappear at insetScale === 0
+  //NOTE: inset first: 2. might be some hierarchical or derivative scaling advantage to successive inset knowledge
+  //NOTE: ultimately both have advantages. could make inset transform a method with two inset compProps: sub & simpleSub
+  get simpleSubShapes() {
+    return this.subShapes?.map(sub =>
+      ProtoSVG.refineProtoSegmentPath(sub, this.id, this.island.perimeterType === 'minCorners')
+    )
+  }
+
   get insetSubShapes() {
-    let insetSubShapes = this.subShapes?.map(sub => {
+    let insetSubShapes = this.simpleSubShapes?.map(sub => {
       let insetSubShape = new OpArray
       let prevInsetSeg
       console.log(``)
-      console.log(`next subshape`)
+      console.error(`next subshape`)
       sub.forEach((seg, i) => {
         let newInsetSeg = seg.insetCopy(this.insetScale, this.grid.minCellWidth) //create inset segment
         if (prevInsetSeg) { // only assignNeighbors once there are two inset segments
@@ -2844,12 +2854,7 @@ class Shape extends ProtoLayer {
     return insetSubShapes
   }
 
-  get simpleSubShapes() {
-    return this.subShapes?.map(sub =>
-      ProtoSVG.refineProtoSegmentPath(sub, this.id, this.island.perimeterType === 'minCorners')
-    )
-  }
-
+  //MARK: SVG Paths
   get svg() {
     // console.log(`current subShapes`, this.id, this.subShapes)
     // console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
