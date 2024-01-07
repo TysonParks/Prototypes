@@ -256,7 +256,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(3, 10)
-  gridX = 4
+  gridX = 6
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
@@ -428,7 +428,7 @@ function gridTests2() {
   group000.createSubIslands({
     // direction: Direction.All,
     filter: shader2,
-    insetScale: .8,
+    insetScale: .9,
   })
 
   // console.log(`group001`, group001)
@@ -436,19 +436,19 @@ function gridTests2() {
   group001.createSubIslands({
     // direction: Direction.Horizontal,
     filter: shader0,
-    insetScale: .8,
+    insetScale: .9,
   })
 
   group002.createSubIslands({
     // direction: Direction.All,
     filter: shader4,
-    insetScale: .8,
+    insetScale: .9,
   })
 
   group003.createSubIslands({
     // direction: Direction.All,
     filter: shader7,
-    insetScale: .8,
+    insetScale: .9,
   })
 
   // group004.createSubIslands({
