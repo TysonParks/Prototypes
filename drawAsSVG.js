@@ -26,7 +26,7 @@ class ProtoSVG {
     let length = 1
     let firstID = undefined
     for (let i = 0; i < path.length; i++) {
-      let seg = path[i]
+      let seg = path[i].copy
       if (prevSeg !== undefined && seg.angle === prevSeg.angle) { // if two segments are in line/flat
         if (length === 1) {
           // startNeighbor = 
@@ -505,7 +505,8 @@ class Vertex extends p5.Vector {
   // normal
 
   constructor(x = 0, y = 0) {
-    super(x, y)
+    super(roundToDec(x, 4), roundToDec(y, 4))
+    // super(x, y)
   }
 
   get id() { return `${this.x.toFixed(1)}, ${this.y.toFixed(1)}` }
@@ -800,6 +801,17 @@ class ProtoSegment extends Segment {
   }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
+  //METH: copy
+  get copy() {
+    const copyNumber = this.id.includes(`copy`) ? `copy` + String(+this.id.slice(-2) + 1).padStart(2, '0') : `copy00`
+    return protoSegment({
+      start: this.start,
+      end: this.end,
+      parentID: this.parentID,
+      id: `${this.id}-${copyNumber}`,
+      islandIDs: this.islandIDs
+    })
+  }
   //METH: insetCopy
   insetCopy(insetScale, minCellWidth) {
     // if (insetScale <= 0) { return }
