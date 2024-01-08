@@ -332,6 +332,7 @@ class Turn {
   }
 
   #getName(value) { return this.#name[`${this.value}`] }
+
   #name = {
     '-1': 'Left',
     '0': 'Straight',
@@ -434,18 +435,6 @@ class EdgePart {
     'UO': 'RR',
   }
 
-  static turnInstructions = {
-    'F': 'none',
-    'CSI': 'SL',
-    'CSO': 'SR',
-    'CEI': 'LS',
-    'CEO': 'RS',
-    'StI': 'RL',
-    'StO': 'LR',
-    'UI': '0-mid, 1-st, 1-mid, 1-end, 2-mid, ',
-    'UO': 'RR',
-  }
-
   static fromTurns(turns) {
     // console.log('turns', turns)
     // console.log('turnPatterns', this.turnPatterns)
@@ -453,6 +442,8 @@ class EdgePart {
   }
 
   static from2(turns) {
+    // console.error(`from2(turns): `, turns)
+    // console.error(turns.map(t => t.shortName))
     const pair = turns.map(e => e.shortName).join('')
     const name = getKeyByValue(this.turnPatterns, pair)
     return new EdgePart(name)
