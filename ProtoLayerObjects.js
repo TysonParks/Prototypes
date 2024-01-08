@@ -2909,13 +2909,14 @@ class Shape extends ProtoLayer {
       cell.segments = segs
     })
   }
+  //METH:
   copy({
     insetScale,
     protoParent,
     island,
   } = {}) {
     const newShape = new Shape({
-      subShapes: this.subShapes,
+      subShapes: this.subShapes.map(sub => sub.map(seg => seg.copy)),
       protoParent: protoParent,
       svgParent: protoParent.svgParent,
       island: island,
@@ -3066,7 +3067,7 @@ class Shape extends ProtoLayer {
           .applyFilter(this.filter, 2)
       }
     } else {
-      this.drawPerimeterDeBug = false
+      this.drawPerimeterDeBug = true
       if (this.drawPerimeterDeBug) {
         const randHue = ProtoColor.randomHighHue()
         const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
