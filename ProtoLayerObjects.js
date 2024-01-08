@@ -2858,7 +2858,7 @@ class Shape extends ProtoLayer {
   get svg() {
     // console.log(`current subShapes`, this.id, this.subShapes)
     // console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
-    let result = this.insetSubShapes.map(e => ProtoSVG.segsToSVG({ segments: e, refine: false, straightness: 0 }))
+    let result = this.subShapes.map(e => ProtoSVG.segsToSVG({ segments: e, refine: false, straightness: 0 }))
     if (result instanceof Array) {
       result = result.join(' ')
     }
