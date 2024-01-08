@@ -505,8 +505,7 @@ class Vertex extends p5.Vector {
   // normal
 
   constructor(x = 0, y = 0) {
-    super(roundToDec(x, 4), roundToDec(y, 4))
-    // super(x, y)
+    super(x, y)
   }
 
   get id() { return `${this.x.toFixed(1)}, ${this.y.toFixed(1)}` }
