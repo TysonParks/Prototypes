@@ -2859,18 +2859,18 @@ class Shape extends ProtoLayer {
   get svg() {
     // console.log(`current subShapes`, this.id, this.subShapes)
     // console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
-    let result = this.insetSubShapes.map(e => ProtoSVG.segsToSVG({ segments: e, refine: true, straightness: 0 }))
+    let result = this.insetSubShapes.map(e => SVGPath.fromSegPath({ segPath: e, refine: true, straightness: 0 }))
     if (result instanceof Array) {
       result = result.join(' ')
     }
     return result
   }
-  // get svg() { return ProtoSVG.segsToSVG({ segments: this.subShapes[0] }) }
+  // get svg() { return SVGPath.fromSegPath({ segPath: this.subShapes[0] }) }
   get svgPath() { return `path('${this.svg}')` }
 
   get perimeter() {
     let result = this.subShapes.map(e =>
-      ProtoSVG.segsToSVG({ segments: e, refine: false, straightness: 1 })
+      SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 1 })
     )
     if (result instanceof Array) {
       result = result.join(' ')
@@ -2881,7 +2881,7 @@ class Shape extends ProtoLayer {
 
   get insetSVG() {
     let result = this.insetSubShapes.map(e =>
-      ProtoSVG.segsToSVG({ segments: e, refine: false, straightness: 0 })
+      SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
     )
     if (result instanceof Array) {
       result = result.join(' ')
