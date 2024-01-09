@@ -3,6 +3,314 @@
 const bezCircleConst = 0.552
 const bezCircle45DegConst = 0.265
 
+//CLASS: SVGPath
+class SVGPath {
+  //TODO: move to SVGPath class
+  //METH: fromSegPath() : 
+  static fromSegPath({ segPath, refine = true, random = false, straightness = 0 } = {}) {
+    if (refine) {
+      let verts = VertPath.fromSegPath(segPath)
+      segPath = SegPath.fromVertPath({ path: verts, refine: true })
+    }
+    return SVGPath.segPathToRoundSVG({ segments: segPath, random: random, straightness: straightness })
+  }
+  //TODO: move to SVGPath class
+  //METH: segPathToRoundSVG() : create SVG path from segments with points rounded using (C) bezier curves
+  static segPathToRoundSVG(
+    { segments,
+      curvature = bezCircleConst,
+      straightness = 0,
+      bisector = .5,
+      circularCaps = true,
+      random = false,
+    } = {}) {
+    segments = segments.copy
+    let last = segments.pop()
+    let lineStartLoc = bisector - straightness * bisector
+    let lineEndLoc = bisector + straightness * (1 - bisector)
+
+    //FUNC: offset
+    const offset = () => { return random ? R.random_num(0.1, 1.5) : curvature }
+
+    //FUNC: makeSegmentCircular
+    const makeSegmentCircular = (segment, startLoc = lineStartLoc) => {
+      control1 = segment.scaledStartPoint(bezCircleConst, startLoc)
+      lineStart = segment.pointOnsegment(startLoc)
+      lineEnd = segment.pointOnsegment(lineEndLoc)
+      control2 = segment.scaledEndPoint(bezCircleConst, lineEndLoc)
+      return [control1, lineStart, lineEnd, control2]
+    }
+
+    //FUNC: makePrevSegmentCircular
+    const makePrevSegmentCircular = () => {
+      if (curves.length === 0) { return }
+      let prevCoords = curves.pop()
+      let lineEndLoc = 1 - circleCurve / previousSegment.length
+      let lineEnd = previousSegment.pointOnsegment(lineEndLoc)
+      let control2 = previousSegment.scaledEndPoint(bezCircleConst, lineEndLoc)
+      let newCoords = [prevCoords[0], prevCoords[1], lineEnd, control2]
+      curves.push(newCoords)
+    }
+
+    let curves = new OpArray
+    let previousSegment = last
+    let control1, lineStart, lineEnd, control2, circleCurve
+
+    // create curve coordinates
+    segments.forEach((e, i) => {
+      // print('lengths')
+      // print([previousSegment.length, e.length])
+      if (!circularCaps) {
+        control1 = e.scaledStartPoint(offset(), lineStartLoc)
+        lineStart = e.pointOnsegment(lineStartLoc)
+        lineEnd = e.pointOnsegment(lineEndLoc)
+        control2 = e.scaledEndPoint(offset(), lineEndLoc)
+      } else {
+        circleCurve = min(e.length, previousSegment.length) / 2
+        if (e.length < previousSegment.length) {
+          // print('previous is longer!')
+          makePrevSegmentCircular()
+          makeSegmentCircular(e)
+        } else {
+          // print('current is longer!')
+          let lineStartLoc = circleCurve / e.length
+          makeSegmentCircular(e, lineStartLoc)
+        }
+        previousSegment = e
+      }
+      curves.push([control1, lineStart, lineEnd, control2])
+    })
+
+    // create start and end coordinates
+    let end, start
+    if (!circularCaps) {
+      end = [last.scaledStartPoint(offset(), lineStartLoc), last.pointOnsegment(lineStartLoc)]
+      start = [last.pointOnsegment(lineEndLoc), last.scaledEndPoint(offset(), lineEndLoc)]
+    } else {
+      circleCurve = min(last.length, previousSegment.length) / 2
+      let lineStartLoc = circleCurve / last.length
+      if (previousSegment.length > last.length) {
+        makePrevSegmentCircular()
+        makeSegmentCircular(last)
+      } else {
+        makeSegmentCircular(last, lineStartLoc)
+      }
+      end = [control1, lineStart]
+
+      circleCurve = min(last.length, segments[0].length) / 2
+      if (last.length > segments[0].length) {
+        lineEndLoc = 1 - circleCurve / last.length
+        lineEnd = last.pointOnsegment(lineEndLoc)
+        control2 = last.scaledEndPoint(bezCircleConst, lineEndLoc)
+      } else {
+        makeSegmentCircular(last, lineStartLoc)
+      }
+      start = [lineEnd, control2]
+    }
+
+    //convert curve segment coordinates into SVG instructions
+    let curvesSVG = curves.map(e => `${e[0].array} ${e[1].array} L ${e[2].array} C ${e[3].array} `)
+    let endSVG = `${end[0].array} ${end[1].array} Z`
+    let startSVG = `M ${start[0].array} C ${start[1].array}`
+    return `${startSVG} ${curvesSVG} ${endSVG}`
+  }
+  // METH: multiplySVGCoords()
+  static multiply({ svgPath, multiplier } = {}) {
+    let verts = VertPath.fromSVGPath(svgPath).map(e => {
+      let pairs = VertPath.toCoord(e)
+      return pairs.map(f => f * multiplier)
+    })
+    return verts
+  }
+}
+
+//CLASS: SegPath
+class SegPath {
+  // METH: fromVertPath() : convert array of verts to a shape path made of Segments
+  static fromVertPath({ path = new OpArray, refine = true, parentID } = {}) {
+    // console.log('path', path)
+    let vertCount = path.length
+    if (vertCount < 3) { return }
+    path = SegPath.loopPath(path)
+    // console.log('loopedpath', path)
+    let segmentPath = new OpArray
+    let previousSeg = undefined
+    for (let i = 0; i < vertCount; i++) {
+      let seg = protoSegment({ start: vert(path[i]), end: vert(path[i + 1]), parentID: parentID })
+      if (refine === true && previousSeg !== undefined && seg.angle === previousSeg.angle) {
+        seg = protoSegment({ start: previousSeg.startPoint, end: seg.endPoint, parentID: parentID })
+        segmentPath.pop()
+      } // combine segments with same angle
+      segmentPath.push(seg)
+      previousSeg = seg
+    }
+    return segmentPath
+  }
+  //METH: refine() : remove colinear segments to simplify seg path to single segments connecting corners
+  static refine(path = new OpArray, parentID, minCorners = false) {
+    let newPath = new OpArray
+    let prevSeg = undefined
+    let prevMid = undefined
+    let length = 1
+    let firstID = undefined
+    for (let i = 0; i < path.length; i++) {
+      let seg = path[i].copy
+      if (prevSeg !== undefined && seg.angle === prevSeg.angle) { // if two segments are in line/flat
+        if (length === 1) {
+          // startNeighbor = 
+          firstID = prevSeg.id
+          if (minCorners) { prevSeg.assignMid() }
+        }
+        length += 1
+        if (minCorners) { prevMid = seg.mid }
+        const prevIDs = OpArray.from(prevSeg.islandIDs)
+        const segIDs = OpArray.from(seg.islandIDs)
+        // console.log(`prevIDs`, prevIDs)
+        // console.log(`segIDs`, segIDs)
+        const idArray = prevIDs.union(segIDs)
+        // console.log(`idArray`, idArray)
+        const islandIDs = new Set(idArray)
+        const id = `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}`
+        let newSeg = protoSegment({
+          start: prevSeg.startPoint,
+          end: seg.endPoint,
+          parentID: parentID,
+          id: id,
+          islandIDs: islandIDs
+        })
+        // add cubicVerts from prevSeg and seg to newSeg
+        newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
+        newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
+        newSeg.addCubicStartVert(seg.cubicVerts.start)
+        newSeg.addCubicEndVert(seg.cubicVerts.end)
+
+        // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
+        newPath.pop()
+        seg = newSeg
+      } else {
+        length = 1
+        firstID = undefined
+        if (minCorners) {
+          prevSeg.addCubicEndVert(prevMid)
+        }
+      }
+
+      newPath.push(seg)
+      prevSeg = seg
+    }
+    //assign neighbors
+    newPath.forEach((seg, i) => {
+      const loop = range(0, newPath.lastIndex)
+      const prev = newPath[loop.cycle(i - 1)]
+      const next = newPath[loop.cycle(i + 1)]
+      seg.assignNeighbors({ start: prev, end: next })
+    })
+
+    return newPath
+  }
+
+  //METH: loopPath() : loopPath closes a shape path loop made of either segments or vertices
+  static loopPath(verts = simpleSquare) {
+    let origin = verts[0]
+    let last = verts[verts.length - 1]
+    if (origin !== last) {
+      let closer
+      if (origin instanceof Segment) {
+        // closer = segment({ start: last, end: origin })
+        closer = new Segment({ start: last, end: origin })
+      } else if (typeof origin[0] === 'number') {
+        // print('has number')
+        closer = origin
+      }
+      verts.push(closer)
+    }
+    return verts
+  }
+}
+
+//CLASS: VertPath
+class VertPath {
+  //METH: fromSegPath()
+  static fromSegPath(segPath) {
+    return segPath.map(seg => [seg.startPoint.x, seg.startPoint.y])
+  }
+  //METH: fromSVGPath() : extract comma separated vert coordinates from an SVG path to array
+  static fromSVGPath(path = '') {
+    let reg = /-?\d+(?:\.\d+)*[,]-?\d+(?:\.\d+)*/
+    let result = matchAll(path, reg)
+    // print(result)
+    return result
+  }
+  //TODO: rewrite to work with svgElements instead of htmlElements
+  // METH: drawPoints() : draw index labeled points at verts 
+  static drawPoints({ verts, parent, size = 5, offset = vert(0), color = '#F80', indices = true } = {}) {
+    let centerOffset = size / 2
+    let divs = []
+    verts.forEach((e, i) => {
+      if (!indices) { i = '' }
+      let div = createDiv(i)
+      let coord = VertPath.toCoord(e)
+      // print(coord)
+      div
+        .attribute('index', i)
+        .attribute('x', coord[0].toFixed())
+        .attribute('y', coord[1].toFixed())
+        .position(coord[0] - centerOffset + offset.x, coord[1] - centerOffset + offset.y)
+        .size(size, size)
+        .style(CS.backgroundColor, color)
+        .style(CS.borderRadius, '50%')
+        .style(CS.textAlign, 'center')
+        .style(CS.fontSize, `${(size * 1.5)}pt`)
+        .style(CS.lineHeight, `${size * 4}px`)
+        .parent(parent)
+        .mouseOver(showCoords)
+        .mouseOut(showIndex)
+      divs.push(div)
+      // print(i, e)
+    })
+    // print(divs)
+    return divs
+
+    function showCoords() {
+      // print('scrolled over')
+      const i = this.attribute('index')
+      const x = this.attribute('x')
+      const y = this.attribute('y')
+      let text = `${i}\n(${x},${y})`
+      this.html(text)
+      redrawAll()
+    }
+    function showIndex() {
+      this.html(this.attribute('index'))
+      redrawAll()
+    }
+  }
+  // METH: toCoordinate() : extract x and y from single comma separated vert string
+  static toCoord(vertPairString) {
+    let reg = /-?\d+(?:\.\d+)*/
+    let result = matchAll(vertPairString, reg)
+      .flatMap(e => Number(e))
+    // print('extractCoord()')
+    // print(result)
+    return result
+  }
+  //TODO: reverse engineer and find where this belongs
+  // NOTE: Made with GPT-4 on May 23, 2023
+  //NOTE: Intended to help make diagonal lines possible
+  //METH: arcControlPoints() : 
+  static arcControlPoints(a, b, c) {
+    const ab = Vertex.sub(b, a).normalize()
+    const bc = Vertex.sub(c, b).normalize()
+    const theta = ab.angleBetween(Vertex.mult(bc, -1))
+    const t = 4 / 3 * tan(theta / 4)
+    const p1 = a
+    const p2 = Vertex.sub(b, Vertex.mult(ab, t))
+    const p3 = Vertex.add(b, Vertex.mult(bc, t))
+    const p4 = c
+    return [p1, p2, p3, p4]
+  }
+}
+
 //CLASS: ProtoSVG
 class ProtoSVG {
 
@@ -126,314 +434,6 @@ class ProtoSVG {
         console.log(`PNG saved`)
       });
     };
-  }
-}
-
-//CLASS: VertPath
-class VertPath {
-  //METH: fromSegPath()
-  static fromSegPath(segPath) {
-    return segPath.map(seg => [seg.startPoint.x, seg.startPoint.y])
-  }
-  //METH: fromSVGPath() : extract comma separated vert coordinates from an SVG path to array
-  static fromSVGPath(path = '') {
-    let reg = /-?\d+(?:\.\d+)*[,]-?\d+(?:\.\d+)*/
-    let result = matchAll(path, reg)
-    // print(result)
-    return result
-  }
-  //TODO: rewrite to work with svgElements instead of htmlElements
-  // METH: drawPoints() : draw index labeled points at verts 
-  static drawPoints({ verts, parent, size = 5, offset = vert(0), color = '#F80', indices = true } = {}) {
-    let centerOffset = size / 2
-    let divs = []
-    verts.forEach((e, i) => {
-      if (!indices) { i = '' }
-      let div = createDiv(i)
-      let coord = VertPath.toCoord(e)
-      // print(coord)
-      div
-        .attribute('index', i)
-        .attribute('x', coord[0].toFixed())
-        .attribute('y', coord[1].toFixed())
-        .position(coord[0] - centerOffset + offset.x, coord[1] - centerOffset + offset.y)
-        .size(size, size)
-        .style(CS.backgroundColor, color)
-        .style(CS.borderRadius, '50%')
-        .style(CS.textAlign, 'center')
-        .style(CS.fontSize, `${(size * 1.5)}pt`)
-        .style(CS.lineHeight, `${size * 4}px`)
-        .parent(parent)
-        .mouseOver(showCoords)
-        .mouseOut(showIndex)
-      divs.push(div)
-      // print(i, e)
-    })
-    // print(divs)
-    return divs
-
-    function showCoords() {
-      // print('scrolled over')
-      const i = this.attribute('index')
-      const x = this.attribute('x')
-      const y = this.attribute('y')
-      let text = `${i}\n(${x},${y})`
-      this.html(text)
-      redrawAll()
-    }
-    function showIndex() {
-      this.html(this.attribute('index'))
-      redrawAll()
-    }
-  }
-  // METH: toCoordinate() : extract x and y from single comma separated vert string
-  static toCoord(vertPairString) {
-    let reg = /-?\d+(?:\.\d+)*/
-    let result = matchAll(vertPairString, reg)
-      .flatMap(e => Number(e))
-    // print('extractCoord()')
-    // print(result)
-    return result
-  }
-  //TODO: reverse engineer and find where this belongs
-  // NOTE: Made with GPT-4 on May 23, 2023
-  //NOTE: Intended to help make diagonal lines possible
-  //METH: arcControlPoints() : 
-  static arcControlPoints(a, b, c) {
-    const ab = Vertex.sub(b, a).normalize()
-    const bc = Vertex.sub(c, b).normalize()
-    const theta = ab.angleBetween(Vertex.mult(bc, -1))
-    const t = 4 / 3 * tan(theta / 4)
-    const p1 = a
-    const p2 = Vertex.sub(b, Vertex.mult(ab, t))
-    const p3 = Vertex.add(b, Vertex.mult(bc, t))
-    const p4 = c
-    return [p1, p2, p3, p4]
-  }
-}
-
-//CLASS: SegPath
-class SegPath {
-  // METH: fromVertPath() : convert array of verts to a shape path made of Segments
-  static fromVertPath({ path = new OpArray, refine = true, parentID } = {}) {
-    // console.log('path', path)
-    let vertCount = path.length
-    if (vertCount < 3) { return }
-    path = SegPath.loopPath(path)
-    // console.log('loopedpath', path)
-    let segmentPath = new OpArray
-    let previousSeg = undefined
-    for (let i = 0; i < vertCount; i++) {
-      let seg = protoSegment({ start: vert(path[i]), end: vert(path[i + 1]), parentID: parentID })
-      if (refine === true && previousSeg !== undefined && seg.angle === previousSeg.angle) {
-        seg = protoSegment({ start: previousSeg.startPoint, end: seg.endPoint, parentID: parentID })
-        segmentPath.pop()
-      } // combine segments with same angle
-      segmentPath.push(seg)
-      previousSeg = seg
-    }
-    return segmentPath
-  }
-  //METH: refine() : remove colinear segments to simplify seg path to single segments connecting corners
-  static refine(path = new OpArray, parentID, minCorners = false) {
-    let newPath = new OpArray
-    let prevSeg = undefined
-    let prevMid = undefined
-    let length = 1
-    let firstID = undefined
-    for (let i = 0; i < path.length; i++) {
-      let seg = path[i].copy
-      if (prevSeg !== undefined && seg.angle === prevSeg.angle) { // if two segments are in line/flat
-        if (length === 1) {
-          // startNeighbor = 
-          firstID = prevSeg.id
-          if (minCorners) { prevSeg.assignMid() }
-        }
-        length += 1
-        if (minCorners) { prevMid = seg.mid }
-        const prevIDs = OpArray.from(prevSeg.islandIDs)
-        const segIDs = OpArray.from(seg.islandIDs)
-        // console.log(`prevIDs`, prevIDs)
-        // console.log(`segIDs`, segIDs)
-        const idArray = prevIDs.union(segIDs)
-        // console.log(`idArray`, idArray)
-        const islandIDs = new Set(idArray)
-        const id = `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}`
-        let newSeg = protoSegment({
-          start: prevSeg.startPoint,
-          end: seg.endPoint,
-          parentID: parentID,
-          id: id,
-          islandIDs: islandIDs
-        })
-        // add cubicVerts from prevSeg and seg to newSeg
-        newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
-        newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
-        newSeg.addCubicStartVert(seg.cubicVerts.start)
-        newSeg.addCubicEndVert(seg.cubicVerts.end)
-
-        // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
-        newPath.pop()
-        seg = newSeg
-      } else {
-        length = 1
-        firstID = undefined
-        if (minCorners) {
-          prevSeg.addCubicEndVert(prevMid)
-        }
-      }
-
-      newPath.push(seg)
-      prevSeg = seg
-    }
-    //assign neighbors
-    newPath.forEach((seg, i) => {
-      const loop = range(0, newPath.lastIndex)
-      const prev = newPath[loop.cycle(i - 1)]
-      const next = newPath[loop.cycle(i + 1)]
-      seg.assignNeighbors({ start: prev, end: next })
-    })
-
-    return newPath
-  }
-
-  //METH: loopPath() : loopPath closes a shape path loop made of either segments or vertices
-  static loopPath(verts = simpleSquare) {
-    let origin = verts[0]
-    let last = verts[verts.length - 1]
-    if (origin !== last) {
-      let closer
-      if (origin instanceof Segment) {
-        // closer = segment({ start: last, end: origin })
-        closer = new Segment({ start: last, end: origin })
-      } else if (typeof origin[0] === 'number') {
-        // print('has number')
-        closer = origin
-      }
-      verts.push(closer)
-    }
-    return verts
-  }
-}
-
-//CLASS: SVGPath
-class SVGPath {
-  //TODO: move to SVGPath class
-  //METH: fromSegPath() : 
-  static fromSegPath({ segPath, refine = true, random = false, straightness = 0 } = {}) {
-    if (refine) {
-      let verts = VertPath.fromSegPath(segPath)
-      segPath = SegPath.fromVertPath({ path: verts, refine: true })
-    }
-    return SVGPath.segPathToRoundSVG({ segments: segPath, random: random, straightness: straightness })
-  }
-  //TODO: move to SVGPath class
-  //METH: segPathToRoundSVG() : create SVG path from segments with points rounded using (C) bezier curves
-  static segPathToRoundSVG(
-    { segments,
-      curvature = bezCircleConst,
-      straightness = 0,
-      bisector = .5,
-      circularCaps = true,
-      random = false,
-    } = {}) {
-    segments = segments.copy
-    let last = segments.pop()
-    let lineStartLoc = bisector - straightness * bisector
-    let lineEndLoc = bisector + straightness * (1 - bisector)
-
-    //FUNC: offset
-    const offset = () => { return random ? R.random_num(0.1, 1.5) : curvature }
-
-    //FUNC: makeSegmentCircular
-    const makeSegmentCircular = (segment, startLoc = lineStartLoc) => {
-      control1 = segment.scaledStartPoint(bezCircleConst, startLoc)
-      lineStart = segment.pointOnsegment(startLoc)
-      lineEnd = segment.pointOnsegment(lineEndLoc)
-      control2 = segment.scaledEndPoint(bezCircleConst, lineEndLoc)
-      return [control1, lineStart, lineEnd, control2]
-    }
-
-    //FUNC: makePrevSegmentCircular
-    const makePrevSegmentCircular = () => {
-      if (curves.length === 0) { return }
-      let prevCoords = curves.pop()
-      let lineEndLoc = 1 - circleCurve / previousSegment.length
-      let lineEnd = previousSegment.pointOnsegment(lineEndLoc)
-      let control2 = previousSegment.scaledEndPoint(bezCircleConst, lineEndLoc)
-      let newCoords = [prevCoords[0], prevCoords[1], lineEnd, control2]
-      curves.push(newCoords)
-    }
-
-    let curves = new OpArray
-    let previousSegment = last
-    let control1, lineStart, lineEnd, control2, circleCurve
-
-    // create curve coordinates
-    segments.forEach((e, i) => {
-      // print('lengths')
-      // print([previousSegment.length, e.length])
-      if (!circularCaps) {
-        control1 = e.scaledStartPoint(offset(), lineStartLoc)
-        lineStart = e.pointOnsegment(lineStartLoc)
-        lineEnd = e.pointOnsegment(lineEndLoc)
-        control2 = e.scaledEndPoint(offset(), lineEndLoc)
-      } else {
-        circleCurve = min(e.length, previousSegment.length) / 2
-        if (e.length < previousSegment.length) {
-          // print('previous is longer!')
-          makePrevSegmentCircular()
-          makeSegmentCircular(e)
-        } else {
-          // print('current is longer!')
-          let lineStartLoc = circleCurve / e.length
-          makeSegmentCircular(e, lineStartLoc)
-        }
-        previousSegment = e
-      }
-      curves.push([control1, lineStart, lineEnd, control2])
-    })
-
-    // create start and end coordinates
-    let end, start
-    if (!circularCaps) {
-      end = [last.scaledStartPoint(offset(), lineStartLoc), last.pointOnsegment(lineStartLoc)]
-      start = [last.pointOnsegment(lineEndLoc), last.scaledEndPoint(offset(), lineEndLoc)]
-    } else {
-      circleCurve = min(last.length, previousSegment.length) / 2
-      let lineStartLoc = circleCurve / last.length
-      if (previousSegment.length > last.length) {
-        makePrevSegmentCircular()
-        makeSegmentCircular(last)
-      } else {
-        makeSegmentCircular(last, lineStartLoc)
-      }
-      end = [control1, lineStart]
-
-      circleCurve = min(last.length, segments[0].length) / 2
-      if (last.length > segments[0].length) {
-        lineEndLoc = 1 - circleCurve / last.length
-        lineEnd = last.pointOnsegment(lineEndLoc)
-        control2 = last.scaledEndPoint(bezCircleConst, lineEndLoc)
-      } else {
-        makeSegmentCircular(last, lineStartLoc)
-      }
-      start = [lineEnd, control2]
-    }
-
-    //convert curve segment coordinates into SVG instructions
-    let curvesSVG = curves.map(e => `${e[0].array} ${e[1].array} L ${e[2].array} C ${e[3].array} `)
-    let endSVG = `${end[0].array} ${end[1].array} Z`
-    let startSVG = `M ${start[0].array} C ${start[1].array}`
-    return `${startSVG} ${curvesSVG} ${endSVG}`
-  }
-  // METH: multiplySVGCoords()
-  static multiply({ svgPath, multiplier } = {}) {
-    let verts = VertPath.fromSVGPath(svgPath).map(e => {
-      let pairs = VertPath.toCoord(e)
-      return pairs.map(f => f * multiplier)
-    })
-    return verts
   }
 }
 
