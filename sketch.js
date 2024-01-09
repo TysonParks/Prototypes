@@ -399,8 +399,9 @@ function gridTests2() {
   // console.log('half 1', bounds.half(Direction.Right).flat().map(e => e.id))
   // console.log('half 1', bounds2.half(Direction.Right).flat().map(e => e.id))
   // console.log('half 3', grid.gridCellBounds.half(Direction.Right).flat().map(e => e.id))
-  console.log('pre-symmetrized cellRows', grid.cellRows)
 
+  //MARK: SYMMETRY
+  // console.log('pre-symmetrized cellRows', grid.cellRows)
   // grid.symmetrize({
   //   direction: Direction.Cardinal,
   //   reflection: false,
@@ -408,8 +409,7 @@ function gridTests2() {
   //   // useEmpty, 
   //   // groupIDs, 
   // })
-
-  console.log('post-symmetrized cellRows', grid.cellRows)
+  // console.log('post-symmetrized cellRows', grid.cellRows)
 
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
@@ -423,12 +423,12 @@ function gridTests2() {
   grid.customizeShapes()
 
   console.error(`  ######################   `)
-  console.log(`when does this happen?`)
+  // console.log(`when does this happen?`)
 
   group000.createSubIslands({
     // direction: Direction.All,
     filter: shader0,
-    insetScale: .35,
+    insetScale: .3,
   })
 
   // group000.createSubIslands({
@@ -442,13 +442,13 @@ function gridTests2() {
   group001.createSubIslands({
     direction: Direction.All,
     filter: shader0,
-    insetScale: 1.55,
+    insetScale: 1.6,
   })
 
   group002?.createSubIslands({
     // direction: Direction.All,
     filter: shader4,
-    insetScale: .2,
+    insetScale: .3,
   })
 
   // group002?.createSubIslands({
@@ -460,13 +460,13 @@ function gridTests2() {
   group003?.createSubIslands({
     // direction: Direction.All,
     filter: shader2,
-    insetScale: .3,
+    insetScale: .2,
   })
 
   group003?.createSubIslands({
     // direction: Direction.All,
     filter: shader2,
-    insetScale: .15,
+    insetScale: .1,
   })
 
   // group004.createSubIslands({

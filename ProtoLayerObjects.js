@@ -230,7 +230,7 @@ class ProtoLayer {
   }
   //METH: 
   setFilter(filter) {
-    console.log(`setting filter of ${this.id} to ${filter?.id}`)
+    // console.log(`setting filter of ${this.id} to ${filter?.id}`)
     this._filter = filter
     this.drawElement()
   }
@@ -1132,7 +1132,7 @@ class Grid extends ProtoLayer {
       findIslanders()
       cells = cells.exclude(islanders, ['id'])
       islanders.forEach(e => e.islandChecked = false)
-      console.log(`cells`, cells.map(c => c.id))
+      // console.log(`cells`, cells.map(c => c.id))
 
       let newIsland = new Island({
         cells: islanders,
@@ -1160,8 +1160,8 @@ class Grid extends ProtoLayer {
       }
       tempIslands.push(newIsland)
     }
-    console.log(`  $$$  `)
-    console.log(`tempIslands`, tempIslands)
+    // console.log(`  $$$  `)
+    // console.log(`tempIslands`, tempIslands)
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) {
       this.updateCells()
@@ -1207,42 +1207,43 @@ class Grid extends ProtoLayer {
     let flatSegs = allSegments.filter(seg => seg.isFlat)
     // console.log(`flatSegs`, flatSegs.map(c => c.id))
 
+    //NOTE: DEPRECATE $$$$$$$$$$$$$$$$$$$$$$$$$$$$
     //TODO: might be able to remove assignMids() and all supporting funcs/props
-    let madeSegs = new OpArray
-    //FUNC: saveSegs(segs) : save segs tp madeSegs
-    const saveSegs = (segs) => { madeSegs = madeSegs.union(segs, ['id']) }
-    //FUNC: remove(segs) : method removes segs from allSegments
-    const remove = (segs) => { allSegments = allSegments.exclude(segs, 'id') }
-    //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
-    const assignMids = (segs, edgeType, assignNeighbors = true) => {
-      segs.forEach(seg => {
-        seg.assignMid() // assign midpoint on this segment
+    // let madeSegs = new OpArray
+    // //FUNC: saveSegs(segs) : save segs tp madeSegs
+    // const saveSegs = (segs) => { madeSegs = madeSegs.union(segs, ['id']) }
+    // //FUNC: remove(segs) : method removes segs from allSegments
+    // const remove = (segs) => { allSegments = allSegments.exclude(segs, 'id') }
+    // //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
+    // const assignMids = (segs, edgeType, assignNeighbors = true) => {
+    //   segs.forEach(seg => {
+    //     seg.assignMid() // assign midpoint on this segment
 
-        //TODO: remove all neighbor finding logic, ProtoSegments store their own neighbors now!!!
-        let startNeighbor // segment connected before this segment
-        let endNeighbor // segment connected after this segment
-        if (assignNeighbors) {
-          startNeighbor = allSegments.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
-          if (startNeighbor) { startNeighbor.assignMid() }
-          endNeighbor = allSegments.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
-          if (endNeighbor) { endNeighbor.assignMid() }
-        }
-        const shared = allSegments.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
-        if (shared?.hasInsideTurn) { // if seg is inside an outside turn, it should force that outside curve
-          shared.assignMid()
-          // const adjShared = 
-        }
-        //TODO: need to revisit this remove call later to see if can remove 
-        // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
-        saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted) // save modified segs to madeSegs
-        segs = allSegments.filter(seg => seg.part.isBaseType(edgeType))
-        // console.log(`madeSegs`, madeSegs.length)
-      })
+    //     //TODO: remove all neighbor finding logic, ProtoSegments store their own neighbors now!!!
+    //     let startNeighbor // segment connected before this segment
+    //     let endNeighbor // segment connected after this segment
+    //     if (assignNeighbors) {
+    //       startNeighbor = allSegments.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
+    //       if (startNeighbor) { startNeighbor.assignMid() }
+    //       endNeighbor = allSegments.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
+    //       if (endNeighbor) { endNeighbor.assignMid() }
+    //     }
+    //     const shared = allSegments.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
+    //     if (shared?.hasInsideTurn) { // if seg is inside an outside turn, it should force that outside curve
+    //       shared.assignMid()
+    //       // const adjShared = 
+    //     }
+    //     //TODO: need to revisit this remove call later to see if can remove 
+    //     // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
+    //     saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted) // save modified segs to madeSegs
+    //     segs = allSegments.filter(seg => seg.part.isBaseType(edgeType))
+    //     // console.log(`madeSegs`, madeSegs.length)
+    //   })
 
-    }
-
-    // assignMids(uTurnSegs, 'UTurn') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
-    // assignMids(stairSegs, 'Stair') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
+    // }
+    // // assignMids(uTurnSegs, 'UTurn') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
+    // // assignMids(stairSegs, 'Stair') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
+    //NOTE: $$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 
     //TODO: can minCorners be handled elsewhere?
@@ -2028,7 +2029,7 @@ class Grid extends ProtoLayer {
   //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
   updateCells({ groupID, islandID } = {}) {
-    console.log(`updating Cells ${groupID}, ${islandID}`)
+    // console.log(`updating Cells ${groupID}, ${islandID}`)
     if (arguments.length === 0) {
       this.cells.forEach(cell => cell.drawElement())
     }
@@ -2040,16 +2041,16 @@ class Grid extends ProtoLayer {
 
     if (islandID) {
       islands = [this.islandNamed(groupID)]
-      console.log(`all islands: `, this.islands)
-      console.log(`islands found: `, islands)
+      // console.log(`all islands: `, this.islands)
+      // console.log(`islands found: `, islands)
     }
     else { islands = this.islands }
     islands.forEach(island => this.updateIsland(island))
-    console.log(`islands`, islands)
+    // console.log(`islands`, islands)
   }
   //METH:
   updateGroup(group) {
-    console.log(`updating Group ${group.id}`)
+    // console.log(`updating Group ${group.id}`)
     group.cells.forEach(cell => {
       // console.log('this Cell', cell)
       let thisCell = this.cells[cell.index]
@@ -2062,7 +2063,7 @@ class Grid extends ProtoLayer {
   }
   //METH:
   updateIsland(island) {
-    console.log(`updating Island ${island.id}`)
+    // console.log(`updating Island ${island.id}`)
     island.cells.forEach(cell => {
       let thisCell = this.cells[cell.index]
       if (thisCell) {
@@ -2488,10 +2489,10 @@ class Island extends ProtoLayer {
 
     let subIslands
     if (!this.allowsProtoErrors) { // protect Island stacking from visual errors
-      console.log(`parent direction: `, this.direction.name)
-      console.log(`child direction: `, direction.name)
-      console.log(`parent direction hierarchy: `, this.directionHierarchy)
-      console.log(`child direction hierarchy: `, this.hierarchyFrom(direction))
+      // console.log(`parent direction: `, this.direction.name)
+      // console.log(`child direction: `, direction.name)
+      // console.log(`parent direction hierarchy: `, this.directionHierarchy)
+      // console.log(`child direction hierarchy: `, this.hierarchyFrom(direction))
       if (this.hierarchyFrom(direction) > this.directionHierarchy) {
         console.error(`trying to create SubIslands out of hierarchy. changing direction to "${this.direction.name}"`)
         direction = this.direction
@@ -2501,7 +2502,7 @@ class Island extends ProtoLayer {
         direction = Direction.Cardinal
       }
       if (direction.equals(this.direction)) { // safest/fastest to copy Island,esp calculated Shape for straight inset
-        console.log(`copying island for new island`)
+        // console.log(`copying island for new island`)
         // copy this island but change inset, set filter, set drawFilter
         const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
         subIslands = OpArray.from([subIsland])
@@ -2627,7 +2628,7 @@ class Island extends ProtoLayer {
   createShape(insetScale) {
     // console.log('createShape insetScale', insetScale)
     let segments = OpArray.format(this.exposedSegments)
-    console.log(`segments`, segments)
+    // console.log(`segments`, segments)
     let subShapes = new OpArray
     let shapeIter = 0
     let subShapeIter = 0
@@ -2660,9 +2661,9 @@ class Island extends ProtoLayer {
                 subShape.push(thisSeg)
                 return
               } else {
-                console.log('thisSeg.endPoint', thisSeg.endPoint)
-                console.log('subShape[0].startPoint', subShape[0].startPoint)
-                console.error('cannot continue segmentShape')
+                // console.log('thisSeg.endPoint', thisSeg.endPoint)
+                // console.log('subShape[0].startPoint', subShape[0].startPoint)
+                // console.error('cannot continue segmentShape')
               }
             }
 
@@ -2671,23 +2672,23 @@ class Island extends ProtoLayer {
               console.error('next has 2 segments')
               let nextDirection
               if (this.direction.someAreOrdinal) {
-                console.log(`this.direction.someAreOrdinal`)
+                // console.log(`this.direction.someAreOrdinal`)
                 nextDirection = thisSeg.direction.previous(2)
               } else {
-                console.log(`!this.direction.someAreOrdinal`)
+                // console.log(`!this.direction.someAreOrdinal`)
                 nextDirection = thisSeg.direction.next(2)
               }
               nextSeg = next.find(e => e.direction.equals(nextDirection))
-              console.log(`thisSeg here`, thisSeg)
-              console.log(`nextSeg here`, nextSeg)
+              // console.log(`thisSeg here`, thisSeg)
+              // console.log(`nextSeg here`, nextSeg)
               if (nextSeg === undefined) { console.error('unexpected 2nd segment') }
             }
-            console.log(``)
-            console.log(this.grid.groups)
-            console.log(this)
-            console.log(`subShape ${this.id} iter ${subShapeIter}`, segments)
-            console.log(`thisSeg`, thisSeg)
-            console.log(`nextSeg`, nextSeg)
+            // console.log(``)
+            // console.log(this.grid.groups)
+            // console.log(this)
+            // console.log(`subShape ${this.id} iter ${subShapeIter}`, segments)
+            // console.log(`thisSeg`, thisSeg)
+            // console.log(`nextSeg`, nextSeg)
             thisSeg.assignNeighbors({ end: nextSeg })
             nextSeg.assignNeighbors({ start: thisSeg })
             fillstack.push(nextSeg)
@@ -2835,13 +2836,13 @@ class Shape extends ProtoLayer {
     let insetSubShapes = this.simpleSubShapes?.map(sub => {
       let insetSubShape = new OpArray
       let prevInsetSeg
-      console.log(``)
-      console.error(`next subshape`)
+      // console.log(``)
+      // console.error(`next subshape`)
       sub.forEach((seg, i) => {
         let newInsetSeg = seg.insetCopy(this.insetScale, this.grid.minCellWidth) //create inset segment
         if (prevInsetSeg) { // only assignNeighbors once there are two inset segments
-          prevInsetSeg.assignNeighbors({ end: newInsetSeg })
-          newInsetSeg.assignNeighbors({ start: prevInsetSeg })
+          // prevInsetSeg.assignNeighbors({ end: newInsetSeg })
+          // newInsetSeg.assignNeighbors({ start: prevInsetSeg })
         }
         if (i === sub.lastIndex) { // last inset segment is neghbors with first inset segment
           newInsetSeg.assignNeighbors({ end: insetSubShape[0] })
