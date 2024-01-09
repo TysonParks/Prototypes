@@ -3067,7 +3067,7 @@ class Shape extends ProtoLayer {
           .applyFilter(this.filter, 2)
       }
     } else {
-      this.drawPerimeterDeBug = true
+      this.drawPerimeterDeBug = false
       if (this.drawPerimeterDeBug) {
         const randHue = ProtoColor.randomHighHue()
         const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
