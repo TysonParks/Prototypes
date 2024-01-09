@@ -256,7 +256,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  gridX = 5
+  // gridX = 5
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
@@ -350,7 +350,7 @@ function gridTests2() {
 
 
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  let group000 = grid.squares({ coverage: 0.35, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
+  let group000 = grid.squares({ coverage: 0.15, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
   // grid.randGroup({amount:0.2})
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -366,9 +366,9 @@ function gridTests2() {
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
   let group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
-  let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  // let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
 
-  // grid.randGroup({amount:0.5})
+  let group002 = grid.randGroup({ amount: 0.5 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
@@ -416,7 +416,7 @@ function gridTests2() {
 
   group000.createPerimiters('maxCorners', Direction.Cardinal)
   group001.createPerimiters('maxCorners', Direction.All)
-  group002.createPerimiters('maxCorners', Direction.Cardinal)
+  group002?.createPerimiters('maxCorners', Direction.Cardinal)
   group003?.createPerimiters('maxCorners', Direction.Cardinal) // will need to create check to make sure all groups used
   console.log(`groups`, grid.groups)
 
@@ -445,7 +445,7 @@ function gridTests2() {
     insetScale: 1.5,
   })
 
-  group002.createSubIslands({
+  group002?.createSubIslands({
     // direction: Direction.All,
     filter: shader4,
     insetScale: .4,
