@@ -261,11 +261,63 @@ class VertPath {
   static fromSegPath(segPath) {
     return segPath.map(seg => [seg.startPoint.x, seg.startPoint.y])
   }
-
   //METH: fromSVGPath() : extract comma separated vert coordinates from an SVG path to array
   static fromSVGPath(path = '') {
     let reg = /-?\d+(?:\.\d+)*[,]-?\d+(?:\.\d+)*/
     let result = matchAll(path, reg)
+    // print(result)
+    return result
+  }
+  //TODO: rewrite to work with svgElements instead of htmlElements
+  // METH: drawPoints() : draw index labeled points at verts 
+  static drawPoints({ verts, parent, size = 5, offset = vert(0), color = '#F80', indices = true } = {}) {
+    let centerOffset = size / 2
+    let divs = []
+    verts.forEach((e, i) => {
+      if (!indices) { i = '' }
+      let div = createDiv(i)
+      let coord = VertPath.toCoord(e)
+      // print(coord)
+      div
+        .attribute('index', i)
+        .attribute('x', coord[0].toFixed())
+        .attribute('y', coord[1].toFixed())
+        .position(coord[0] - centerOffset + offset.x, coord[1] - centerOffset + offset.y)
+        .size(size, size)
+        .style(CS.backgroundColor, color)
+        .style(CS.borderRadius, '50%')
+        .style(CS.textAlign, 'center')
+        .style(CS.fontSize, `${(size * 1.5)}pt`)
+        .style(CS.lineHeight, `${size * 4}px`)
+        .parent(parent)
+        .mouseOver(showCoords)
+        .mouseOut(showIndex)
+      divs.push(div)
+      // print(i, e)
+    })
+    // print(divs)
+    return divs
+
+    function showCoords() {
+      // print('scrolled over')
+      const i = this.attribute('index')
+      const x = this.attribute('x')
+      const y = this.attribute('y')
+      let text = `${i}\n(${x},${y})`
+      this.html(text)
+      redrawAll()
+    }
+    function showIndex() {
+      this.html(this.attribute('index'))
+      redrawAll()
+    }
+  }
+  // METH: toCoordinate() : extract x and y from single comma separated vert string
+  static toCoord(vertPairString) {
+    let reg = /-?\d+(?:\.\d+)*/
+    let result = matchAll(vertPairString, reg)
+      .flatMap(e => Number(e))
+    // print('extractCoord()')
     // print(result)
     return result
   }
@@ -377,95 +429,17 @@ class SegPath {
 
 //CLASS: SVGPath
 class SVGPath {
-
-}
-
-//TODO: DEPRECATED
-// // FUNC: lVertsToSVGPath()
-// function lVertsToSVGPath(verts = simpleSquare) {
-//   let shape = verts
-//     .map((e, i,) => {
-//       if (i === 0) { return `M ${e}` }
-//       return `L ${e}`
-//     })
-//   // return `${shape.join(" ")}`
-//   return `path('${shape.join(" ")}')`
-// }
-
-// FUNC: drawPointsAtVerts()
-// draw index labeled points at (comma separated) verts extracted from SVG path description
-function drawPointsAtVerts({ path, parent, size = 5, offset = vert(0), color = '#F80', indices = true } = {}) {
-  let verts = VertPath.fromSVGPath(path)
-  let centerOffset = size / 2
-  let divs = []
-  verts.forEach((e, i) => {
-    if (!indices) { i = '' }
-    let div = createDiv(i)
-    let coord = extractCoord(e)
-    // print(coord)
-    div
-      .attribute('index', i)
-      .attribute('x', coord[0].toFixed())
-      .attribute('y', coord[1].toFixed())
-      .position(coord[0] - centerOffset + offset.x, coord[1] - centerOffset + offset.y)
-      .size(size, size)
-      .style(CS.backgroundColor, color)
-      .style(CS.borderRadius, '50%')
-      .style(CS.textAlign, 'center')
-      .style(CS.fontSize, `${(size * 1.5)}pt`)
-      .style(CS.lineHeight, `${size * 4}px`)
-      .parent(parent)
-      .mouseOver(showCoords)
-      .mouseOut(showIndex)
-    divs.push(div)
-    // print(i, e)
-  })
-  // print(divs)
-  return divs
-
-  function showCoords() {
-    // print('scrolled over')
-    const i = this.attribute('index')
-    const x = this.attribute('x')
-    const y = this.attribute('y')
-    let text = `${i}\n(${x},${y})`
-    this.html(text)
-    redrawAll()
-  }
-  function showIndex() {
-    this.html(this.attribute('index'))
-    redrawAll()
+  // METH: multiplySVGCoords()
+  static multiply({ svgPath, multiplier } = {}) {
+    let verts = VertPath.fromSVGPath(svgPath).map(e => {
+      let pairs = VertPath.toCoord(e)
+      return pairs.map(f => f * multiplier)
+    })
+    return verts
   }
 }
 
-// // FUNC: extractVerts()
-// // extract comma separated vert coordinates from an SVG path to array
-// function extractVerts(path = '') {
-//   let reg = /-?\d+(?:\.\d+)*[,]-?\d+(?:\.\d+)*/
-//   let result = matchAll(path, reg)
-//   // print(result)
-//   return result
-// }
 
-// FUNC: extractCoord()
-// extract x and y from single comma separated vert string
-function extractCoord(vertString) {
-  let reg = /-?\d+(?:\.\d+)*/
-  let result = matchAll(vertString, reg)
-    .flatMap(e => Number(e))
-  // print('extractCoord()')
-  // print(result)
-  return result
-}
-
-// FUNC: multiplySVGCoords()
-function multiplySVGCoords({ path, multiplier } = {}) {
-  let verts = VertPath.fromSVGPath(path).map(e => {
-    let pairs = extractCoord(e)
-    return pairs.map(f => f * multiplier)
-  })
-  return verts
-}
 
 
 // MARK: Pseudo Drawing Classes
