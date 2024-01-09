@@ -8,7 +8,7 @@ class ProtoSVG {
   //METH:
   static segsToSVG({ segments, refine = true, random = false, straightness = 0 } = {}) {
     if (refine) {
-      let verts = segmentPathToVertsPath(segments)
+      let verts = VertPath.fromSegPath(segments)
       segments = vertsPathToSegmentPath({ path: verts, refine: true })
       // print('segments')
       // print(segments.map(e => e.string))
@@ -257,7 +257,10 @@ class ProtoSVG {
 }
 
 class VertPath {
-
+  // FUNC: fromSegPath()
+  static fromSegPath(segPath) {
+    return segPath.map(seg => [seg.startPoint.x, seg.startPoint.y])
+  }
 }
 
 class SegPath {
@@ -439,7 +442,7 @@ function roundedCornerShape({ shape = testShape2a, cornerRadius = '16px', weight
   // print(segmentShape)
   let curvedPath = ProtoSVG.segPathToRoundSVG({ segments: segmentShape })
 
-  let newVerts = segmentPathToVertsPath(segmentShape)
+  let newVerts = VertPath.fromSegPath(segmentShape)
 
   let path = lVertsToSVGPath(newVerts)
 
@@ -453,11 +456,6 @@ function roundedCornerShape({ shape = testShape2a, cornerRadius = '16px', weight
   // convert each point to Q control point
   // add Q point before Qcontrol and slide it -radius pixels/percent along segment slope
   // max/min the slide based upon length of segment (1/2 maybe?)
-}
-
-// FUNC: segmentPathToVertsPath()
-function segmentPathToVertsPath(segmentPath) {
-  return segmentPath.map(seg => [seg.startPoint.x, seg.startPoint.y])
 }
 
 // FUNC: vertsPathToSegmentPath()
