@@ -255,8 +255,8 @@ class ProtoMill {
 // FUNC: gridTests2()
 function gridTests2() {
 
-  let gridX = R.random_int(3, 10)
-  // gridX = 6
+  let gridX = R.random_int(4, 10)
+  gridX = 4
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
@@ -350,7 +350,7 @@ function gridTests2() {
 
 
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  let group000 = grid.squares({ coverage: 0.15, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
+  let group000 = grid.squares({ coverage: 0.25, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
   // grid.randGroup({amount:0.2})
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -360,7 +360,7 @@ function gridTests2() {
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
   // grid.randGroup({amount:0.1})
-  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(1, 1), newGroup: false })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(1, 2), newGroup: false })
   // grid.randGroup({ amount: 0.05 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
   // const randDir = Direction.All.random(3)
@@ -428,7 +428,7 @@ function gridTests2() {
   group000.createSubIslands({
     // direction: Direction.All,
     filter: shader0,
-    insetScale: .25,
+    insetScale: .4,
   })
 
   // group000.createSubIslands({
@@ -448,7 +448,7 @@ function gridTests2() {
   group002.createSubIslands({
     // direction: Direction.All,
     filter: shader4,
-    insetScale: .25,
+    insetScale: .4,
   })
 
   // group002.createSubIslands({
@@ -460,7 +460,7 @@ function gridTests2() {
   group003?.createSubIslands({
     // direction: Direction.All,
     filter: shader6,
-    insetScale: .25,
+    insetScale: .4,
   })
 
   // group003.createSubIslands({
