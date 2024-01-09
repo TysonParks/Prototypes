@@ -244,13 +244,35 @@ function lSegmentPathToRoundedSVGPath(
     circularCaps = true,
     random = false,
   } = {}) {
-  segments = OpArray.from(segments)
+  segments = segments.copy
   let last = segments.pop()
   let lineStartLoc = bisector - straightness * bisector
   let lineEndLoc = bisector + straightness * (1 - bisector)
-  function offset() { return random ? R.random_num(0.1, 1.5) : curvature }
 
-  let curves = []
+  //FUNC: offset
+  const offset = () => { return random ? R.random_num(0.1, 1.5) : curvature }
+
+  //FUNC: makeSegmentCircular
+  const makeSegmentCircular = (segment, startLoc = lineStartLoc) => {
+    control1 = segment.scaledStartPoint(bezCircleConst, startLoc)
+    lineStart = segment.pointOnsegment(startLoc)
+    lineEnd = segment.pointOnsegment(lineEndLoc)
+    control2 = segment.scaledEndPoint(bezCircleConst, lineEndLoc)
+    return [control1, lineStart, lineEnd, control2]
+  }
+
+  //FUNC: makePrevSegmentCircular
+  const makePrevSegmentCircular = () => {
+    if (curves.length === 0) { return }
+    let prevCoords = curves.pop()
+    let lineEndLoc = 1 - circleCurve / previousSegment.length
+    let lineEnd = previousSegment.pointOnsegment(lineEndLoc)
+    let control2 = previousSegment.scaledEndPoint(bezCircleConst, lineEndLoc)
+    let newCoords = [prevCoords[0], prevCoords[1], lineEnd, control2]
+    curves.push(newCoords)
+  }
+
+  let curves = new OpArray
   let previousSegment = last
   let control1, lineStart, lineEnd, control2, circleCurve
 
@@ -311,26 +333,6 @@ function lSegmentPathToRoundedSVGPath(
   let endSVG = `${end[0].array} ${end[1].array} Z`
   let startSVG = `M ${start[0].array} C ${start[1].array}`
   return `${startSVG} ${curvesSVG} ${endSVG}`
-
-
-  // methods
-  function makeSegmentCircular(segment, startLoc = lineStartLoc) {
-    control1 = segment.scaledStartPoint(bezCircleConst, startLoc)
-    lineStart = segment.pointOnsegment(startLoc)
-    lineEnd = segment.pointOnsegment(lineEndLoc)
-    control2 = segment.scaledEndPoint(bezCircleConst, lineEndLoc)
-    return [control1, lineStart, lineEnd, control2]
-  }
-
-  function makePrevSegmentCircular() {
-    if (curves.length === 0) { return }
-    let prevCoords = curves.pop()
-    let lineEndLoc = 1 - circleCurve / previousSegment.length
-    let lineEnd = previousSegment.pointOnsegment(lineEndLoc)
-    let control2 = previousSegment.scaledEndPoint(bezCircleConst, lineEndLoc)
-    let newCoords = [prevCoords[0], prevCoords[1], lineEnd, control2]
-    curves.push(newCoords)
-  }
 }
 
 // FUNC: roundedCornerShape()
@@ -363,13 +365,13 @@ function segmentPathToVertsPath(segmentPath) {
 
 // FUNC: vertsPathToSegmentPath()
 // convert array of verts to a shape path made of Segments
-function vertsPathToSegmentPath({ path = [], refine = true, parentID } = {}) {
+function vertsPathToSegmentPath({ path = new OpArray, refine = true, parentID } = {}) {
   // console.log('path', path)
   let vertCount = path.length
   if (vertCount < 3) { return }
   path = loopPath(path)
   // console.log('loopedpath', path)
-  let segmentPath = []
+  let segmentPath = new OpArray
   let previousSeg = undefined
   for (let i = 0; i < vertCount; i++) {
     let seg = protoSegment({ start: vert(path[i]), end: vert(path[i + 1]), parentID: parentID })
