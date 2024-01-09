@@ -233,7 +233,7 @@ class ProtoMill {
   }
   //METH:
   mkLimits() {
-    //TODO: create perimeters/limits using Grid.assignGroupPerimeters()
+    //TODO: create perimeters/limits using groupXXX.createPerimeters()
   }
   //METH:
   setTensions() {
@@ -241,7 +241,7 @@ class ProtoMill {
   }
   //METH:
   setShaders() {
-    //TODO: assign shaders and insets using Grid.createIslands()
+    //TODO: assign shaders and insets using groupXXX.createSubIslands()
   }
   //METH:
   mkFinal() { }
