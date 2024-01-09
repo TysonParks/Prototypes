@@ -414,10 +414,10 @@ function gridTests2() {
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
-  grid.assignGroupPerimeter('grp000', 'maxCorners', Direction.Cardinal)
-  grid.assignGroupPerimeter('grp001', 'maxCorners', Direction.All)
-  grid.assignGroupPerimeter('grp002', 'maxCorners', Direction.Cardinal)
-  grid.assignGroupPerimeter('grp003', 'maxCorners', Direction.Cardinal)
+  group000.createPerimiters('maxCorners', Direction.Cardinal)
+  group001.createPerimiters('maxCorners', Direction.All)
+  group002.createPerimiters('maxCorners', Direction.Cardinal)
+  group003.createPerimiters('maxCorners', Direction.Cardinal)
   console.log(`groups`, grid.groups)
 
   grid.customizeShapes()
