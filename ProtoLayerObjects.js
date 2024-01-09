@@ -1991,11 +1991,12 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Assignment Methods
   // #region Grammar AssignmentMethods
   //METH:
-  assignGroupPerimeter(groupID, perimeterType) {
-    const group = this.groupNamed(groupID)
-    if (!group) { console.error(`groupID ${groupID} is invalid`) }
-    group?.createPerimiters(perimeterType)
-  }
+  //TODO: DEPRECATED
+  // assignGroupPerimeter(groupID, perimeterType, direction) {
+  //   const group = this.groupNamed(groupID)
+  //   if (!group) { console.error(`groupID ${groupID} is invalid`) }
+  //   group?.createPerimiters(perimeterType, direction)
+  // }
   //METH:
   assignCells(selection, groupID) {
     // console.log('selection', selection)
