@@ -257,9 +257,17 @@ class ProtoSVG {
 
 //CLASS: VertPath
 class VertPath {
-  // FUNC: fromSegPath()
+  //METH: fromSegPath()
   static fromSegPath(segPath) {
     return segPath.map(seg => [seg.startPoint.x, seg.startPoint.y])
+  }
+
+  //METH: fromSVGPath() : extract comma separated vert coordinates from an SVG path to array
+  static fromSVGPath(path = '') {
+    let reg = /-?\d+(?:\.\d+)*[,]-?\d+(?:\.\d+)*/
+    let result = matchAll(path, reg)
+    // print(result)
+    return result
   }
 }
 
@@ -270,7 +278,7 @@ class SegPath {
     // console.log('path', path)
     let vertCount = path.length
     if (vertCount < 3) { return }
-    path = loopPath(path)
+    path = SegPath.loopPath(path)
     // console.log('loopedpath', path)
     let segmentPath = new OpArray
     let previousSeg = undefined
@@ -347,6 +355,24 @@ class SegPath {
 
     return newPath
   }
+
+  //METH: loopPath() : loopPath closes a shape path loop made of either segments or vertices
+  static loopPath(verts = simpleSquare) {
+    let origin = verts[0]
+    let last = verts[verts.length - 1]
+    if (origin !== last) {
+      let closer
+      if (origin instanceof Segment) {
+        // closer = segment({ start: last, end: origin })
+        closer = new Segment({ start: last, end: origin })
+      } else if (typeof origin[0] === 'number') {
+        // print('has number')
+        closer = origin
+      }
+      verts.push(closer)
+    }
+    return verts
+  }
 }
 
 //CLASS: SVGPath
@@ -354,43 +380,22 @@ class SVGPath {
 
 }
 
-
-// FUNC: lVertsToSVGPath()
-function lVertsToSVGPath(verts = simpleSquare) {
-  let shape = verts
-    .map((e, i,) => {
-      if (i === 0) { return `M ${e}` }
-      return `L ${e}`
-    })
-  // return `${shape.join(" ")}`
-  return `path('${shape.join(" ")}')`
-}
-
-
-
-// FUNC: loopPath()
-// loopPath closes a shape path loop made of either segments or vertices
-function loopPath(verts = simpleSquare) {
-  let origin = verts[0]
-  let last = verts[verts.length - 1]
-  if (origin !== last) {
-    let closer
-    if (origin instanceof Segment) {
-      // closer = segment({ start: last, end: origin })
-      closer = new Segment({ start: last, end: origin })
-    } else if (typeof origin[0] === 'number') {
-      // print('has number')
-      closer = origin
-    }
-    verts.push(closer)
-  }
-  return verts
-}
+//TODO: DEPRECATED
+// // FUNC: lVertsToSVGPath()
+// function lVertsToSVGPath(verts = simpleSquare) {
+//   let shape = verts
+//     .map((e, i,) => {
+//       if (i === 0) { return `M ${e}` }
+//       return `L ${e}`
+//     })
+//   // return `${shape.join(" ")}`
+//   return `path('${shape.join(" ")}')`
+// }
 
 // FUNC: drawPointsAtVerts()
 // draw index labeled points at (comma separated) verts extracted from SVG path description
 function drawPointsAtVerts({ path, parent, size = 5, offset = vert(0), color = '#F80', indices = true } = {}) {
-  let verts = extractVerts(path)
+  let verts = VertPath.fromSVGPath(path)
   let centerOffset = size / 2
   let divs = []
   verts.forEach((e, i) => {
@@ -433,14 +438,14 @@ function drawPointsAtVerts({ path, parent, size = 5, offset = vert(0), color = '
   }
 }
 
-// FUNC: extractVerts()
-// extract comma separated vert coordinates from an SVG path to array
-function extractVerts(path = '') {
-  let reg = /-?\d+(?:\.\d+)*[,]-?\d+(?:\.\d+)*/
-  let result = matchAll(path, reg)
-  // print(result)
-  return result
-}
+// // FUNC: extractVerts()
+// // extract comma separated vert coordinates from an SVG path to array
+// function extractVerts(path = '') {
+//   let reg = /-?\d+(?:\.\d+)*[,]-?\d+(?:\.\d+)*/
+//   let result = matchAll(path, reg)
+//   // print(result)
+//   return result
+// }
 
 // FUNC: extractCoord()
 // extract x and y from single comma separated vert string
@@ -455,7 +460,7 @@ function extractCoord(vertString) {
 
 // FUNC: multiplySVGCoords()
 function multiplySVGCoords({ path, multiplier } = {}) {
-  let verts = extractVerts(path).map(e => {
+  let verts = VertPath.fromSVGPath(path).map(e => {
     let pairs = extractCoord(e)
     return pairs.map(f => f * multiplier)
   })
