@@ -390,7 +390,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
-  let group003 = grid.groupAvail()
+  let group003 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   // const bounds = grid.cellBounds({ selection: grid.cells })
   // const bounds2 = grid.gridCellBounds
@@ -417,7 +417,7 @@ function gridTests2() {
   group000.createPerimiters('maxCorners', Direction.Cardinal)
   group001.createPerimiters('maxCorners', Direction.All)
   group002.createPerimiters('maxCorners', Direction.Cardinal)
-  group003.createPerimiters('maxCorners', Direction.Cardinal)
+  group003?.createPerimiters('maxCorners', Direction.Cardinal) // will need to create check to make sure all groups used
   console.log(`groups`, grid.groups)
 
   grid.customizeShapes()
@@ -457,7 +457,7 @@ function gridTests2() {
   //   insetScale: .2,
   // })
 
-  group003.createSubIslands({
+  group003?.createSubIslands({
     // direction: Direction.All,
     filter: shader6,
     insetScale: .25,
