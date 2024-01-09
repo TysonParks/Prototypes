@@ -2826,7 +2826,7 @@ class Shape extends ProtoLayer {
   //NOTE: ultimately both have advantages. could make inset transform a method with two inset compProps: sub & simpleSub
   get simpleSubShapes() {
     return this.subShapes?.map(sub =>
-      ProtoSVG.refineProtoSegmentPath(sub, this.id, this.island.perimeterType === 'minCorners')
+      SegPath.refine(sub, this.id, this.island.perimeterType === 'minCorners')
     )
   }
 
@@ -2896,7 +2896,7 @@ class Shape extends ProtoLayer {
   //METH: 
   createSimpleSubShapes(minCorners = false) {
     this.simpleSubShapes = this.subShapes.map(
-      subShape => ProtoSVG.refineProtoSegmentPath(subShape, this.id, minCorners)
+      subShape => SegPath.refine(subShape, this.id, minCorners)
     )
     this.drawElement()
     console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
