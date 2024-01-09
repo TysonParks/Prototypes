@@ -17,69 +17,6 @@ class ProtoSVG {
 
     return lSegmentPathToRoundedSVGPath({ segments: segments, random: random, straightness: straightness })
   }
-  //METH: refineProtoSegmentPath()
-  // remove colinear segments to reduce shape path to single segments connecting corners
-  static refineProtoSegmentPath(path = [], parentID, minCorners = false) {
-    let newPath = new OpArray
-    let prevSeg = undefined
-    let prevMid = undefined
-    let length = 1
-    let firstID = undefined
-    for (let i = 0; i < path.length; i++) {
-      let seg = path[i].copy
-      if (prevSeg !== undefined && seg.angle === prevSeg.angle) { // if two segments are in line/flat
-        if (length === 1) {
-          // startNeighbor = 
-          firstID = prevSeg.id
-          if (minCorners) { prevSeg.assignMid() }
-        }
-        length += 1
-        if (minCorners) { prevMid = seg.mid }
-        const prevIDs = OpArray.from(prevSeg.islandIDs)
-        const segIDs = OpArray.from(seg.islandIDs)
-        // console.log(`prevIDs`, prevIDs)
-        // console.log(`segIDs`, segIDs)
-        const idArray = prevIDs.union(segIDs)
-        // console.log(`idArray`, idArray)
-        const islandIDs = new Set(idArray)
-        const id = `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}`
-        let newSeg = protoSegment({
-          start: prevSeg.startPoint,
-          end: seg.endPoint,
-          parentID: parentID,
-          id: id,
-          islandIDs: islandIDs
-        })
-        // add cubicVerts from prevSeg and seg to newSeg
-        newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
-        newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
-        newSeg.addCubicStartVert(seg.cubicVerts.start)
-        newSeg.addCubicEndVert(seg.cubicVerts.end)
-
-        // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
-        newPath.pop()
-        seg = newSeg
-      } else {
-        length = 1
-        firstID = undefined
-        if (minCorners) {
-          prevSeg.addCubicEndVert(prevMid)
-        }
-      }
-
-      newPath.push(seg)
-      prevSeg = seg
-    }
-    //assign neighbors
-    newPath.forEach((seg, i) => {
-      const loop = range(0, newPath.lastIndex)
-      const prev = newPath[loop.cycle(i - 1)]
-      const next = newPath[loop.cycle(i + 1)]
-      seg.assignNeighbors({ start: prev, end: next })
-    })
-
-    return newPath
-  }
 
   // NOTE: Made with GPT-4 on May 23, 2023
   //METH:
@@ -223,8 +160,69 @@ class VertPath {
 
 }
 
-class SegmentPath {
+class SegPath {
+  //METH: refine() : remove colinear segments to simplify seg path to single segments connecting corners
+  static refine(path = new OpArray, parentID, minCorners = false) {
+    let newPath = new OpArray
+    let prevSeg = undefined
+    let prevMid = undefined
+    let length = 1
+    let firstID = undefined
+    for (let i = 0; i < path.length; i++) {
+      let seg = path[i].copy
+      if (prevSeg !== undefined && seg.angle === prevSeg.angle) { // if two segments are in line/flat
+        if (length === 1) {
+          // startNeighbor = 
+          firstID = prevSeg.id
+          if (minCorners) { prevSeg.assignMid() }
+        }
+        length += 1
+        if (minCorners) { prevMid = seg.mid }
+        const prevIDs = OpArray.from(prevSeg.islandIDs)
+        const segIDs = OpArray.from(seg.islandIDs)
+        // console.log(`prevIDs`, prevIDs)
+        // console.log(`segIDs`, segIDs)
+        const idArray = prevIDs.union(segIDs)
+        // console.log(`idArray`, idArray)
+        const islandIDs = new Set(idArray)
+        const id = `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}`
+        let newSeg = protoSegment({
+          start: prevSeg.startPoint,
+          end: seg.endPoint,
+          parentID: parentID,
+          id: id,
+          islandIDs: islandIDs
+        })
+        // add cubicVerts from prevSeg and seg to newSeg
+        newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
+        newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
+        newSeg.addCubicStartVert(seg.cubicVerts.start)
+        newSeg.addCubicEndVert(seg.cubicVerts.end)
 
+        // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
+        newPath.pop()
+        seg = newSeg
+      } else {
+        length = 1
+        firstID = undefined
+        if (minCorners) {
+          prevSeg.addCubicEndVert(prevMid)
+        }
+      }
+
+      newPath.push(seg)
+      prevSeg = seg
+    }
+    //assign neighbors
+    newPath.forEach((seg, i) => {
+      const loop = range(0, newPath.lastIndex)
+      const prev = newPath[loop.cycle(i - 1)]
+      const next = newPath[loop.cycle(i + 1)]
+      seg.assignNeighbors({ start: prev, end: next })
+    })
+
+    return newPath
+  }
 }
 
 class SVGPath {
