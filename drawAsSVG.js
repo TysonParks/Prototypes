@@ -5,131 +5,6 @@ const bezCircle45DegConst = 0.265
 
 //CLASS: ProtoSVG
 class ProtoSVG {
-  //METH:
-  static segsToSVG({ segments, refine = true, random = false, straightness = 0 } = {}) {
-    if (refine) {
-      let verts = VertPath.fromSegPath(segments)
-      segments = SegPath.fromVertPath({ path: verts, refine: true })
-      // print('segments')
-      // print(segments.map(e => e.string))
-    }
-
-    return ProtoSVG.segPathToRoundSVG({ segments: segments, random: random, straightness: straightness })
-  }
-
-  //METH: segPathToRoundSVG() : create SVG path from segments with points rounded using (C) bezier curves
-  static segPathToRoundSVG(
-    { segments,
-      curvature = bezCircleConst,
-      straightness = 0,
-      bisector = .5,
-      circularCaps = true,
-      random = false,
-    } = {}) {
-    segments = segments.copy
-    let last = segments.pop()
-    let lineStartLoc = bisector - straightness * bisector
-    let lineEndLoc = bisector + straightness * (1 - bisector)
-
-    //FUNC: offset
-    const offset = () => { return random ? R.random_num(0.1, 1.5) : curvature }
-
-    //FUNC: makeSegmentCircular
-    const makeSegmentCircular = (segment, startLoc = lineStartLoc) => {
-      control1 = segment.scaledStartPoint(bezCircleConst, startLoc)
-      lineStart = segment.pointOnsegment(startLoc)
-      lineEnd = segment.pointOnsegment(lineEndLoc)
-      control2 = segment.scaledEndPoint(bezCircleConst, lineEndLoc)
-      return [control1, lineStart, lineEnd, control2]
-    }
-
-    //FUNC: makePrevSegmentCircular
-    const makePrevSegmentCircular = () => {
-      if (curves.length === 0) { return }
-      let prevCoords = curves.pop()
-      let lineEndLoc = 1 - circleCurve / previousSegment.length
-      let lineEnd = previousSegment.pointOnsegment(lineEndLoc)
-      let control2 = previousSegment.scaledEndPoint(bezCircleConst, lineEndLoc)
-      let newCoords = [prevCoords[0], prevCoords[1], lineEnd, control2]
-      curves.push(newCoords)
-    }
-
-    let curves = new OpArray
-    let previousSegment = last
-    let control1, lineStart, lineEnd, control2, circleCurve
-
-    // create curve coordinates
-    segments.forEach((e, i) => {
-      // print('lengths')
-      // print([previousSegment.length, e.length])
-      if (!circularCaps) {
-        control1 = e.scaledStartPoint(offset(), lineStartLoc)
-        lineStart = e.pointOnsegment(lineStartLoc)
-        lineEnd = e.pointOnsegment(lineEndLoc)
-        control2 = e.scaledEndPoint(offset(), lineEndLoc)
-      } else {
-        circleCurve = min(e.length, previousSegment.length) / 2
-        if (e.length < previousSegment.length) {
-          // print('previous is longer!')
-          makePrevSegmentCircular()
-          makeSegmentCircular(e)
-        } else {
-          // print('current is longer!')
-          let lineStartLoc = circleCurve / e.length
-          makeSegmentCircular(e, lineStartLoc)
-        }
-        previousSegment = e
-      }
-      curves.push([control1, lineStart, lineEnd, control2])
-    })
-
-    // create start and end coordinates
-    let end, start
-    if (!circularCaps) {
-      end = [last.scaledStartPoint(offset(), lineStartLoc), last.pointOnsegment(lineStartLoc)]
-      start = [last.pointOnsegment(lineEndLoc), last.scaledEndPoint(offset(), lineEndLoc)]
-    } else {
-      circleCurve = min(last.length, previousSegment.length) / 2
-      let lineStartLoc = circleCurve / last.length
-      if (previousSegment.length > last.length) {
-        makePrevSegmentCircular()
-        makeSegmentCircular(last)
-      } else {
-        makeSegmentCircular(last, lineStartLoc)
-      }
-      end = [control1, lineStart]
-
-      circleCurve = min(last.length, segments[0].length) / 2
-      if (last.length > segments[0].length) {
-        lineEndLoc = 1 - circleCurve / last.length
-        lineEnd = last.pointOnsegment(lineEndLoc)
-        control2 = last.scaledEndPoint(bezCircleConst, lineEndLoc)
-      } else {
-        makeSegmentCircular(last, lineStartLoc)
-      }
-      start = [lineEnd, control2]
-    }
-
-    //convert curve segment coordinates into SVG instructions
-    let curvesSVG = curves.map(e => `${e[0].array} ${e[1].array} L ${e[2].array} C ${e[3].array} `)
-    let endSVG = `${end[0].array} ${end[1].array} Z`
-    let startSVG = `M ${start[0].array} C ${start[1].array}`
-    return `${startSVG} ${curvesSVG} ${endSVG}`
-  }
-
-  // NOTE: Made with GPT-4 on May 23, 2023
-  //METH:
-  static arcControlPoints(a, b, c) {
-    const ab = Vertex.sub(b, a).normalize()
-    const bc = Vertex.sub(c, b).normalize()
-    const theta = ab.angleBetween(Vertex.mult(bc, -1))
-    const t = 4 / 3 * tan(theta / 4)
-    const p1 = a
-    const p2 = Vertex.sub(b, Vertex.mult(ab, t))
-    const p3 = Vertex.add(b, Vertex.mult(bc, t))
-    const p4 = c
-    return [p1, p2, p3, p4]
-  }
 
   // MARK: File export methods
   // NOTE: Made with GPT-4 on April 14, 2023
@@ -154,7 +29,6 @@ class ProtoSVG {
   // NOTE: Made with ClaudeAI on Oct 5, 2023
   //METH:
   static async exportPNG16(svgMarkup, fileName, width, height) {
-
     // Load SVG image
     async function loadImage(svgMarkup) {
       const img = await new Promise(resolve => {
@@ -321,6 +195,21 @@ class VertPath {
     // print(result)
     return result
   }
+  //TODO: reverse engineer and find where this belongs
+  // NOTE: Made with GPT-4 on May 23, 2023
+  //NOTE: Intended to help make diagonal lines possible
+  //METH: arcControlPoints() : 
+  static arcControlPoints(a, b, c) {
+    const ab = Vertex.sub(b, a).normalize()
+    const bc = Vertex.sub(c, b).normalize()
+    const theta = ab.angleBetween(Vertex.mult(bc, -1))
+    const t = 4 / 3 * tan(theta / 4)
+    const p1 = a
+    const p2 = Vertex.sub(b, Vertex.mult(ab, t))
+    const p3 = Vertex.add(b, Vertex.mult(bc, t))
+    const p4 = c
+    return [p1, p2, p3, p4]
+  }
 }
 
 //CLASS: SegPath
@@ -429,6 +318,115 @@ class SegPath {
 
 //CLASS: SVGPath
 class SVGPath {
+  //TODO: move to SVGPath class
+  //METH: fromSegPath() : 
+  static fromSegPath({ segPath, refine = true, random = false, straightness = 0 } = {}) {
+    if (refine) {
+      let verts = VertPath.fromSegPath(segPath)
+      segPath = SegPath.fromVertPath({ path: verts, refine: true })
+    }
+    return SVGPath.segPathToRoundSVG({ segments: segPath, random: random, straightness: straightness })
+  }
+  //TODO: move to SVGPath class
+  //METH: segPathToRoundSVG() : create SVG path from segments with points rounded using (C) bezier curves
+  static segPathToRoundSVG(
+    { segments,
+      curvature = bezCircleConst,
+      straightness = 0,
+      bisector = .5,
+      circularCaps = true,
+      random = false,
+    } = {}) {
+    segments = segments.copy
+    let last = segments.pop()
+    let lineStartLoc = bisector - straightness * bisector
+    let lineEndLoc = bisector + straightness * (1 - bisector)
+
+    //FUNC: offset
+    const offset = () => { return random ? R.random_num(0.1, 1.5) : curvature }
+
+    //FUNC: makeSegmentCircular
+    const makeSegmentCircular = (segment, startLoc = lineStartLoc) => {
+      control1 = segment.scaledStartPoint(bezCircleConst, startLoc)
+      lineStart = segment.pointOnsegment(startLoc)
+      lineEnd = segment.pointOnsegment(lineEndLoc)
+      control2 = segment.scaledEndPoint(bezCircleConst, lineEndLoc)
+      return [control1, lineStart, lineEnd, control2]
+    }
+
+    //FUNC: makePrevSegmentCircular
+    const makePrevSegmentCircular = () => {
+      if (curves.length === 0) { return }
+      let prevCoords = curves.pop()
+      let lineEndLoc = 1 - circleCurve / previousSegment.length
+      let lineEnd = previousSegment.pointOnsegment(lineEndLoc)
+      let control2 = previousSegment.scaledEndPoint(bezCircleConst, lineEndLoc)
+      let newCoords = [prevCoords[0], prevCoords[1], lineEnd, control2]
+      curves.push(newCoords)
+    }
+
+    let curves = new OpArray
+    let previousSegment = last
+    let control1, lineStart, lineEnd, control2, circleCurve
+
+    // create curve coordinates
+    segments.forEach((e, i) => {
+      // print('lengths')
+      // print([previousSegment.length, e.length])
+      if (!circularCaps) {
+        control1 = e.scaledStartPoint(offset(), lineStartLoc)
+        lineStart = e.pointOnsegment(lineStartLoc)
+        lineEnd = e.pointOnsegment(lineEndLoc)
+        control2 = e.scaledEndPoint(offset(), lineEndLoc)
+      } else {
+        circleCurve = min(e.length, previousSegment.length) / 2
+        if (e.length < previousSegment.length) {
+          // print('previous is longer!')
+          makePrevSegmentCircular()
+          makeSegmentCircular(e)
+        } else {
+          // print('current is longer!')
+          let lineStartLoc = circleCurve / e.length
+          makeSegmentCircular(e, lineStartLoc)
+        }
+        previousSegment = e
+      }
+      curves.push([control1, lineStart, lineEnd, control2])
+    })
+
+    // create start and end coordinates
+    let end, start
+    if (!circularCaps) {
+      end = [last.scaledStartPoint(offset(), lineStartLoc), last.pointOnsegment(lineStartLoc)]
+      start = [last.pointOnsegment(lineEndLoc), last.scaledEndPoint(offset(), lineEndLoc)]
+    } else {
+      circleCurve = min(last.length, previousSegment.length) / 2
+      let lineStartLoc = circleCurve / last.length
+      if (previousSegment.length > last.length) {
+        makePrevSegmentCircular()
+        makeSegmentCircular(last)
+      } else {
+        makeSegmentCircular(last, lineStartLoc)
+      }
+      end = [control1, lineStart]
+
+      circleCurve = min(last.length, segments[0].length) / 2
+      if (last.length > segments[0].length) {
+        lineEndLoc = 1 - circleCurve / last.length
+        lineEnd = last.pointOnsegment(lineEndLoc)
+        control2 = last.scaledEndPoint(bezCircleConst, lineEndLoc)
+      } else {
+        makeSegmentCircular(last, lineStartLoc)
+      }
+      start = [lineEnd, control2]
+    }
+
+    //convert curve segment coordinates into SVG instructions
+    let curvesSVG = curves.map(e => `${e[0].array} ${e[1].array} L ${e[2].array} C ${e[3].array} `)
+    let endSVG = `${end[0].array} ${end[1].array} Z`
+    let startSVG = `M ${start[0].array} C ${start[1].array}`
+    return `${startSVG} ${curvesSVG} ${endSVG}`
+  }
   // METH: multiplySVGCoords()
   static multiply({ svgPath, multiplier } = {}) {
     let verts = VertPath.fromSVGPath(svgPath).map(e => {
@@ -439,11 +437,7 @@ class SVGPath {
   }
 }
 
-
-
-
-// MARK: Pseudo Drawing Classes
-
+// MARK: Proto Geometry Classes
 // CLASS: Vertex
 function vert(x = 0, y = 0) {
   if (x instanceof Array) { return new Vertex(x[0], x[1]) }
@@ -843,7 +837,7 @@ class ProtoSegment extends Segment {
 
 
 
-
+//TODO: MIGRATE TO TESTMESS
 // MARK: Test Shapes
 const testPath = `
 M 100 100 
