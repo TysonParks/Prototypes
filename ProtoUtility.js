@@ -447,70 +447,8 @@ class EdgePart {
     const pair = turns.map(e => e.shortName).join('')
     const name = getKeyByValue(this.turnPatterns, pair)
     return new EdgePart(name)
-
-    const absSum = abs(turns[0].value + turns[1].value)
-    switch (absSum) {
-      case 0:             // LS, RS, SL, SR -> Corner
-        return EdgePart.S
-      case 1:             // LR, RL -> Stair
-        return EdgePart.C
-      case 2:           // LL, RR -> U
-        return EdgePart.U
-    }
   }
-
 }
-
-//TODO: DEPRECATE - early version of EnumFeature in ABFeatureScript.js
-// // CLASS: Option
-// class Option {
-//   #category
-//   #options
-//   #weighted
-//   constructor(name, options) {
-//     this.#options = OpArray.from(options)
-//     this.#category = name
-//     this.#weighted = this.#weighOptions()
-//   }
-
-//   // PUBLIC
-//   get category() { return this.#category }
-//   // get none() { return this.#getFeatureNamed('None') }
-//   feature(weight) { return this.#getFeature(this.#getFeatureIndex(weight)) }
-//   name(weight) { return this.feature(weight)[1] }
-//   value(weight) { return this.feature(weight)[2] || `"${this.name(weight)}" feature has no value` }
-//   chance(name) { return this.#getFeatureChance(name) }
-
-//   // PRIVATE
-//   // get #optionsArray() { return Object.entries(this.#options) }
-//   get #totalWeight() {
-//     return this.#options
-//       .map(e => e[1])
-//       .reduce((a, b) => a + b, 0)
-//   }
-
-//   #getFeatureNamed(name) {
-//     return this.#getFeature(this.#options.findIndex(e => e[0] === name)) || `"${name}" feature does not exist`
-//   }
-//   #getFeature(index) { return [this.#category, this.#options[index][0], this.#options[index][2]] }
-//   #getFeatureIndex(weight) { return this.#weighted.findIndex(e => between(weight, e[1])) }
-//   #getFeatureChance(name) { return this.#getChance(this.#weighted.findIndex(e => e[0] === name)) }
-//   #getChance(index) { return this.#weighted[index][2].toFixed(2) }
-//   #weighOptions() {
-//     let p = []
-//     let currentWeight = 0
-//     let weightRange = [0, this.#totalWeight]
-//     this.#options.forEach(e => {
-//       let range = [currentWeight, currentWeight + e[1]]
-//       let normRange = normalizeSubRange(range, weightRange)
-//       let normWeight = normRange[1] - normRange[0]
-//       currentWeight += e[1]
-//       p.push([e[0], normRange, normWeight])
-//     })
-//     return p
-//   }
-
-// }
 
 // MARK: Utility
 // FUNC: gridPointIndex() calculates 2D array index given coords(x,y) and array width
