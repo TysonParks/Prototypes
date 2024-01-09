@@ -20,6 +20,7 @@ const lastHash = [
   '0x31ecf9802468183e9c88a2b784cd71ea7e671c10dd85045f65cb15efbc78d1c4',
   '0xb5d75d1c41ec1e4f3a9645d885888bbbaaaaf79dfff2c2853aedb2169a3a7294',
   '0xccd808d92ef4a00ac0e47c71108a68055f7e575d5c13ffbdaef319d22380c5f0',
+  '0x9f15a4efffc8d5cd56ba1d8035ce004037a94a435dd4e39f75401bc5e949b4a0',
 ]
 
 function currentHash() {
