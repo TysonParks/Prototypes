@@ -12,20 +12,20 @@ class SVGPath {
       let verts = VertPath.fromSegPath(segPath)
       segPath = SegPath.fromVertPath({ path: verts, refine: true })
     }
-    return SVGPath.segPathToRoundSVG({ segments: segPath, random: random, straightness: straightness })
+    return SVGPath.segPathToRoundSVG({ segPath: segPath, random: random, straightness: straightness })
   }
   //TODO: move to SVGPath class
   //METH: segPathToRoundSVG() : create SVG path from segments with points rounded using (C) bezier curves
   static segPathToRoundSVG(
-    { segments,
+    { segPath,
       curvature = bezCircleConst,
       straightness = 0,
       bisector = .5,
       circularCaps = true,
       random = false,
     } = {}) {
-    segments = segments.copy
-    let last = segments.pop()
+    segPath = segPath.copy
+    let last = segPath.pop()
     let lineStartLoc = bisector - straightness * bisector
     let lineEndLoc = bisector + straightness * (1 - bisector)
 
@@ -45,38 +45,42 @@ class SVGPath {
     const makePrevSegmentCircular = () => {
       if (curves.length === 0) { return }
       let prevCoords = curves.pop()
-      let lineEndLoc = 1 - circleCurve / previousSegment.length
-      let lineEnd = previousSegment.pointOnsegment(lineEndLoc)
-      let control2 = previousSegment.scaledEndPoint(bezCircleConst, lineEndLoc)
+      let lineEndLoc = 1 - circleCurve / prevSeg.length
+      let lineEnd = prevSeg.pointOnsegment(lineEndLoc)
+      let control2 = prevSeg.scaledEndPoint(bezCircleConst, lineEndLoc)
       let newCoords = [prevCoords[0], prevCoords[1], lineEnd, control2]
       curves.push(newCoords)
     }
 
     let curves = new OpArray
-    let previousSegment = last
+    let prevSeg = last
     let control1, lineStart, lineEnd, control2, circleCurve
 
     // create curve coordinates
-    segments.forEach((e, i) => {
-      // print('lengths')
-      // print([previousSegment.length, e.length])
+    segPath.forEach((seg, i) => {
       if (!circularCaps) {
-        control1 = e.scaledStartPoint(offset(), lineStartLoc)
-        lineStart = e.pointOnsegment(lineStartLoc)
-        lineEnd = e.pointOnsegment(lineEndLoc)
-        control2 = e.scaledEndPoint(offset(), lineEndLoc)
+        control1 = seg.scaledStartPoint(offset(), lineStartLoc)
+        lineStart = seg.pointOnsegment(lineStartLoc)
+        lineEnd = seg.pointOnsegment(lineEndLoc)
+        control2 = seg.scaledEndPoint(offset(), lineEndLoc)
       } else {
-        circleCurve = min(e.length, previousSegment.length) / 2
-        if (e.length < previousSegment.length) {
+        // console.error(`YAAAASSSSSS`)
+        if (seg.hasSomeCubicVerts) {
+          // console.error(`YAAAASSSSSS`)
+          circleCurve = min(seg.length, prevSeg.length) / 8
+        } else {
+          circleCurve = min(seg.length, prevSeg.length) / 2
+        }
+        if (seg.length < prevSeg.length) {
           // print('previous is longer!')
           makePrevSegmentCircular()
-          makeSegmentCircular(e)
+          makeSegmentCircular(seg)
         } else {
           // print('current is longer!')
-          let lineStartLoc = circleCurve / e.length
-          makeSegmentCircular(e, lineStartLoc)
+          let lineStartLoc = circleCurve / seg.length
+          makeSegmentCircular(seg, lineStartLoc)
         }
-        previousSegment = e
+        prevSeg = seg
       }
       curves.push([control1, lineStart, lineEnd, control2])
     })
@@ -87,9 +91,9 @@ class SVGPath {
       end = [last.scaledStartPoint(offset(), lineStartLoc), last.pointOnsegment(lineStartLoc)]
       start = [last.pointOnsegment(lineEndLoc), last.scaledEndPoint(offset(), lineEndLoc)]
     } else {
-      circleCurve = min(last.length, previousSegment.length) / 2
+      circleCurve = min(last.length, prevSeg.length) / 2
       let lineStartLoc = circleCurve / last.length
-      if (previousSegment.length > last.length) {
+      if (prevSeg.length > last.length) {
         makePrevSegmentCircular()
         makeSegmentCircular(last)
       } else {
@@ -97,8 +101,8 @@ class SVGPath {
       }
       end = [control1, lineStart]
 
-      circleCurve = min(last.length, segments[0].length) / 2
-      if (last.length > segments[0].length) {
+      circleCurve = min(last.length, segPath[0].length) / 2
+      if (last.length > segPath[0].length) {
         lineEndLoc = 1 - circleCurve / last.length
         lineEnd = last.pointOnsegment(lineEndLoc)
         control2 = last.scaledEndPoint(bezCircleConst, lineEndLoc)
@@ -188,6 +192,7 @@ class SegPath {
         newPath.pop()
         seg = newSeg
       } else {
+        seg.parentID = parentID
         length = 1
         firstID = undefined
         if (minCorners) {
@@ -610,8 +615,9 @@ class Segment {
   scaledEndPoint(lerp, midPoint = 0.5) {
     return this.pointOnsegment(midPoint + lerp * (1 - midPoint))
   }
-
+  //METH: distancedStartPoint() : get point on segment given distance from start
   distancedStartPoint(distance) { return this.pointOnsegment(distance / this.length) }
+  //METH: distancedEndPoint() : get point on segment given distance from end
   distancedEndPoint(distance) { return this.pointOnsegment(1 - distance / this.length) }
 
   #assignVerts(start, end, args) {
