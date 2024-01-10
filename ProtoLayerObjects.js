@@ -2819,12 +2819,13 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
-  finalSubShapes = new OpArray
+  finalSubShapes
   testVerts
   testColor
 
   constructor({
     subShapes,
+    finalSubShapes,
     protoParent,
     svgParent,
     island,
@@ -2837,6 +2838,7 @@ class Shape extends ProtoLayer {
       drawFilter: protoParent.drawFilter,
     })
     this.subShapes = subShapes
+    this.finalSubShapes = finalSubShapes ? finalSubShapes : new OpArray
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
     this.assignSegments()
@@ -2879,6 +2881,8 @@ class Shape extends ProtoLayer {
   }
 
   get insetSubShapes() {
+    console.log(`this.finalSubShapes`, this.finalSubShapes)
+    console.log(`using finalSubshapes`, this.finalSubShapes.length > 0)
     const subs = this.finalSubShapes.length > 0 ? this.finalSubShapes : this.simpleSubShapes
     let insetSubShapes = subs?.map(sub => {
       let insetSubShape = new OpArray
@@ -2976,6 +2980,7 @@ class Shape extends ProtoLayer {
   } = {}) {
     const newShape = new Shape({
       subShapes: this.subShapes.map(sub => sub.map(seg => seg.copy)),
+      finalSubShapes: this.finalSubShapes,
       protoParent: protoParent,
       svgParent: protoParent.svgParent,
       island: island,
