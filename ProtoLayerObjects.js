@@ -810,6 +810,8 @@ class Grid extends ProtoLayer {
   groupNamed(name) { return this.groups.find(e => e.id === name) || null }
   //METH: 
   islandNamed(name) { return this.islands.find(e => e.id === name) || null }
+  //METH: 
+  shapeNamed(name) { return this.shapes.find(e => e.id === name) || null }
   // #endregion
   // MARK: CellIndex Methods
   // #region CellIndex Methods
@@ -1270,27 +1272,70 @@ class Grid extends ProtoLayer {
     // let currentSimples = allSimpleSegments.copy // deflationary working copy
     // console.log(`allSimpleSegments`, allSimpleSegments.map(s => s.id))
     // console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
-    //TODO: Add a first stage in which 4-sided shapes are processed. It's here where I can vary the outcomes.
-    //NOTE: Modes: 0-Normal, 1-reflective offset, 2-rotational offset, 3-Random
-    //FUNC: formQuadShapes(mode) : 
+
+
+
+    //FUNC: formQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
+    //TODO: need to add an ABFeature to select these!!!
     const formQuadShapes = (mode) => {
       const addSides = (sides) => sides.reduce((a, b) => a + b)
+      console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
       let quads = this.allSimpleSubShapes
         .filter(sub => sub.length === 4)// filter for 4-sided shapes
-        .sort((a, b) => addSides(b) - addSides(a))
+        .filter(sub => sub.some(seg => seg.isUTurnOut)) // filter for Outside shapes only (UTurnOut)
+        .sort((a, b) => addSides(b) - addSides(a)) // sort smallest to largest
+        .copy
       // console.log(`this.allSimpleSubShapes`, this.allSimpleSubShapes)
-      // console.log('quads', quads)
+      console.log('quads', quads)
+      console.log(`quad parts`, quads.map(quad => quad.map(seg => seg.part.value)))
 
+      let processor
       switch (mode) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
+        case 0: // Max curvature, equal radii
+          processor = (quad) => {
+            const radius = min(quad.map(seg => seg.length)) / 2
+            const shape = this.shapeNamed(quad[0].parentID)
+            console.log('parent shape', shape)
+            quad.forEach(seg => {
+              console.log(`processing quad seg`, seg.id, seg)
+              seg.addCubicStartVert(seg.distancedStartPoint(radius))
+              seg.addCubicEndVert(seg.distancedEndPoint(radius))
+            })
+            shape.finalSubShapes.push(quad)
+            console.log(`modified shape`, shape)
+          }
+          break
+        case 1: // Min curvature, equal radii
+          processor = (quad) => {
+            const radius = this.minCellWidth / 2
+            quad.forEach(seg => {
+              console.log(`processing quad seg`, seg.id)
+              seg.addCubicStartVert(seg.distancedStartPoint(radius))
+              seg.addCubicEndVert(seg.distancedEndPoint(radius))
+            })
+          }
+          break
+        case 2: // Horizontal Symmetry
+
+        case 3: // Vertical Symmetry
+
+        case 4: // Diagonal Eyeballs : max curvature with diagonal symmetry
+
+        case 5: // One Big Radius Corner
+
+        case 6: // Random radii per corner
+
+        case 7: // Mix : change mode for each subShape
+
         default:
       }
+
+      quads.forEach(quad => processor(quad))
+      console.log('quads post-processed', quads)
     }
 
-    formQuadShapes()
+    formQuadShapes(0)
+
 
     //FUNC: reorderSimples : reorders currentSimples
     const sortedSimples = (allSimpleSubShapes) => {
@@ -2502,7 +2547,7 @@ class Island extends ProtoLayer {
         direction = Direction.Cardinal
       }
       if (direction.equals(this.direction)) { // safest/fastest to copy Island,esp calculated Shape for straight inset
-        // console.log(`copying island for new island`)
+        console.log(`copying island for new island`)
         // copy this island but change inset, set filter, set drawFilter
         const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
         subIslands = OpArray.from([subIsland])
@@ -2531,6 +2576,7 @@ class Island extends ProtoLayer {
       })
     }
     this.subIslands = subIslands
+    // console.log(`new subShapes`, subIslands.map(isle => isle.shapes.map(shape => shape)))
   }
   //METH: copy(insetScale) : create copy 
   copy({
@@ -2773,7 +2819,7 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
-  finalSubShapes
+  finalSubShapes = new OpArray
   testVerts
   testColor
 
@@ -2833,7 +2879,8 @@ class Shape extends ProtoLayer {
   }
 
   get insetSubShapes() {
-    let insetSubShapes = this.simpleSubShapes?.map(sub => {
+    const subs = this.finalSubShapes.length > 0 ? this.finalSubShapes : this.simpleSubShapes
+    let insetSubShapes = subs?.map(sub => {
       let insetSubShape = new OpArray
       let prevInsetSeg
       // console.log(``)
@@ -2890,6 +2937,16 @@ class Shape extends ProtoLayer {
     return result
   }
   get insetSVGPath() { return `path('${this.insetSVG}')` }
+
+  get finalSVG() {
+    let result = this.finalSubShapes.map(e =>
+      SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
+    )
+    if (result instanceof Array) {
+      result = result.join(' ')
+    }
+    return result
+  }
 
   get extractedVerts() { return extractVerts(this.svg) }
 
@@ -3085,7 +3142,7 @@ class Shape extends ProtoLayer {
           .attribute('fill', protoColor(0, 0))
       }
     }
-    this.drawInsetDeBug = false
+    this.drawInsetDeBug = true
     if (this.drawInsetDeBug && this.drawFilter) {
       const insetPath = createSVGElt('path')
       insetPath
