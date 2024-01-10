@@ -64,9 +64,10 @@ class SVGPath {
         lineEnd = seg.pointOnsegment(lineEndLoc)
         control2 = seg.scaledEndPoint(offset(), lineEndLoc)
       } else {
-        // console.error(`YAAAASSSSSS`)
+        console.error(`YAAAASSSSSS`)
+        console.log(`segment`, seg)
         if (seg.hasSomeCubicVerts) {
-          // console.error(`YAAAASSSSSS`)
+          console.error(`YEEEEEEESSSSSS`)
           circleCurve = min(seg.length, prevSeg.length) / 8
         } else {
           circleCurve = min(seg.length, prevSeg.length) / 2
@@ -719,13 +720,13 @@ class ProtoSegment extends Segment {
 
   get hasCubicStartVert() { return this.cubicVerts.start.length > 0 }
   get hasCubicEndVert() { return this.cubicVerts.end.length > 0 }
-  get hasSomeCubicVerts() { return this.hasCubicStartVert + this.hasCubicEndVert === 1 }
+  get hasSomeCubicVerts() { return this.hasCubicStartVert || this.hasCubicEndVert }
   get hasNoCubicVerts() { return !this.hasSomeCubicVerts }
-  get hasOneCubicVert() { return (this.hasCubicStartVert || this.hasCubicEndVert) && !(this.hasBothCubicVerts) }
+  get hasOnlyOneCubicVert() { return (this.hasCubicStartVert || this.hasCubicEndVert) && !(this.hasBothCubicVerts) }
   get hasBothCubicVerts() { return this.hasCubicStartVert && this.hasCubicEndVert }
   get cubicVertCount() {
     if (this.hasBothCubicVerts) { return 2 }
-    if (this.hasOneCubicVert) { return 1 }
+    if (this.hasOnlyOneCubicVert) { return 1 }
     if (!this.hasSomeCubicVerts) { return 0 }
   }
 
