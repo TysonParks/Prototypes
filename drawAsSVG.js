@@ -8,7 +8,7 @@ class SVGPath {
   //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
     segPath = segPath.copy
-    console.log(`segPath`, segPath[0].parentID, segPath)
+    // console.log(`segPath`, segPath[0].parentID, segPath)
     let curves = []
     let start, end, cornerStart, cornerEnd
     let startRadius, startSegment, endRadius, endSegment
@@ -34,14 +34,16 @@ class SVGPath {
       if (i === segPath.lastIndex) {  // lastLoop
         end = [lineEnd, controlEnd]
         cornerEnd = seg.end
-        if (!cornerStart.equals(cornerEnd)) { // verify start and end meet at same point
+        if (!cornerStart.equals(cornerEnd, 3)) { // verify start and end meet at same point
           console.error(`ERROR: start and end are not connected!`)
+          console.log(`cornerStart`, cornerStart)
+          console.log(`cornerEnd`, cornerEnd)
         }
       }
     })
-    console.log(`start`, start)
-    console.log(`curves`, curves)
-    console.log(`end`, end)
+    // console.log(`start`, start)
+    // console.log(`curves`, curves)
+    // console.log(`end`, end)
 
     //FUNC: simplify(curve) : convert each vert into roundedDec coord pair array
     const simplify = (curve) => {
@@ -53,16 +55,16 @@ class SVGPath {
     start = simplify(start)
     curves = curves.map(curve => simplify(curve))
     end = simplify(end)
-    console.log(`  simplified: `)
-    console.log(`start`, start)
-    console.log(`curves`, curves)
-    console.log(`end`, end)
+    // console.log(`  simplified: `)
+    // console.log(`start`, start)
+    // console.log(`curves`, curves)
+    // console.log(`end`, end)
 
     const startSVG = `M ${end[0]} C ${end[1]}`
     const curvesSVG = curves.map(c => `${c[0]} ${c[1]} L ${c[2]} C ${c[3]} `)
     const endSVG = `${end[0]} ${end[1]} Z`
     const svgPath = `${startSVG} ${curvesSVG} ${endSVG}`
-    console.log(`FINAL svgPath`, svgPath)
+    // console.log(`FINAL svgPath`, svgPath)
     return svgPath
   }
 
@@ -573,10 +575,10 @@ class Vertex extends p5.Vector {
   equals(vert, accuracy = 3) {
     let ax, ay, bx, by
     if (arguments.length === 2) {
-      ax = this.x.toFixed(accuracy)
-      ay = this.y.toFixed(accuracy)
-      bx = vert.x.toFixed(accuracy)
-      by = vert.y.toFixed(accuracy)
+      ax = roundToDec(this.x, accuracy)
+      ay = roundToDec(this.y, accuracy)
+      bx = roundToDec(vert.x, accuracy)
+      by = roundToDec(vert.y, accuracy)
     } else {
       ax = this.x
       ay = this.y
@@ -733,6 +735,7 @@ class ProtoSegment extends Segment {
   get turns() {
     if (!this.neighbors.start || !this.neighbors.end) {
       console.error(`segment ${this.id} without neighbors has no turns`)
+      console.log(this.neighbors)
       return
     }
     return {
