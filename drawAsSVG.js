@@ -8,20 +8,21 @@ class SVGPath {
   //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
     segPath = segPath.copy
-
+    console.log(`segPath`, segPath[0].parentID, segPath)
     let curves = []
     let start, end, cornerStart, cornerEnd
     let startRadius, startSegment, endRadius, endSegment
     let controlStart, lineStart, lineEnd, controlEnd
 
     segPath.forEach((seg, i) => {
+      cornerMin = min(cornerMin, seg.length / 2)
       startRadius = seg.hasCubicStartVert ? seg.availableStartLength : cornerMin // radius of corner arc
       lineStart = seg.distancedStartPoint(startRadius * cornerScale) // start point of line connecting corner arcs 
       startSegment = segment(lineStart, seg.start) // control point calculation segment, connects hard corner to mid line
       controlStart = startSegment.pointOnsegment(bezCircleConst)
 
       endRadius = seg.hasCubicEndVert ? seg.availableEndLength : cornerMin // radius of corner arc
-      lineEnd = seg.distancedStartPoint(endRadius * cornerScale) // end point of line connecting corner arcs
+      lineEnd = seg.distancedEndPoint(endRadius * cornerScale) // end point of line connecting corner arcs
       endSegment = segment(lineEnd, seg.end) // control point calculation segment, connects hard corner to middle line
       controlEnd = endSegment.pointOnsegment(bezCircleConst)
 
@@ -33,15 +34,18 @@ class SVGPath {
       if (i === segPath.lastIndex) {  // lastLoop
         end = [lineEnd, controlEnd]
         cornerEnd = seg.end
-        if (!cornerStart[0].equals(cornerEnd[0])) { // verify start and end meet at same point
+        if (!cornerStart.equals(cornerEnd)) { // verify start and end meet at same point
           console.error(`ERROR: start and end are not connected!`)
         }
       }
     })
+    console.log(`start`, start)
+    console.log(`curves`, curves)
+    console.log(`end`, end)
 
     //FUNC: simplify(curve) : convert each vert into roundedDec coord pair array
     const simplify = (curve) => {
-      curve.map(vert =>
+      return curve.map(vert =>
         vert.array.map(coord => roundToDec(coord, 4))
       )
     }
@@ -49,8 +53,12 @@ class SVGPath {
     start = simplify(start)
     curves = curves.map(curve => simplify(curve))
     end = simplify(end)
+    console.log(`  simplified: `)
+    console.log(`start`, start)
+    console.log(`curves`, curves)
+    console.log(`end`, end)
 
-    const startSVG = `M ${start[0]} C ${start[1]}`
+    const startSVG = `M ${end[0]} C ${end[1]}`
     const curvesSVG = curves.map(c => `${c[0]} ${c[1]} L ${c[2]} C ${c[3]} `)
     const endSVG = `${end[0]} ${end[1]} Z`
     const svgPath = `${startSVG} ${curvesSVG} ${endSVG}`
@@ -116,10 +124,10 @@ class SVGPath {
         lineEnd = seg.pointOnsegment(lineEndLoc)
         control2 = seg.scaledEndPoint(offset(), lineEndLoc)
       } else {
-        console.error(`YAAAASSSSSS`)
-        console.log(`segment`, seg)
+        // console.error(`YAAAASSSSSS`)
+        // console.log(`segment`, seg)
         if (seg.hasSomeCubicVerts) {
-          console.error(`YEEEEEEESSSSSS`)
+          // console.error(`YEEEEEEESSSSSS`)
           circleCurve = min(seg.length, prevSeg.length) / 8
         } else {
           circleCurve = min(seg.length, prevSeg.length) / 2
