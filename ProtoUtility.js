@@ -549,7 +549,14 @@ function isPrime(number) {
 // FUNC: roundToDec() round to number of decimal places
 function roundToDec(number, decimalPlaces = 3) {
   const factor = 10 ** decimalPlaces
-  return Math.round(number * factor) / factor
+  return round(number * factor) / factor
+}
+
+// FUNC: equalsRoundedDec() round to number of decimal places
+function equalsRoundedDec(num1, num2, decimalPlaces) {
+  num1 = roundToDec(num1, decimalPlaces)
+  num2 = roundToDec(num2, decimalPlaces)
+  return num1 === num2
 }
 
 // TODO: consider the intersection with the DOM Range interface
@@ -570,10 +577,10 @@ class Range {
   get size() { return abs(this.end - this.start) + 1 }
 
   array(step = 1) {
-    return OpArray.from({ length: (this.stop - this.start) / step + 1 }, (_, i) => this.start + (i * step))
+    return OpArray.from({ length: (this.end - this.start) / step + 1 }, (_, i) => this.start + (i * step))
   }
   forEach(callbackFn) { return this.array().forEach(callbackFn) }
-  between(x) { return x >= this.start && x <= this.stop }
+  between(x) { return x >= this.start && x <= this.end }
   convertRange(x, range2) {
     return (x - this.start) * (range2.end - range2.start) / (this.end - this.start) + range2.start
   }
