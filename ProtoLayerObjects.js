@@ -1278,12 +1278,13 @@ class Grid extends ProtoLayer {
     //FUNC: formQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
     //TODO: need to add an ABFeature to select these!!!
     const formQuadShapes = (mode) => {
-      const addSides = (sides) => sides.reduce((a, b) => a + b)
+      const sumSides = (sides) => sides.reduce((a, b) => a + b)
+      const cellRadius = roundToDec(this.minCellWidth / 2)
       console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
       let quads = this.allSimpleSubShapes
         .filter(sub => sub.length === 4)// filter for 4-sided shapes
         .filter(sub => sub.some(seg => seg.isUTurnOut)) // filter for Outside shapes only (UTurnOut)
-        .sort((a, b) => addSides(b) - addSides(a)) // sort smallest to largest
+        .sort((a, b) => sumSides(b) - sumSides(a)) // sort smallest to largest
         .copy
       // console.log(`this.allSimpleSubShapes`, this.allSimpleSubShapes)
       console.log('quads', quads)
@@ -1307,20 +1308,67 @@ class Grid extends ProtoLayer {
           break
         case 1: // Min curvature, equal radii
           processor = (quad) => {
-            const radius = this.minCellWidth / 2
+            const shape = this.shapeNamed(quad[0].parentID)
             quad.forEach(seg => {
               console.log(`processing quad seg`, seg.id)
-              seg.addCubicStartVert(seg.distancedStartPoint(radius))
-              seg.addCubicEndVert(seg.distancedEndPoint(radius))
+              seg.addCubicStartVert(seg.distancedStartPoint(cellRadius))
+              seg.addCubicEndVert(seg.distancedEndPoint(cellRadius))
             })
+            shape.finalSubShapes.push(quad)
           }
           break
         case 2: // Horizontal Symmetry
 
         case 3: // Vertical Symmetry
 
-        case 4: // Diagonal Eyeballs : max curvature with diagonal symmetry
+        case 4: // Easter Eggs / Eyeballs : max curvature with diagonal symmetry
+          processor = (quad) => {
+            console.error(`hi`)
+            const shape = this.shapeNamed(quad[0].parentID)
+            let cornerMap
+            const minLength = min(quad.map(seg => seg.length)) // min side length
+            if (equalsRoundedDec(minLength, this.minCellWidth, 4)) { // quad is single cell width or height
+              cornerMap = [cellRadius, cellRadius, cellRadius, cellRadius,]
+            } else {
+              const maxRadius = minLength - cellRadius // maxRadius given cellRadius is minRadius
+              // build options from cellRadius steps from 0->minLength, removing 3 steps (0, minLength/2, and minLength)
+              const steps = (round(maxRadius / cellRadius) - 1) / 2 // totalSteps = 2 * steps + 1
+              let options = range(-steps, steps)
+                .array() // totalSteps array minus 1st and last (0 and minLength)
+                // .filter(s => !(s === 0)) // remove middle (minLength/2) step
+                .map(s => s + steps + 1) // add back steps like converting -0.5 to 0.5 range to 0-1 range
+              const radius1 = minLength - (R.random_choice(options) * cellRadius)
+              const radius2 = minLength - radius1
+              cornerMap = [radius1, radius2, radius1, radius2,]
+              console.log(`minLength`, minLength)
+              console.log(`cellRadius`, cellRadius)
+              console.log(`maxRadius`, maxRadius)
+              console.log(`steps`, steps)
+              console.log(`options`, options)
+            }
+            console.log(`cornerMap`, cornerMap)
+            // [0] UpLeft corner
+            quad[3].addCubicEndVert(quad[3].distancedEndPoint(cornerMap[0]))
+            quad[0].addCubicStartVert(quad[0].distancedStartPoint(cornerMap[0]))
+            // [1] UpRight corner
+            quad[0].addCubicEndVert(quad[0].distancedEndPoint(cornerMap[1]))
+            quad[1].addCubicStartVert(quad[1].distancedStartPoint(cornerMap[1]))
+            // [2] DownRight corner
+            quad[1].addCubicEndVert(quad[1].distancedEndPoint(cornerMap[2]))
+            quad[2].addCubicStartVert(quad[2].distancedStartPoint(cornerMap[2]))
+            // [3] DownLeft corner
+            quad[2].addCubicEndVert(quad[2].distancedEndPoint(cornerMap[3]))
+            quad[3].addCubicStartVert(quad[3].distancedStartPoint(cornerMap[3]))
 
+            // quad.forEach((seg, i) => {
+            //   console.log(`processing quad seg`, seg.id)
+            //   // if ()
+            //   seg.addCubicStartVert(seg.distancedStartPoint(radius))
+            //   seg.addCubicEndVert(seg.distancedEndPoint(radius))
+            // })
+            shape.finalSubShapes.push(quad)
+          }
+          break
         case 5: // One Big Radius Corner
 
         case 6: // Random radii per corner
@@ -1331,6 +1379,8 @@ class Grid extends ProtoLayer {
       }
 
       quads.forEach(quad => processor(quad))
+
+
       console.log('quads post-processed', quads)
     }
 
@@ -2911,7 +2961,10 @@ class Shape extends ProtoLayer {
   get svg() {
     // console.log(`current subShapes`, this.id, this.subShapes)
     // console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
-    let result = this.insetSubShapes.map(e => SVGPath.fromSegPath({ segPath: e, refine: true, straightness: 0 }))
+    let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
+      segPath: e,
+      cornerMin: this.grid.minCellWidth / 2
+    }))
     if (result instanceof Array) {
       result = result.join(' ')
     }
@@ -3147,7 +3200,7 @@ class Shape extends ProtoLayer {
           .attribute('fill', protoColor(0, 0))
       }
     }
-    this.drawInsetDeBug = true
+    this.drawInsetDeBug = false
     if (this.drawInsetDeBug && this.drawFilter) {
       const insetPath = createSVGElt('path')
       insetPath
