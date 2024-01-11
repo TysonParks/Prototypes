@@ -1295,26 +1295,12 @@ class Grid extends ProtoLayer {
         case 0: // Max curvature, equal radii
           processor = (quad) => {
             const radius = min(quad.map(seg => seg.length)) / 2
-            const shape = this.shapeNamed(quad[0].parentID)
-            console.log('parent shape', shape)
-            quad.forEach(seg => {
-              console.log(`processing quad seg`, seg.id, seg)
-              seg.addCubicStartVert(seg.distancedStartPoint(radius))
-              seg.addCubicEndVert(seg.distancedEndPoint(radius))
-            })
-            shape.finalSubShapes.push(quad)
-            console.log(`modified shape`, shape)
+            return [radius, radius, radius, radius]
           }
           break
         case 1: // Min curvature, equal radii
           processor = (quad) => {
-            const shape = this.shapeNamed(quad[0].parentID)
-            quad.forEach(seg => {
-              console.log(`processing quad seg`, seg.id)
-              seg.addCubicStartVert(seg.distancedStartPoint(cellRadius))
-              seg.addCubicEndVert(seg.distancedEndPoint(cellRadius))
-            })
-            shape.finalSubShapes.push(quad)
+            return [cellRadius, cellRadius, cellRadius, cellRadius]
           }
           break
         case 2: // Horizontal Symmetry
@@ -1324,7 +1310,7 @@ class Grid extends ProtoLayer {
         case 4: // Easter Eggs / Eyeballs : max curvature with diagonal symmetry
           processor = (quad) => {
             console.error(`hi`)
-            const shape = this.shapeNamed(quad[0].parentID)
+
             let cornerMap
             const minLength = min(quad.map(seg => seg.length)) // min side length
             if (equalsRoundedDec(minLength, this.minCellWidth, 4)) { // quad is single cell width or height
@@ -1335,7 +1321,7 @@ class Grid extends ProtoLayer {
               const steps = (round(maxRadius / cellRadius) - 1) / 2 // totalSteps = 2 * steps + 1
               let options = range(-steps, steps)
                 .array() // totalSteps array minus 1st and last (0 and minLength)
-                // .filter(s => !(s === 0)) // remove middle (minLength/2) step
+                .filter(s => !(s === 0)) // remove middle (minLength/2) step
                 .map(s => s + steps + 1) // add back steps like converting -0.5 to 0.5 range to 0-1 range
               const radius1 = minLength - (R.random_choice(options) * cellRadius)
               const radius2 = minLength - radius1
@@ -1346,27 +1332,7 @@ class Grid extends ProtoLayer {
               console.log(`steps`, steps)
               console.log(`options`, options)
             }
-            console.log(`cornerMap`, cornerMap)
-            // [0] UpLeft corner
-            quad[3].addCubicEndVert(quad[3].distancedEndPoint(cornerMap[0]))
-            quad[0].addCubicStartVert(quad[0].distancedStartPoint(cornerMap[0]))
-            // [1] UpRight corner
-            quad[0].addCubicEndVert(quad[0].distancedEndPoint(cornerMap[1]))
-            quad[1].addCubicStartVert(quad[1].distancedStartPoint(cornerMap[1]))
-            // [2] DownRight corner
-            quad[1].addCubicEndVert(quad[1].distancedEndPoint(cornerMap[2]))
-            quad[2].addCubicStartVert(quad[2].distancedStartPoint(cornerMap[2]))
-            // [3] DownLeft corner
-            quad[2].addCubicEndVert(quad[2].distancedEndPoint(cornerMap[3]))
-            quad[3].addCubicStartVert(quad[3].distancedStartPoint(cornerMap[3]))
-
-            // quad.forEach((seg, i) => {
-            //   console.log(`processing quad seg`, seg.id)
-            //   // if ()
-            //   seg.addCubicStartVert(seg.distancedStartPoint(radius))
-            //   seg.addCubicEndVert(seg.distancedEndPoint(radius))
-            // })
-            shape.finalSubShapes.push(quad)
+            return cornerMap
           }
           break
         case 5: // One Big Radius Corner
@@ -1378,10 +1344,31 @@ class Grid extends ProtoLayer {
         default:
       }
 
-      quads.forEach(quad => processor(quad))
+      //FUNC: assignQuad() : assign cubic verts using radii from cornerMap
+      const assignQuad = (quad, cornerMap) => {
+        // [0] UpLeft corner
+        quad[3].addDistancedCubicEndVert(cornerMap[0])
+        quad[0].addDistancedCubicStartVert(cornerMap[0])
+        // [1] UpRight corner
+        quad[0].addDistancedCubicEndVert(cornerMap[1])
+        quad[1].addDistancedCubicStartVert(cornerMap[1])
+        // [2] DownRight corner
+        quad[1].addDistancedCubicEndVert(cornerMap[2])
+        quad[2].addDistancedCubicStartVert(cornerMap[2])
+        // [3] DownLeft corner
+        quad[2].addDistancedCubicEndVert(cornerMap[3])
+        quad[3].addDistancedCubicStartVert(cornerMap[3])
 
+        const shape = this.shapeNamed(quad[0].parentID)
+        shape.finalSubShapes.push(quad)
+      }
 
-      console.log('quads post-processed', quads)
+      quads.forEach(quad => {
+        const cornerMap = processor(quad)
+        console.log(`cornerMap`, cornerMap)
+        assignQuad(quad, cornerMap)
+      })
+      // console.log('quads post-processed', quads)
     }
 
     formQuadShapes(0)
