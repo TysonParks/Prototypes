@@ -866,6 +866,8 @@ class ProtoSegment extends Segment {
     this.addCubicStartVert(vert)
     this.addCubicEndVert(vert)
   }
+  addDistancedCubicStartVert(distance) { this.addCubicStartVert(this.distancedStartPoint(distance)) }
+  addDistancedCubicEndVert(distance) { this.addCubicEndVert(this.distancedEndPoint(distance)) }
 
   #addCubicVert(vert, start) {
     let cubicVerts = start ? this.cubicVerts.start : this.cubicVerts.end
