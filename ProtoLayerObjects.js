@@ -2843,8 +2843,8 @@ class Shape extends ProtoLayer {
       sub.forEach((seg, i) => {
         let newInsetSeg = seg.insetCopy(this.insetScale, this.grid.minCellWidth) //create inset segment
         if (prevInsetSeg) { // only assignNeighbors once there are two inset segments
-          // prevInsetSeg.assignNeighbors({ end: newInsetSeg })
-          // newInsetSeg.assignNeighbors({ start: prevInsetSeg })
+          prevInsetSeg.assignNeighbors({ end: newInsetSeg })
+          newInsetSeg.assignNeighbors({ start: prevInsetSeg })
         }
         if (i === sub.lastIndex) { // last inset segment is neghbors with first inset segment
           newInsetSeg.assignNeighbors({ end: insetSubShape[0] })
@@ -2860,9 +2860,11 @@ class Shape extends ProtoLayer {
 
   //MARK: SVG Paths
   get svg() {
-    console.log(`Get SVG for: `, this.id)
-    // console.log(`current subShapes`, this.id, this.subShapes)
-    // console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
+    // console.log(`Get SVG for: `, this.id)
+    // console.log(`current subShapes`, this.subShapes)
+    // console.log(`current simpleSubShapes`, this.simpleSubShapes)
+    // console.log(`current insetSubShapes`, this.insetSubShapes)
+
     let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
       segPath: e,
       cornerMin: this.grid.minCellWidth / 2
