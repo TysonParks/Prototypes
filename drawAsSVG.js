@@ -5,7 +5,59 @@ const bezCircle45DegConst = 0.265
 
 //CLASS: SVGPath
 class SVGPath {
-  //TODO: move to SVGPath class
+  //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
+  static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
+    segPath = segPath.copy
+
+    let curves = []
+    let start, end, cornerStart, cornerEnd
+    let startRadius, startSegment, endRadius, endSegment
+    let controlStart, lineStart, lineEnd, controlEnd
+
+    segPath.forEach((seg, i) => {
+      startRadius = seg.hasCubicStartVert ? seg.availableStartLength : cornerMin // radius of corner arc
+      lineStart = seg.distancedStartPoint(startRadius * cornerScale) // start point of line connecting corner arcs 
+      startSegment = segment(lineStart, seg.start) // control point calculation segment, connects hard corner to mid line
+      controlStart = startSegment.pointOnsegment(bezCircleConst)
+
+      endRadius = seg.hasCubicEndVert ? seg.availableEndLength : cornerMin // radius of corner arc
+      lineEnd = seg.distancedStartPoint(endRadius * cornerScale) // end point of line connecting corner arcs
+      endSegment = segment(lineEnd, seg.end) // control point calculation segment, connects hard corner to middle line
+      controlEnd = endSegment.pointOnsegment(bezCircleConst)
+
+      curves.push([controlStart, lineStart, lineEnd, controlEnd])
+      if (i === 0) { // firstLoop
+        start = [controlStart, lineStart]
+        cornerStart = seg.start
+      }
+      if (i === segPath.lastIndex) {  // lastLoop
+        end = [lineEnd, controlEnd]
+        cornerEnd = seg.end
+        if (!cornerStart[0].equals(cornerEnd[0])) { // verify start and end meet at same point
+          console.error(`ERROR: start and end are not connected!`)
+        }
+      }
+    })
+
+    //FUNC: simplify(curve) : convert each vert into roundedDec coord pair array
+    const simplify = (curve) => {
+      curve.map(vert =>
+        vert.array.map(coord => roundToDec(coord, 4))
+      )
+    }
+
+    start = simplify(start)
+    curves = curves.map(curve => simplify(curve))
+    end = simplify(end)
+
+    const startSVG = `M ${start[0]} C ${start[1]}`
+    const curvesSVG = curves.map(c => `${c[0]} ${c[1]} L ${c[2]} C ${c[3]} `)
+    const endSVG = `${end[0]} ${end[1]} Z`
+    const svgPath = `${startSVG} ${curvesSVG} ${endSVG}`
+    console.log(`FINAL svgPath`, svgPath)
+    return svgPath
+  }
+
   //METH: fromSegPath() : 
   static fromSegPath({ segPath, refine = true, random = false, straightness = 0 } = {}) {
     if (refine) {
@@ -14,7 +66,6 @@ class SVGPath {
     }
     return SVGPath.segPathToRoundSVG({ segPath: segPath, random: random, straightness: straightness })
   }
-  //TODO: move to SVGPath class
   //METH: segPathToRoundSVG() : create SVG path from segments with points rounded using (C) bezier curves
   static segPathToRoundSVG(
     { segPath,
@@ -55,6 +106,7 @@ class SVGPath {
     let curves = new OpArray
     let prevSeg = last
     let control1, lineStart, lineEnd, control2, circleCurve
+
 
     // create curve coordinates
     segPath.forEach((seg, i) => {
