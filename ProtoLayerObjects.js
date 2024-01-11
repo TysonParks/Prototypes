@@ -515,41 +515,7 @@ class SelectionBounds {
     const bounds = this.grid.cellBounds({ selection: firstHalf }) // get bounds from first half
     return bounds.half(dir[1]) // select half of first half to get second half
   }
-  // TODO: DEPRECATE old implementation
-  // quadrant(direction) {
-  //   console.log('')
-  //   if (!direction.allAreOrdinal || !direction.isSingle) { console.error('direction must be single Ordinal') }
-  //   if (this.rowCount < 2 || this.columnCount < 2) { console.error('this grid is too small to get a quadrant') }
-  //   let start, end
-  //   let evenMid = {}
-  //   let oddMid = {}
-  //   const vect = this.cellBoundsSize
-  //   //TODO: FINISH this implementation!
-  //   if (vect.x % 2 === 0) { evenMid.x = vect.x / 2 }
-  //   else { oddMid.x = floor(vect.x / 2) }
-  //   if (vect.y % 2 === 0) { evenMid.y = vect.y / 2 }
-  //   else { oddMid.y = floor(vect.y / 2) }
-  //   const [first, last] = this.spanCellIndices
 
-  //   switch (direction.vals[0]) {
-  //     case 0.5://upRight
-  //       start = this.grid.index(evenMid.x ? evenMid.x : oddMid.x + 1, 0)
-  //       end = this.grid.index(this.xCellMax, evenMid.y ? evenMid.y - 1 : oddMid.y - 1)
-  //       break
-  //     case 1.5://downRight
-  //       start = this.grid.index(evenMid.x ? evenMid.x : oddMid.x + 1, evenMid.y ? evenMid.y : oddMid.y + 1)
-  //       end = last
-  //       break
-  //     case 2.5://downLeft
-  //       start = this.grid.index(0, evenMid.y ? evenMid.y : oddMid.y + 1)
-  //       end = this.grid.index(evenMid.x ? evenMid.x - 1 : oddMid.x - 1, this.yCellMax)
-  //       break
-  //     case 3.5://upLeft
-  //       start = first
-  //       end = this.grid.index(evenMid.x ? evenMid.x - 1 : oddMid.x - 1, evenMid.y ? evenMid.y - 1 : oddMid.y - 1)
-  //   }
-  //   return this.grid.cellSpanRowsBetween(start, end)
-  // }
   //METH:
   transformedGrid(type) { }
 
@@ -1192,7 +1158,7 @@ class Grid extends ProtoLayer {
     // assign EdgeParts in every island
     // sort allSegments into groups: (uTurns, stairs, flatsAndCorners)
     // Simplify all segments in 'flatsAndCorners' to corners only/straight segments
-
+    const cellRadius = roundToDec(this.minCellWidth / 2)
     const shapeCells = this.cellsInAnIsland // get all cells assigned to an island
     // console.log(`shapeCells`, shapeCells)
 
@@ -1279,7 +1245,7 @@ class Grid extends ProtoLayer {
     //TODO: need to add an ABFeature to select these!!!
     const formQuadShapes = (mode) => {
       const sumSides = (sides) => sides.reduce((a, b) => a + b)
-      const cellRadius = roundToDec(this.minCellWidth / 2)
+
       console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
       let quads = this.allSimpleSubShapes
         .filter(sub => sub.length === 4)// filter for 4-sided shapes
@@ -1303,9 +1269,13 @@ class Grid extends ProtoLayer {
             return [cellRadius, cellRadius, cellRadius, cellRadius]
           }
           break
-        case 2: // Horizontal Symmetry
 
+        case 2: // Horizontal Symmetry
+        // quads must be horizontal rectangles! utilize Easter Egg logic but add maxLength?
+        // might be worth combining symmtry into single mode, 
         case 3: // Vertical Symmetry
+        // quads must be vertical rectangles! utilize Easter Egg logic but add maxLength?
+        // might be worth combining symmtry into single mode, 
 
         case 4: // Easter Eggs / Eyeballs : max curvature with diagonal symmetry
           processor = (quad) => {
@@ -1335,12 +1305,14 @@ class Grid extends ProtoLayer {
             return cornerMap
           }
           break
-        case 5: // One Big Radius Corner
 
+        case 5: // Single Big Radius Corner
+        // use Easter Egg processor but add another mode and Random call that selects a single corner for largest radius
+        // a [max, min, middle, min] radius scenario would match OG prototype shape used for 3D water renders
         case 6: // Random radii per corner
-
+        // low priority for implementation: this might be too janky!
         case 7: // Mix : change mode for each subShape
-
+        // this option should probably be outside of the switch?
         default:
       }
 
@@ -1430,7 +1402,6 @@ class Grid extends ProtoLayer {
     const findCubicVerts = ({
       preferSnuggles = false,
     } = {}) => {
-      let minLength = this.minCellWidth / 2 // might remove this as cubicVertCount might move things along instead
       let currentSimples = sortedSimples(this.allSimpleSubShapes)
       let limit = 40
       while (currentSimples.length > 0 && limit > 0) {
@@ -1513,10 +1484,10 @@ class Grid extends ProtoLayer {
           let useStart
           // compare seg lengths to compute 'useStart'
           if (segSL < segEL) { // start length is smaller
-            useStart = segSL > minLength // startLength is above min
+            useStart = segSL > cellRadius // startLength is above min
           }
           if (segEL < segSL) { // end length is smaller
-            useStart = segEL < minLength // endLength is less than min (flip the switch back!)
+            useStart = segEL < cellRadius // endLength is less than min (flip the switch back!)
           }
           // assign comparison data
           let segCompData, neighborCompData
@@ -2275,64 +2246,6 @@ class CellGroup extends ProtoLayer {
     this.grid.cellIsIsolated({ cellIndex: cellIndex, groupID: this.id, directions: directions })
   }
   // #endregion
-  // MARK: Grammar Methods
-  // TODO: Review these methods... probably most need migrated!
-  // #region Grammar Methods  
-  walk(direction = 2, distance = 1) {
-    for (let i = 1; i <= distance; i++) {
-      if (this.grid.neighborIsAvailable(direction)) {
-        this.add(this.grid.neighbor(direction))
-      } else {
-        this.expansionStopped
-      }
-    }
-  }
-
-  // TODO: test this code one cell visualization is improved
-  randomWalk({ maxStraight = 1, start = undefined, end = undefined } = {}) {
-    let borderCells = this.borderCells.flat()
-    let borderCount = borderCells.length
-    if (start === undefined) {
-      start = borderCells[R.random_num(0, borderCount)]
-    }
-    // if (end === undefined) {
-    //   start = borderCells[R.random_num(0, borderCount)]
-    // }
-
-  }
-
-  // TODO: DEPRECATE!!!
-  // fullContractShape(distance = 1) {
-  //   this.contractShapeHor(distance)
-  //   this.contractShapeVert(distance)
-  // }
-
-  // contractShapeHor(distance = 1) {
-  //   this.contractShape(1, distance)
-  //   this.contractShape(3, distance)
-  // }
-
-  // contractShapeVert(distance = 1) {
-  //   this.contractShape(0, distance)
-  //   this.contractShape(2, distance)
-  // }
-
-  // contractShape(direction = 2, distance = 1) {
-  //   if (isHorizontal(direction) && this.columnCount - distance < 1) {
-  //     return
-  //   }
-  //   if (!isHorizontal(direction) && this.rowCount - distance < 1) {
-  //     return
-  //   }
-  //   for (let i = 1; i <= distance; i++) {
-  //     let borderCells = this.borderCells(direction)
-  //     let newCells = cells.map(e => !borderCells.includes(e))
-  //     this.cells = newCells
-  //   }
-  // }
-
-  // borderCells(direction = 0) { return this.boundsCells[direction] }
-  // #endregion
 }
 
 // CLASS: Cell
@@ -2587,6 +2500,7 @@ class Island extends ProtoLayer {
         console.log(`copying island for new island`)
         // copy this island but change inset, set filter, set drawFilter
         const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
+        console.log(`created subIsland: `, subIsland)
         subIslands = OpArray.from([subIsland])
       }
       if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) { // hierarchy > 1 curves can crop cells
@@ -2918,8 +2832,8 @@ class Shape extends ProtoLayer {
   }
 
   get insetSubShapes() {
-    console.log(`this.finalSubShapes`, this.finalSubShapes)
-    console.log(`using finalSubshapes`, this.finalSubShapes.length > 0)
+    // console.log(`this.finalSubShapes`, this.finalSubShapes)
+    // console.log(`using finalSubshapes`, this.finalSubShapes.length > 0)
     const subs = this.finalSubShapes.length > 0 ? this.finalSubShapes : this.simpleSubShapes
     let insetSubShapes = subs?.map(sub => {
       let insetSubShape = new OpArray
@@ -2946,6 +2860,7 @@ class Shape extends ProtoLayer {
 
   //MARK: SVG Paths
   get svg() {
+    console.log(`Get SVG for: `, this.id)
     // console.log(`current subShapes`, this.id, this.subShapes)
     // console.log(`current simpleSubShapes`, this.id, this.simpleSubShapes)
     let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
@@ -3120,6 +3035,7 @@ class Shape extends ProtoLayer {
   finishSetup(store) {
     this.storeObject(store)
     this.assignElement()
+    console.log(`created new shape`, this.id)
     // this.createSimpleSubShapes()
     this.drawElement()
   }
