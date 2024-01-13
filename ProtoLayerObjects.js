@@ -1148,9 +1148,7 @@ class Grid extends ProtoLayer {
   //METH:
   createSimpleSubShapes() { this.groups.forEach(g => g.createSimpleSubShapes()) }
   //METH: drawShapes()
-  drawShapes() {
-    this.shapes.forEach(s => s.drawElement())
-  }
+  drawShapes() { this.shapes.forEach(s => s.drawElement()) }
 
   //MARK: CUSTOMIZE SHAPES
   //METH:
@@ -2697,9 +2695,9 @@ class Island extends ProtoLayer {
                 subShape.push(thisSeg)
                 return
               } else {
-                // console.log('thisSeg.endPoint', thisSeg.endPoint)
-                // console.log('subShape[0].startPoint', subShape[0].startPoint)
-                // console.error('cannot continue segmentShape')
+                console.log('thisSeg.endPoint', thisSeg.endPoint)
+                console.log('subShape[0].startPoint', subShape[0].startPoint)
+                console.error('cannot continue segmentShape')
               }
             }
 
@@ -2795,14 +2793,6 @@ class Island extends ProtoLayer {
     // FIXME: interGrid should get assigned to a new 'this.interGrid' property. This should probably be on be on ProtoLayer???
   }
   // #endregion
-  //METH:
-  // drawElement(look = this.testLook) {
-  //   this.svgElt
-  //     .style(CS.overflow, 'visible')
-  //     .look(look)
-  //     .size(this.insetSize.x, this.insetSize.y)
-  //     .position(this.insetAnchor.x, this.insetAnchor.y)
-  // }
 }
 
 // CLASS: Shape
@@ -2829,7 +2819,7 @@ class Shape extends ProtoLayer {
       insetScale: insetScale,
       drawFilter: protoParent.drawFilter,
     })
-    this.subShapes = subShapes
+    this.subShapes = subShapes ? subShapes : new OpArray
     // this.finalSubShapes = finalSubShapes ? finalSubShapes : new OpArray
     this.simpleSubShapes = simpleSubShapes ? simpleSubShapes : new OpArray
     this.island = island
@@ -2979,7 +2969,7 @@ class Shape extends ProtoLayer {
     island,
   } = {}) {
     const newShape = new Shape({
-      subShapes: this.subShapes.map(sub => sub.map(seg => seg.copy)),
+      // subShapes: this.subShapes.map(sub => sub.map(seg => seg.copy)),
       // finalSubShapes: this.finalSubShapes,
       simpleSubShapes: this.simpleSubShapes,
       protoParent: protoParent,
