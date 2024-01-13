@@ -19,6 +19,23 @@ p5.prototype.createSVG = function (width, height) {
     .attribute(SVG.height, `${height}`)
 }
 
+// NOTE: Created with GPT-4 on Fri Jan 13, 2024
+//PROTOTYPE: p5 extension createSVGText
+p5.prototype.createSVGText = function (content, x = 0, y = 0) {
+  const textElt = this.createSVGElt('text').html(content)
+  textElt.attribute('x', x)
+  textElt.attribute('y', y)
+  return textElt
+}
+// NOTE: Created with GPT-4 on Fri Jan 13, 2024
+//PROTOTYPE: p5.Element extension setText
+p5.Element.prototype.setText = function (content) {
+  if (this.type === 'svg' && this.elt.tagName === 'text') {
+    this.html(content)
+  }
+  return this
+}
+
 //PROTOTYPE: p5.Element extension addToClassList(newClass)
 p5.Element.prototype.addToClassList = function (newClass) {
   // print(`addToClassList():`)
