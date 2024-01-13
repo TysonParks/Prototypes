@@ -1179,9 +1179,9 @@ class Grid extends ProtoLayer {
     //TODO: might be able to remove assignMids() and all supporting funcs/props
     // let madeSegs = new OpArray
     // //FUNC: saveSegs(segs) : save segs tp madeSegs
-    // const saveSegs = (segs) => { madeSegs = madeSegs.union(segs, ['id']) }
+    // const saveSegs = (segs) =>  madeSegs = madeSegs.union(segs, ['id']) 
     // //FUNC: remove(segs) : method removes segs from allSegments
-    // const remove = (segs) => { allSegments = allSegments.exclude(segs, 'id') }
+    // const remove = (segs) =>  allSegments = allSegments.exclude(segs, 'id') 
     // //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
     // const assignMids = (segs, edgeType, assignNeighbors = true) => {
     //   segs.forEach(seg => {
@@ -1239,6 +1239,54 @@ class Grid extends ProtoLayer {
     // console.log(`allSimpleSegments`, allSimpleSegments.map(s => s.id))
     // console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
 
+    //FUNC: colinearOverlaps(seg) : finds all segments that are overlap input segment
+    const overlapSegs = (seg) => this.allSimpleSubShapes.filter(s => s.isOverlappingWith(seg))
+
+    //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
+    const findColinearWrappedCorner = (seg) => {
+      if (!seg.turns.end.isRight) { return } // must be an outside corner, so end of seg turns Right
+      const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
+      const overlappingStart = overlapSegs(seg).filter(over => over.turns.start.isLeft) //wraps if overlap leftTurn
+      const overlappingEnd = overlapSegs(neighbor).filter(over => over.turns.end.isLeft)
+      // I think there should only ever be 1 wrapping corner, but do forEach just in case I'm wrong
+      overlappingStart.forEach(over => {
+        if (over.vertIsOnLine(seg.closestCubicEndVert)) { // if seg's cubic vert falls on over's line
+          over.addDistancedCubicStartVert(seg.closestCubicEndVert) // transfer cubic End Vert
+        }
+      })
+      overlappingEnd.forEach(over => {
+        if (over.vertIsOnLine(neighbor.closestCubicStartVert)) {
+          over.addDistancedCubicEndVert(neighbor.closesCubicStartVert) // transfer cubic Start Vert
+        }
+      })
+    }
+
+    //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
+    const findAdjacentWrappedCorner = (seg) => {
+      if (!seg.turns.end.isLeft) { return } // must be an inside corner, so end of seg turns Left
+      const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
+
+      // with current implementation, all adjacent sides will be with current shape. Intergrids might change this?
+      const shape = this.shapeNamed(seg.parentID)
+      const subShapes = shape.simpleSubShapes.flat()
+
+      const firstAdjSegTo = (seg, neighor = false) => {
+        const segDir = seg.direction
+        const adjDir = segDir.opposites
+        const turn = neighbor ? 'end' : 'start'
+        const cubicVert = neighor ? seg.closestCubicEndVert : seg.closestCubicStartVert
+        const normCoord = segDir.rotated(90).moveCoord
+        const normal = segment(cubicVert, Vertex.mult(normCoord, shape.cellBounds.size))
+        const adjs = subShapes
+          .filter(s => s.direction.equals(adjDir) && s.turns[turn].isRight)
+          .map(s => s.intersectionWith(normal))
+
+        //FIXME: finish implementation!
+        // contains seg.closestCubicStartVert.moved(moveDir), 
+        // do in loop with i * moveCoords, the store first/closest adj with i [i, adjSeg] to compare both adjacents on corner}
+      }
+    }
+
 
     //MARK: QUAD SHAPES
     //FUNC: formQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
@@ -1265,9 +1313,7 @@ class Grid extends ProtoLayer {
           }
           break
         case 1: // Min curvature, equal radii
-          processor = (quad) => {
-            return [cellRadius, cellRadius, cellRadius, cellRadius]
-          }
+          processor = (quad) => [cellRadius, cellRadius, cellRadius, cellRadius]
           break
 
         case 2: // Horizontal Symmetry
@@ -1335,10 +1381,13 @@ class Grid extends ProtoLayer {
         // shape.finalSubShapes.push(quad)
       }
 
+
+
       quads.forEach(quad => {
         const cornerMap = processor(quad)
         // console.log(`cornerMap`, cornerMap)
         assignQuad(quad, cornerMap)
+
       })
       // console.log('quads post-processed', quads)
     }
@@ -1477,53 +1526,7 @@ class Grid extends ProtoLayer {
           }
         }
 
-        //FUNC: colinearOverlaps(seg) : finds all segments that are overlap input segment
-        const overlapSegs = (seg) => this.allSimpleSubShapes.filter(s => s.isOverlappingWith(seg))
 
-        //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
-        const findColinearWrappedCorner = (seg) => {
-          if (!seg.turns.end.isRight) { return } // must be an outside corner, so end of seg turns Right
-          const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
-          const overlappingStart = overlapSegs(seg).filter(over => over.turns.start.isLeft) //wraps if overlap leftTurn
-          const overlappingEnd = overlapSegs(neighbor).filter(over => over.turns.end.isLeft)
-          // I think there should only ever be 1 wrapping corner, but do forEach just in case I'm wrong
-          overlappingStart.forEach(over => {
-            if (over.vertIsOnLine(seg.closestCubicEndVert)) { // if seg's cubic vert falls on over's line
-              over.addDistancedCubicStartVert(seg.closestCubicEndVert) // transfer cubic End Vert
-            }
-          })
-          overlappingEnd.forEach(over => {
-            if (over.vertIsOnLine(neighbor.closestCubicStartVert)) {
-              over.addDistancedCubicEndVert(neighbor.closesCubicStartVert) // transfer cubic Start Vert
-            }
-          })
-        }
-
-        //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
-        const findAdjacentWrappedCorner = (seg) => {
-          if (!seg.turns.end.isLeft) { return } // must be an inside corner, so end of seg turns Left
-          const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
-
-          // with current implementation, all adjacent sides will be with current shape. Intergrids might change this?
-          const shape = this.shapeNamed(seg.parentID)
-          const subShapes = shape.simpleSubShapes.flat()
-
-          const firstAdjSegTo = (seg, neighor = false) => {
-            const segDir = seg.direction
-            const adjDir = segDir.opposites
-            const turn = neighbor ? 'end' : 'start'
-            const cubicVert = neighor ? seg.closestCubicEndVert : seg.closestCubicStartVert
-            const normCoord = segDir.rotated(90).moveCoord
-            const normal = segment(cubicVert, Vertex.mult(normCoord, shape.cellBounds.size))
-            const adjs = subShapes
-              .filter(s => s.direction.equals(adjDir) && s.turns[turn].isRight)
-              .map(s => s.intersectionWith(normal))
-
-            //FIXME: finish implementation!
-            // contains seg.closestCubicStartVert.moved(moveDir), 
-            // do in loop with i * moveCoords, the store first/closest adj with i [i, adjSeg] to compare both adjacents on corner}
-          }
-        }
 
 
 
