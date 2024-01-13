@@ -1240,23 +1240,39 @@ class Grid extends ProtoLayer {
     // console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
 
     //FUNC: colinearOverlaps(seg) : finds all segments that are overlap input segment
-    const overlapSegs = (seg) => this.allSimpleSubShapes.filter(s => s.isOverlappingWith(seg))
+    const overlapSegs = (seg) => {
+      return this.allSimpleSubShapes.flat().filter(s => s.isOverlappingWith(seg))
+    }
 
     //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
+    //FIXME: something very wrong with this currently
     const findColinearWrappedCorner = (seg) => {
-      if (!seg.turns.end.isRight) { return } // must be an outside corner, so end of seg turns Right
+      // console.log(seg)
+      if (!seg.turns.end.isRight) {
+        console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
+        return
+      } // must be an outside corner, so end of seg turns Right
       const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
-      const overlappingStart = overlapSegs(seg).filter(over => over.turns.start.isLeft) //wraps if overlap leftTurn
-      const overlappingEnd = overlapSegs(neighbor).filter(over => over.turns.end.isLeft)
+      let overlappingStart = overlapSegs(seg)
+      // console.log(`pre overlappingStart`, overlappingStart)
+      overlappingStart = overlappingStart
+        .filter(over => over.turns.start.isLeft) //wraps if overlap leftTurn
+      let overlappingEnd = overlapSegs(neighbor)
+      // console.log(`pre overlappingEnd`, overlappingEnd)
+      overlappingEnd = overlappingEnd
+        .filter(over => over.turns.end.isLeft)
+      console.log(` ** findColinear seg`, seg)
+      console.log(`overlappingStart`, overlappingStart)
+      console.log(`overlappingEnd`, overlappingEnd)
       // I think there should only ever be 1 wrapping corner, but do forEach just in case I'm wrong
       overlappingStart.forEach(over => {
         if (over.vertIsOnLine(seg.closestCubicEndVert)) { // if seg's cubic vert falls on over's line
-          over.addDistancedCubicStartVert(seg.closestCubicEndVert) // transfer cubic End Vert
+          over.addDistancedCubicStartVert(seg.availableEndLength) // transfer cubic End Vert
         }
       })
       overlappingEnd.forEach(over => {
         if (over.vertIsOnLine(neighbor.closestCubicStartVert)) {
-          over.addDistancedCubicEndVert(neighbor.closesCubicStartVert) // transfer cubic Start Vert
+          over.addDistancedCubicEndVert(neighbor.availableStartLength) // transfer cubic Start Vert
         }
       })
     }
@@ -1387,7 +1403,7 @@ class Grid extends ProtoLayer {
         const cornerMap = processor(quad)
         // console.log(`cornerMap`, cornerMap)
         assignQuad(quad, cornerMap)
-
+        quad.forEach(seg => findColinearWrappedCorner(seg))
       })
       // console.log('quads post-processed', quads)
     }
@@ -1411,7 +1427,8 @@ class Grid extends ProtoLayer {
       return currentSimples
     }
 
-    let currentSimples = sortedSimples(this.allSimpleSubShapes)
+    // let currentSimples = sortedSimples(this.allSimpleSubShapes)
+
     // console.log(`currentSimples`, currentSimples.map(s => s.id))
     // console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
     //FUNC: simpleSegFromID(id) : find segment inside of allSimpleSubShapes
@@ -3042,9 +3059,9 @@ class Shape extends ProtoLayer {
           .applyFilter(this.filter, 2)
       }
     } else {
-      this.drawPerimeterDeBug = false
+      this.drawPerimeterDeBug = true
       if (this.drawPerimeterDeBug) {
-        const randHue = ProtoColor.randomHighHue()
+        const randHue = ProtoColor.randomShadHue()
         const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
         path
           .attribute('d', this.perimeter)
@@ -3075,6 +3092,17 @@ class Shape extends ProtoLayer {
         .attribute('stroke', randHue)
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
+    }
+    this.drawShapeLabelDeBug = true
+    if (this.drawShapeLabelDeBug) {
+      const label = createSVGText(this.id, 0, 0)
+      label
+        .parent(this.svgElt)
+        .addToClassList(this.id)
+        .addToClassList(this.svgParent.elt.classList.value)
+        .layout(this.anchor.x + 1, this.anchor.y + 4, this.size.x, this.size.y)
+        .style(`font`, `4px sans-serif`)
+
     }
 
     // .svgLook(SVGLook.trendyCactus(path))
