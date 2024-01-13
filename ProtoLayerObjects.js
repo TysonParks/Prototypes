@@ -2852,9 +2852,9 @@ class Shape extends ProtoLayer {
   get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
   get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
   // TODO: possibly DEPRECATE? Currently unused
-  get turns() { return this.subShapes.map(sub => sub.map(seg => seg.turns)) }
+  // get turns() { return this.subShapes.map(sub => sub.map(seg => seg.turns)) }
   // TODO: possibly DEPRECATE? Currently unused
-  get parts() { return this.subShapes.map(sub => sub.map(seg => seg.part)) }
+  // get parts() { return this.subShapes.map(sub => sub.map(seg => seg.part)) }
   get allSegments() { return this.subShapes.flat() }
   get assignedVerts() {
     return this.subShapes.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
