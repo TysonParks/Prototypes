@@ -658,6 +658,52 @@ class Segment {
     return t >= 0 && t <= 1
   }
 
+  //TODO: Finish Implementation
+  // isColinearWith(seg) {
+
+  //   if (this.direction.andOpposites.equals(seg.direction.andOpposites)) {
+
+  //   }
+  //   return false
+  // }
+
+  isOverlappingWith(seg) { return this.vertIsOnLine(seg.start) || this.vertIsOnLine(seg.end) }
+
+  //NOTE: made with ChatGPT4.0 on Jan12, 2024
+  intersectionWith(seg) {
+    // Direction vectors
+    const p = this.startPoint;
+    const q = seg.startPoint;
+    const r = this.lineVector;
+    const s = seg.lineVector;
+
+    // Check if the segments are parallel (cross product is zero)
+    if (p5.Vector.cross(r, s).z === 0) {
+      return null; // No intersection (parallel or collinear)
+    }
+
+    // Compute the intersection t value
+    const t = p5.Vector.cross(p5.Vector.sub(q, p), s).z / p5.Vector.cross(r, s).z;
+
+    // Check if the intersection point is on the first segment
+    if (t < 0 || t > 1) {
+      return null; // No intersection
+    }
+
+    // Compute the intersection u value for the other segment
+    const u = p5.Vector.cross(p5.Vector.sub(q, p), r).z / p5.Vector.cross(r, s).z;
+
+    // Check if the intersection point is on the second segment
+    if (u < 0 || u > 1) {
+      return null; // No intersection
+    }
+
+    // Calculate the intersection point
+    const intersection = p5.Vector.add(p, p5.Vector.mult(r, t));
+
+    return new Vertex(intersection.x, intersection.y);
+  }
+
   equals(segment, accuracy = 3) {
     return this.startPoint.equals(segment.startPoint, accuracy) && this.endPoint.equals(segment.endPoint, accuracy)
   }
