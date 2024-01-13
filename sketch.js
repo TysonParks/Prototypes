@@ -256,7 +256,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  gridX = 5
+  gridX = 10
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 8, y: 14 })
@@ -365,7 +365,7 @@ function gridTests2() {
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
-  let group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  let group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 2) })
   // let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
 
   let group002 = grid.randGroup({ amount: 0.5 })
