@@ -91,7 +91,7 @@ class SVGPath {
     let lineEndLoc = bisector + straightness * (1 - bisector)
 
     //FUNC: offset
-    const offset = () => { return random ? R.random_num(0.1, 1.5) : curvature }
+    const offset = () => random ? R.random_num(0.1, 1.5) : curvature
 
     //FUNC: makeSegmentCircular
     const makeSegmentCircular = (segment, startLoc = lineStartLoc) => {

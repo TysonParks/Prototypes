@@ -178,7 +178,7 @@ function calculateFeatures(token = tokenData) {
     #calcBaseLayer(r) {
       const base = this.enums.baseLayer.feature(r)
       const inset = roundToDec(r.random_num(0.8, 0.95))
-      const noShrinkWrap = () => { this.enums.shrinkWrap.removeOptions(['True']) }
+      const noShrinkWrap = () => this.enums.shrinkWrap.removeOptions(['True'])
       switch (base) {
         case 'None':
           return 'None'
