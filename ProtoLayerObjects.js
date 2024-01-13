@@ -1151,6 +1151,8 @@ class Grid extends ProtoLayer {
   drawShapes() {
     this.shapes.forEach(s => s.drawElement())
   }
+
+  //MARK: CUSTOMIZE SHAPES
   //METH:
   customizeShapes(diagonals = false) {
 
@@ -1240,7 +1242,7 @@ class Grid extends ProtoLayer {
     // console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
 
 
-
+    //MARK: QUAD SHAPES
     //FUNC: formQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
     //TODO: need to add an ABFeature to select these!!!
     const formQuadShapes = (mode) => {
@@ -1337,7 +1339,7 @@ class Grid extends ProtoLayer {
 
       quads.forEach(quad => {
         const cornerMap = processor(quad)
-        console.log(`cornerMap`, cornerMap)
+        // console.log(`cornerMap`, cornerMap)
         assignQuad(quad, cornerMap)
       })
       // console.log('quads post-processed', quads)
@@ -1446,10 +1448,10 @@ class Grid extends ProtoLayer {
             const segShortest = segTriplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
             // console.log(`segShortest`, segShortest)
             //1. assign both UTurn OUT segment cubicVerts and it's neighboring cubicVerts
-            startNeighbor.addCubicEndVert(startNeighbor.distancedEndPoint(segShortest))
-            seg.addCubicStartVert(seg.distancedStartPoint(segShortest))
-            seg.addCubicEndVert(seg.distancedEndPoint(segShortest))
-            endNeighbor.addCubicStartVert(endNeighbor.distancedStartPoint(segShortest))
+            startNeighbor.addDistancedCubicEndVert(segShortest)
+            seg.addDistancedCubicStartVert(segShortest)
+            seg.addDistancedCubicEndVert(segShortest)
+            endNeighbor.addDistancedCubicStartVert(segShortest)
 
             //TODO: this probably needs to become a func itself that can be called (non) recursively
             //2. if seg has shared corners (2 sides wrapping), assign matching verts if shortest
@@ -1459,15 +1461,15 @@ class Grid extends ProtoLayer {
                 const neighbor = shared.neighbors.start
                 const shortest = min(segShortest, neighbor.availableEndLength)
                 // console.log(`start shortest`, shortest)
-                shared.addCubicStartVert(shared.distancedStartPoint(shortest))
-                neighbor.addCubicEndVert(neighbor.distancedEndPoint(shortest))
+                shared.addDistancedCubicStartVert(shortest)
+                neighbor.addDistancedCubicEndVert(shortest)
               }
               if (shared.turns.end.isLeft) { // end turn wraps this uTurnOut seg
                 const neighbor = shared.neighbors.end
                 const shortest = min(segShortest, neighbor.availableStartLength)
                 // console.log(`end shortest`, shortest)
-                shared.addCubicEndVert(shared.distancedEndPoint(shortest))
-                neighbor.addCubicStartVert(neighbor.distancedStartPoint(shortest))
+                shared.addDistancedCubicEndVert(shortest)
+                neighbor.addDistancedCubicStartVert(shortest)
               }
               //3. if sharedTriplet has adjacents that wrap, assign adjacent verts if shortest
 
@@ -1476,6 +1478,75 @@ class Grid extends ProtoLayer {
 
           }
         }
+
+        //FUNC: colinearOverlaps(seg) : finds all segments that are overlap input segment
+        const overlapSegs = (seg) => this.allSimpleSubShapes.filter(s => s.isOverlappingWith(seg))
+
+        //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
+        const findColinearWrappedCorner = (seg) => {
+          if (!seg.turns.end.isRight) { return } // must be an outside corner, so end of seg turns Right
+          const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
+          const overlappingStart = overlapSegs(seg).filter(over => over.turns.start.isLeft) //wraps if overlap leftTurn
+          const overlappingEnd = overlapSegs(neighbor).filter(over => over.turns.end.isLeft)
+          // I think there should only ever be 1 wrapping corner, but do forEach just in case I'm wrong
+          overlappingStart.forEach(over => {
+            if (over.vertIsOnLine(seg.closestCubicEndVert)) { // if seg's cubic vert falls on over's line
+              over.addDistancedCubicStartVert(seg.closestCubicEndVert) // transfer cubic End Vert
+            }
+          })
+          overlappingEnd.forEach(over => {
+            if (over.vertIsOnLine(neighbor.closestCubicStartVert)) {
+              over.addDistancedCubicEndVert(neighbor.closesCubicStartVert) // transfer cubic Start Vert
+            }
+          })
+        }
+
+        //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
+        const findAdjacentWrappedCorner = (seg) => {
+          if (!seg.turns.end.isLeft) { return } // must be an inside corner, so end of seg turns Left
+          const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
+
+          // with current implementation, all adjacent sides will be with current shape. Intergrids might change this?
+          const shape = this.shapeNamed(seg.parentID)
+          const subShapes = shape.simpleSubShapes.flat()
+
+          const firstAdjSegTo = (seg, neighor = false) => {
+            const segDir = seg.direction
+            const adjDir = segDir.opposites
+            const turn = neighbor ? 'end' : 'start'
+            const cubicVert = neighor ? seg.closestCubicEndVert : seg.closestCubicStartVert
+            const normCoord = segDir.rotated(90).moveCoord
+            const normal = segment(cubicVert, Vertex.mult(normCoord, shape.cellBounds.size))
+            const adjs = subShapes
+              .filter(s => s.direction.equals(adjDir) && s.turns[turn].isRight)
+              .map(s => s.intersectionWith(normal))
+
+
+
+
+
+            // contains seg.closestCubicStartVert.moved(moveDir), 
+            // do in loop with i * moveCoords, the store first/closest adj with i [i, adjSeg] to compare both adjacents on corner}
+          }
+        }
+
+
+
+        //TODO: DEPRECATE!
+        //FUNC: findWrappedCorner() : DEPRECATE, this old version only works with shared (opposite) segments
+        // const findWrappedCorner = (seg) => {
+        //   const end = seg.neighbors.end
+        //   const shared = simpleSegShared(end)
+
+        //   if (shared.turns.end.isLeft) { // start turn wraps this uTurnOut seg
+        //     const neighbor = shared.neighbors.end
+        //     const length = seg.availableEndLength
+        //     shared.addDistancedCubicEndVert(length)
+        //     neighbor.addDistancedCubicStartVert(length)
+        //   }
+        // }
+
+
 
         if (segSL !== segEL) {
           // console.log(`segSL !== segEL`)
@@ -2191,23 +2262,7 @@ class CellGroup extends ProtoLayer {
   // #endregion
   // MARK: Setup Methods
   // #region Setup Methods
-  //METH:
-  //FIXME: finish implementation to make createPerimiters work with min-corners
-  createSimpleSubShapes(minCorners = false) { }
-  //METH:
-  createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
-    if (this.islands.isEmpty) {
-      console.log(`creating subIslands`)
-      this.perimeterIslands.forEach(i =>
-        i.createSubIslands({
-          direction: direction,
-          filter: filter,
-          insetScale: insetScale,
-          // drawFilter: drawFilter,
-        }))
-    }
-  }
-  //METH:
+  //METH: createPerimiters() : 
   //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
   //FIXME: so "omni-min", "omni-max", "cardinal-min", "cardinal-max"
   createPerimiters(perimeterType = `maxCorners`, direction = Direction.Cardinal) {
@@ -2230,6 +2285,22 @@ class CellGroup extends ProtoLayer {
       perimeterType: perimeterType,
       drawFilter: false,
     })
+  }
+  //METH: createSimpleSubShapes() : 
+  //FIXME: finish implementation to make createPerimiters work with min-corners
+  createSimpleSubShapes(minCorners = false) { }
+  //METH: createSubIslands() :
+  createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
+    if (this.islands.isEmpty) {
+      console.log(`creating subIslands`)
+      this.perimeterIslands.forEach(i =>
+        i.createSubIslands({
+          direction: direction,
+          filter: filter,
+          insetScale: insetScale,
+          // drawFilter: drawFilter,
+        }))
+    }
   }
   // #endregion
   // MARK: Geometry Methods
@@ -2417,9 +2488,7 @@ class Island extends ProtoLayer {
     this._type = parentIslandID ? 'SubIsland' : 'Island'
     if (stored) { this.finishSetup(S.Islands) }
     // console.log('new Island', cells.map(e => e.id))
-    // else { this.finishSetup() }
     // this.color = R.random_hash(3, '#')
-    // this.createShape()
   }
   // MARK: Computed Properties
   // #region Computed Properties
@@ -2914,11 +2983,11 @@ class Shape extends ProtoLayer {
   // MARK: methods
   // #region methods
   //METH: 
-  createSimpleSubShapes(minCorners = false) {
+  createSimpleSubShapes() {
     this.simpleSubShapes = this.subShapes.map(
-      subShape => SegPath.refine(subShape, this.id, minCorners)
+      SegPath.refine(sub, this.id, this.island.perimeterType === 'minCorners')
     )
-    this.drawElement()
+    // this.drawElement()
     console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
@@ -2946,91 +3015,7 @@ class Shape extends ProtoLayer {
     return newShape
   }
   // #endregion
-  // MARK: Vert Assignment Methods
-  // TODO: DEPRECATE
-  // #region Vert Assignment Methods
-  //METH:
-  // assignCornerVerts() { this.allSegments.forEach(seg => seg.assignCornerVerts()) }
-  //METH:
-  // assignUTurnVerts() {
-  //   console.log("assignUTurnVerts called")
-  //   this.subShapes.forEach(sub => sub.forEach((seg, i) => {
-  //     const loop = range(0, sub.lastIndex)
-  //     const prev = sub[loop.cycle(i - 1)]
-  //     const next = sub[loop.cycle(i + 1)]
-  //     if (seg.isUTurn) {
-  //       prev.assignVert('mid')
-  //       seg.assignVert('mid')
-  //       next.assignVert('mid')
-  //     }
-  //   }))
-  // }
-  //METH:
-  // assignSingleStairVerts() {
-  //   console.log("assignSingleStairVerts called")
-  //   this.subShapes.forEach(sub => sub.forEach((seg, i) => {
-  //     // console.log('try assignSingleStair')
-  //     const loop = range(0, sub.lastIndex)
-  //     const prev = sub[loop.cycle(i - 1)]
-  //     const next = sub[loop.cycle(i + 1)]
-  //     // console.log([prev, seg, next].map(e => e.part.value))
-  //     // case covers 1 or 2 consequetive stairs
-  //     if (seg.isStair && !next.isStair) {
-  //       // console.log('found single stair')
-  //       prev.assignVert('mid')
-  //       seg.assignVert('mid')
-  //       next.assignVert('mid')
-  //     }
-  //   }))
-  // }
-  //METH:
-  // assignRectangleVerts() {
-  //   console.log("assignRectangleVerts called")
-  //   const bounds = this.cellBounds
-  //   const aspect = bounds.aspect
-  //   const width = bounds.columnCount
-  //   const height = bounds.rowCount
-  //   let offsetLength, length, offset
-  //   let prevLength = 0
 
-  //   if (aspect.value === 2) { offsetLength = height } // landscape
-  //   else { offsetLength = width } // square/portrait
-
-  //   for (let i = 0; i < 4; i++) {
-  //     if (i % 2 === 0) { length = width } // top/bottom 
-  //     else { length = height } // left/right
-
-  //     if (offsetLength % 2 === 0) { // even number of cells
-  //       offset = offsetLength / 2 - 1
-  //       this.subShapes[0][prevLength + offset].assignVert('end')
-  //       this.subShapes[0][prevLength + length - offset - 1].assignVert('start')
-  //     } else { // odd number of cells
-  //       offset = (offsetLength - 1) / 2
-  //       this.subShapes[0][prevLength + offset].assignVert('mid')
-  //       this.subShapes[0][prevLength + length - offset - 1].assignVert('mid')
-  //     }
-  //     prevLength += length
-  //   }
-  // }
-  //METH:
-  // assignSquareVerts() {
-  //   const width = this.cellBounds.columnCount
-  //   // console.log(`square width = ${width}`)
-  //   if (width % 2 === 0) {
-  //     const offset = width / 2 - 1
-  //     for (let i = 0; i < 4; i++) {
-  //       this.subShapes[0][width * i + offset].assignVert('end')
-  //       this.subShapes[0][width * (i + 1) - offset - 1].assignVert('start')
-  //     }
-  //   }
-  //   if (width % 2 === 1) {
-  //     const offset = (width - 1) / 2
-  //     for (let i = 0; i < 4; i++) {
-  //       this.subShapes[0][width * i + offset].assignVert('mid')
-  //     }
-  //   }
-  // }
-  // #endregion
   // MARK: Setup Methods
   // #region Setup Methods
   //METH: 
