@@ -1146,7 +1146,7 @@ class Grid extends ProtoLayer {
   // MARK: Shape Methods
   // #region Shape Methods
   //METH:
-  createSimpleSubShapes() { this.islands.forEach(i => i.createSimpleSubShapes()) }
+  createSimpleSubShapes() { this.groups.forEach(g => g.createSimpleSubShapes()) }
   //METH: drawShapes()
   drawShapes() {
     this.shapes.forEach(s => s.drawElement())
@@ -1233,7 +1233,7 @@ class Grid extends ProtoLayer {
     // else { console.log(`there is NOT a minCorners Group`) }
 
 
-    // this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
+    this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
     // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
     let allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
@@ -1333,8 +1333,8 @@ class Grid extends ProtoLayer {
         quad[2].addDistancedCubicEndVert(cornerMap[3])
         quad[3].addDistancedCubicStartVert(cornerMap[3])
 
-        const shape = this.shapeNamed(quad[0].parentID)
-        shape.finalSubShapes.push(quad)
+        // const shape = this.shapeNamed(quad[0].parentID)
+        // shape.finalSubShapes.push(quad)
       }
 
       quads.forEach(quad => {
@@ -1521,30 +1521,12 @@ class Grid extends ProtoLayer {
               .filter(s => s.direction.equals(adjDir) && s.turns[turn].isRight)
               .map(s => s.intersectionWith(normal))
 
-
-
-
-
+            //FIXME: finish implementation!
             // contains seg.closestCubicStartVert.moved(moveDir), 
             // do in loop with i * moveCoords, the store first/closest adj with i [i, adjSeg] to compare both adjacents on corner}
           }
         }
 
-
-
-        //TODO: DEPRECATE!
-        //FUNC: findWrappedCorner() : DEPRECATE, this old version only works with shared (opposite) segments
-        // const findWrappedCorner = (seg) => {
-        //   const end = seg.neighbors.end
-        //   const shared = simpleSegShared(end)
-
-        //   if (shared.turns.end.isLeft) { // start turn wraps this uTurnOut seg
-        //     const neighbor = shared.neighbors.end
-        //     const length = seg.availableEndLength
-        //     shared.addDistancedCubicEndVert(length)
-        //     neighbor.addDistancedCubicStartVert(length)
-        //   }
-        // }
 
 
 
@@ -1583,18 +1565,6 @@ class Grid extends ProtoLayer {
         }
 
 
-        // const shared = sourcesSegs.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
-        // if (shared?.hasInsideTurn) { // if this segment is inside an outside turn, it should force shared curve
-        // console.log(`000000 ${seg.id} shared ${shared.id}`, shared)
-        // console.log(`000000 shared has inside turn`, seg.id, shared.id)
-        // shared.assignMid()
-        // }
-        //TODO: need to revisit this remove call later to see if can remove 
-        // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
-        // saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted) // save modified segs to madeSegs
-        // segs = sourcesSegs.filter(seg => seg.part.isBaseType(edgeType))
-        // console.log(`madeSegs`, madeSegs.length)
-
         currentSimples = sortedSimples(this.allSimpleSubShapes)
       }
       // console.log(`currentSimples after`, currentSimples.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
@@ -1602,7 +1572,7 @@ class Grid extends ProtoLayer {
 
     // console.log(`allSimpleSubShapes before`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
 
-    findCubicVerts()
+    // findCubicVerts()
     // console.log(`current islands`, this.islands)
     // console.log(`current shapes`, this.shapes)
     // this.drawShapes()
@@ -2288,7 +2258,7 @@ class CellGroup extends ProtoLayer {
   }
   //METH: createSimpleSubShapes() : 
   //FIXME: finish implementation to make createPerimiters work with min-corners
-  createSimpleSubShapes(minCorners = false) { }
+  createSimpleSubShapes() { this.perimeterIslands.forEach(pIsles => pIsles.createSimpleSubShapes()) }
   //METH: createSubIslands() :
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     if (this.islands.isEmpty) {
@@ -2790,7 +2760,7 @@ class Island extends ProtoLayer {
     console.error('Undefined directionHierachy')
   }
   //METH: createSimpleSubShapes(minCorners) : direct all shapes to createSimpleSubShapes 
-  createSimpleSubShapes(minCorners = false) { this.shapes.forEach(s => s.createSimpleSubShapes(minCorners)) }
+  createSimpleSubShapes() { this.shapes.forEach(s => s.createSimpleSubShapes()) }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
     return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, directions: directions })
@@ -2839,13 +2809,15 @@ class Island extends ProtoLayer {
 class Shape extends ProtoLayer {
   island
   subShapes
-  finalSubShapes
+  simpleSubShapes
+  // finalSubShapes
   testVerts
   testColor
 
   constructor({
     subShapes,
-    finalSubShapes,
+    // finalSubShapes,
+    simpleSubShapes,
     protoParent,
     svgParent,
     island,
@@ -2858,7 +2830,8 @@ class Shape extends ProtoLayer {
       drawFilter: protoParent.drawFilter,
     })
     this.subShapes = subShapes
-    this.finalSubShapes = finalSubShapes ? finalSubShapes : new OpArray
+    // this.finalSubShapes = finalSubShapes ? finalSubShapes : new OpArray
+    this.simpleSubShapes = simpleSubShapes ? simpleSubShapes : new OpArray
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
     this.assignSegments()
@@ -2894,16 +2867,17 @@ class Shape extends ProtoLayer {
   //NOTE: inset first: 1. possibility of knowing that opposite-walled cells will disappear at insetScale === 0
   //NOTE: inset first: 2. might be some hierarchical or derivative scaling advantage to successive inset knowledge
   //NOTE: ultimately both have advantages. could make inset transform a method with two inset compProps: sub & simpleSub
-  get simpleSubShapes() {
-    return this.subShapes?.map(sub =>
-      SegPath.refine(sub, this.id, this.island.perimeterType === 'minCorners')
-    )
-  }
+  // get simpleSubShapes() {
+  //   return this.subShapes?.map(sub =>
+  //     SegPath.refine(sub, this.id, this.island.perimeterType === 'minCorners')
+  //   )
+  // }
 
   get insetSubShapes() {
     // console.log(`this.finalSubShapes`, this.finalSubShapes)
     // console.log(`using finalSubshapes`, this.finalSubShapes.length > 0)
-    const subs = this.finalSubShapes.length > 0 ? this.finalSubShapes : this.simpleSubShapes
+    // const subs = this.finalSubShapes.length > 0 ? this.finalSubShapes : this.simpleSubShapes
+    const subs = this.simpleSubShapes
     let insetSubShapes = subs?.map(sub => {
       let insetSubShape = new OpArray
       let prevInsetSeg
@@ -2969,7 +2943,7 @@ class Shape extends ProtoLayer {
   get insetSVGPath() { return `path('${this.insetSVG}')` }
 
   get finalSVG() {
-    let result = this.finalSubShapes.map(e =>
+    let result = this.simpleSubShapes.map(e =>
       SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
     )
     if (result instanceof Array) {
@@ -2984,7 +2958,7 @@ class Shape extends ProtoLayer {
   // #region methods
   //METH: 
   createSimpleSubShapes() {
-    this.simpleSubShapes = this.subShapes.map(
+    this.simpleSubShapes = this.subShapes.map(sub =>
       SegPath.refine(sub, this.id, this.island.perimeterType === 'minCorners')
     )
     // this.drawElement()
@@ -3006,7 +2980,8 @@ class Shape extends ProtoLayer {
   } = {}) {
     const newShape = new Shape({
       subShapes: this.subShapes.map(sub => sub.map(seg => seg.copy)),
-      finalSubShapes: this.finalSubShapes,
+      // finalSubShapes: this.finalSubShapes,
+      simpleSubShapes: this.simpleSubShapes,
       protoParent: protoParent,
       svgParent: protoParent.svgParent,
       island: island,
