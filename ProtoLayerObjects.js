@@ -1302,7 +1302,7 @@ class Grid extends ProtoLayer {
         console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
         console.log(``)
         wrapperStart[0].addCubicStartVert(seg.closestCubicEndVert)
-        wrapperEnd[0].addCubicEndVert(seg.closestCubicStartVert)
+        wrapperEnd[0].addCubicEndVert(neighbor.closestCubicStartVert)
       }
 
       // I think there should only ever be 1 wrapping corner, but do forEach just in case I'm wrong
@@ -3143,7 +3143,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = true
+    this.drawShapeLabelDeBug = false
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
