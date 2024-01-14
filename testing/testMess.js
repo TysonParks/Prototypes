@@ -54,9 +54,9 @@ function functionTestPrint() {
 
   // console.log(`subtest01`, vert0.sub(vert1).mag())
   // console.log(`subtest02`, vert1.sub(vert0).mag())
-  console.log(`vert2 is on line?`, seg1.vertIsOnLine(vert2))
-  console.log(`vert3 is on line?`, seg1.vertIsOnLine(vert3))
-  console.log(`vert4 is on line?`, seg1.vertIsOnLine(vert4))
+  console.log(`vert2 is on line? (true)`, seg1.vertIsOnLine(vert2))
+  console.log(`vert3 is on line? (true)`, seg1.vertIsOnLine(vert3))
+  console.log(`vert4 is on line? (false)`, seg1.vertIsOnLine(vert4))
 
   // NOTE: hash display
   // print(printInputToGridRows(values32x8bit, 4, 8))
