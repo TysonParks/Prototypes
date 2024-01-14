@@ -1120,7 +1120,7 @@ class Grid extends ProtoLayer {
         newIsland.setFilter(filter)
         //FIXME: Need to figure out how to properly assign/add subIslands from Island.CreateSubIsland() call to createIslands
         if (group) { group.perimeterIslands.push(newIsland) }
-        if (protoParent?.type === 'Island' || protoParent?.type === 'SubIsland') {
+        if (protoParent?.type === 'Island' || protoParent?.type === 'PerimeterIsland') {
           // protoParent.setFilter(filter)
           protoParent.subIslands.push(newIsland)
         }
@@ -1247,34 +1247,58 @@ class Grid extends ProtoLayer {
     //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
     //FIXME: something very wrong with this currently
     const findColinearWrappedCorner = (seg) => {
-      // console.log(seg)
       if (!seg.turns.end.isRight) {
         console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
         return
       } // must be an outside corner, so end of seg turns Right
-      const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
-      let overlappingStart = overlapSegs(seg)
-      // console.log(`pre overlappingStart`, overlappingStart)
-      overlappingStart = overlappingStart
-        .filter(over => over.turns.start.isLeft) //wraps if overlap leftTurn
-      let overlappingEnd = overlapSegs(neighbor)
-      // console.log(`pre overlappingEnd`, overlappingEnd)
-      overlappingEnd = overlappingEnd
-        .filter(over => over.turns.end.isLeft)
       console.log(` ** findColinear seg`, seg)
-      console.log(`overlappingStart`, overlappingStart)
-      console.log(`overlappingEnd`, overlappingEnd)
+      const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
+
+      const wrappingSeg = (seg, neighbor = false) => {
+        const segDir = seg.direction
+        const wrapDir = segDir.opposites
+        const turn = neighbor ? 'end' : 'start'
+        const cubicVert = neighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
+        const name = neighbor ? `end` : `start`
+        // console.log(` ** findColinear seg`, seg)
+
+        let overlappers = overlapSegs(seg)
+          .filter(s => s.direction.equals(wrapDir))
+        // console.log(`${name} overFilter opposites`, overlappers)
+        overlappers = overlappers
+          .filter(s => s.turns[turn].isLeft)
+        // console.log(`${name} overFilter turn`, overlappers)
+        overlappers = overlappers
+          .filter(s => s.vertIsOnLine(cubicVert))
+        // console.log(`${name} overFilter vertOnLine`, overlappers)
+
+        return overlappers
+      }
+
+
+
+      const wrappingStart = wrappingSeg(seg)
+      const wrappingEnd = wrappingSeg(neighbor, true)
+
+      console.log(`--> wrappingStart`, wrappingStart)
+      console.log(`--> wrappingEnd`, wrappingEnd)
+
+      if (wrappingStart.length === 1 && wrappingEnd.length === 1) {
+        console.log(`!!! WRAPPED CORNER FOUND !!!`)
+        console.log(seg)
+      }
+
       // I think there should only ever be 1 wrapping corner, but do forEach just in case I'm wrong
-      overlappingStart.forEach(over => {
-        if (over.vertIsOnLine(seg.closestCubicEndVert)) { // if seg's cubic vert falls on over's line
-          over.addDistancedCubicStartVert(seg.availableEndLength) // transfer cubic End Vert
-        }
-      })
-      overlappingEnd.forEach(over => {
-        if (over.vertIsOnLine(neighbor.closestCubicStartVert)) {
-          over.addDistancedCubicEndVert(neighbor.availableStartLength) // transfer cubic Start Vert
-        }
-      })
+      // overlappingStart.forEach(over => {
+      //   if (over.vertIsOnLine(seg.closestCubicEndVert)) { // if seg's cubic vert falls on over's line
+      //     over.addDistancedCubicStartVert(seg.availableEndLength) // transfer cubic End Vert
+      //   }
+      // })
+      // overlappingEnd.forEach(over => {
+      //   if (over.vertIsOnLine(neighbor.closestCubicStartVert)) {
+      //     over.addDistancedCubicEndVert(neighbor.availableStartLength) // transfer cubic Start Vert
+      //   }
+      // })
     }
 
     //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
@@ -1399,11 +1423,17 @@ class Grid extends ProtoLayer {
 
 
 
-      quads.forEach(quad => {
+      quads.forEach((quad, i) => {
+        // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.cubicVerts.start[0]?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
+        // console.log(quad)
         const cornerMap = processor(quad)
         // console.log(`cornerMap`, cornerMap)
         assignQuad(quad, cornerMap)
+        console.log(`quad pre`, i)
+        // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
+        // console.log(quad)
         quad.forEach(seg => findColinearWrappedCorner(seg))
+        // console.log(`quad post`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
       })
       // console.log('quads post-processed', quads)
     }
@@ -2473,7 +2503,7 @@ class Island extends ProtoLayer {
     this.perimeterType = perimeterType
     this.parentIslandID = parentIslandID
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
-    this._type = parentIslandID ? 'SubIsland' : 'Island'
+    this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
     if (stored) { this.finishSetup(S.Islands) }
     // console.log('new Island', cells.map(e => e.id))
     // this.color = R.random_hash(3, '#')
@@ -2845,7 +2875,7 @@ class Shape extends ProtoLayer {
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
     this.assignSegments()
-    this._type = 'Shape'
+    this._type = protoParent.type === `Island` ? 'Shape' : `PerimeterShape`
     this.finishSetup(S.Shapes)
   }
 
@@ -3096,13 +3126,15 @@ class Shape extends ProtoLayer {
     this.drawShapeLabelDeBug = true
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
+      const isShape = this.type !== `Shape`
+      const offset = isShape ? vert(3, 6) : vert(3, 12)
+      const font = isShape ? `bold 3px sans-serif` : `3px sans-serif`
       label
         .parent(this.svgElt)
         .addToClassList(this.id)
         .addToClassList(this.svgParent.elt.classList.value)
-        .layout(this.anchor.x + 1, this.anchor.y + 4, this.size.x, this.size.y)
-        .style(`font`, `4px sans-serif`)
-
+        .layout(this.anchor.x + offset.x, this.anchor.y + offset.y, this.size.x, this.size.y)
+        .style(`font`, font)
     }
 
     // .svgLook(SVGLook.trendyCactus(path))
