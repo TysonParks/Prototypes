@@ -651,11 +651,36 @@ class Segment {
 
   //NOTE: made with ChatGPT4.0 on May26, 2023
   // check to see if Vertex point is on Segment line
+  // vertIsOnLine(vert) {
+  //   // Calculate the t parameter using linear interpolation
+  //   const t = this.lineVector.dot(p5.Vector.sub(vert, this.startPoint)) / this.lineVector.magSq()
+  //   // Check if t is within the range [0, 1]
+  //   return t >= 0 && t <= 1
+  // }
+  //NOTE: made with ChatGPT4.0 on Jan14, 2024
   vertIsOnLine(vert) {
+    // Check if vert is within the bounding box of the segment
+    let minX = min(this.startPoint.x, this.endPoint.x)
+    let maxX = max(this.startPoint.x, this.endPoint.x)
+    let minY = min(this.startPoint.y, this.endPoint.y)
+    let maxY = max(this.startPoint.y, this.endPoint.y)
+
+    if (vert.x < minX || vert.x > maxX || vert.y < minY || vert.y > maxY) {
+      return false // The point is outside the segment's bounding box
+    }
+
     // Calculate the t parameter using linear interpolation
-    const t = this.lineVector.dot(p5.Vector.sub(vert, this.startPoint)) / this.lineVector.magSq()
+    const t = this.lineVector.dot(Vertex.sub(vert, this.startPoint)) / this.lineVector.magSq()
     // Check if t is within the range [0, 1]
-    return t >= 0 && t <= 1
+    if (t < 0 || t > 1) {
+      return false // The point does not lie within the segment
+    }
+
+    // Calculate the projected point on the line
+    const projectedPoint = Vertex.add(this.startPoint, Vertex.mult(this.lineVector, t))
+    // Check if the vert is close enough to the projected point (considering a small threshold for precision issues)
+    const threshold = 0.0001 // Adjust this threshold based on your precision needs
+    return p5.Vector.dist(vert, projectedPoint) < threshold
   }
 
   //TODO: Finish Implementation
