@@ -1251,8 +1251,16 @@ class Grid extends ProtoLayer {
         console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
         return
       } // must be an outside corner, so end of seg turns Right
-      console.log(` ** findColinear seg`, seg)
+      // console.log(` ** findColinear seg`, seg)
       const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
+
+      const info = (seg) => {
+        return {
+          dir: seg.direction.name,
+          shape: seg.parentID,
+          id: seg.id
+        }
+      }
 
       const wrappingSeg = (seg, neighbor = false) => {
         const segDir = seg.direction
@@ -1260,32 +1268,41 @@ class Grid extends ProtoLayer {
         const turn = neighbor ? 'end' : 'start'
         const cubicVert = neighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
         const name = neighbor ? `end` : `start`
-        // console.log(` ** findColinear seg`, seg)
+        console.log(` ** findColinear seg`, info(seg))
 
         let overlappers = overlapSegs(seg)
+        console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
+        overlappers = overlappers
           .filter(s => s.direction.equals(wrapDir))
-        // console.log(`${name} overFilter opposites`, overlappers)
+        console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
         overlappers = overlappers
           .filter(s => s.turns[turn].isLeft)
-        // console.log(`${name} overFilter turn`, overlappers)
+        console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
         overlappers = overlappers
           .filter(s => s.vertIsOnLine(cubicVert))
-        // console.log(`${name} overFilter vertOnLine`, overlappers)
-
+        console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+        console.log(``)
         return overlappers
       }
 
 
 
-      const wrappingStart = wrappingSeg(seg)
-      const wrappingEnd = wrappingSeg(neighbor, true)
+      const wrapperStart = wrappingSeg(seg)
+      const wrapperEnd = wrappingSeg(neighbor, true)
 
-      console.log(`--> wrappingStart`, wrappingStart)
-      console.log(`--> wrappingEnd`, wrappingEnd)
+      console.log(`--> wrapperStart`, wrapperStart)
+      console.log(`--> wrapperEnd`, wrapperEnd)
+      console.log(``)
 
-      if (wrappingStart.length === 1 && wrappingEnd.length === 1) {
+      if (wrapperStart.length === 1 && wrapperEnd.length === 1) {
+
         console.log(`!!! WRAPPED CORNER FOUND !!!`)
-        console.log(seg)
+        // console.log(seg)
+        console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
+        console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+        console.log(``)
+        wrapperStart[0].addCubicStartVert(seg.closestCubicEndVert)
+        wrapperEnd[0].addCubicEndVert(seg.closestCubicStartVert)
       }
 
       // I think there should only ever be 1 wrapping corner, but do forEach just in case I'm wrong
@@ -1429,7 +1446,8 @@ class Grid extends ProtoLayer {
         const cornerMap = processor(quad)
         // console.log(`cornerMap`, cornerMap)
         assignQuad(quad, cornerMap)
-        console.log(`quad pre`, i)
+        console.log(``)
+        console.log(`    QUAD`, i, quad[0].parentID)
         // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
         // console.log(quad)
         quad.forEach(seg => findColinearWrappedCorner(seg))
@@ -2235,6 +2253,8 @@ class Grid extends ProtoLayer {
     })
   }
   // #endregion
+
+
 }
 
 // CLASS: CellGroup
@@ -2736,17 +2756,17 @@ class Island extends ProtoLayer {
             let nextSeg
             //find next segments (could be 2 if allowing ordinal island connections)
             let next = segments
-              .filter(s => thisSeg.endPoint.equals(s.startPoint, 4))
+              .filter(s => thisSeg.end.equals(s.start, 4))
               .compacted
             if (next.length === 0) {
-              if (thisSeg.endPoint.equals(subShape[0].startPoint, 4)) {
+              if (thisSeg.end.equals(subShape[0].start, 4)) {
                 thisSeg.assignNeighbors({ end: subShape[0] })
                 subShape[0].assignNeighbors({ start: thisSeg })
                 subShape.push(thisSeg)
                 return
               } else {
-                console.log('thisSeg.endPoint', thisSeg.endPoint)
-                console.log('subShape[0].startPoint', subShape[0].startPoint)
+                console.log('thisSeg.end', thisSeg.end)
+                console.log('subShape[0].start', subShape[0].start)
                 console.error('cannot continue segmentShape')
               }
             }
@@ -3089,7 +3109,7 @@ class Shape extends ProtoLayer {
           .applyFilter(this.filter, 2)
       }
     } else {
-      this.drawPerimeterDeBug = true
+      this.drawPerimeterDeBug = false
       if (this.drawPerimeterDeBug) {
         const randHue = ProtoColor.randomShadHue()
         const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
@@ -3097,7 +3117,7 @@ class Shape extends ProtoLayer {
           .attribute('d', this.perimeter)
           .attribute('fill', protoColor(0, 0))
           .attribute('stroke', randHue)
-          .attribute('stroke-width', `.25`)
+          .attribute('stroke-width', `.125`)
           .attribute('stroke-dasharray', `4 1`)
       } else {
         path
@@ -3127,7 +3147,7 @@ class Shape extends ProtoLayer {
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
-      const offset = isShape ? vert(3, 6) : vert(3, 12)
+      const offset = isShape ? vert(1, 6) : vert(1, 9)
       const font = isShape ? `bold 3px sans-serif` : `3px sans-serif`
       label
         .parent(this.svgElt)
