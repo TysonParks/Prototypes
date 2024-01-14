@@ -50,7 +50,7 @@ function setup() {
   // mill.mkProtoType()
 
   //TESTING
-  // functionTestPrint()
+  functionTestPrint()
   createGUI()
   console.log('random R useage', R.useage)
   console.log('random RuID useage', RuID.useage)
