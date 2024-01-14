@@ -205,7 +205,7 @@ class SegPath {
     for (let i = 0; i < vertCount; i++) {
       let seg = protoSegment({ start: vert(path[i]), end: vert(path[i + 1]), parentID: parentID })
       if (refine === true && previousSeg !== undefined && seg.angle === previousSeg.angle) {
-        seg = protoSegment({ start: previousSeg.startPoint, end: seg.endPoint, parentID: parentID })
+        seg = protoSegment({ start: previousSeg.start, end: seg.end, parentID: parentID })
         segmentPath.pop()
       } // combine segments with same angle
       segmentPath.push(seg)
@@ -239,8 +239,8 @@ class SegPath {
         const islandIDs = new Set(idArray)
         const id = `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}`
         let newSeg = protoSegment({
-          start: prevSeg.startPoint,
-          end: seg.endPoint,
+          start: prevSeg.start,
+          end: seg.end,
           parentID: parentID,
           id: id,
           islandIDs: islandIDs
@@ -300,7 +300,7 @@ class SegPath {
 class VertPath {
   //METH: fromSegPath()
   static fromSegPath(segPath) {
-    return segPath.map(seg => [seg.startPoint.x, seg.startPoint.y])
+    return segPath.map(seg => [seg.start.x, seg.start.y])
   }
   //METH: fromSVGPath() : extract comma separated vert coordinates from an SVG path to array
   static fromSVGPath(path = '') {
@@ -632,54 +632,55 @@ class Segment {
   }
 
   get id() { return `(${this.verts.start.id}) -> (${this.verts.end.id})` }
-  get string() { return `[(${this.startPoint.string}), (${this.endPoint.string})]` }
+  get string() { return `[(${this.start.string}), (${this.end.string})]` }
 
-  get lineVector() { return p5.Vector.sub(this.endPoint, this.startPoint) }
+  get lineVector() { return p5.Vector.sub(this.end, this.start) }
   get opposite() { return segment(this.end, this.start) }
 
   get start() { return this.verts.start }
+  get mid() { return this.pointOnsegment(0.5) }
   get end() { return this.verts.end }
 
-  get startPoint() { return this.verts.start } // DEPRECATE usage of -point???
-  get midPoint() { return this.pointOnsegment(0.5) } // DEPRECATE usage of -point???
-  get endPoint() { return this.verts.end } // DEPRECATE usage of -point???
+  // get startPoint() { return this.verts.start } // DEPRECATE usage of -point???
+  // get midPoint() { return this.pointOnsegment(0.5) } // DEPRECATE usage of -point???
+  // get endPoint() { return this.verts.end } // DEPRECATE usage of -point???
   get angle() { return this.lineVector.heading() }
   get direction() { return Direction.atAngle(this.angle) }
   get length() { return roundToDec(this.lineVector.mag(), 4) }
-  get width() { return this.startPoint.widthTo(this.endPoint) }
-  get height() { return this.startPoint.heightTo(this.endPoint) }
+  get width() { return this.start.widthTo(this.end) }
+  get height() { return this.start.heightTo(this.end) }
 
   //NOTE: made with ChatGPT4.0 on May26, 2023
   // check to see if Vertex point is on Segment line
   // vertIsOnLine(vert) {
   //   // Calculate the t parameter using linear interpolation
-  //   const t = this.lineVector.dot(p5.Vector.sub(vert, this.startPoint)) / this.lineVector.magSq()
+  //   const t = this.lineVector.dot(p5.Vector.sub(vert, this.start)) / this.lineVector.magSq()
   //   // Check if t is within the range [0, 1]
   //   return t >= 0 && t <= 1
   // }
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
   vertIsOnLine(vert) {
     // Check if vert is within the bounding box of the segment
-    let minX = min(this.startPoint.x, this.endPoint.x)
-    let maxX = max(this.startPoint.x, this.endPoint.x)
-    let minY = min(this.startPoint.y, this.endPoint.y)
-    let maxY = max(this.startPoint.y, this.endPoint.y)
+    let minX = min(this.start.x, this.end.x)
+    let maxX = max(this.start.x, this.end.x)
+    let minY = min(this.start.y, this.end.y)
+    let maxY = max(this.start.y, this.end.y)
 
     if (vert.x < minX || vert.x > maxX || vert.y < minY || vert.y > maxY) {
       return false // The point is outside the segment's bounding box
     }
 
     // Calculate the t parameter using linear interpolation
-    const t = this.lineVector.dot(Vertex.sub(vert, this.startPoint)) / this.lineVector.magSq()
+    const t = this.lineVector.dot(Vertex.sub(vert, this.start)) / this.lineVector.magSq()
     // Check if t is within the range [0, 1]
     if (t < 0 || t > 1) {
       return false // The point does not lie within the segment
     }
 
     // Calculate the projected point on the line
-    const projectedPoint = Vertex.add(this.startPoint, Vertex.mult(this.lineVector, t))
+    const projectedPoint = Vertex.add(this.start, Vertex.mult(this.lineVector, t))
     // Check if the vert is close enough to the projected point (considering a small threshold for precision issues)
-    const threshold = 0.0001 // Adjust this threshold based on your precision needs
+    const threshold = 0.1 // Adjust this threshold based on your precision needs
     return p5.Vector.dist(vert, projectedPoint) < threshold
   }
 
@@ -697,8 +698,8 @@ class Segment {
   //NOTE: made with ChatGPT4.0 on Jan12, 2024
   intersectionWith(seg) {
     // Direction vectors
-    const p = this.startPoint;
-    const q = seg.startPoint;
+    const p = this.start;
+    const q = seg.start;
     const r = this.lineVector;
     const s = seg.lineVector;
 
@@ -730,24 +731,24 @@ class Segment {
   }
 
   equals(segment, accuracy = 3) {
-    return this.startPoint.equals(segment.startPoint, accuracy) && this.endPoint.equals(segment.endPoint, accuracy)
+    return this.start.equals(segment.start, accuracy) && this.end.equals(segment.end, accuracy)
   }
 
-  // lerp along segment 0-1, 0 = startPoint, 1 = endPoint
+  // lerp along segment 0-1, 0 = start, 1 = end
   pointOnsegment(lerp) {
     let newVec = p5.Vector.mult(this.lineVector, lerp)
-    let startVec = createVector(this.startPoint.x, this.startPoint.y)
+    let startVec = createVector(this.start.x, this.start.y)
     let result = p5.Vector.add(startVec, newVec)
     // return [result.x, result.y]
     return new Vertex(result.x, result.y)
   }
 
-  // lerp 0-1 from midPoint to startPoint/endpoint
-  scaledStartPoint(lerp, midPoint = 0.5) {
-    return this.pointOnsegment(midPoint - lerp * midPoint)
+  // lerp 0-1 from mid to start/endpoint
+  scaledStartPoint(lerp, mid = 0.5) {
+    return this.pointOnsegment(mid - lerp * mid)
   }
-  scaledEndPoint(lerp, midPoint = 0.5) {
-    return this.pointOnsegment(midPoint + lerp * (1 - midPoint))
+  scaledEndPoint(lerp, mid = 0.5) {
+    return this.pointOnsegment(mid + lerp * (1 - mid))
   }
   //METH: distancedStartPoint() : get point on segment given distance from start
   distancedStartPoint(distance) { return this.pointOnsegment(distance / this.length) }
@@ -930,8 +931,8 @@ class ProtoSegment extends Segment {
 
   //TODO: do I actually want/need this?
   assignMid() {
-    this.addCubicStartVert(this.midPoint)
-    this.addCubicEndVert(this.midPoint)
+    this.addCubicStartVert(this.mid)
+    this.addCubicEndVert(this.mid)
   }
 
   addCubicStartVert(vert) { this.#addCubicVert(vert, true) }
@@ -969,9 +970,9 @@ class ProtoSegment extends Segment {
   }
 
   #vertNames = {
-    'start': this.startPoint,
-    'mid': this.midPoint,
-    'end': this.endPoint,
+    'start': this.start,
+    'mid': this.mid,
+    'end': this.end,
     'two': ['start', 'end'],
     'three': ['start', 'mid', 'end'],
   }
