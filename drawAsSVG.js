@@ -650,14 +650,29 @@ class Segment {
   get width() { return this.start.widthTo(this.end) }
   get height() { return this.start.heightTo(this.end) }
 
-  //NOTE: made with ChatGPT4.0 on May26, 2023
-  // check to see if Vertex point is on Segment line
-  // vertIsOnLine(vert) {
-  //   // Calculate the t parameter using linear interpolation
-  //   const t = this.lineVector.dot(p5.Vector.sub(vert, this.start)) / this.lineVector.magSq()
-  //   // Check if t is within the range [0, 1]
-  //   return t >= 0 && t <= 1
-  // }
+  get xMin() { return min(this.start.x, this.end.x) }
+  get xMax() { return max(this.start.x, this.end.x) }
+  get yMin() { return min(this.start.y, this.end.y) }
+  get yMax() { return max(this.start.y, this.end.y) }
+
+  get boundsCorners() {
+    return {
+      upLeft: vert(this.xMin, this.yMin),
+      upRight: vert(this.xMax, this.yMin),
+      downRight: vert(this.xMax, this.yMax),
+      downLeft: vert(this.xMin, this.yMax),
+    }
+  }
+
+  vertIsInBounds(vert, accuracy = 4) {
+    const x = roundToDec(vert.x, accuracy)
+    const y = roundToDec(vert.y, accuracy)
+    return x >= roundToDec(this.xMin, accuracy)
+      || x <= roundToDec(this.xMax, accuracy)
+      || y >= roundToDec(this.yMin, accuracy)
+      || y <= roundToDec(this.yMax, accuracy)
+  }
+
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
   vertIsOnLine(vert) {
     // Check if vert is within the bounding box of the segment
@@ -666,7 +681,7 @@ class Segment {
     let minY = min(this.start.y, this.end.y)
     let maxY = max(this.start.y, this.end.y)
 
-    if (vert.x < minX || vert.x > maxX || vert.y < minY || vert.y > maxY) {
+    if (!this.vertIsInBounds(vert)) {
       return false // The point is outside the segment's bounding box
     }
 
@@ -676,6 +691,7 @@ class Segment {
     if (t < 0 || t > 1) {
       return false // The point does not lie within the segment
     }
+    // return true
 
     // Calculate the projected point on the line
     const projectedPoint = Vertex.add(this.start, Vertex.mult(this.lineVector, t))
