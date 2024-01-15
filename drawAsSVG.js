@@ -408,64 +408,64 @@ class ProtoSVG {
     // Load SVG image
     async function loadImage(svgMarkup) {
       const img = await new Promise(resolve => {
-        const img = new Image();
+        const img = new Image()
         img.onload = () => {
-          resolve(img);
+          resolve(img)
         }
-        img.src = URL.createObjectURL(new Blob([svgMarkup], { type: 'image/svg+xml' }));
-      });
-      return img;
+        img.src = URL.createObjectURL(new Blob([svgMarkup], { type: 'image/svg+xml' }))
+      })
+      return img
     }
 
     // Encode 16-bit PNG
     function encodePNG16(data, width, height) {
-      const header = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+      const header = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
 
-      const buf = new Uint16Array(width * height * 4);
+      const buf = new Uint16Array(width * height * 4)
 
       for (let i = 0; i < data.length; i++) {
-        const high = (data[i] >> 8) & 0xFF;
-        const low = data[i] & 0xFF;
-        buf[i * 2] = low;
-        buf[i * 2 + 1] = high;
+        const high = (data[i] >> 8) & 0xFF
+        const low = data[i] & 0xFF
+        buf[i * 2] = low
+        buf[i * 2 + 1] = high
       }
 
-      const png = new Uint8Array(header.length + buf.length * 2);
-      png.set(header);
-      png.set(buf, header.length);
+      const png = new Uint8Array(header.length + buf.length * 2)
+      png.set(header)
+      png.set(buf, header.length)
 
-      return png;
+      return png
     }
 
     // Export PNG file  
     function downloadBlob(data, filename) {
-      const url = URL.createObjectURL(new Blob([data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(new Blob([data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
     }
 
-    const canvas = new OffscreenCanvas(width, height);
-    const gl = canvas.getContext('webgl2', { pixelFormat: 'float16' });
+    const canvas = new OffscreenCanvas(width, height)
+    const gl = canvas.getContext('webgl2', { pixelFormat: 'float16' })
 
     if (!gl) {
-      throw new Error('WebGL 2 not supported');
+      throw new Error('WebGL 2 not supported')
     }
 
-    const texture = gl.createTexture();
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.UNSIGNED_SHORT, null);
+    const texture = gl.createTexture()
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.UNSIGNED_SHORT, null)
 
-    const img = await loadImage(svgMarkup);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_SHORT, img);
+    const img = await loadImage(svgMarkup)
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_SHORT, img)
 
-    const data = new Uint16Array(width * height * 4);
-    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_SHORT, data);
+    const data = new Uint16Array(width * height * 4)
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_SHORT, data)
 
-    const png = await encodePNG16(data, width, height);
+    const png = await encodePNG16(data, width, height)
 
-    downloadBlob(png, fileName);
+    downloadBlob(png, fileName)
   }
 
   // NOTE: Made with GPT-4 on April 14, 2023
@@ -500,8 +500,8 @@ class ProtoSVG {
         URL.revokeObjectURL(url) // Revoke the Blob URL for the PNG
         URL.revokeObjectURL(svgUrl) // Revoke the Blob URL for the SVG
         console.log(`PNG saved`)
-      });
-    };
+      })
+    }
   }
 }
 
@@ -524,7 +524,7 @@ class Vertex extends p5.Vector {
   get id() { return `${this.x.toFixed(1)}, ${this.y.toFixed(1)}` }
 
   get isZero() { return this.x === 0 && this.y === 0 }
-  get string() { return `${this.x}, ${this.y}` }
+  get string() { return `${roundToDec(this.x, 3)}, ${roundToDec(this.y, 3)}` }
   get array() { return [this.x || 0, this.y || 0] }
   get round() { return vert(round(this.x), round(this.y)) }
   get floor() { return vert(floor(this.x), floor(this.y)) }
@@ -646,6 +646,7 @@ class Segment {
   // get endPoint() { return this.verts.end } // DEPRECATE usage of -point???
   get angle() { return this.lineVector.heading() }
   get direction() { return Direction.atAngle(this.angle) }
+  get slope() { return this.start.slopeTo(this.end) }
   get length() { return roundToDec(this.lineVector.mag(), 4) }
   get width() { return this.start.widthTo(this.end) }
   get height() { return this.start.heightTo(this.end) }
@@ -667,6 +668,7 @@ class Segment {
   vertIsInBounds(vert, accuracy = 4) {
     const x = roundToDec(vert.x, accuracy)
     const y = roundToDec(vert.y, accuracy)
+    // console.log(`vertIsInBounds vert:`, x, y)
     return x >= roundToDec(this.xMin, accuracy)
       || x <= roundToDec(this.xMax, accuracy)
       || y >= roundToDec(this.yMin, accuracy)
@@ -676,12 +678,13 @@ class Segment {
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
   vertIsOnLine(vert) {
     // Check if vert is within the bounding box of the segment
-    let minX = min(this.start.x, this.end.x)
-    let maxX = max(this.start.x, this.end.x)
-    let minY = min(this.start.y, this.end.y)
-    let maxY = max(this.start.y, this.end.y)
+    // let minX = min(this.start.x, this.end.x)
+    // let maxX = max(this.start.x, this.end.x)
+    // let minY = min(this.start.y, this.end.y)
+    // let maxY = max(this.start.y, this.end.y)
 
     if (!this.vertIsInBounds(vert)) {
+      console.log(`vertIsOnLine vert is not in bounds`)
       return false // The point is outside the segment's bounding box
     }
 
@@ -689,6 +692,7 @@ class Segment {
     const t = this.lineVector.dot(Vertex.sub(vert, this.start)) / this.lineVector.magSq()
     // Check if t is within the range [0, 1]
     if (t < 0 || t > 1) {
+      // console.log(`vertIsOnLine failed t param test`)
       return false // The point does not lie within the segment
     }
     // return true
@@ -696,7 +700,7 @@ class Segment {
     // Calculate the projected point on the line
     const projectedPoint = Vertex.add(this.start, Vertex.mult(this.lineVector, t))
     // Check if the vert is close enough to the projected point (considering a small threshold for precision issues)
-    const threshold = 0.1 // Adjust this threshold based on your precision needs
+    const threshold = 0.01 // Adjust this threshold based on your precision needs
     return p5.Vector.dist(vert, projectedPoint) < threshold
   }
 
@@ -714,36 +718,36 @@ class Segment {
   //NOTE: made with ChatGPT4.0 on Jan12, 2024
   intersectionWith(seg) {
     // Direction vectors
-    const p = this.start;
-    const q = seg.start;
-    const r = this.lineVector;
-    const s = seg.lineVector;
+    const p = this.start
+    const q = seg.start
+    const r = this.lineVector
+    const s = seg.lineVector
 
     // Check if the segments are parallel (cross product is zero)
     if (p5.Vector.cross(r, s).z === 0) {
-      return null; // No intersection (parallel or collinear)
+      return null // No intersection (parallel or collinear)
     }
 
     // Compute the intersection t value
-    const t = p5.Vector.cross(p5.Vector.sub(q, p), s).z / p5.Vector.cross(r, s).z;
+    const t = p5.Vector.cross(p5.Vector.sub(q, p), s).z / p5.Vector.cross(r, s).z
 
     // Check if the intersection point is on the first segment
     if (t < 0 || t > 1) {
-      return null; // No intersection
+      return null // No intersection
     }
 
     // Compute the intersection u value for the other segment
-    const u = p5.Vector.cross(p5.Vector.sub(q, p), r).z / p5.Vector.cross(r, s).z;
+    const u = p5.Vector.cross(p5.Vector.sub(q, p), r).z / p5.Vector.cross(r, s).z
 
     // Check if the intersection point is on the second segment
     if (u < 0 || u > 1) {
-      return null; // No intersection
+      return null // No intersection
     }
 
     // Calculate the intersection point
-    const intersection = p5.Vector.add(p, p5.Vector.mult(r, t));
+    const intersection = p5.Vector.add(p, p5.Vector.mult(r, t))
 
-    return new Vertex(intersection.x, intersection.y);
+    return new Vertex(intersection.x, intersection.y)
   }
 
   equals(segment, accuracy = 3) {
