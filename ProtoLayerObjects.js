@@ -1243,104 +1243,150 @@ class Grid extends ProtoLayer {
     const overlapSegs = (seg) => {
       return this.allSimpleSubShapes.flat().filter(s => s.isOverlappingWith(seg))
     }
+    //FUNC: info ; temp logging helper for wrappedCorner methods
+    const info = (seg) => {
+      return {
+        dir: seg.direction.name,
+        shape: seg.parentID,
+        id: seg.id,
+        midPoint: seg.mid.string,
+      }
+    }
 
     //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
-    //FIXME: something very wrong with this currently
     const findColinearWrappedCorner = (seg) => {
-      if (!seg.turns.end.isRight) {
+      if (!seg.turns.end.isRight) { // must be an outside corner, so end of seg turns Right
         console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
         return
-      } // must be an outside corner, so end of seg turns Right
+      }
       // console.log(` ** findColinear seg`, seg)
       const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
 
-      const info = (seg) => {
-        return {
-          dir: seg.direction.name,
-          shape: seg.parentID,
-          id: seg.id
-        }
-      }
-
-      const wrappingSeg = (seg, neighbor = false) => {
+      const colWrapper = (seg, isNeighbor = false) => {
         const segDir = seg.direction
         const wrapDir = segDir.opposites
-        const turn = neighbor ? 'end' : 'start'
-        const cubicVert = neighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
-        const name = neighbor ? `end` : `start`
-        console.log(` ** findColinear seg`, info(seg))
+        const turn = isNeighbor ? 'end' : 'start'
+        const cubicVert = isNeighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
+        const name = isNeighbor ? `end` : `start`
+        // console.log(` ** findColinear seg`, info(seg))
 
         let overlappers = overlapSegs(seg)
-        console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
-        overlappers = overlappers
+          // console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
+          // overlappers = overlappers
           .filter(s => s.direction.equals(wrapDir))
-        console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
-        overlappers = overlappers
+          // console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
+          // overlappers = overlappers
           .filter(s => s.turns[turn].isLeft)
-        console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
-        overlappers = overlappers
+          // console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
+          // overlappers = overlappers
           .filter(s => s.vertIsOnLine(cubicVert))
-        console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-        console.log(``)
+        // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+        // console.log(``)
         return overlappers
       }
 
+      const wrapperStart = colWrapper(seg)
+      const wrapperEnd = colWrapper(neighbor, true)
 
-
-      const wrapperStart = wrappingSeg(seg)
-      const wrapperEnd = wrappingSeg(neighbor, true)
-
-      console.log(`--> wrapperStart`, wrapperStart)
-      console.log(`--> wrapperEnd`, wrapperEnd)
-      console.log(``)
+      // console.log(`--> wrapperStart`, wrapperStart)
+      // console.log(`--> wrapperEnd`, wrapperEnd)
+      // console.log(``)
 
       if (wrapperStart.length === 1 && wrapperEnd.length === 1) {
-
-        console.log(`!!! WRAPPED CORNER FOUND !!!`)
+        console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
         // console.log(seg)
         console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
         console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
         console.log(``)
         wrapperStart[0].addCubicStartVert(seg.closestCubicEndVert)
         wrapperEnd[0].addCubicEndVert(neighbor.closestCubicStartVert)
-      }
 
-      // I think there should only ever be 1 wrapping corner, but do forEach just in case I'm wrong
-      // overlappingStart.forEach(over => {
-      //   if (over.vertIsOnLine(seg.closestCubicEndVert)) { // if seg's cubic vert falls on over's line
-      //     over.addDistancedCubicStartVert(seg.availableEndLength) // transfer cubic End Vert
-      //   }
-      // })
-      // overlappingEnd.forEach(over => {
-      //   if (over.vertIsOnLine(neighbor.closestCubicStartVert)) {
-      //     over.addDistancedCubicEndVert(neighbor.availableStartLength) // transfer cubic Start Vert
-      //   }
-      // })
+        return wrapperStart[0]
+      }
     }
 
     //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
     const findAdjacentWrappedCorner = (seg) => {
-      if (!seg.turns.end.isLeft) { return } // must be an inside corner, so end of seg turns Left
+      if (!seg.turns.start.isLeft) {
+        console.error(`findAdjacentWrappedCorner only works on segment corners starting in left turns `)
+        return
+      } // must be an inside corner, so end of seg turns Left
       const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
 
+      // console.log(` ** findAdjacent seg`, info(seg))
       // with current implementation, all adjacent sides will be with current shape. Intergrids might change this?
       const shape = this.shapeNamed(seg.parentID)
       const subShapes = shape.simpleSubShapes.flat()
 
-      const firstAdjSegTo = (seg, neighor = false) => {
+      const adjWrapper = (seg, isNeighbor = false) => {
         const segDir = seg.direction
         const adjDir = segDir.opposites
-        const turn = neighbor ? 'end' : 'start'
-        const cubicVert = neighor ? seg.closestCubicEndVert : seg.closestCubicStartVert
+        const turn = !isNeighbor ? 'end' : 'start'
+        const cubicVert = isNeighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
         const normCoord = segDir.rotated(90).moveCoord
-        const normal = segment(cubicVert, Vertex.mult(normCoord, shape.cellBounds.size))
-        const adjs = subShapes
-          .filter(s => s.direction.equals(adjDir) && s.turns[turn].isRight)
-          .map(s => s.intersectionWith(normal))
+        const normal = segment(cubicVert, Vertex.add(cubicVert, Vertex.mult(normCoord, shape.cellBounds.size)))
+        const name = isNeighbor ? `end` : `start`
+        console.log(` ** findAdjacent seg`, info(seg))
+        console.log(`normal`, normal.string)
 
-        //FIXME: finish implementation!
-        // contains seg.closestCubicStartVert.moved(moveDir), 
-        // do in loop with i * moveCoords, the store first/closest adj with i [i, adjSeg] to compare both adjacents on corner}
+        let adjs = subShapes
+        console.log(`${name} adj subshapes `, adjs.map(s => info(s)))
+        adjs = adjs
+          .filter(s => s.direction.equals(adjDir))
+        console.log(`${name} adj opposites `, adjs.map(s => info(s)))
+        adjs = adjs
+          .filter(s => s.turns[turn].isRight)
+        console.log(`${name} adj rightTurns `, adjs.map(s => info(s)))
+        adjs = adjs
+          .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null)
+          .compacted
+        console.log(`${name} adj intersections `, adjs.map(s => [info(s[0]), s[1]]))
+        // //FIXME: need to filter out segments that are colinear... I know what I mean here!
+        adjs = adjs
+          .filter(s => !s[1].equals(s[0][name], 1))
+        console.log(`${name} adj intersections colinear`, adjs.map(s => info(s[0])))
+        adjs = adjs
+          .sort((a, b) => segment(seg, a[1]).length - segment(seg, b[1]).length)
+        console.log(`${name} adj intersections sorted`, adjs.map(s => info(s[0])))
+        console.log(`${name} adj intersections sorted`, adjs.map(s => segment(seg, s[1]).length))
+        adjs = adjs[0]
+        console.log(`${name} adjs final`, adjs ? info(adjs[0]) : undefined)
+        // console.log(`${name} adjs final`, adjs[0].map(s => info(s)))
+        console.log(``)
+
+        return adjs
+      }
+
+      const wrapperStart = adjWrapper(seg)
+      const wrapperEnd = adjWrapper(neighbor, true)
+
+      console.log(`--> wrapperStart`, wrapperStart)
+      console.log(`--> wrapperEnd`, wrapperEnd)
+      console.log(``)
+
+      if (wrapperStart && wrapperEnd) {
+        console.log(`!!! ADJACENT WRAPPED CORNER FOUND !!!`)
+        // console.log(seg)
+        console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
+        console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+        const startGap = segment(seg.closestCubicStartVert, wrapperStart[1])
+        const endGap = segment(neighbor.closestCubicEndVert, wrapperEnd[1])
+        console.log(`startGap`, startGap.length, startGap.string)
+        console.log(`endGap`, endGap.length, endGap.string)
+        console.log(``)
+        const startGapLength = roundToDec(startGap.length, 3)
+        const endGapLength = roundToDec(endGap.length, 3)
+        if (startGapLength === endGapLength) {
+          wrapperStart[0].addCubicEndVert(wrapperStart[1])
+          wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+        }
+        // else if (startGapLength < endGapLength) {
+        //   wrapperStart[0].addCubicEndVert(wrapperStart[1])
+        // } else {
+        //   wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+        // }
+
+        return wrapperStart
       }
     }
 
@@ -1382,8 +1428,7 @@ class Grid extends ProtoLayer {
 
         case 4: // Easter Eggs / Eyeballs : max curvature with diagonal symmetry
           processor = (quad) => {
-            console.error(`hi`)
-
+            // console.error(`hi`)
             let cornerMap
             const minLength = min(quad.map(seg => seg.length)) // min side length
             if (equalsRoundedDec(minLength, this.minCellWidth, 4)) { // quad is single cell width or height
@@ -1438,7 +1483,7 @@ class Grid extends ProtoLayer {
         // shape.finalSubShapes.push(quad)
       }
 
-
+      let colinears = new OpArray
 
       quads.forEach((quad, i) => {
         // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.cubicVerts.start[0]?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
@@ -1450,9 +1495,18 @@ class Grid extends ProtoLayer {
         console.log(`    QUAD`, i, quad[0].parentID)
         // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
         // console.log(quad)
-        quad.forEach(seg => findColinearWrappedCorner(seg))
+        const colinear = quad.map(seg => { return findColinearWrappedCorner(seg) }).compacted
+        colinears.push(colinear)
+        console.log(`colinear`, colinear)
         // console.log(`quad post`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
       })
+      console.log(`+++++++++++++++++++++++++++++++++++++++++++++++`)
+      console.log(`colinears`, colinears.flat())
+      console.log(``)
+      colinears.forEach((quad, i) => {
+        quad.forEach(seg => findAdjacentWrappedCorner(seg))
+      })
+
       // console.log('quads post-processed', quads)
     }
 
@@ -2330,7 +2384,7 @@ class CellGroup extends ProtoLayer {
   //METH: createSubIslands() :
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     if (this.islands.isEmpty) {
-      console.log(`creating subIslands`)
+      // console.log(`creating subIslands`)
       this.perimeterIslands.forEach(i =>
         i.createSubIslands({
           direction: direction,
@@ -2581,7 +2635,7 @@ class Island extends ProtoLayer {
   // #region Methods
   //METH:
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
-    console.log(`Island ${this.id} createSubIslands`)
+    // console.log(`Island ${this.id} createSubIslands`)
     if (this.subIslands) {
       this.subIslands.forEach(isle =>
         isle.createSubIslands({ direction: direction, filter: filter, insetScale: insetScale, drawFilter: drawFilter })
@@ -2604,10 +2658,10 @@ class Island extends ProtoLayer {
         direction = Direction.Cardinal
       }
       if (direction.equals(this.direction)) { // safest/fastest to copy Island,esp calculated Shape for straight inset
-        console.log(`copying island for new island`)
+        // console.log(`copying island for new island`)
         // copy this island but change inset, set filter, set drawFilter
         const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
-        console.log(`created subIsland: `, subIsland)
+        // console.log(`created subIsland: `, subIsland)
         subIslands = OpArray.from([subIsland])
       }
       if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) { // hierarchy > 1 curves can crop cells
@@ -2970,7 +3024,7 @@ class Shape extends ProtoLayer {
 
     let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
       segPath: e,
-      cornerMin: this.grid.minCellWidth / 2
+      cornerMin: 0
     }))
     if (result instanceof Array) {
       result = result.join(' ')
@@ -3057,7 +3111,7 @@ class Shape extends ProtoLayer {
   finishSetup(store) {
     this.storeObject(store)
     this.assignElement()
-    console.log(`created new shape`, this.id)
+    // console.log(`created new shape`, this.id)
     // this.createSimpleSubShapes()
     this.drawElement()
   }
@@ -3143,7 +3197,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = false
+    this.drawShapeLabelDeBug = true
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
