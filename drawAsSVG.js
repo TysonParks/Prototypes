@@ -3,10 +3,22 @@
 const bezCircleConst = 0.552
 const bezCircle45DegConst = 0.265
 
+const info = (seg) => {
+  return {
+    hasGoneBad: seg.end.x < 0 || seg.end.y < 0,
+    dir: seg.direction.name,
+    start: seg.start.string,
+    end: seg.end.string,
+    cubicStart: seg.cubicVerts.start,
+    cubicEnd: seg.cubicVerts.end,
+  }
+}
+
 //CLASS: SVGPath
 class SVGPath {
   //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
+    console.warn(`fromProtoSegPath called`)
     segPath = segPath.copy
     // console.log(`segPath`, segPath[0].parentID, segPath)
     let curves = []
@@ -15,6 +27,17 @@ class SVGPath {
     let controlStart, lineStart, lineEnd, controlEnd
 
     segPath.forEach((seg, i) => {
+      if (seg.id.includes(`shp004-4down-cell019-rightSide`)) {
+        console.error(`problem segment in fromProtoSegPath`)
+        console.log(`current state`, info(seg))
+        console.warn(`next seg startNeighbor`, info(segPath[i + 1].neighbors.start))
+        console.log(`next seg startNeighbor`, segPath[i + 1].neighbors.start.end, segPath[i + 1].neighbors.start.verts)
+        console.warn(`next seg startNeighbor`, info(segPath[i + 1].neighbors.start))
+      }
+      if (seg.id.includes(`shp004-4left-cell031-downSide-4down-cell019-rightSide`)) {
+        console.error(`Neighbor of problem segment in fromProtoSegPath`)
+        console.log(`current state`, info(seg))
+      }
       cornerMin = min(cornerMin, seg.length / 2)
       startRadius = seg.hasCubicStartVert ? seg.availableStartLength : cornerMin // radius of corner arc
       lineStart = seg.distancedStartPoint(startRadius * cornerScale) // start point of line connecting corner arcs 
@@ -65,6 +88,7 @@ class SVGPath {
     const endSVG = `${end[0]} ${end[1]} Z`
     const svgPath = `${startSVG} ${curvesSVG} ${endSVG}`
     // console.log(`FINAL svgPath`, svgPath)
+    console.warn(`fromProtoSegPath end`)
     return svgPath
   }
 
@@ -624,22 +648,26 @@ function segment(start, end) {
 }
 
 class Segment {
-  verts
+  // verts
   // normal
+  start
+  end
 
   constructor(start, end) {
-    this.#assignVerts(start, end, arguments)
+    this.start = start
+    this.end = end
+    // this.#assignVerts(start, end, arguments)
   }
 
-  get id() { return `(${this.verts.start.id}) -> (${this.verts.end.id})` }
+  get id() { return `(${this.start.id}) -> (${this.end.id})` }
   get string() { return `[(${this.start.string}), (${this.end.string})]` }
 
   get lineVector() { return p5.Vector.sub(this.end, this.start) }
   get opposite() { return segment(this.end, this.start) }
 
-  get start() { return this.verts.start }
+  // get start() { return this.verts.start }
   get mid() { return this.pointOnsegment(0.5) }
-  get end() { return this.verts.end }
+  // get end() { return this.verts.end }
 
   // get startPoint() { return this.verts.start } // DEPRECATE usage of -point???
   // get midPoint() { return this.pointOnsegment(0.5) } // DEPRECATE usage of -point???
@@ -775,32 +803,32 @@ class Segment {
   //METH: distancedEndPoint() : get point on segment given distance from end
   distancedEndPoint(distance) { return this.pointOnsegment(1 - distance / this.length) }
 
-  #assignVerts(start, end, args) {
-    if (args.length === 1) {
-      if (start instanceof Array) {
-        if (start[0] instanceof Vertex) {
-          this.verts = { start: start[0], end: start[1] }
-        }
-        else if (start[0] instanceof Object || start[0] instanceof Array) {
-          this.verts = { start: vert(start[0]), end: vert(start[1]) }
-        }
-      }
-      else if (start instanceof Object) {
-        if (start.start instanceof Vertex) {
-          this.verts = { start: start.start, end: start.end }
-        }
-        else if (start.start instanceof Object || start[0] instanceof Array) {
-          this.verts = { start: vert(start.start), end: vert(start.end) }
-        }
-      }
-    }
-    else if (start instanceof Vertex) {
-      this.verts = { start: start, end: end }
-    }
-    else if (start instanceof Object) {
-      this.verts = { start: vert(start), end: vert(end) }
-    }
-  }
+  // #assignVerts(start, end, args) {
+  //   if (args.length === 1) {
+  //     if (start instanceof Array) {
+  //       if (start[0] instanceof Vertex) {
+  //         this.verts = { start: start[0], end: start[1] }
+  //       }
+  //       else if (start[0] instanceof Object || start[0] instanceof Array) {
+  //         this.verts = { start: vert(start[0]), end: vert(start[1]) }
+  //       }
+  //     }
+  //     else if (start instanceof Object) {
+  //       if (start.start instanceof Vertex) {
+  //         this.verts = { start: start.start, end: start.end }
+  //       }
+  //       else if (start.start instanceof Object || start[0] instanceof Array) {
+  //         this.verts = { start: vert(start.start), end: vert(start.end) }
+  //       }
+  //     }
+  //   }
+  //   else if (start instanceof Vertex) {
+  //     this.verts = { start: start, end: end }
+  //   }
+  //   else if (start instanceof Object) {
+  //     this.verts = { start: vert(start), end: vert(end) }
+  //   }
+  // }
 }
 
 // CLASS: ProtoSegment
@@ -822,6 +850,10 @@ class ProtoSegment extends Segment {
     this.parentID = parentID
     this.islandIDs = islandIDs
     this.id = id
+    if (!this.direction.allAreCardinal) {
+      console.error(`this segment is not Cardinal!`)
+      console.log(this)
+    }
   }
 
   get turns() {
@@ -830,9 +862,19 @@ class ProtoSegment extends Segment {
       console.log(this.neighbors)
       return
     }
+    const start = this.neighbors.start.direction.turnTo(this.direction)
+    const end = this.direction.turnTo(this.neighbors.end.direction)
+    if (!start) {
+      console.error(`segment ${this.id} failed to calculate start turn`)
+      console.log(`start neighbor: `, info(this.neighbors.start))
+    }
+    if (!end) {
+      console.error(`segment ${this.id} failed to calculate end turn`)
+      console.log(`end neighbor: `, this.neighbors.end)
+    }
     return {
-      start: this.neighbors.start.direction.turnTo(this.direction),
-      end: this.direction.turnTo(this.neighbors.end.direction)
+      start: start,
+      end: end
     }
   }
 
@@ -867,6 +909,17 @@ class ProtoSegment extends Segment {
   get hasInsideTurn() { return this.turns?.start.name === 'Left' || this.turns?.end.name === 'Left' }
 
   get cornerVerts() {
+    if (!this.neighbors.start || !this.neighbors.end) {
+      console.error(`segment ${this.id} without neighbors has no cornerVerts`)
+      console.log(this)
+      return
+    }
+    if (!this.turns.start || !this.turns.end) {
+      console.error(`segment ${this.id} without turns has no cornerVerts`)
+      console.log(`this seg`, this)
+      console.log(`start neighbor: `, info(this.neighbors.start))
+      return
+    }
     return {
       start: (this.turns?.start.value !== 0) ? this.start : undefined,
       end: (this.turns?.end.value !== 0) ? this.end : undefined,
@@ -922,6 +975,7 @@ class ProtoSegment extends Segment {
   insetCopy(insetScale, minCellWidth) {
     // if (insetScale <= 0) { return }
     // if (insetScale > 2) { insetScale = 2 }
+
     const scaleToOffset = Vertex.sub(insetScale, vert(1))  // create scaleToOffset 
     const offset = Vertex.mult(scaleToOffset, minCellWidth / 2)
     const startMove = Vertex.mult(this.normals.start.moveCoord, offset) // startMove vector
@@ -936,17 +990,50 @@ class ProtoSegment extends Segment {
       islandIDs: this.islandIDs
     })
 
+
+
+    if (this.id.includes(`shp004-4down-cell019`)) {
+      console.error(`insetCopy made here!`)
+      console.log(`arguments`, insetScale, minCellWidth)
+      console.log(`normals`, this.normals.map(n => n.name))
+      console.log(`insetStart`, insetStart)
+      console.log(`insetEnd`, insetEnd)
+      console.log(`original`, this)
+      console.log(`pree insetCopy`, info(insetCopy))
+    }
+
+
     const cubicMove = Vertex.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
     const insetCubicStarts = this.cubicVerts.start.map(v => Vertex.add(v, cubicMove))
     const insetCubicEnds = this.cubicVerts.end.map(v => Vertex.add(v, cubicMove))
     insetCopy.cubicVerts = { start: insetCubicStarts, end: insetCubicEnds } // assign new inset cubicVerts
+    if (this.id.includes(`shp004-4down-cell019`)) {
+      console.log(`post insetCopy`, info(insetCopy))
+    }
     return insetCopy
   }
+
   //METH: assignNeighbors()
   //NOTE: be sure to assign neighbors by reference instead of value to avoid infinite tree
   assignNeighbors({ start, end } = {}) {
-    if (start) { this.neighbors.start = start }
-    if (end) { this.neighbors.end = end }
+
+    if (start) {
+      if (start.id.includes(`shp004-4down-cell019-rightSide`)) {
+        console.error(`problem segment getting assigned as start neighbor`)
+        console.log(`current state`, info(start))
+      }
+      if (!this.start.equals(start.end, 3)) {
+        console.error(`assigned a disconnected start neighbor!`, this)
+      }
+      this.neighbors.start = start
+    }
+    if (end) {
+      if (!this.end.equals(end.start, 3)) {
+        console.error(`assigned a disconnected end neighbor!`, this)
+      }
+      this.neighbors.end = end
+    }
+
   }
 
   //TODO: do I actually want/need this?
@@ -972,6 +1059,11 @@ class ProtoSegment extends Segment {
     }
     if (vert instanceof Vertex) {
       // console.log(`already assigned ${cubicVerts}`, cubicVerts.length)
+      if (!this.vertIsOnLine(vert)) {
+        console.error(`trying to assign a cubicVert that is not on this segment`)
+        console.log(`off-line vert`, vert)
+        console.lof(`this.segment`, info(this))
+      }
       cubicVerts.push(vert)
       cubicVerts = cubicVerts.unique('x', 'y')
       // console.log(`just assigned ${vert}`)
