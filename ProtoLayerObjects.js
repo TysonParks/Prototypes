@@ -1510,7 +1510,7 @@ class Grid extends ProtoLayer {
       // console.log('quads post-processed', quads)
     }
 
-    formQuadShapes(0)
+    formQuadShapes(4)
 
 
     //FUNC: reorderSimples : reorders currentSimples
@@ -1699,6 +1699,8 @@ class Grid extends ProtoLayer {
 
     // console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
     // console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
+    console.log(`  %%%% end customizeShapes %%%%`)
+    console.log(``)
     // LOOP:
     // filter simpleSegments to incomplete(computed) only 
     // sort allSegments by availableLength(computed), shortest to longest
@@ -2384,7 +2386,7 @@ class CellGroup extends ProtoLayer {
   //METH: createSubIslands() :
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     if (this.islands.isEmpty) {
-      // console.log(`creating subIslands`)
+      console.log(`creating subIslands`, this.id, direction.name, insetScale)
       this.perimeterIslands.forEach(i =>
         i.createSubIslands({
           direction: direction,
@@ -2658,7 +2660,7 @@ class Island extends ProtoLayer {
         direction = Direction.Cardinal
       }
       if (direction.equals(this.direction)) { // safest/fastest to copy Island,esp calculated Shape for straight inset
-        // console.log(`copying island for new island`)
+        console.log(`copying island for new island`)
         // copy this island but change inset, set filter, set drawFilter
         const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
         // console.log(`created subIsland: `, subIsland)
@@ -2697,6 +2699,7 @@ class Island extends ProtoLayer {
     drawFilter = this.drawFilter,
     protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
   } = {}) {
+    console.log(`copying island`, this.id)
     const newIsland = new Island({
       cells: this.cells,
       filter: filter,
@@ -2712,6 +2715,7 @@ class Island extends ProtoLayer {
       drawFilter: drawFilter
     })
     newIsland.shapes = this.shapes.map(s => s.copy({ insetScale: insetScale, protoParent: newIsland, island: newIsland }))
+    console.log(`newIsland`, newIsland)
     return newIsland
   }
   //METH: recalcdCells(shapes, newInsetScale) : 
@@ -2988,7 +2992,7 @@ class Shape extends ProtoLayer {
   // }
 
   get insetSubShapes() {
-    // console.log(`this.finalSubShapes`, this.finalSubShapes)
+    // console.error(`this.simpleSubShapes`, this.id, this.simpleSubShapes)
     // console.log(`using finalSubshapes`, this.finalSubShapes.length > 0)
     // const subs = this.finalSubShapes.length > 0 ? this.finalSubShapes : this.simpleSubShapes
     const subs = this.simpleSubShapes
@@ -2999,7 +3003,19 @@ class Shape extends ProtoLayer {
       // console.error(`next subshape`)
       sub.forEach((seg, i) => {
         let newInsetSeg = seg.insetCopy(this.insetScale, this.grid.minCellWidth) //create inset segment
+
+        if (newInsetSeg.id.includes(`shp004-4down-cell019-rightSide`)) {
+          console.error(`insetSubShapes: problem seg is newInsetSeg`)
+          console.log(`newInsetSeg state: `, info(newInsetSeg))
+        }
+
         if (prevInsetSeg) { // only assignNeighbors once there are two inset segments
+
+          if (prevInsetSeg.id.includes(`shp004-4down-cell019-rightSide`)) {
+            console.error(`insetSubShapes: problem seg is prevInsetSeg`)
+            console.log(`prevInsetSeg state: `, info(prevInsetSeg))
+          }
+
           prevInsetSeg.assignNeighbors({ end: newInsetSeg })
           newInsetSeg.assignNeighbors({ start: prevInsetSeg })
         }
@@ -3008,19 +3024,30 @@ class Shape extends ProtoLayer {
           insetSubShape[0].assignNeighbors({ start: newInsetSeg })
         }
         insetSubShape.push(newInsetSeg)
+        if (newInsetSeg.id.includes(`shp004-4down-cell019-rightSide`)) {
+          console.error(`insetSubShapes: problem seg is newInsetSeg`)
+          console.log(`newInsetSeg end state: `, info(newInsetSeg))
+        }
         prevInsetSeg = newInsetSeg
+        if (prevInsetSeg.id.includes(`shp004-4down-cell019-rightSide`)) {
+          console.error(`insetSubShapes: problem seg is prevInsetSeg`)
+          console.log(`prevInsetSeg end state: `, info(prevInsetSeg))
+        }
       })
+      console.log(`INSETSUBSHAPE END problem`, (insetSubShape.filter(s => s.id.includes(`shp004-4down-cell019-rightSide`))).flat()[0])
       return insetSubShape
     })
+    console.log(`INSETSUBSHAPES END problem`, (insetSubShapes.map(r => r.filter(s => s.id.includes(`shp004-4down-cell019-rightSide`))).flat()[0]))
+
     return insetSubShapes
   }
 
   //MARK: SVG Paths
   get svg() {
-    // console.log(`Get SVG for: `, this.id)
-    // console.log(`current subShapes`, this.subShapes)
-    // console.log(`current simpleSubShapes`, this.simpleSubShapes)
-    // console.log(`current insetSubShapes`, this.insetSubShapes)
+    console.log(`Get SVG for: `, this.id)
+    console.log(`current subShapes`, this.subShapes)
+    console.log(`current simpleSubShapes`, this.simpleSubShapes)
+    console.log(`current insetSubShapes`, this.insetSubShapes)
 
     let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
       segPath: e,
@@ -3031,7 +3058,7 @@ class Shape extends ProtoLayer {
     }
     return result
   }
-  // get svg() { return SVGPath.fromSegPath({ segPath: this.subShapes[0] }) }
+
   get svgPath() { return `path('${this.svg}')` }
 
   get perimeter() {
@@ -3092,6 +3119,8 @@ class Shape extends ProtoLayer {
     protoParent,
     island,
   } = {}) {
+    console.log(`copying shape`, this.id)
+    console.log(`this.simpleSubShapes`, this.simpleSubShapes[0][7])
     const newShape = new Shape({
       // subShapes: this.subShapes.map(sub => sub.map(seg => seg.copy)),
       // finalSubShapes: this.finalSubShapes,
@@ -3101,6 +3130,7 @@ class Shape extends ProtoLayer {
       island: island,
       insetScale: insetScale,
     })
+    console.log(`newShape`, newShape)
     return newShape
   }
   // #endregion
@@ -3163,7 +3193,7 @@ class Shape extends ProtoLayer {
           .applyFilter(this.filter, 2)
       }
     } else {
-      this.drawPerimeterDeBug = false
+      this.drawPerimeterDeBug = true
       if (this.drawPerimeterDeBug) {
         const randHue = ProtoColor.randomShadHue()
         const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
