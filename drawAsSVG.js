@@ -3,6 +3,7 @@
 const bezCircleConst = 0.552
 const bezCircle45DegConst = 0.265
 
+//TODO: REMOVE THIS DEBUG CODE WHEN DONE!
 const info = (seg) => {
   return {
     hasGoneBad: seg.end.x < 0 || seg.end.y < 0,
@@ -13,8 +14,6 @@ const info = (seg) => {
     cubicEnd: seg.cubicVerts.end,
   }
 }
-
-// let watchSeg
 
 //CLASS: SVGPath
 class SVGPath {
@@ -27,42 +26,18 @@ class SVGPath {
     let controlStart, lineStart, lineEnd, controlEnd
 
     segPath.forEach((seg, i) => {
-
-      if (seg.id.includes(`shp004-4down-cell019-rightSide`)) {
-        console.warn(`1 current seg - length: ${seg.length}, start: ${seg.start.string}, end:${seg.end.string}`)
-        // console.warn(`current seg`, seg.end.string, seg)
-        // watchSeg = seg
-        // console.error(`problem segment in fromProtoSegPath`)
-        // console.log(`current state`, info(seg))
-        // console.warn(`next seg startNeighbor`, info(segPath[i + 1].neighbors.start))
-        // console.log(`next seg startNeighbor`, segPath[i + 1].neighbors.start.end, segPath[i + 1].neighbors.start.verts)
-        // console.warn(`next seg startNeighbor`, info(segPath[i + 1].neighbors.start))
-        // console.warn(`seg.availableEndLength`, seg.availableEndLength)
-        // debugger
-      }
-      if (seg.id.includes(`shp004-4left-cell031-downSide-4down-cell019-rightSide`)) {
-        console.error(`Neighbor of problem segment in fromProtoSegPath`)
-        console.log(`current state`, info(seg))
-      }
       cornerMin = min(cornerMin, seg.length / 2)
-      // console.log(`hasCubicStartVert`, seg.hasCubicStartVert)
-      // console.log(`availableStartLength`, seg.availableStartLength)
-      // console.warn(`2 current seg - length: ${seg.length}, start: ${seg.start.string}, end:${seg.end.string}`)
 
       startRadius = seg.hasCubicStartVert ? seg.availableStartLength : cornerMin // radius of corner arc
-      // console.warn(`3 current seg - length: ${seg.length}, start: ${seg.start.string}, end:${seg.end.string}`)
-      // console.log(`availableStartLength`, seg.availableStartLength, seg.length, seg.id)
       lineStart = seg.distancedStartPoint(startRadius * cornerScale) // start point of line connecting corner arcs 
       startSegment = segment(lineStart, seg.start) // control point calculation segment, connects hard corner to mid line
       controlStart = startSegment.pointOnsegment(bezCircleConst)
-      // console.warn(`4 current seg - length: ${seg.length}, start: ${seg.start.string}, end:${seg.end.string}`)
-      // console.log(`seg.hasCubicEndVert`, seg.hasCubicEndVert)
+
       endRadius = seg.hasCubicEndVert ? seg.availableEndLength : cornerMin // radius of corner arc
-      console.warn(`5 current seg - length: ${seg.length}, start: ${seg.start.string}, end:${seg.end.string}`)
       lineEnd = seg.distancedEndPoint(endRadius * cornerScale) // end point of line connecting corner arcs
       endSegment = segment(lineEnd, seg.end) // control point calculation segment, connects hard corner to middle line
       controlEnd = endSegment.pointOnsegment(bezCircleConst)
-      console.warn(`6 current seg - length: ${seg.length}, start: ${seg.start.string}, end:${seg.end.string}`)
+
       curves.push([controlStart, lineStart, lineEnd, controlEnd])
       if (i === 0) { // firstLoop
         start = [controlStart, lineStart]
@@ -78,9 +53,6 @@ class SVGPath {
         }
       }
     })
-    // console.log(`start`, start)
-    // console.log(`curves`, curves)
-    // console.log(`end`, end)
 
     //FUNC: simplify(curve) : convert each vert into roundedDec coord pair array
     const simplify = (curve) => {
@@ -88,21 +60,15 @@ class SVGPath {
         vert.array.map(coord => roundToDec(coord, 4))
       )
     }
-
+    // calculate start, (middle) curves, and end
     start = simplify(start)
     curves = curves.map(curve => simplify(curve))
     end = simplify(end)
-    // console.log(`  simplified: `)
-    // console.log(`start`, start)
-    // console.log(`curves`, curves)
-    // console.log(`end`, end)
 
     const startSVG = `M ${end[0]} C ${end[1]}`
     const curvesSVG = curves.map(c => `${c[0]} ${c[1]} L ${c[2]} C ${c[3]} `)
     const endSVG = `${end[0]} ${end[1]} Z`
     const svgPath = `${startSVG} ${curvesSVG} ${endSVG}`
-    // console.log(`FINAL svgPath`, svgPath)
-    console.warn(`fromProtoSegPath end`)
     return svgPath
   }
 
@@ -557,7 +523,6 @@ class Vertex extends p5.Vector {
 
   constructor(x = 0, y = 0) {
     super(x, y)
-    // if (x < -1 || y < -1) { console.warn(`x vert with negative value assigned`, this) }
   }
 
   get id() { return `${this.x.toFixed(1)}, ${this.y.toFixed(1)}` }
@@ -569,7 +534,7 @@ class Vertex extends p5.Vector {
   get floor() { return vert(floor(this.x), floor(this.y)) }
   get evenFloor() { return vert((2 * floor(this.x / 2)), (2 * floor(this.y / 2))) }
   get direction() {
-    // if 
+    //TODO: not sure when I started this implementation. Do I need this?
   }
 
   get aspect() { return Aspect.fromRatio((this.x / this.y)) }
@@ -664,7 +629,6 @@ function segment(start, end) {
 
 class Segment {
   // verts
-  // normal
   // start
   // end
 
@@ -680,6 +644,7 @@ class Segment {
   get lineVector() { return p5.Vector.sub(this.end, this.start) }
   get opposite() { return segment(this.end, this.start) }
 
+  //TODO: I should be able to revert to instance properties with these
   get start() { return this._start }
   set start(vert) { this._start = vert }
   get end() { return this._end }
@@ -712,7 +677,6 @@ class Segment {
   vertIsInBounds(vert, accuracy = 4) {
     const x = roundToDec(vert.x, accuracy)
     const y = roundToDec(vert.y, accuracy)
-    // console.log(`vertIsInBounds vert:`, x, y)
     return x >= roundToDec(this.xMin, accuracy)
       || x <= roundToDec(this.xMax, accuracy)
       || y >= roundToDec(this.yMin, accuracy)
@@ -722,11 +686,6 @@ class Segment {
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
   vertIsOnLine(vert) {
     // Check if vert is within the bounding box of the segment
-    // let minX = min(this.start.x, this.end.x)
-    // let maxX = max(this.start.x, this.end.x)
-    // let minY = min(this.start.y, this.end.y)
-    // let maxY = max(this.start.y, this.end.y)
-
     if (!this.vertIsInBounds(vert)) {
       console.log(`vertIsOnLine vert is not in bounds`)
       return false // The point is outside the segment's bounding box
@@ -817,6 +776,7 @@ class Segment {
   //METH: distancedEndPoint() : get point on segment given distance from end
   distancedEndPoint(distance) { return this.pointOnsegment(1 - distance / this.length) }
 
+  //TODO: I might be able to revert to this
   // #assignVerts(start, end, args) {
   //   if (args.length === 1) {
   //     if (start instanceof Array) {
@@ -870,57 +830,17 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get start() {
-    if (this._lastStart) {
-      if (this._lastStart !== this._start) { console.warn(`!^!^!^! START value has changed`) }
-    }
-    this._lastStart = this._start
-    return this._start
-  }
-  set start(vert) {
-    if (vert.x < 0 || vert.y < 0) { console.warn(`trying to assign a negative start vert`) }
-    const prev = this._start
-    if (prev) {
-      console.warn(`previous value ${prev.string} will be replaced by ${vert.string}`)
-    }
-    // console.log(`new start vert assigned`, vert)
-    this._start = vert
-  }
-
-  get end() {
-    if (this._lastEnd) {
-      if (this._lastEnd !== this._end) { console.warn(`!^!^!^! END value has changed`) }
-    }
-    this._lastEnd = this._end
-    return this._end
-  }
-  set end(vert) {
-    if (vert.x < 0 || vert.y < 0) { console.warn(`trying to assign a negative end vert`) }
-    const prev = this._end
-    if (prev) {
-      console.warn(`previous value ${prev.string} will be replaced by ${vert.string}`)
-    }
-    // console.log(`new end vert assigned`, vert)
-    this._end = vert
-  }
-
-
   get turns() {
     if (!this.neighbors.start || !this.neighbors.end) {
       console.error(`segment ${this.id} without neighbors has no turns`)
-      console.log(this.neighbors)
       return
     }
     const start = this.neighbors.start.direction.turnTo(this.direction)
     const end = this.direction.turnTo(this.neighbors.end.direction)
-    if (!start) {
-      console.error(`segment ${this.id} failed to calculate start turn`)
-      console.log(`start neighbor: `, info(this.neighbors.start))
-    }
-    if (!end) {
-      console.error(`segment ${this.id} failed to calculate end turn`)
-      console.log(`end neighbor: `, this.neighbors.end)
-    }
+
+    if (!start) { console.error(`segment ${this.id} failed to calculate start turn`) }
+    if (!end) { console.error(`segment ${this.id} failed to calculate end turn`) }
+
     return {
       start: start,
       end: end
@@ -933,6 +853,7 @@ class ProtoSegment extends Segment {
       return
     }
     if (this.angle === undefined) { console.error(`segment ${this.id} has no angle!`, this) }
+
     const normals =
     {
       start: this.neighbors.start.angle - this.turns.start.normalRotAngle,
@@ -960,15 +881,13 @@ class ProtoSegment extends Segment {
   get cornerVerts() {
     if (!this.neighbors.start || !this.neighbors.end) {
       console.error(`segment ${this.id} without neighbors has no cornerVerts`)
-      console.log(this)
       return
     }
     if (!this.turns.start || !this.turns.end) {
       console.error(`segment ${this.id} without turns has no cornerVerts`)
-      console.log(`this seg`, this)
-      console.log(`start neighbor: `, info(this.neighbors.start))
       return
     }
+
     return {
       start: (this.turns?.start.value !== 0) ? this.start : undefined,
       end: (this.turns?.end.value !== 0) ? this.end : undefined,
@@ -989,91 +908,56 @@ class ProtoSegment extends Segment {
 
   get cubicVertsToStartLengths() {
     return this.cubicVerts.start.map(vert => Vertex.sub(this.start, vert).roundedMag()).numsorted
-    return this.cubicVerts.start.map(vert => this.start.sub(vert).roundedMag()).numsorted
   }
   get cubicVertsToEndLengths() {
     return this.cubicVerts.end.map(vert => Vertex.sub(this.end, vert).roundedMag()).numsorted
-    return this.cubicVerts.end.map(vert => this.end.sub(vert).roundedMag()).numsorted
   }
   get closestCubicStartVert() {
-    return this.cubicVerts.start.sort((a, b) => Vertex.sub(this.start, a).roundedMag() - Vertex.sub(this.start, b).roundedMag())[0]
+    return this.cubicVerts.start.sort((a, b) =>
+      Vertex.sub(this.start, a).roundedMag() - Vertex.sub(this.start, b).roundedMag())[0]
   }
   get closestCubicEndVert() {
-    return this.cubicVerts.end.sort((a, b) => Vertex.sub(this.end, a).roundedMag() - Vertex.sub(this.end, b).roundedMag())[0]
+    return this.cubicVerts.end.sort((a, b) =>
+      Vertex.sub(this.end, a).roundedMag() - Vertex.sub(this.end, b).roundedMag())[0]
   }
 
+  //TODO: Might need to rethink this implementation along with array impl of CubicVerts...???
   get availableStartLength() {
-    // console.log(`$$$$ availableStartLength`)
-    if (!this.cornerVerts.start) {
+    if (!this.cornerVerts.start) {// needs to have cornerVerts to calculate
       console.warn(`cannot calculate available length without cornerVerts`)
       return
-    } // needs to have cornerVerts to calculate
-    let availablelength
-    if (this.hasNoCubicVerts) { // assume entire length available
-      console.log(`availableLength calculated from length/2 (no cubicVerts)`)
-      availablelength = this.length / 2
     }
+    let availablelength
+    if (this.hasNoCubicVerts) { availablelength = this.length / 2 } // assume entire length available
     else if (this.hasCubicStartVert) {
-      console.log(`availableLength calculated by cubicStartVert`)
       availablelength = Vertex.sub(this.closestCubicStartVert, this.start).roundedMag()
     }
-    else if (this.hasCubicEndVert) {
-      console.log(`availableLength calculated by `)
-      length = this.length - this.availableEndLength
-    }
+    else if (this.hasCubicEndVert) { length = this.length - this.availableEndLength }
     if (availablelength > this.length) {
       console.warn(`Invalid availableStartLength is longer than segment length!`)
-      console.log(`this.availableEndLength`, this.availableEndLength)
-      console.log(`this.length`, this.length)
     }
     return availablelength
   }
 
+  //TODO: Might need to rethink this implementation along with array impl of CubicVerts...???
   get availableEndLength() {
-    console.log(`$$$$ availableEndLength current seg - id: ${this.id}`)
-    // console.warn(`1 $$$$ availableEndLength current seg - length: ${this.length}, start: ${this.start.string}, end:${this.end.string}`)
-    if (!this.cornerVerts.end) {
+    if (!this.cornerVerts.end) { // needs to have cornerVerts to calculate
       console.warn(`cannot calculate available length without cornerVerts`)
       return
-    } // needs to have cornerVerts to calculate
-
+    }
     let availablelength
-    if (this.hasNoCubicVerts) { // assume entire length available
-      console.log(`availableLength calculated from length/2 (no cubicVerts)`)
-      availablelength = this.length / 2
+    if (this.hasNoCubicVerts) { availablelength = this.length / 2 } // assume entire length available
+    else if (this.hasCubicEndVert) {
+      availablelength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag()
     }
-    else {
-      // console.warn(`2 $$$$ availableEndLength current seg - length: ${this.length}, start: ${this.start.string}, end:${this.end.string}`)
-      if (this.hasCubicEndVert) {
-        // console.warn(`3 $$$$ availableEndLength current seg - length: ${this.length}, start: ${this.start.string}, end:${this.end.string}`)
-        //NOTE: THIS IS THE BAD CALCULATION!
-        console.log(`availableLength calculated by cubicEndVert`)
-        console.log(`closestCubicEndVert`, this.closestCubicEndVert)
-        console.log(`closestCubicEndVert`, this.closestCubicEndVert)
-        // console.log(`length`, this.length)
-        // console.log(`end ${this.end.string}`)
-        // console.log(`end`, this.end)
+    else if (this.hasCubicStartVert) { availablelength = this.length - this.availableStartLength }
 
-        availablelength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag()
-      } else {
-        console.warn(`4 $$$$ availableEndLength current seg - length: ${this.length}, start: ${this.start.string}, end:${this.end.string}`)
-        if (this.hasCubicStartVert) {
-          console.log(`availableLength calculated by hasCubicStartVert`)
-          availablelength = this.length - this.availableStartLength
-        }
-      }
-    }
-    // console.warn(`4 $$$$ availableEndLength current seg - length: ${this.length}, start: ${this.start.string}, end:${this.end.string}`)
     if (availablelength > this.length) {
       console.warn(`Invalid availableEndLength is longer than segment length!`)
-      console.warn(`current seg - length: ${this.length}, start: ${this.start.string}, end:${this.end.string}`)
-      console.log(`this.availablelength`, this.availablelength)
-      console.log(`this.length`, this.length)
-      console.warn(`this.availableStartLength`, this.availableStartLength)
-
     }
     return availablelength
   }
+
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
   //METH: copy
@@ -1109,56 +993,25 @@ class ProtoSegment extends Segment {
       islandIDs: this.islandIDs
     })
 
-
-
-    if (this.id.includes(`shp004-4down-cell019`)) {
-      console.error(`insetCopy made here!`)
-      console.log(`arguments`, insetScale, minCellWidth)
-      console.log(`normals`, this.normals.map(n => n.name))
-      console.log(`this.normals.end.moveCoord`, this.normals.end.moveCoord)
-      console.log(`this.end`, this.end)
-      console.log(`endMove`, endMove)
-      console.log(`insetEnd`, insetEnd)
-      console.log(`insetEnd: ${insetEnd.string}`)
-      console.log(`original`, this)
-      console.log(`pree insetCopy`, info(insetCopy))
-      console.log(`pree insetCopy`, insetCopy)
-    }
-
-
     const cubicMove = Vertex.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
     const insetCubicStarts = this.cubicVerts.start.map(v => Vertex.add(v, cubicMove))
     const insetCubicEnds = this.cubicVerts.end.map(v => Vertex.add(v, cubicMove))
     insetCopy.cubicVerts = { start: insetCubicStarts, end: insetCubicEnds } // assign new inset cubicVerts
-    if (this.id.includes(`shp004-4down-cell019`)) {
-      console.log(`post insetCopy`, info(insetCopy))
-    }
+
     return insetCopy
   }
 
   //METH: assignNeighbors()
   //NOTE: be sure to assign neighbors by reference instead of value to avoid infinite tree
   assignNeighbors({ start, end } = {}) {
-
     if (start) {
-      if (start.id.includes(`shp004-4down-cell019-rightSide`)) {
-        console.error(`problem segment getting assigned as start neighbor`)
-        console.log(`current state`, start)
-        console.log(`current state`, info(start))
-        console.log(`current state ${start.string}`)
-      }
-      if (!this.start.equals(start.end, 3)) {
-        console.error(`assigned a disconnected start neighbor!`, this)
-      }
+      if (!this.start.equals(start.end, 3)) { console.error(`assigned a disconnected start neighbor!`, this) }
       this.neighbors.start = start
     }
     if (end) {
-      if (!this.end.equals(end.start, 3)) {
-        console.error(`assigned a disconnected end neighbor!`, this)
-      }
+      if (!this.end.equals(end.start, 3)) { console.error(`assigned a disconnected end neighbor!`, this) }
       this.neighbors.end = end
     }
-
   }
 
   //TODO: do I actually want/need this?
@@ -1179,12 +1032,7 @@ class ProtoSegment extends Segment {
   //TODO: CLEANUP ALL SILENCED CODE
   #addCubicVert(vert, start) {
     let cubicVerts = start ? this.cubicVerts.start : this.cubicVerts.end
-    // if (typeof vert === 'string') {
-    //   console.warn(`assign cubicVert via String`)
-    //   vert = this.#vertNames[vert]
-    // }
     if (vert instanceof Vertex) {
-      // console.log(`already assigned ${cubicVerts}`, cubicVerts.length)
       if (!this.vertIsOnLine(vert)) {
         console.error(`trying to assign a cubicVert that is not on this segment`)
         console.log(`off-line vert`, vert)
@@ -1192,28 +1040,8 @@ class ProtoSegment extends Segment {
       }
       cubicVerts.push(vert)
       cubicVerts = cubicVerts.unique('x', 'y')
-      // console.log(`just assigned ${vert}`)
-      // console.log(`now assigned ${cubicVerts}`, cubicVerts.length)
     }
-    // if (vert instanceof Set) { vert = Array.from(vert) }
-    // if (vert instanceof Array && vert.length > 0) {
-    //   console.log(`!!vert from array`, vert)
-    //   // if (typeof vert[0] === 'string') { vert = vert.map(v => this.#vertNames[v]) }
-    //   // console.log(`vert converted`, vert)
-    //   if (vert[0] instanceof Vertex) {
-    //     // console.error(`addCubicVert vert is a Vertex`)
-    //     cubicVerts = cubicVerts.union(vert, ['x', 'y'])
-    //   }
-    // }
   }
-
-  // #vertNames = {
-  //   'start': this.start,
-  //   'mid': this.mid,
-  //   'end': this.end,
-  //   'two': ['start', 'end'],
-  //   'three': ['start', 'mid', 'end'],
-  // }
 }
 
 
