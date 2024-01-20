@@ -198,16 +198,16 @@ class SVGPath {
 //CLASS: SegPath
 class SegPath {
   // METH: fromVertPath() : convert array of verts to a shape path made of Segments
-  static fromVertPath({ path = new OpArray, refine = true, parentID } = {}) {
-    // console.log('path', path)
-    let vertCount = path.length
+  static fromVertPath({ vertPath, refine = true, parentID } = {}) {
+    // console.log('vertPath', vertPath)
+    let vertCount = vertPath.length
     if (vertCount < 3) { return }
-    path = SegPath.loopPath(path)
-    // console.log('loopedpath', path)
+    vertPath = SegPath.loopPath(vertPath)
+    // console.log('loopedpath', vertPath)
     let segmentPath = new OpArray
     let previousSeg = undefined
     for (let i = 0; i < vertCount; i++) {
-      let seg = protoSegment({ start: vert(path[i]), end: vert(path[i + 1]), parentID: parentID })
+      let seg = protoSegment({ start: vert(vertPath[i]), end: vert(vertPath[i + 1]), parentID: parentID })
       if (refine === true && previousSeg !== undefined && seg.angle === previousSeg.angle) {
         seg = protoSegment({ start: previousSeg.start, end: seg.end, parentID: parentID })
         segmentPath.pop()
@@ -218,15 +218,34 @@ class SegPath {
     return segmentPath
   }
   //METH: refine() : remove colinear segments to simplify seg path to single segments connecting corners
-  static refine(path = new OpArray, parentID, minCorners = false) {
+  static refine(segPath, parentID, minCorners = false) {
+    let report = false
+    if (parentID === `shp004` && segPath.length === 8) {
+      console.warn(`refine segPath`, segPath)
+      report = true
+    }
+
     let newPath = new OpArray
     let prevSeg = undefined
     let prevMid = undefined
     let length = 1
     let firstID = undefined
-    for (let i = 0; i < path.length; i++) {
-      let seg = path[i].copy
-      if (prevSeg !== undefined && seg.angle === prevSeg.angle) { // if two segments are in line/flat
+    for (let i = 0; i < segPath.length; i++) {
+      let seg = segPath[i].copy
+      if (report) {
+        console.log(`seg`, seg.id)
+        console.log(`prevSeg`, prevSeg?.id)
+      }
+      //FIXME: RECONFIGURE LOOP TO RUN INIT DIRECTION EQUALITY CHECK ON FINAL SEG. 
+      //FIXME: Current bug prevents last->first connection of colinear segments
+      //FIXME: This might also be fixed by repairing the bug that starts interior shapes with left-most segment
+      //FIXME: FIX BOTH!!! As both will create separate edgecases
+      if (prevSeg !== undefined && seg.direction.equals(prevSeg.direction)) { // if two segments are in line/flat
+        if (report) {
+          console.log(`seg`, seg.id)
+          console.log(`prevSeg`, prevSeg.id)
+        }
+
         if (length === 1) {
           // startNeighbor = 
           firstID = prevSeg.id
@@ -920,7 +939,6 @@ class ProtoSegment extends Segment {
     return this.cubicVerts.end.sort((a, b) =>
       Vertex.sub(this.end, a).roundedMag() - Vertex.sub(this.end, b).roundedMag())[0]
   }
-
   //TODO: Might need to rethink this implementation along with array impl of CubicVerts...???
   get availableStartLength() {
     if (!this.cornerVerts.start) {// needs to have cornerVerts to calculate
@@ -962,7 +980,7 @@ class ProtoSegment extends Segment {
 
   //METH: copy
   get copy() {
-    const copyNumber = this.id.includes(`copy`) ? `copy` + String(+this.id.slice(-2) + 1).padStart(2, '0') : `copy00`
+    const copyNumber = this.id.includes(`copy`) ? `copy` + String(+this.id.slice(-2) + 1).padStart(1, '0') : `copy0`
     return protoSegment({
       start: this.start,
       end: this.end,
@@ -1005,11 +1023,15 @@ class ProtoSegment extends Segment {
   //NOTE: be sure to assign neighbors by reference instead of value to avoid infinite tree
   assignNeighbors({ start, end } = {}) {
     if (start) {
-      if (!this.start.equals(start.end, 3)) { console.error(`assigned a disconnected start neighbor!`, this) }
+      if (!this.start.equals(start.end, 1)) {
+        console.error(`assigned a disconnected start neighbor!`, this.start, start.end)
+      }
       this.neighbors.start = start
     }
     if (end) {
-      if (!this.end.equals(end.start, 3)) { console.error(`assigned a disconnected end neighbor!`, this) }
+      if (!this.end.equals(end.start, 1)) {
+        console.error(`assigned a disconnected end neighbor!`, this.end, end.start)
+      }
       this.neighbors.end = end
     }
   }
