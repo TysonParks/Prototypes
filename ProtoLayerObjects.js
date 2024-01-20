@@ -1259,7 +1259,7 @@ class Grid extends ProtoLayer {
         console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
         return
       }
-      // console.log(` ** findColinear seg`, seg)
+      console.log(` ** findColinear seg`, seg)
       const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
 
       const colWrapper = (seg, isNeighbor = false) => {
@@ -1268,29 +1268,29 @@ class Grid extends ProtoLayer {
         const turn = isNeighbor ? 'end' : 'start'
         const cubicVert = isNeighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
         const name = isNeighbor ? `end` : `start`
-        // console.log(` ** findColinear seg`, info(seg))
+        console.log(` ** findColinear seg`, info(seg))
 
         let overlappers = overlapSegs(seg)
-          // console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
-          // overlappers = overlappers
+        console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
+        overlappers = overlappers
           .filter(s => s.direction.equals(wrapDir))
-          // console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
-          // overlappers = overlappers
+        console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
+        overlappers = overlappers
           .filter(s => s.turns[turn].isLeft)
-          // console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
-          // overlappers = overlappers
+        console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
+        overlappers = overlappers
           .filter(s => s.vertIsOnLine(cubicVert))
-        // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-        // console.log(``)
+        console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+        console.log(``)
         return overlappers
       }
 
       const wrapperStart = colWrapper(seg)
       const wrapperEnd = colWrapper(neighbor, true)
 
-      // console.log(`--> wrapperStart`, wrapperStart)
-      // console.log(`--> wrapperEnd`, wrapperEnd)
-      // console.log(``)
+      console.log(`--> wrapperStart`, wrapperStart)
+      console.log(`--> wrapperEnd`, wrapperEnd)
+      console.log(``)
 
       if (wrapperStart.length === 1 && wrapperEnd.length === 1) {
         console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
@@ -1346,9 +1346,9 @@ class Grid extends ProtoLayer {
           .filter(s => !s[1].equals(s[0][name], 1))
         console.log(`${name} adj intersections colinear`, adjs.map(s => info(s[0])))
         adjs = adjs
-          .sort((a, b) => segment(seg, a[1]).length - segment(seg, b[1]).length)
+          .sort((a, b) => segment(seg[name], a[1]).length - segment(seg[name], b[1]).length)
         console.log(`${name} adj intersections sorted`, adjs.map(s => info(s[0])))
-        console.log(`${name} adj intersections sorted`, adjs.map(s => segment(seg, s[1]).length))
+        console.log(`${name} adj intersections sorted`, adjs.map(s => s[0].length))
         adjs = adjs[0]
         console.log(`${name} adjs final`, adjs ? info(adjs[0]) : undefined)
         // console.log(`${name} adjs final`, adjs[0].map(s => info(s)))
@@ -1389,7 +1389,7 @@ class Grid extends ProtoLayer {
           console.log(`Wrapped start of end segment${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
           wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
         }
-
+        console.log(``)
         return wrapperStart
       }
     }
@@ -1486,7 +1486,7 @@ class Grid extends ProtoLayer {
         // const shape = this.shapeNamed(quad[0].parentID)
         // shape.finalSubShapes.push(quad)
       }
-
+      //TODO: rewrite this to use recursive wrapperFinder
       let colinears = new OpArray
 
       quads.forEach((quad, i) => {
@@ -1514,7 +1514,7 @@ class Grid extends ProtoLayer {
       // console.log('quads post-processed', quads)
     }
 
-    formQuadShapes(4)
+    formQuadShapes(0)
 
 
     //FUNC: reorderSimples : reorders currentSimples
@@ -2866,6 +2866,11 @@ class Island extends ProtoLayer {
         findSubShape(segment)
         segments = segments.exclude(subShape, ['id'])
         subShapes.push(subShape)
+        if (subShapes.length === 1) { // re-sort inner subshapes for counter-clockwise processing
+          segments = segments
+            .sort((a, b) => a.start.y - b.start.y || b.start.x - a.start.x) // sort by y, -x 
+        }
+
       }
     }
 
@@ -3197,7 +3202,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = true
+    this.drawShapeLabelDeBug = false
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
