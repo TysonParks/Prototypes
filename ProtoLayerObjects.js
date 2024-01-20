@@ -1377,14 +1377,18 @@ class Grid extends ProtoLayer {
         const startGapLength = roundToDec(startGap.length, 3)
         const endGapLength = roundToDec(endGap.length, 3)
         if (startGapLength === endGapLength) {
+          console.log(`Wrapped both segments`)
           wrapperStart[0].addCubicEndVert(wrapperStart[1])
           wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
         }
-        // else if (startGapLength < endGapLength) {
-        //   wrapperStart[0].addCubicEndVert(wrapperStart[1])
-        // } else {
-        //   wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
-        // }
+
+        else if (startGapLength < endGapLength) {
+          console.log(`Wrapped end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
+          wrapperStart[0].addCubicEndVert(wrapperStart[1])
+        } else {
+          console.log(`Wrapped start of end segment${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
+          wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+        }
 
         return wrapperStart
       }
@@ -3020,7 +3024,7 @@ class Shape extends ProtoLayer {
   get svg() {
     let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
       segPath: e,
-      cornerMin: 2
+      cornerMin: .5
     }))
     if (result instanceof Array) {
       result = result.join(' ')
@@ -3193,11 +3197,11 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = false
+    this.drawShapeLabelDeBug = true
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
-      const offset = isShape ? vert(1, 6) : vert(1, 9)
+      const offset = isShape ? vert(1, 4) : vert(1, 8)
       const font = isShape ? `bold 3px sans-serif` : `3px sans-serif`
       label
         .parent(this.svgElt)
