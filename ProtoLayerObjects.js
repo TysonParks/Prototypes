@@ -1266,9 +1266,11 @@ class Grid extends ProtoLayer {
         const segDir = seg.direction
         const wrapDir = segDir.opposites
         const turn = isNeighbor ? 'end' : 'start'
-        const cubicVert = isNeighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
+        const cubicVert = !isNeighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
         const name = isNeighbor ? `end` : `start`
         console.log(` ** findColinear seg`, info(seg))
+
+        console.log(`cubicVert`, cubicVert)
 
         let overlappers = overlapSegs(seg)
         console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
@@ -1377,9 +1379,10 @@ class Grid extends ProtoLayer {
         const startGapLength = roundToDec(startGap.length, 3)
         const endGapLength = roundToDec(endGap.length, 3)
         if (startGapLength === endGapLength) {
-          console.log(`Wrapped both segments`)
+          console.warn(`Wrapped both segments`)
           wrapperStart[0].addCubicEndVert(wrapperStart[1])
           wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+          return wrapperStart[0]
         }
 
         else if (startGapLength < endGapLength) {
@@ -1390,7 +1393,17 @@ class Grid extends ProtoLayer {
           wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
         }
         console.log(``)
-        return wrapperStart
+
+      }
+    }
+
+    const wrapOutsideCorners = (segs) => {
+      const colinears = segs.map(seg => findColinearWrappedCorner(seg)).compacted
+      if (colinears.length > 0) {
+        const adjacents = colinears.map(seg => findAdjacentWrappedCorner(seg)).compacted
+        if (adjacents.length > 0) {
+          wrapOutsideCorners(adjacents)
+        }
       }
     }
 
@@ -1488,7 +1501,7 @@ class Grid extends ProtoLayer {
       }
       //TODO: rewrite this to use recursive wrapperFinder
       let colinears = new OpArray
-
+      let adjacents = new OpArray
       quads.forEach((quad, i) => {
         // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.cubicVerts.start[0]?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
         // console.log(quad)
@@ -1499,19 +1512,38 @@ class Grid extends ProtoLayer {
         console.log(`    QUAD`, i, quad[0].parentID)
         // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
         // console.log(quad)
-        const colinear = quad.map(seg => { return findColinearWrappedCorner(seg) }).compacted
-        colinears.push(colinear)
-        console.log(`colinear`, colinear)
+
+        // const colinear = quad.map(seg => findColinearWrappedCorner(seg)).compacted
+        // colinears.push(colinear)
+        // console.log(`colinear`, colinear)
+
         // console.log(`quad post`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
       })
-      console.log(`+++++++++++++++++++++++++++++++++++++++++++++++`)
-      console.log(`colinears`, colinears.flat())
-      console.log(``)
-      colinears.forEach((quad, i) => {
-        quad.forEach(seg => findAdjacentWrappedCorner(seg))
-      })
+      // colinears = quads.flat()
+      //   .map(seg => findColinearWrappedCorner(seg))
+      //   .compacted
 
+
+      // console.log(`+++++++++++++++++++++++++++++++++++++++++++++++`)
+      // console.log(`colinears`, colinears.flat())
+      // console.log(``)
+      // adjacents = colinears.map(seg => findAdjacentWrappedCorner(seg))
+      //   .compacted
+
+      // const col2 = adjacents
+      //   .map(seg => findColinearWrappedCorner(seg))
+      //   .compacted
+
+      // const adj2 = col2.map(seg => findAdjacentWrappedCorner(seg))
+      //   .compacted
+
+      // console.warn(`colinears`, colinears)
+      // console.warn(`adjacents`, adjacents)
+      // console.warn(`col2`, col2)
+      // console.warn(`adj2`, adj2)
       // console.log('quads post-processed', quads)
+
+      wrapOutsideCorners(quads.flat())
     }
 
     formQuadShapes(0)
