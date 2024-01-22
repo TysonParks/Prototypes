@@ -1499,48 +1499,42 @@ class Grid extends ProtoLayer {
     }
 
     //FUNC: reorderSimples : reorders currentSimples
-    const sortedSimples = (allSimpleSubShapes) => {
-      let currentSimples = allSimpleSubShapes
+    const sortedSimples = () => {
+      let currentSimples = this.allSimpleSubShapes
         // .sort() // 
         .flat() // flatten subShapes into allSegments
         // .filter(s => !s.hasSomeCubicVerts)
-        .filter(s => !s.isStair)
-        .filter(s => !s.isUTurnIn)
+        // .filter(s => !s.isStair)
+        // .filter(s => !s.isUTurnIn)
         .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-
+        // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
         .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
         // .sort((a, b) => b.isUTurnIn - a.isUTurnIn) // sort UTurnIn first
         .sort((a, b) => b.isStair - a.isStair) // sort Stairs first
-        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+        // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
         .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
 
-
+        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
 
       return currentSimples
     }
 
-    let currentSimples = sortedSimples(this.allSimpleSubShapes)
-
-    console.log(`currentSimples`, currentSimples.map(s => s.id))
-    console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
-
-
     //FUNC: sortUTurnOuts() : sorting for createUTurnOuts()
-    const sortUTurnOuts = (allSimpleSubShapes) => {
-      return allSimpleSubShapes
+    const sortUTurnOuts = () => {
+      return this.allSimpleSubShapes
         .flat()
         .filter(s => s.isUTurnOut) // only include UTurnOut segments
         .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
         // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
         .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+      // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
       // return utoSimples
     }
 
     //FUNC: createUTurnOuts()
     const createUTurnOuts = () => {
       let curved = new OpArray
-      let uTOs = sortUTurnOuts(this.allSimpleSubShapes)
+      let uTOs = sortUTurnOuts()
       while (uTOs.length > 0) {
         const seg = uTOs[0]
         const startNeighbor = seg.neighbors.start
@@ -1565,141 +1559,37 @@ class Grid extends ProtoLayer {
       wrapOutsideCorners(curved)
     }
 
-    createQuadShapes(0)
+    //FUNC: sortUTurnOuts() : sorting for createUTurnOuts()
+    const sortStairs = () => {
+      return this.allSimpleSubShapes
+        .flat()
+        .filter(s => s.isStair) // only include UTurnOut segments
+        .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
+        // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+      // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+      // return utoSimples
+    }
+    //TODO: Finish implementation for creating diagonal lines
+    //FUNC: createUTurnOuts()
+    const createStairs = () => {
+      let curved = new OpArray
+      let stairs = sortStairs(this.allSimpleSubShapes)
+      while (stairs.length > 0) {
+        const seg = stairs[0]
+        const startNeighbor = seg.neighbors.start
+        const endNeighbor = seg.neighbors.end
+      }
+    }
+
+
+    createQuadShapes(4)
     createUTurnOuts()
+    // createStairs()
 
 
-
-    //FUNC: findCubicVerts(segs, sourceSegs)
-    const findCubicVerts = ({
-      preferSnuggles = false,
-    } = {}) => {
-      let currentSimples = sortedSimples(this.allSimpleSubShapes)
-      let limit = 40
-      while (currentSimples.length > 0 && limit > 0) {
-        limit -= 1
-        // console.log(`limit`, limit)
-        // console.log(`currentSimples.length`, currentSimples.length)
-
-        const seg = simpleSegFromID(currentSimples[0].id)
-        // console.log(`seg`, seg)
-        // console.log(`seg stats`, seg.minCubicLength, seg.part.value, seg.cubicVertCount, seg.id)
-        const segSL = seg.availableStartLength
-        const segEL = seg.availableEndLength
-        let segStartData = [seg, segSL]
-        let segEndData = [seg, segEL]
-        // console.log(`seg`, seg)
-
-        let startNeighbor = seg.neighbors.start // neighbor attached before seg's start
-        let startNeighborData = [startNeighbor, startNeighbor.availableEndLength]
-
-        let endNeighbor = seg.neighbors.end // neighbor attached after seg's end
-        let endNeighborData = [endNeighbor, endNeighbor.availableStartLength]
-
-        let segTriplet = [startNeighbor, seg, endNeighbor]
-
-        let shared = simpleSegShared(seg)
-
-        // if (segTriplet.every(s => s.hasNoCubicVerts)) { // if all 3 segs are unassigned
-        //   console.log(`segTriplet lengths`, segTriplet.map(s => s.minCubicLength))
-        //   let smallest = segTriplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
-        //   console.log(`smallest`, smallest)
-        //   startNeighbor.addCubicEndVert(startNeighbor.distancedEndPoint(smallest))
-        //   seg.addCubicStartVert(seg.distancedStartPoint(smallest))
-        //   seg.addCubicEndVert(seg.distancedEndPoint(smallest))
-        //   endNeighbor.addCubicStartVert(endNeighbor.distancedStartPoint(smallest))
-        // }
-
-        if (seg.isUTurnOut) {
-          if (segSL === segEL) { // if startLength and endLength are EQUAL
-            //TODO: will probably need to test to find best result for this, but 'half' should be default
-            //NOTE: probably want modes such as 'half', 'small start', 'small end', 'random'
-            // calculate shortest length available in segTriplet
-            const segShortest = segTriplet.map(s => s.minCubicLength).reduce((a, b) => min(a, b))
-            // console.log(`segShortest`, segShortest)
-            //1. assign both UTurn OUT segment cubicVerts and it's neighboring cubicVerts
-            startNeighbor.addDistancedCubicEndVert(segShortest)
-            seg.addDistancedCubicStartVert(segShortest)
-            seg.addDistancedCubicEndVert(segShortest)
-            endNeighbor.addDistancedCubicStartVert(segShortest)
-          }
-        }
-
-
-
-
-
-
-        if (segSL !== segEL) {
-          // console.log(`segSL !== segEL`)
-
-
-          let useStart
-          // compare seg lengths to compute 'useStart'
-          if (segSL < segEL) { // start length is smaller
-            useStart = segSL > cellRadius // startLength is above min
-          }
-          if (segEL < segSL) { // end length is smaller
-            useStart = segEL < cellRadius // endLength is less than min (flip the switch back!)
-          }
-          // assign comparison data
-          let segCompData, neighborCompData
-          if (useStart) { // assign start and it's neighbor (end vert)
-            segCompData = segStartData
-            neighborCompData = startNeighborData
-          } else {// assign end and it's neighbor (start vert)
-            segCompData = segEndData
-            neighborCompData = endNeighborData
-          }
-          //FIXME: this won't work, need to assign new vert using length and pointOnsegment(), scaledStartPoint(), or scaledEndPoint() methods
-          // compare min length and assign new cubic vert to appropriate segment
-          if (segCompData[1] < neighborCompData[1]) { // segment length is less than neighbor length
-            // vert = 
-            // neighborCompData[0].assignCubicVerts()
-          } else {// neighbor length is less than segment length
-            // vert = 
-            // seg.assignCubicVerts()
-          }
-
-
-        }
-
-
-        currentSimples = sortedSimples(this.allSimpleSubShapes)
-      }
-      // console.log(`currentSimples after`, currentSimples.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
-    }
-    // TODO: DEPRECATE
-    //FUNC: simpleSegFromID(id) : find segment inside of allSimpleSubShapes
-    const simpleSegFromID = (id) => {
-      for (const sub of this.allSimpleSubShapes) {
-        for (const seg of sub) {
-          if (seg.id === id) { return seg }
-        }
-      }
-      return null
-    }
-    //FUNC: simpleSegShared(segment)
-    const simpleSegShared = (segment) => {
-      for (const sub of this.allSimpleSubShapes) {
-        for (const seg of sub) {
-          if (seg.equals(segment.opposite)) { return seg }
-        }
-      }
-      return null
-    }
-    //FUNC: simpleShapeContainingSeg(segment)
-    const simpleShapeContainingSeg = (segment) => {
-      return this.allSimpleSubShapes.find(sub => sub.includes(seg => seg.id === segment.id))
-    }
-    //FUNC: simpleSegAdjacent(seg)
-    const simpleSegAdjacent = (segment) => {
-      let sub = simpleShapeContainingSeg(segment)
-      let adjacents = sub
-        .filter(seg => segment.direction.opposites.equals(seg.direction))
-      console.log('adjacents', adjacents)
-    }
-
+    console.log(`currentSimples`, sortedSimples().map(s => s.id))
+    console.log(`currentSimples turns`, sortedSimples().map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
 
     console.log(`  %%%% end customizeShapes %%%%`)
     console.log(``)
