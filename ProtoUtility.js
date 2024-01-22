@@ -388,8 +388,8 @@ class EdgePart {
   get isUTurnOut() { return this.isType('UO') }
 
   get isStair() { return this.isBaseType('Stair') }
-  get isStairIn() { return this.isType('I') }
-  get isStairOut() { return this.isType('O') }
+  get isStairIn() { return this.isType('StI') }
+  get isStairOut() { return this.isType('StO') }
 
   get isCorner() { return this.isBaseType('Corner') }
   get isCornerStart() { return this.value === 'CSI' || this.value === 'CSO' }
