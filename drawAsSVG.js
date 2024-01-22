@@ -958,7 +958,7 @@ class ProtoSegment extends Segment {
       if (this.hasCubicStartVert) { startLength = Vertex.sub(this.closestCubicStartVert, this.start).roundedMag() }
       if (this.hasCubicEndVert) { endLength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag() }
       if (startLength && endLength) { // this.hasBothCubicVerts
-        if (startLength + endLength > this.length) { // usually only occurs in a stair segment wrapped from both sides
+        if (startLength + endLength > approxToDec(this.length, 3, 2)) { // usually only occurs in a stair segment wrapped from both sides
           if (this.isStair) { // always reduce the outside corner (turn === R)
             if (this.isStairIn) { // isStairIn (turns === RL)
               startLength = this.length - endLength // reduce start corner
@@ -967,6 +967,8 @@ class ProtoSegment extends Segment {
             }
           } else { // segment is UTurn unexpectedly
             console.warn(`Unexpected availablelength UTurn edgecase hit! Please evaluate and implement response.`)
+            console.log(this)
+            console.log(`startLength: ${startLength}, endLength: ${endLength}, length: ${approxToDec(this.length, 3, 2)}`)
           }
         }
       } else { // segment only has one cubicVert
