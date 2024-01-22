@@ -932,7 +932,6 @@ class ProtoSegment extends Segment {
   //   return this.cubicVerts.end.map(vert => Vertex.sub(this.end, vert).roundedMag()).numsorted
   // }
 
-  //FIXME: rewrite these to cooperate with availableLength func
   get closestCubicStartVert() {
     return this.cubicVerts.start.sort((a, b) =>
       Vertex.sub(this.start, a).roundedMag() - Vertex.sub(this.start, b).roundedMag())[0]
@@ -942,8 +941,14 @@ class ProtoSegment extends Segment {
       Vertex.sub(this.end, a).roundedMag() - Vertex.sub(this.end, b).roundedMag())[0]
   }
 
-  get finalCubicStartVert() { return this.distancedStartPoint(this.availableStartLength) }
-  get finalCubicEndVert() { return this.distancedEndPoint(this.availableEndLength) }
+  get finalCubicStartVert() {
+    const finalLength = min(this.availableStartLength, this.neighbors.start.availableEndLength)
+    return this.distancedStartPoint(finalLength)
+  }
+  get finalCubicEndVert() {
+    const finalLength = min(this.availableEndLength, this.neighbors.end.availableStartLength)
+    return this.distancedEndPoint(finalLength)
+  }
 
 
   #availableLength(start = true) {
