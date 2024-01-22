@@ -925,12 +925,14 @@ class ProtoSegment extends Segment {
     if (!this.hasSomeCubicVerts) { return 0 }
   }
 
-  get cubicVertsToStartLengths() {
-    return this.cubicVerts.start.map(vert => Vertex.sub(this.start, vert).roundedMag()).numsorted
-  }
-  get cubicVertsToEndLengths() {
-    return this.cubicVerts.end.map(vert => Vertex.sub(this.end, vert).roundedMag()).numsorted
-  }
+  // get cubicVertsToStartLengths() {
+  //   return this.cubicVerts.start.map(vert => Vertex.sub(this.start, vert).roundedMag()).numsorted
+  // }
+  // get cubicVertsToEndLengths() {
+  //   return this.cubicVerts.end.map(vert => Vertex.sub(this.end, vert).roundedMag()).numsorted
+  // }
+
+  //FIXME: rewrite these to cooperate with availableLength func
   get closestCubicStartVert() {
     return this.cubicVerts.start.sort((a, b) =>
       Vertex.sub(this.start, a).roundedMag() - Vertex.sub(this.start, b).roundedMag())[0]
@@ -939,42 +941,77 @@ class ProtoSegment extends Segment {
     return this.cubicVerts.end.sort((a, b) =>
       Vertex.sub(this.end, a).roundedMag() - Vertex.sub(this.end, b).roundedMag())[0]
   }
-  //TODO: Might need to rethink this implementation along with array impl of CubicVerts...???
-  get availableStartLength() {
-    if (!this.cornerVerts.start) {// needs to have cornerVerts to calculate
+
+  get finalCubicStartVert() { return this.distancedStartPoint(this.availableStartLength) }
+  get finalCubicEndVert() { return this.distancedEndPoint(this.availableEndLength) }
+
+
+  #availableLength(start = true) {
+    if (!this.cornerVerts.start || !this.cornerVerts.end) {// needs to have cornerVerts to calculate
       console.warn(`cannot calculate available length without cornerVerts`)
       return
     }
-    let availablelength
-    if (this.hasNoCubicVerts) { availablelength = this.length / 2 } // assume entire length available
-    else if (this.hasCubicStartVert) {
-      availablelength = Vertex.sub(this.closestCubicStartVert, this.start).roundedMag()
+    // let availablelength
+    if (this.hasNoCubicVerts) { return this.length / 2 } // assume entire length available
+    else {
+      let startLength, endLength
+      if (this.hasCubicStartVert) { startLength = Vertex.sub(this.closestCubicStartVert, this.start).roundedMag() }
+      if (this.hasCubicEndVert) { endLength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag() }
+      if (startLength && endLength) { // this.hasBothCubicVerts
+        if (startLength + endLength > this.length) { // usually only occurs in a stair segment wrapped from both sides
+          if (this.isStair) { // always reduce the outside corner (turn === R)
+            if (this.isStairIn) { // isStairIn (turns === RL)
+              startLength = this.length - endLength // reduce start corner
+            } else { // isStairOut (turns === LR)
+              endLength = this.length - startLength // reduce end corner
+            }
+          } else { // segment is UTurn unexpectedly
+            console.warn(`Unexpected availablelength UTurn edgecase hit! Please evaluate and implement response.`)
+          }
+        }
+      } else { // segment only has one cubicVert
+        if (startLength) { // only has cubicStartVert
+          endLength = this.length - startLength
+        } else { // only has cubicEndVert
+          startLength = this.length - endLength
+        }
+      }
+      if (start) {
+        return startLength
+      } else {
+        return endLength
+      }
+
+
+      return availablelength
     }
-    else if (this.hasCubicEndVert) { length = this.length - this.availableEndLength }
-    if (availablelength > this.length) {
-      console.warn(`Invalid availableStartLength is longer than segment length!`)
-    }
-    return availablelength
   }
+
+
+  //FIXME: Need to still make sure closestCubicVerts call this func...
+  //FIXME: Because the wrapper funcs call the closestCubicVerts funcs, which means wave order will set new verts(?)
+  //FIXME: Still might need to revert some of this to be handled by customizeShapes or SVGPath.fromProtoSegPath
+  get availableStartLength() { return this.#availableLength() }
+  get availableEndLength() { return this.#availableLength(false) }
 
   //TODO: Might need to rethink this implementation along with array impl of CubicVerts...???
-  get availableEndLength() {
-    if (!this.cornerVerts.end) { // needs to have cornerVerts to calculate
-      console.warn(`cannot calculate available length without cornerVerts`)
-      return
-    }
-    let availablelength
-    if (this.hasNoCubicVerts) { availablelength = this.length / 2 } // assume entire length available
-    else if (this.hasCubicEndVert) {
-      availablelength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag()
-    }
-    else if (this.hasCubicStartVert) { availablelength = this.length - this.availableStartLength }
+  // get availableEndLength() {
+  //   if (!this.cornerVerts.end) { // needs to have cornerVerts to calculate
+  //     console.warn(`cannot calculate available length without cornerVerts`)
+  //     return
+  //   }
+  //   let availablelength
+  //   if (this.hasNoCubicVerts) { availablelength = this.length / 2 } // assume entire length available
+  //   else if (this.hasCubicEndVert) {
+  //     availablelength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag()
+  //   }
+  //   else if (this.hasCubicStartVert) { availablelength = this.length - this.availableStartLength }
 
-    if (availablelength > this.length) {
-      console.warn(`Invalid availableEndLength is longer than segment length!`)
-    }
-    return availablelength
-  }
+  //   if (availablelength > this.length) {
+  //     console.warn(`Invalid availableEndLength is longer than segment length!`)
+  //   }
+  //   return availablelength
+  // }
 
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
