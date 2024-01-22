@@ -956,24 +956,28 @@ class ProtoSegment extends Segment {
       console.warn(`cannot calculate available length without cornerVerts`)
       return
     }
-    // let availablelength
     if (this.hasNoCubicVerts) { return this.length / 2 } // assume entire length available
     else {
       let startLength, endLength
-      if (this.hasCubicStartVert) { startLength = Vertex.sub(this.closestCubicStartVert, this.start).roundedMag() }
-      if (this.hasCubicEndVert) { endLength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag() }
+      if (this.hasCubicStartVert) {
+        startLength = Vertex.sub(this.closestCubicStartVert, this.start).roundedMag()
+      }
+      if (this.hasCubicEndVert) {
+        endLength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag()
+      }
       if (startLength && endLength) { // this.hasBothCubicVerts
-        if (approxToDec(startLength, 3, 1) + approxToDec(endLength, 3, 1) > approxToDec(this.length, 3, 2)) { // usually only occurs in a stair segment wrapped from both sides
+        if (approxToDec(startLength, 2, 1) + approxToDec(endLength, 2, 1) > approxToDec(this.length, 2, 2)) {
+          // usually only occurs in a stair segment wrapped from both sides
           if (this.isStair) { // always reduce the outside corner (turn === R)
             if (this.isStairIn) { // isStairIn (turns === RL)
               startLength = this.length - endLength // reduce start corner
             } else { // isStairOut (turns === LR)
               endLength = this.length - startLength // reduce end corner
             }
-          } else { // segment is UTurn unexpectedly
+          } else { // segment is unexpectedly UTurn (still tuning approxToDec above!)
             console.warn(`Unexpected availablelength UTurn edgecase hit! Please evaluate and implement response.`)
             console.log(this)
-            console.log(`startLength: ${startLength}, endLength: ${endLength}, length: ${approxToDec(this.length, 3, 2)}`)
+            console.log(`startLength: ${approxToDec(startLength, 2, 2)}, endLength: ${approxToDec(endLength, 2, 2)}, length: ${approxToDec(this.length, 2, 2)}`)
           }
         }
       } else { // segment only has one cubicVert
@@ -988,37 +992,11 @@ class ProtoSegment extends Segment {
       } else {
         return endLength
       }
-
-
-      return availablelength
     }
   }
 
-
-  //FIXME: Need to still make sure closestCubicVerts call this func...
-  //FIXME: Because the wrapper funcs call the closestCubicVerts funcs, which means wave order will set new verts(?)
-  //FIXME: Still might need to revert some of this to be handled by customizeShapes or SVGPath.fromProtoSegPath
   get availableStartLength() { return this.#availableLength() }
   get availableEndLength() { return this.#availableLength(false) }
-
-  //TODO: Might need to rethink this implementation along with array impl of CubicVerts...???
-  // get availableEndLength() {
-  //   if (!this.cornerVerts.end) { // needs to have cornerVerts to calculate
-  //     console.warn(`cannot calculate available length without cornerVerts`)
-  //     return
-  //   }
-  //   let availablelength
-  //   if (this.hasNoCubicVerts) { availablelength = this.length / 2 } // assume entire length available
-  //   else if (this.hasCubicEndVert) {
-  //     availablelength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag()
-  //   }
-  //   else if (this.hasCubicStartVert) { availablelength = this.length - this.availableStartLength }
-
-  //   if (availablelength > this.length) {
-  //     console.warn(`Invalid availableEndLength is longer than segment length!`)
-  //   }
-  //   return availablelength
-  // }
 
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
@@ -1094,6 +1072,19 @@ class ProtoSegment extends Segment {
   }
   addDistancedCubicStartVert(distance) { this.addCubicStartVert(this.distancedStartPoint(distance)) }
   addDistancedCubicEndVert(distance) { this.addCubicEndVert(this.distancedEndPoint(distance)) }
+
+  addDistancedStartCornerVerts(distance) {
+    this.neighbors.start.addDistancedCubicEndVert(distance)
+    this.addDistancedCubicStartVert(distance)
+  }
+  addDistancedEndCornerVerts(distance) {
+    this.addDistancedCubicEndVert(distance)
+    this.neighbors.end.addDistancedCubicStartVert(distance)
+  }
+  addBothDistancedCornerVerts(distance) {
+    this.addDistancedStartCornerVerts(distance)
+    this.addDistancedEndCornerVerts(distance)
+  }
 
   //TODO: CLEANUP ALL SILENCED CODE
   #addCubicVert(vert, start) {
