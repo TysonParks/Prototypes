@@ -1266,7 +1266,7 @@ class Grid extends ProtoLayer {
         const segDir = seg.direction
         const wrapDir = segDir.opposites
         const turn = isNeighbor ? 'end' : 'start'
-        const cubicVert = !isNeighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
+        const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
         const name = isNeighbor ? `end` : `start`
         console.log(` ** findColinear seg`, info(seg))
 
@@ -1300,8 +1300,8 @@ class Grid extends ProtoLayer {
         console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
         console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
         console.log(``)
-        wrapperStart[0].addCubicStartVert(seg.closestCubicEndVert)
-        wrapperEnd[0].addCubicEndVert(neighbor.closestCubicStartVert)
+        wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)
+        wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)
 
         return wrapperStart[0]
       }
@@ -1324,7 +1324,7 @@ class Grid extends ProtoLayer {
         const segDir = seg.direction
         const adjDir = segDir.opposites
         const turn = !isNeighbor ? 'end' : 'start'
-        const cubicVert = isNeighbor ? seg.closestCubicEndVert : seg.closestCubicStartVert
+        const cubicVert = isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
         const normCoord = segDir.rotated(90).moveCoord
         const normal = segment(cubicVert, Vertex.add(cubicVert, Vertex.mult(normCoord, shape.cellBounds.size)))
         const name = isNeighbor ? `end` : `start`
@@ -1371,8 +1371,8 @@ class Grid extends ProtoLayer {
         // console.log(seg)
         console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
         console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
-        const startGap = segment(seg.closestCubicStartVert, wrapperStart[1])
-        const endGap = segment(neighbor.closestCubicEndVert, wrapperEnd[1])
+        const startGap = segment(seg.finalCubicStartVert, wrapperStart[1])
+        const endGap = segment(neighbor.finalCubicEndVert, wrapperEnd[1])
         console.log(`startGap`, startGap.length, startGap.string)
         console.log(`endGap`, endGap.length, endGap.string)
         console.log(``)
@@ -1456,7 +1456,7 @@ class Grid extends ProtoLayer {
               const steps = (round(maxRadius / cellRadius) - 1) / 2 // totalSteps = 2 * steps + 1
               let options = range(-steps, steps)
                 .array() // totalSteps array minus 1st and last (0 and minLength)
-                .filter(s => !(s === 0)) // remove middle (minLength/2) step
+                // .filter(s => !(s === 0)) // remove middle (minLength/2) step
                 .map(s => s + steps + 1) // add back steps like converting -0.5 to 0.5 range to 0-1 range
               const radius1 = minLength - (R.random_choice(options) * cellRadius)
               const radius2 = minLength - radius1
@@ -1503,21 +1503,21 @@ class Grid extends ProtoLayer {
       let colinears = new OpArray
       let adjacents = new OpArray
       quads.forEach((quad, i) => {
-        // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.cubicVerts.start[0]?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
+        // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.cubicVerts.start[0]?.string, seg.finalCubicEndVert?.string, seg.end.string].join(` - `)))
         // console.log(quad)
         const cornerMap = processor(quad)
         // console.log(`cornerMap`, cornerMap)
         assignQuad(quad, cornerMap)
         console.log(``)
         console.log(`    QUAD`, i, quad[0].parentID)
-        // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
+        // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.finalCubicStartVert?.string, seg.finalCubicEndVert?.string, seg.end.string].join(` - `)))
         // console.log(quad)
 
         // const colinear = quad.map(seg => findColinearWrappedCorner(seg)).compacted
         // colinears.push(colinear)
         // console.log(`colinear`, colinear)
 
-        // console.log(`quad post`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.closestCubicStartVert?.string, seg.closestCubicEndVert?.string, seg.end.string].join(` - `)))
+        // console.log(`quad post`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.finalCubicStartVert?.string, seg.finalCubicEndVert?.string, seg.end.string].join(` - `)))
       })
       // colinears = quads.flat()
       //   .map(seg => findColinearWrappedCorner(seg))
@@ -1546,7 +1546,7 @@ class Grid extends ProtoLayer {
       wrapOutsideCorners(quads.flat())
     }
 
-    formQuadShapes(0)
+    formQuadShapes(4)
 
 
     //FUNC: reorderSimples : reorders currentSimples
@@ -2787,9 +2787,9 @@ class Island extends ProtoLayer {
         const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
         const neighbor = seg.neighbors.start
         const arcRadius = seg.availableStartLength // arcRadius : only correct if corner is circular arc. use min otherwise
-        const startCorner = neighbor.closestCubicEndVert// startCorner of arc
+        const startCorner = neighbor.finalCubicEndVert// startCorner of arc
         const normalCorner = seg.start // normal pointer of arc
-        const endCorner = seg.closesCubicStartVert // endCorner of arc
+        const endCorner = seg.finalCubicStartVert // endCorner of arc
         const origin = startCorner.add(seg.lineVector)// origin of arc
         const squareVerts = [startCorner, normalCorner, endCorner, origin].gridVertSorted
         let cornerCells = this.grid.cells.filter(cell => // find cells within arc square
