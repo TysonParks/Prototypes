@@ -1397,6 +1397,7 @@ class Grid extends ProtoLayer {
       }
     }
 
+    //FUNC: wrapOutsideCorners() : recursive combination of colinear/adjacent wrap functions for outside corners
     const wrapOutsideCorners = (segs) => {
       const colinears = segs.map(seg => findColinearWrappedCorner(seg)).compacted
       if (colinears.length > 0) {
@@ -1409,17 +1410,18 @@ class Grid extends ProtoLayer {
 
 
     //MARK: QUAD SHAPES
-    //FUNC: formQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
+    //FUNC: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
     //TODO: need to add an ABFeature to select these!!!
-    const formQuadShapes = (mode) => {
+    const createQuadShapes = (mode) => {
       const sumSides = (sides) => sides.reduce((a, b) => a + b)
 
       console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
-      let quads = this.allSimpleSubShapes
+      //FIXME: need to filter out outer subShapes that wrap/outline an inner subShape
+      const quads = this.allSimpleSubShapes
         .filter(sub => sub.length === 4)// filter for 4-sided shapes
         .filter(sub => sub.some(seg => seg.isUTurnOut)) // filter for Outside shapes only (UTurnOut)
         .sort((a, b) => sumSides(b) - sumSides(a)) // sort smallest to largest
-        .copy
+      // .copy
       // console.log(`this.allSimpleSubShapes`, this.allSimpleSubShapes)
       console.log('quads', quads)
       console.log(`quad parts`, quads.map(quad => quad.map(seg => seg.part.value)))
@@ -1483,71 +1485,18 @@ class Grid extends ProtoLayer {
 
       //FUNC: assignQuad() : assign cubic verts using radii from cornerMap
       const assignQuad = (quad, cornerMap) => {
-        // [0] UpLeft corner
-        quad[3].addDistancedCubicEndVert(cornerMap[0])
-        quad[0].addDistancedCubicStartVert(cornerMap[0])
-        // [1] UpRight corner
-        quad[0].addDistancedCubicEndVert(cornerMap[1])
-        quad[1].addDistancedCubicStartVert(cornerMap[1])
-        // [2] DownRight corner
-        quad[1].addDistancedCubicEndVert(cornerMap[2])
-        quad[2].addDistancedCubicStartVert(cornerMap[2])
-        // [3] DownLeft corner
-        quad[2].addDistancedCubicEndVert(cornerMap[3])
-        quad[3].addDistancedCubicStartVert(cornerMap[3])
-
-        // const shape = this.shapeNamed(quad[0].parentID)
-        // shape.finalSubShapes.push(quad)
+        cornerMap.forEach((cMap, i) => quad[i].addDistancedStartCornerVerts(cMap))
       }
-      //TODO: rewrite this to use recursive wrapperFinder
-      let colinears = new OpArray
-      let adjacents = new OpArray
+
       quads.forEach((quad, i) => {
-        // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.cubicVerts.start[0]?.string, seg.finalCubicEndVert?.string, seg.end.string].join(` - `)))
-        // console.log(quad)
         const cornerMap = processor(quad)
         // console.log(`cornerMap`, cornerMap)
         assignQuad(quad, cornerMap)
         console.log(``)
         console.log(`    QUAD`, i, quad[0].parentID)
-        // console.log(`quad pre`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.finalCubicStartVert?.string, seg.finalCubicEndVert?.string, seg.end.string].join(` - `)))
-        // console.log(quad)
-
-        // const colinear = quad.map(seg => findColinearWrappedCorner(seg)).compacted
-        // colinears.push(colinear)
-        // console.log(`colinear`, colinear)
-
-        // console.log(`quad post`, i, quad[0].parentID, quad.map(seg => [seg.start.string, seg.finalCubicStartVert?.string, seg.finalCubicEndVert?.string, seg.end.string].join(` - `)))
       })
-      // colinears = quads.flat()
-      //   .map(seg => findColinearWrappedCorner(seg))
-      //   .compacted
-
-
-      // console.log(`+++++++++++++++++++++++++++++++++++++++++++++++`)
-      // console.log(`colinears`, colinears.flat())
-      // console.log(``)
-      // adjacents = colinears.map(seg => findAdjacentWrappedCorner(seg))
-      //   .compacted
-
-      // const col2 = adjacents
-      //   .map(seg => findColinearWrappedCorner(seg))
-      //   .compacted
-
-      // const adj2 = col2.map(seg => findAdjacentWrappedCorner(seg))
-      //   .compacted
-
-      // console.warn(`colinears`, colinears)
-      // console.warn(`adjacents`, adjacents)
-      // console.warn(`col2`, col2)
-      // console.warn(`adj2`, adj2)
-      // console.log('quads post-processed', quads)
-
       wrapOutsideCorners(quads.flat())
     }
-
-    formQuadShapes(4)
-
 
     //FUNC: reorderSimples : reorders currentSimples
     const sortedSimples = (allSimpleSubShapes) => {
@@ -1558,49 +1507,68 @@ class Grid extends ProtoLayer {
         .filter(s => !s.isStair)
         .filter(s => !s.isUTurnIn)
         .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-        .sort((a, b) => b.isStair - a.isStair) // sort Stairs first
-        .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
+
         .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+        // .sort((a, b) => b.isUTurnIn - a.isUTurnIn) // sort UTurnIn first
+        .sort((a, b) => b.isStair - a.isStair) // sort Stairs first
         .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+        .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
+
+
+
       return currentSimples
     }
 
-    // let currentSimples = sortedSimples(this.allSimpleSubShapes)
+    let currentSimples = sortedSimples(this.allSimpleSubShapes)
 
-    // console.log(`currentSimples`, currentSimples.map(s => s.id))
-    // console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
-    //FUNC: simpleSegFromID(id) : find segment inside of allSimpleSubShapes
-    const simpleSegFromID = (id) => {
-      for (const sub of this.allSimpleSubShapes) {
-        for (const seg of sub) {
-          if (seg.id === id) { return seg }
+    console.log(`currentSimples`, currentSimples.map(s => s.id))
+    console.log(`currentSimples turns`, currentSimples.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
+
+
+    //FUNC: sortUTurnOuts() : sorting for createUTurnOuts()
+    const sortUTurnOuts = (allSimpleSubShapes) => {
+      return allSimpleSubShapes
+        .flat()
+        .filter(s => s.isUTurnOut) // only include UTurnOut segments
+        .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
+        // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+      // return utoSimples
+    }
+
+    //FUNC: createUTurnOuts()
+    const createUTurnOuts = () => {
+      let curved = new OpArray
+      let uTOs = sortUTurnOuts(this.allSimpleSubShapes)
+      while (uTOs.length > 0) {
+        const seg = uTOs[0]
+        const startNeighbor = seg.neighbors.start
+        const endNeighbor = seg.neighbors.end
+        const startRadius = min(startNeighbor.availableEndLength, seg.availableStartLength)
+        const endRadius = min(seg.availableEndLength, endNeighbor.availableStartLength)
+
+        if (approxToDec(startRadius) === approxToDec(endRadius)) {
+          seg.addBothDistancedCornerVerts(startRadius)
+          curved.push(startNeighbor)
+          curved.push(seg)
         }
-      }
-      return null
-    }
-
-    //FUNC: simpleSegShared(segment)
-    const simpleSegShared = (segment) => {
-      for (const sub of this.allSimpleSubShapes) {
-        for (const seg of sub) {
-          if (seg.equals(segment.opposite)) { return seg }
+        else if (startRadius < endRadius) {
+          seg.addDistancedStartCornerVerts(startRadius)
+          curved.push(startNeighbor)
+        } else {
+          seg.addDistancedEndCornerVerts(endRadius)
+          curved.push(seg)
         }
+        uTOs = sortUTurnOuts(this.allSimpleSubShapes)
       }
-      return null
+      wrapOutsideCorners(curved)
     }
 
-    //FUNC: simpleShapeContainingSeg(segment)
-    const simpleShapeContainingSeg = (segment) => {
-      return this.allSimpleSubShapes.find(sub => sub.includes(seg => seg.id === segment.id))
-    }
+    createQuadShapes(0)
+    createUTurnOuts()
 
-    //FUNC: simpleSegAdjacent(seg)
-    const simpleSegAdjacent = (segment) => {
-      let sub = simpleShapeContainingSeg(segment)
-      let adjacents = sub
-        .filter(seg => segment.direction.opposites.equals(seg.direction))
-      console.log('adjacents', adjacents)
-    }
+
 
     //FUNC: findCubicVerts(segs, sourceSegs)
     const findCubicVerts = ({
@@ -1654,30 +1622,6 @@ class Grid extends ProtoLayer {
             seg.addDistancedCubicStartVert(segShortest)
             seg.addDistancedCubicEndVert(segShortest)
             endNeighbor.addDistancedCubicStartVert(segShortest)
-
-            //TODO: this probably needs to become a func itself that can be called (non) recursively
-            //2. if seg has shared corners (2 sides wrapping), assign matching verts if shortest
-            if (shared) { // if seg shares a side
-              // console.log('** shared', shared)
-              if (shared.turns.start.isLeft) { // start turn wraps this uTurnOut seg
-                const neighbor = shared.neighbors.start
-                const shortest = min(segShortest, neighbor.availableEndLength)
-                // console.log(`start shortest`, shortest)
-                shared.addDistancedCubicStartVert(shortest)
-                neighbor.addDistancedCubicEndVert(shortest)
-              }
-              if (shared.turns.end.isLeft) { // end turn wraps this uTurnOut seg
-                const neighbor = shared.neighbors.end
-                const shortest = min(segShortest, neighbor.availableStartLength)
-                // console.log(`end shortest`, shortest)
-                shared.addDistancedCubicEndVert(shortest)
-                neighbor.addDistancedCubicStartVert(shortest)
-              }
-              //3. if sharedTriplet has adjacents that wrap, assign adjacent verts if shortest
-
-            }
-
-
           }
         }
 
@@ -1725,16 +1669,38 @@ class Grid extends ProtoLayer {
       }
       // console.log(`currentSimples after`, currentSimples.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
     }
+    // TODO: DEPRECATE
+    //FUNC: simpleSegFromID(id) : find segment inside of allSimpleSubShapes
+    const simpleSegFromID = (id) => {
+      for (const sub of this.allSimpleSubShapes) {
+        for (const seg of sub) {
+          if (seg.id === id) { return seg }
+        }
+      }
+      return null
+    }
+    //FUNC: simpleSegShared(segment)
+    const simpleSegShared = (segment) => {
+      for (const sub of this.allSimpleSubShapes) {
+        for (const seg of sub) {
+          if (seg.equals(segment.opposite)) { return seg }
+        }
+      }
+      return null
+    }
+    //FUNC: simpleShapeContainingSeg(segment)
+    const simpleShapeContainingSeg = (segment) => {
+      return this.allSimpleSubShapes.find(sub => sub.includes(seg => seg.id === segment.id))
+    }
+    //FUNC: simpleSegAdjacent(seg)
+    const simpleSegAdjacent = (segment) => {
+      let sub = simpleShapeContainingSeg(segment)
+      let adjacents = sub
+        .filter(seg => segment.direction.opposites.equals(seg.direction))
+      console.log('adjacents', adjacents)
+    }
 
-    // console.log(`allSimpleSubShapes before`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
 
-    // findCubicVerts()
-    // console.log(`current islands`, this.islands)
-    // console.log(`current shapes`, this.shapes)
-    // this.drawShapes()
-
-    // console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.map(sub => sub.map(s => s.cubicVertCount)).flat())
-    // console.log(`allSimpleSubShapes after`, this.allSimpleSubShapes.flat().map(s => [s.minCubicLength, s.part.value, s.cubicVertCount, s.id]))
     console.log(`  %%%% end customizeShapes %%%%`)
     console.log(``)
     // LOOP:
