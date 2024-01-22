@@ -963,7 +963,7 @@ class ProtoSegment extends Segment {
       if (this.hasCubicStartVert) { startLength = Vertex.sub(this.closestCubicStartVert, this.start).roundedMag() }
       if (this.hasCubicEndVert) { endLength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag() }
       if (startLength && endLength) { // this.hasBothCubicVerts
-        if (startLength + endLength > approxToDec(this.length, 3, 2)) { // usually only occurs in a stair segment wrapped from both sides
+        if (approxToDec(startLength, 3, 1) + approxToDec(endLength, 3, 1) > approxToDec(this.length, 3, 2)) { // usually only occurs in a stair segment wrapped from both sides
           if (this.isStair) { // always reduce the outside corner (turn === R)
             if (this.isStairIn) { // isStairIn (turns === RL)
               startLength = this.length - endLength // reduce start corner
