@@ -429,7 +429,7 @@ function gridTests2() {
     // direction: Direction.All,
     filter: shader0,
     // insetScale: .25,
-    insetScale: .9,
+    insetScale: .8,
   })
 
   // group000.createSubIslands({
@@ -443,20 +443,48 @@ function gridTests2() {
   group001.createSubIslands({
     direction: Direction.All,
     filter: shader0,
-    insetScale: .9,
+    // insetScale: 1.6,
   })
 
   group002?.createSubIslands({
     // direction: Direction.All,
     filter: shader4,
     // insetScale: .25,
-    insetScale: .9,
+    insetScale: .8,
   })
 
   // group002?.createSubIslands({
   //   // direction: Direction.All,
   //   filter: shader5,
   //   insetScale: .2,
+  // })
+
+  // group003?.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: 1.6,
+  // })
+
+  // group003?.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: 1.4,
+  // })
+
+  // group003?.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: 1.2,
+  // })
+
+  // group003?.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: 1,
   // })
 
   group003?.createSubIslands({
