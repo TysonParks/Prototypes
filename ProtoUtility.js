@@ -552,6 +552,21 @@ function roundToDec(number, decimalPlaces = 3) {
   return round(number * factor) / factor
 }
 
+// FUNC: approxToDec() round/floor/ceil to number of decimal places
+function approxToDec(number, decimalPlaces = 3, mode = 0) {
+  const factor = 10 ** decimalPlaces
+  const mult = number * factor
+  switch (mode) {
+    case 0: // round
+      return round(mult) / factor
+    case 1: // floor
+      return floor(mult) / factor
+    case 2: // ceiling
+      return ceil(mult) / factor
+  }
+
+}
+
 // FUNC: equalsRoundedDec() round to number of decimal places
 function equalsRoundedDec(num1, num2, decimalPlaces) {
   num1 = roundToDec(num1, decimalPlaces)
