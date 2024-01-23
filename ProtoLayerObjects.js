@@ -1582,14 +1582,40 @@ class Grid extends ProtoLayer {
       }
     }
 
+    //FUNC: sortCorners()
+    const sortCorners = () => {
+      return this.allSimpleSubShapes
+        .flat()
+        .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+    }
 
-    createQuadShapes(4)
+    //FUNC: finishCorners()
+    const finishCorners = () => {
+      let curved = new OpArray
+      let corners = sortCorners()
+      console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
+      while (corners.length > 0) {
+        let seg = corners[0]
+        seg = seg.hasCubicStartVert ? seg : seg.neighbors.start
+        const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
+        seg.addDistancedEndCornerVerts(radius)
+
+        curved.push(seg)
+        corners = sortCorners()
+      }
+      // wrapOutsideCorners(curved)
+    }
+
+
+    createQuadShapes(0)
     createUTurnOuts()
     // createStairs()
+    finishCorners()
 
-
-    console.log(`currentSimples`, sortedSimples().map(s => s.id))
-    console.log(`currentSimples turns`, sortedSimples().map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
+    // console.log(`currentSimples`, sortedSimples().map(s => s.id))
+    // console.log(`currentSimples turns`, sortedSimples().map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
 
     console.log(`  %%%% end customizeShapes %%%%`)
     console.log(``)
