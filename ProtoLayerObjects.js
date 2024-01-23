@@ -1153,66 +1153,7 @@ class Grid extends ProtoLayer {
   //MARK: CUSTOMIZE SHAPES
   //METH:
   customizeShapes(diagonals = false) {
-
-    // SEGMENT LENGTH BASED //
-    // assign EdgeParts in every island
-    // sort allSegments into groups: (uTurns, stairs, flatsAndCorners)
-    // Simplify all segments in 'flatsAndCorners' to corners only/straight segments
     const cellRadius = roundToDec(this.minCellWidth / 2)
-    const shapeCells = this.cellsInAnIsland // get all cells assigned to an island
-    // console.log(`shapeCells`, shapeCells)
-
-    let allSegments = shapeCells.map(cell => cell.segments).flat() // all segments contained in shapeCells
-    // console.log(`allSegments`, allSegments.map(s => s.id))
-    // console.log(`allSegments`, allSegments)
-    let uTurnSegs = allSegments.filter(seg => seg.isUTurn)
-    // console.log(`uTurnSegs`, uTurnSegs.map(c => c.id))
-    let stairSegs = allSegments.filter(seg => seg.isStair)
-    // console.log(`stairSegs`, stairSegs.map(c => c.id))
-
-    let cornerSegs = allSegments.filter(seg => seg.isCorner)
-    // console.log(`cornerSegs`, cornerSegs.map(c => c.id))
-    let flatSegs = allSegments.filter(seg => seg.isFlat)
-    // console.log(`flatSegs`, flatSegs.map(c => c.id))
-
-    //NOTE: DEPRECATE $$$$$$$$$$$$$$$$$$$$$$$$$$$$
-    //TODO: might be able to remove assignMids() and all supporting funcs/props
-    // let madeSegs = new OpArray
-    // //FUNC: saveSegs(segs) : save segs tp madeSegs
-    // const saveSegs = (segs) =>  madeSegs = madeSegs.union(segs, ['id']) 
-    // //FUNC: remove(segs) : method removes segs from allSegments
-    // const remove = (segs) =>  allSegments = allSegments.exclude(segs, 'id') 
-    // //FUNC: assignMids(segs, edgeType, assignNeighbors) : assigns midpoints to Cubic verts of segs
-    // const assignMids = (segs, edgeType, assignNeighbors = true) => {
-    //   segs.forEach(seg => {
-    //     seg.assignMid() // assign midpoint on this segment
-
-    //     //TODO: remove all neighbor finding logic, ProtoSegments store their own neighbors now!!!
-    //     let startNeighbor // segment connected before this segment
-    //     let endNeighbor // segment connected after this segment
-    //     if (assignNeighbors) {
-    //       startNeighbor = allSegments.find(s => s.end.equals(seg.start) && s.islandIDs.equals(seg.islandIDs))
-    //       if (startNeighbor) { startNeighbor.assignMid() }
-    //       endNeighbor = allSegments.find(s => s.start.equals(seg.end) && s.islandIDs.equals(seg.islandIDs))
-    //       if (endNeighbor) { endNeighbor.assignMid() }
-    //     }
-    //     const shared = allSegments.find(s => s.equals(seg.opposite)) // seg from another cell that overlaps this segment
-    //     if (shared?.hasInsideTurn) { // if seg is inside an outside turn, it should force that outside curve
-    //       shared.assignMid()
-    //       // const adjShared = 
-    //     }
-    //     //TODO: need to revisit this remove call later to see if can remove 
-    //     // remove(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted)
-    //     saveSegs(OpArray.from([seg, startNeighbor, endNeighbor, shared]).compacted) // save modified segs to madeSegs
-    //     segs = allSegments.filter(seg => seg.part.isBaseType(edgeType))
-    //     // console.log(`madeSegs`, madeSegs.length)
-    //   })
-
-    // }
-    // // assignMids(uTurnSegs, 'UTurn') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
-    // // assignMids(stairSegs, 'Stair') // assign midpoints to these segs, neighbor segs, and shared segs with inside turns
-    //NOTE: $$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
 
     //TODO: can minCorners be handled elsewhere?
     // handle 'minCorners' perimeter types
@@ -1233,11 +1174,7 @@ class Grid extends ProtoLayer {
 
     this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
-    // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
-    let allSimpleSegments = this.allSimpleSubShapes.flat() // get simple segments from all simple subShapes
-    // let currentSimples = allSimpleSegments.copy // deflationary working copy
-    // console.log(`allSimpleSegments`, allSimpleSegments.map(s => s.id))
-    // console.log(`allSimpleSegments turns`, allSimpleSegments.map(s => [s.minCubicLength, s.part.value, s.cubicVertCount]))
+
 
     //FUNC: colinearOverlaps(seg) : finds all segments that are overlap input segment
     const overlapSegs = (seg) => {
@@ -1252,8 +1189,7 @@ class Grid extends ProtoLayer {
         midPoint: seg.mid.string,
       }
     }
-
-    //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
+    //FUNC: findColinearWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to wrappers
     const findColinearWrappedCorner = (seg) => {
       if (!seg.turns.end.isRight) { // must be an outside corner, so end of seg turns Right
         console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
@@ -1343,10 +1279,9 @@ class Grid extends ProtoLayer {
           .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null) // adjWraps intersect normal
           .compacted
         console.log(`${name} adj intersections `, adjs.map(s => [info(s[0]), s[1]]))
-        // //FIXME: need to filter out segments that are colinear... I know what I mean here!
-        // adjs = adjs
-        //   .filter(s => !s[0].isColinearWith(seg))
-        // console.log(`${name} adj intersections colinear`, adjs)
+        adjs = adjs
+          .filter(s => !s[0].start.equals(s[1], 2) && !s[0].end.equals(s[1], 2)) // adjWraps cant have ends on normal
+        console.log(`${name} adj intersections colinear`, adjs)
         adjs = adjs
           .sort((a, b) => segment(seg[name], a[1]).length - segment(seg[name], b[1]).length)
         console.log(`${name} adj intersections sorted`, adjs.map(s => info(s[0])))
@@ -1622,7 +1557,7 @@ class Grid extends ProtoLayer {
 
 
     createQuadShapes(0)
-    createUTurnOuts()
+    // createUTurnOuts()
     // createStairs()
     // finishCorners(0)
 
