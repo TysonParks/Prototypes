@@ -1251,7 +1251,7 @@ class Grid extends ProtoLayer {
       } // must be an inside corner, so end of seg turns Left
       const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
 
-      console.warn(` %$#** FindAdjacent Seg`, info(seg))
+      console.log(` %$#** FindAdjacent Seg`, info(seg))
       // with current implementation, all adjacent sides will be with current shape. Intergrids might change this?
       const shape = this.shapeNamed(seg.parentID)
       const subShapes = shape.simpleSubShapes.flat()
@@ -1303,7 +1303,7 @@ class Grid extends ProtoLayer {
 
       if (wrapperStart && wrapperEnd) {
         if (wrapperStart[0].neighbors.end.id !== wrapperEnd[0].id) {
-          console.warn(`INVALID: Wrappers are not connected`)
+          console.error(`INVALID: Wrappers are not connected`)
           return
         }
         //FIXME: test to see if this is working AND solving a bug!
@@ -1492,13 +1492,17 @@ class Grid extends ProtoLayer {
           seg.addBothDistancedCornerVerts(startRadius)
           curved.push(startNeighbor)
           curved.push(seg)
+          // wrapOutsideCorners(startNeighbor)
+          // wrapOutsideCorners(seg)
         }
         else if (startRadius < endRadius) {
           seg.addDistancedStartCornerVerts(startRadius)
           curved.push(startNeighbor)
+          // wrapOutsideCorners(startNeighbor)
         } else {
           seg.addDistancedEndCornerVerts(endRadius)
           curved.push(seg)
+          // wrapOutsideCorners(seg)
         }
         uTOs = sortUTurnOuts(this.allSimpleSubShapes)
       }
@@ -1537,8 +1541,8 @@ class Grid extends ProtoLayer {
         .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
     }
 
-    //FUNC: finishCorners()
-    const finishCorners = () => {
+    //FUNC: createCorners()
+    const createCorners = () => {
       // let curved = new OpArray
       let corners = sortCorners()
       console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
@@ -1555,11 +1559,15 @@ class Grid extends ProtoLayer {
       // wrapOutsideCorners(curved)
     }
 
+    //FUNC: finish()
+    const finish = () => { this.allSimpleSubShapes.flat().forEach(s => s.matchStartCorner()) }
+
 
     createQuadShapes(0)
-    // createUTurnOuts()
+    createUTurnOuts()
     // createStairs()
-    // finishCorners(0)
+    createCorners()
+    finish()
 
     // console.log(`currentSimples`, sortedSimples().map(s => s.id))
     // console.log(`currentSimples turns`, sortedSimples().map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
@@ -3063,7 +3071,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = false
+    this.drawShapeLabelDeBug = true
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
