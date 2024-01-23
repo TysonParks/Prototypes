@@ -899,12 +899,12 @@ class ProtoSegment extends Segment {
   get part() { return EdgePart.from([this.turns.start, this.turns.end]) }
 
   get isUTurn() { return this.part?.isUTurn }
-  get isUTurnIn() { return this.part?.isUTurnIn }
-  get isUTurnOut() { return this.part?.isUTurnOut }
+  get isUTurnIn() { return this.part?.isUTurnIn }   // LL
+  get isUTurnOut() { return this.part?.isUTurnOut } // RR
 
   get isStair() { return this.part?.isStair }
-  get isStairIn() { return this.part?.isStairIn }
-  get isStairOut() { return this.part?.isStairOut }
+  get isStairIn() { return this.part?.isStairIn }   // RL
+  get isStairOut() { return this.part?.isStairOut } // LR
 
   get isFlat() { return this.part?.isFlat }
   get isCorner() { return this.part?.isCorner }
