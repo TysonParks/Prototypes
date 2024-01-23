@@ -1093,7 +1093,7 @@ class ProtoSegment extends Segment {
       if (!this.vertIsOnLine(vert)) {
         console.error(`trying to assign a cubicVert that is not on this segment`)
         console.log(`off-line vert`, vert)
-        console.lof(`this.segment`, info(this))
+        console.log(`this.segment`, info(this))
       }
       cubicVerts.push(vert)
       cubicVerts = cubicVerts.unique('x', 'y')
