@@ -1593,7 +1593,7 @@ class Grid extends ProtoLayer {
 
     //FUNC: finishCorners()
     const finishCorners = () => {
-      let curved = new OpArray
+      // let curved = new OpArray
       let corners = sortCorners()
       console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
       while (corners.length > 0) {
@@ -1602,7 +1602,8 @@ class Grid extends ProtoLayer {
         const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
         seg.addDistancedEndCornerVerts(radius)
 
-        curved.push(seg)
+        if (seg.isRightTurn) { wrapOutsideCorners(seg) }
+        // curved.push(seg)
         corners = sortCorners()
       }
       // wrapOutsideCorners(curved)
@@ -1612,7 +1613,7 @@ class Grid extends ProtoLayer {
     createQuadShapes(0)
     createUTurnOuts()
     // createStairs()
-    finishCorners()
+    // finishCorners()
 
     // console.log(`currentSimples`, sortedSimples().map(s => s.id))
     // console.log(`currentSimples turns`, sortedSimples().map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
@@ -3116,7 +3117,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = false
+    this.drawShapeLabelDeBug = true
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
