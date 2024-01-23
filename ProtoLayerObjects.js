@@ -1345,6 +1345,7 @@ class Grid extends ProtoLayer {
 
     //FUNC: wrapOutsideCorners() : recursive combination of colinear/adjacent wrap functions for outside corners
     const wrapOutsideCorners = (segs) => {
+      segs = OpArray.format(segs)
       const colinears = segs.map(seg => findColinearWrappedCorner(seg)).compacted
       if (colinears.length > 0) {
         const adjacents = colinears.map(seg => findAdjacentWrappedCorner(seg)).compacted
@@ -1353,6 +1354,18 @@ class Grid extends ProtoLayer {
         }
       }
     }
+
+    //TODO: DEPRECATE 
+    //FUNC: wrapInsideCorners() : recursive combination of colinear/adjacent wrap functions for inside corners
+    // const wrapInsideCorners = (segs) => {
+    //   const adjacents = colinears.map(seg => findAdjacentWrappedCorner(seg)).compacted
+    //   if (adjacents.length > 0) {
+    //     const colinears = segs.map(seg => findColinearWrappedCorner(seg)).compacted
+    //     if (colinears.length > 0) {
+    //       wrapInsideCorners(colinears)
+    //     }
+    //   }
+    // }
 
 
     //MARK: QUAD SHAPES
@@ -1545,7 +1558,7 @@ class Grid extends ProtoLayer {
     const createCorners = () => {
       // let curved = new OpArray
       let corners = sortCorners()
-      console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
+      // console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
       while (corners.length > 0) {
         let seg = corners[0]
         seg = seg.hasCubicStartVert ? seg : seg.neighbors.start
@@ -3071,7 +3084,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = true
+    this.drawShapeLabelDeBug = false
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
