@@ -1556,7 +1556,6 @@ class Grid extends ProtoLayer {
 
     //FUNC: createCorners()
     const createCorners = () => {
-      // let curved = new OpArray
       let corners = sortCorners()
       // console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
       while (corners.length > 0) {
@@ -1564,12 +1563,9 @@ class Grid extends ProtoLayer {
         seg = seg.hasCubicStartVert ? seg : seg.neighbors.start
         const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
         seg.addDistancedEndCornerVerts(radius)
-
-        if (seg.isRightTurn) { wrapOutsideCorners(seg) }
-        // curved.push(seg)
+        if (seg.turns.end.isRight) { wrapOutsideCorners(seg) }
         corners = sortCorners()
       }
-      // wrapOutsideCorners(curved)
     }
 
     //FUNC: finish()
