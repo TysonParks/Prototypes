@@ -1264,7 +1264,7 @@ class Grid extends ProtoLayer {
 
       const colWrapper = (seg, isNeighbor = false) => {
         const segDir = seg.direction
-        const wrapDir = segDir.opposites
+        const wrapDir = segDir.opposites // wrapper will point opposite of segDir
         const turn = isNeighbor ? 'end' : 'start'
         const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
         const name = isNeighbor ? `end` : `start`
@@ -1272,16 +1272,16 @@ class Grid extends ProtoLayer {
 
         console.log(`cubicVert`, cubicVert)
 
-        let overlappers = overlapSegs(seg)
+        let overlappers = overlapSegs(seg) // colinear wraps overlap seg
         console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
         overlappers = overlappers
-          .filter(s => s.direction.equals(wrapDir))
+          .filter(s => s.direction.equals(wrapDir)) // colinear wraps point in opposite direction as seg
         console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
         overlappers = overlappers
-          .filter(s => s.turns[turn].isLeft)
+          .filter(s => s.turns[turn].isLeft) // colinear wraps turn left
         console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
         overlappers = overlappers
-          .filter(s => s.vertIsOnLine(cubicVert))
+          .filter(s => s.vertIsOnLine(cubicVert)) // colinear wraps will contain the transferrable cubicVert
         console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
         console.log(``)
         return overlappers
@@ -1294,16 +1294,16 @@ class Grid extends ProtoLayer {
       console.log(`--> wrapperEnd`, wrapperEnd)
       console.log(``)
 
-      if (wrapperStart.length === 1 && wrapperEnd.length === 1) {
+      if (wrapperStart.length === 1 && wrapperEnd.length === 1) { // only valid when both contain single segment
         console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
         // console.log(seg)
         console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
         console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
         console.log(``)
-        wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)
-        wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)
+        wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
+        wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
 
-        return wrapperStart[0]
+        return wrapperStart[0] // return wrapperStart only for adjacent wrapping
       }
     }
 
@@ -1315,17 +1315,17 @@ class Grid extends ProtoLayer {
       } // must be an inside corner, so end of seg turns Left
       const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
 
-      // console.log(` ** findAdjacent seg`, info(seg))
+      console.warn(` %$#** FindAdjacent Seg`, info(seg))
       // with current implementation, all adjacent sides will be with current shape. Intergrids might change this?
       const shape = this.shapeNamed(seg.parentID)
       const subShapes = shape.simpleSubShapes.flat()
 
       const adjWrapper = (seg, isNeighbor = false) => {
         const segDir = seg.direction
-        const adjDir = segDir.opposites
+        const adjDir = segDir.opposites // adjacent wraps point opposite of segDir
         const turn = !isNeighbor ? 'end' : 'start'
         const cubicVert = isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
-        const normCoord = segDir.rotated(90).moveCoord
+        const normCoord = segDir.rotated(90).moveCoord // normals always point left 90deg from segment direction
         const normal = segment(cubicVert, Vertex.add(cubicVert, Vertex.mult(normCoord, shape.cellBounds.size)))
         const name = isNeighbor ? `end` : `start`
         console.log(` ** findAdjacent seg`, info(seg))
@@ -1334,19 +1334,19 @@ class Grid extends ProtoLayer {
         let adjs = subShapes
         console.log(`${name} adj subshapes `, adjs.map(s => info(s)))
         adjs = adjs
-          .filter(s => s.direction.equals(adjDir))
+          .filter(s => s.direction.equals(adjDir)) // adjacent wraps point in opposite direction as seg
         console.log(`${name} adj opposites `, adjs.map(s => info(s)))
         adjs = adjs
-          .filter(s => s.turns[turn].isRight)
+          .filter(s => s.turns[turn].isRight) // adjacent wraps turn right
         console.log(`${name} adj rightTurns `, adjs.map(s => info(s)))
         adjs = adjs
-          .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null)
+          .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null) // adjWraps intersect normal
           .compacted
         console.log(`${name} adj intersections `, adjs.map(s => [info(s[0]), s[1]]))
         // //FIXME: need to filter out segments that are colinear... I know what I mean here!
-        adjs = adjs
-          .filter(s => !s[1].equals(s[0][name], 1))
-        console.log(`${name} adj intersections colinear`, adjs.map(s => info(s[0])))
+        // adjs = adjs
+        //   .filter(s => !s[0].isColinearWith(seg))
+        // console.log(`${name} adj intersections colinear`, adjs)
         adjs = adjs
           .sort((a, b) => segment(seg[name], a[1]).length - segment(seg[name], b[1]).length)
         console.log(`${name} adj intersections sorted`, adjs.map(s => info(s[0])))
@@ -1367,6 +1367,16 @@ class Grid extends ProtoLayer {
       console.log(``)
 
       if (wrapperStart && wrapperEnd) {
+        if (wrapperStart[0].neighbors.end.id !== wrapperEnd[0].id) {
+          console.warn(`INVALID: Wrappers are not connected`)
+          return
+        }
+        //FIXME: test to see if this is working AND solving a bug!
+        if (wrapperStart[0].isColinearWith(seg) || wrapperEnd[0].isColinearWith(neighbor)) {
+          console.warn(`INVALID: Wrapper corner is colinear with segment corner`)
+          return
+        }
+
         console.log(`!!! ADJACENT WRAPPED CORNER FOUND !!!`)
         // console.log(seg)
         console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
@@ -1382,6 +1392,7 @@ class Grid extends ProtoLayer {
           console.warn(`Wrapped both segments`)
           wrapperStart[0].addCubicEndVert(wrapperStart[1])
           wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+          console.log(``)
           return wrapperStart[0]
         }
 
@@ -1389,7 +1400,7 @@ class Grid extends ProtoLayer {
           console.log(`Wrapped end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
           wrapperStart[0].addCubicEndVert(wrapperStart[1])
         } else {
-          console.log(`Wrapped start of end segment${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
+          console.log(`Wrapped start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
           wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
         }
         console.log(``)
@@ -1613,7 +1624,7 @@ class Grid extends ProtoLayer {
     createQuadShapes(0)
     createUTurnOuts()
     // createStairs()
-    // finishCorners()
+    // finishCorners(0)
 
     // console.log(`currentSimples`, sortedSimples().map(s => s.id))
     // console.log(`currentSimples turns`, sortedSimples().map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
@@ -3117,7 +3128,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = true
+    this.drawShapeLabelDeBug = false
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
