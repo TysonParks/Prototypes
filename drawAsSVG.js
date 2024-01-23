@@ -988,10 +988,15 @@ class ProtoSegment extends Segment {
             } else { // isStairOut (turns === LR)
               endLength = this.length - startLength // reduce end corner
             }
-          } else { // segment is unexpectedly UTurn (still tuning approxToDec above!)
-            console.warn(`Unexpected availablelength UTurn edgecase hit! Please evaluate and implement response.`)
-            console.log(this)
-            console.log(`startLength: ${approxToDec(startLength, 2, 2)}, endLength: ${approxToDec(endLength, 2, 2)}, length: ${approxToDec(this.length, 2, 2)}`)
+          } else { // segment is UTurn
+            if (approxToDec(startLength, 2, 1) === approxToDec(endLength, 2, 1)) {
+              startLength = this.length / 2
+              endLength = startLength
+            } else if (approxToDec(startLength, 2, 1) > approxToDec(endLength, 2, 1)) {
+              startLength = this.length - endLength
+            } else {
+              endLength = this.length - startLength
+            }
           }
         }
       } else { // segment only has one cubicVert
