@@ -78,10 +78,10 @@ class SVGPath {
       let verts = VertPath.fromSegPath(segPath)
       segPath = SegPath.fromVertPath({ path: verts, refine: true })
     }
-    return SVGPath.segPathToRoundSVG({ segPath: segPath, random: random, straightness: straightness })
+    return SVGPath.segPathToCurvedSVG({ segPath: segPath, random: random, straightness: straightness })
   }
-  //METH: segPathToRoundSVG() : create SVG path from segments with points rounded using (C) bezier curves
-  static segPathToRoundSVG(
+  //METH: segPathToCurvedSVG() : create SVG path from segments with points rounded using (C) bezier curves
+  static segPathToCurvedSVG(
     { segPath,
       curvature = bezCircleConst,
       straightness = 0,
@@ -549,12 +549,12 @@ class Vertex extends p5.Vector {
   get isZero() { return this.x === 0 && this.y === 0 }
   get string() { return `${roundToDec(this.x, 3)}, ${roundToDec(this.y, 3)}` }
   get array() { return [this.x || 0, this.y || 0] }
-  get round() { return vert(round(this.x), round(this.y)) }
-  get floor() { return vert(floor(this.x), floor(this.y)) }
-  get evenFloor() { return vert((2 * floor(this.x / 2)), (2 * floor(this.y / 2))) }
-  get direction() {
-    //TODO: not sure when I started this implementation. Do I need this?
-  }
+  // get round() { return vert(round(this.x), round(this.y)) }
+  // get floor() { return vert(floor(this.x), floor(this.y)) }
+  // get evenFloor() { return vert((2 * floor(this.x / 2)), (2 * floor(this.y / 2))) }
+  // get direction() {
+  //TODO: not sure when I started this implementation. Do I need this?
+  // }
 
   get aspect() { return Aspect.fromRatio((this.x / this.y)) }
   get quadrantDirection() {
@@ -675,7 +675,7 @@ class Segment {
   get angle() { return this.lineVector.heading() }
   get direction() { return Direction.atAngle(this.angle) }
   get slope() { return this.start.slopeTo(this.end) }
-  get length() { return roundToDec(this.lineVector.mag(), 4) }
+  get length() { return this.lineVector.mag() }
   get width() { return this.start.widthTo(this.end) }
   get height() { return this.start.heightTo(this.end) }
 
@@ -960,10 +960,10 @@ class ProtoSegment extends Segment {
     else {
       let startLength, endLength
       if (this.hasCubicStartVert) {
-        startLength = Vertex.sub(this.closestCubicStartVert, this.start).roundedMag()
+        startLength = Vertex.sub(this.closestCubicStartVert, this.start).mag()
       }
       if (this.hasCubicEndVert) {
-        endLength = Vertex.sub(this.closestCubicEndVert, this.end).roundedMag()
+        endLength = Vertex.sub(this.closestCubicEndVert, this.end).mag()
       }
       if (startLength && endLength) { // this.hasBothCubicVerts
         if (approxToDec(startLength, 2, 1) + approxToDec(endLength, 2, 1) > approxToDec(this.length, 2, 2)) {
