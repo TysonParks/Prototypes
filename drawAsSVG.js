@@ -742,7 +742,10 @@ class Segment {
         console.log(`bool = ${bool}`)
       }
     } else { bool = false }
-    console.warn(`Result: `, bool)
+    if (bool === false) {
+      console.warn(`Result: `, bool)
+    } else { console.error(`Result: `, bool) }
+
     return bool
   }
 
@@ -1097,7 +1100,6 @@ class ProtoSegment extends Segment {
     this.addDistancedEndCornerVerts(distance)
   }
 
-  //TODO: CLEANUP ALL SILENCED CODE
   #addCubicVert(vert, start) {
     let cubicVerts = start ? this.cubicVerts.start : this.cubicVerts.end
     if (vert instanceof Vertex) {
@@ -1109,6 +1111,19 @@ class ProtoSegment extends Segment {
       cubicVerts.push(vert)
       cubicVerts = cubicVerts.unique('x', 'y')
     }
+  }
+
+  matchStartCorner() {
+    const startMin = min(this.availableStartLength, this.neighbors.start.availableEndLength)
+    this.addDistancedStartCornerVerts(startMin)
+  }
+  matchEndCorner() {
+    const endMin = min(this.availableEndLength, this.neighbors.end.availableStartLength)
+    this.addDistancedEndCornerVerts(endMin)
+  }
+  matchCorners() {
+    this.matchStartCorner()
+    this.matchEndCorner()
   }
 }
 
