@@ -1569,7 +1569,13 @@ class Grid extends ProtoLayer {
     }
 
     //FUNC: finish()
-    const finish = () => { this.allSimpleSubShapes.flat().forEach(s => s.matchStartCorner()) }
+    const finish = () => {
+      this.allSimpleSubShapes.flat().forEach(s => {
+        s.matchStartCorner()
+        if (s.turns.end.isRight) { wrapOutsideCorners(s) }
+        // wrapOutsideCorners(s)
+      })
+    }
 
 
     createQuadShapes(0)
