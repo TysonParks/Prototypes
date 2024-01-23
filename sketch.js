@@ -319,7 +319,7 @@ function gridTests2() {
 
   // const frameInset = R.random_num(0.02, 0.18)
 
-  FRAME.setFilter(shader3)
+  // FRAME.setFilter(shader3)
   // grid.setFilter(shader1)
   // console.log('FRAME Filter', FRAME.filter.id)
   // console.log('gridFilter', grid.filter.id)
@@ -436,8 +436,8 @@ function gridTests2() {
   group000.createSubIslands({
     // direction: Direction.All,
     filter: shader4,
-    // insetScale: .25,
-    insetScale: .8,
+    insetScale: .25,
+    // insetScale: .8,
   })
 
   // group000.createSubIslands({
@@ -458,7 +458,7 @@ function gridTests2() {
   group001.createSubIslands({
     direction: Direction.All,
     filter: shader0,
-    // insetScale: 1.4,
+    insetScale: 1.4,
     // insetScale: .9,
   })
 
@@ -472,8 +472,8 @@ function gridTests2() {
   group002?.createSubIslands({
     // direction: Direction.All,
     filter: shader1,
-    // insetScale: .2,
-    insetScale: .6,
+    insetScale: .2,
+    // insetScale: .6,
   })
 
   // group002?.createSubIslands({
@@ -497,11 +497,11 @@ function gridTests2() {
   //   insetScale: 1.6,
   // })
 
-  // group003?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   insetScale: 1.4,
-  // })
+  group003?.createSubIslands({
+    // direction: Direction.All,
+    filter: shader2,
+    insetScale: 1.4,
+  })
 
   // group003?.createSubIslands({
   //   // direction: Direction.All,
