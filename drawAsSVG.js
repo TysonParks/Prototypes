@@ -1,6 +1,6 @@
 
 // MARK: Constants
-const bezCircleConst = 0.552
+const bezCircleConst = 0.55228
 const bezCircle45DegConst = 0.265
 
 //TODO: REMOVE THIS DEBUG CODE WHEN DONE!
@@ -60,6 +60,7 @@ class SVGPath {
         vert.array.map(coord => roundToDec(coord, 4))
       )
     }
+
     // calculate start, (middle) curves, and end
     start = simplify(start)
     curves = curves.map(curve => simplify(curve))
