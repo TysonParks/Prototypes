@@ -1219,6 +1219,9 @@ class Grid extends ProtoLayer {
         overlappers = overlappers
           .filter(s => s.vertIsOnLine(cubicVert)) // colinear wraps will contain the transferrable cubicVert
         console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+        overlappers = overlappers
+          .filter(s => !s.start.equals(cubicVert, 2) && !s.end.equals(cubicVert, 2))// colWraps ends !== cubicVert
+        console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
         console.log(``)
         return overlappers
       }
@@ -3086,7 +3089,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = false
+    this.drawShapeLabelDeBug = true
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
