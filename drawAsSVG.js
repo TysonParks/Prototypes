@@ -729,23 +729,25 @@ class Segment {
 
   //TODO: Finish Implementation
   isColinearWith(seg) {
-    console.warn(`USING: isColinearWith`)
+    // console.warn(`USING: isColinearWith`)
     let bool
     if (this.direction.andOpposites.equals(seg.direction.andOpposites)) { //both horizontal or both vertical
-      console.log(`same direction?`, this.direction.andOpposites.equals(seg.direction.andOpposites))
+      // console.log(`same direction?`, this.direction.andOpposites.equals(seg.direction.andOpposites))
       if (this.direction.andOpposites.isVertical) {               // if vertical
-        console.log(`comparing verticals: ${roundToDec(this.end.x, 1)} to ${roundToDec(seg.end.x, 1)}`)
+        // console.log(`comparing verticals: ${roundToDec(this.end.x, 1)} to ${roundToDec(seg.end.x, 1)}`)
         bool = roundToDec(this.end.x, 1) === roundToDec(seg.end.x, 1)
-        console.log(`bool = ${bool}`)
+        // console.log(`bool = ${bool}`)
       } else if (this.direction.andOpposites.isHorizontal) {       // if horizontal
-        console.log(`comparing horizontals: ${roundToDec(this.end.y, 1)} to ${roundToDec(seg.end.y, 1)}`)
+        // console.log(`comparing horizontals: ${roundToDec(this.end.y, 1)} to ${roundToDec(seg.end.y, 1)}`)
         bool = roundToDec(this.end.y, 1) === roundToDec(seg.end.y, 1)
-        console.log(`bool = ${bool}`)
+        // console.log(`bool = ${bool}`)
       }
     } else { bool = false }
     if (bool === false) {
-      console.warn(`Result: `, bool)
-    } else { console.error(`Result: `, bool) }
+      // console.warn(`Result: `, bool)
+    } else {
+      //  console.error(`Result: `, bool)
+    }
 
     return bool
   }
@@ -1113,9 +1115,14 @@ class ProtoSegment extends Segment {
         console.error(`trying to assign a cubicVert that is not on this segment`)
         console.log(`off-line vert`, vert)
         console.log(`this.segment`, info(this))
+        return
+      }
+      if (cubicVerts.some(v => v.equals(vert, 2))) {
+        // console.warn(`segment already contains this cubicVert`)
+        return
       }
       cubicVerts.push(vert)
-      cubicVerts = cubicVerts.unique('x', 'y')
+      // cubicVerts = cubicVerts.unique()
     }
   }
 
