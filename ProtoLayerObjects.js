@@ -1122,6 +1122,8 @@ class Grid extends ProtoLayer {
         if (group) { group.perimeterIslands.push(newIsland) }
         if (protoParent?.type === 'Island' || protoParent?.type === 'PerimeterIsland') {
           // protoParent.setFilter(filter)
+          // console.warn(protoParent)
+          if (!protoParent.subIslands) { protoParent.subIslands = new OpArray }
           protoParent.subIslands.push(newIsland)
         }
         // if ()
@@ -1306,7 +1308,7 @@ class Grid extends ProtoLayer {
 
       if (wrapperStart && wrapperEnd) {
         if (wrapperStart[0].neighbors.end.id !== wrapperEnd[0].id) {
-          console.error(`INVALID: Wrappers are not connected`)
+          // console.error(`INVALID: Wrappers are not connected`)
           return
         }
         //FIXME: test to see if this is working AND solving a bug!
@@ -1592,21 +1594,6 @@ class Grid extends ProtoLayer {
 
     console.log(`  %%%% end customizeShapes %%%%`)
     console.log(``)
-    // LOOP:
-    // filter simpleSegments to incomplete(computed) only 
-    // sort allSegments by availableLength(computed), shortest to longest
-    // for each segment:
-    // // find sharedSegment
-    // // find neighborSegments
-    // // for each unassigned controlVertex: 
-    // // if uTurn, follow uTurn rules
-    // // if stair, follow stair rules
-    // // else:
-    // // // on segment: assign lineStart/lineEnd vertex at availableLength from vertex
-    // // // // on sharedSegment: assign lineStart/lineEnd vertex at availableLength from vertex
-    // // // on neighborSegment: assign lineStart/lineEnd vertex at availableLength from vertex
-    // // // // on sharedSegment: assign lineStart/lineEnd vertex at availableLength from vertex
-    // 
   }
   // #endregion
   // MARK: Setup Methods
@@ -1750,6 +1737,7 @@ class Grid extends ProtoLayer {
       let shrunkSelection = available.exclude(inlineSelection, 'id') //shrunk selection by excluding inline
       // console.log('shrunkSelection', shrunkSelection.map(e => e.id))
 
+      //FUNC: newSquare() :
       const newSquare = () => {
         let isValid = false
         let cell, square
@@ -1774,7 +1762,6 @@ class Grid extends ProtoLayer {
               isValid = true
           }
           // console.log('square is valid', isValid)
-
           if (!isValid) {
             square = new OpArray //make square empty
             shrunkSelection = shrunkSelection.filter(e => e.id !== cell[0].id) // remove failed cell 
@@ -2569,6 +2556,14 @@ class Island extends ProtoLayer {
           insetScale: insetScale,
           drawFilter: drawFilter,
         })
+      } else {
+        subIslands = this.grid.createIslands({
+          islandID: this.id,
+          direction: direction,
+          filter: filter,
+          insetScale: insetScale,
+          drawFilter: drawFilter,
+        })
       }
 
     } else { // create unprotected Island stacks with potential visual errors
@@ -2612,55 +2607,57 @@ class Island extends ProtoLayer {
   //METH: recalcdCells(shapes, newInsetScale) : 
   recalcdCells(newInsetScale, shapes = this.shapes) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
-    //TODO: replace simpSubShapes with finalSubShapes once finalSubShapes has been reached
-    // if (!this.shapes.finalSubShapes) { console.error(`cannot recalcdCells because shape has no finalSubShapes`) }
-    console.log(`shapes`, shapes)
+    console.warn(`recalcdCells shapes`, shapes)
     if (shapes.every(s => s.simpleSubShapes.isEmpty)) { console.error(`cannot recalcdCells because shape has no simpleSubShapes`) }
     const cellRadius = this.grid.minCellWidth / 2
     // let newCells = this.cells
-    let corners = shapes.flat().map(s => {
-      console.log(`s.simpleSubShapes`, s.simpleSubShapes)
+    let shapeCorners = shapes.flat().map(s => {
+      // console.log(`s.simpleSubShapes`, s.simpleSubShapes)
       const corners = s.simpleSubShapes.map(sub => {
         console.log(`sub`, sub)
         return sub
-          .filter(seg => // filter unfinished Corners
-            !seg.neighbors.start.availableEndLength && !seg.availableStartLength // remove once finalSubShapes implemented!!
-          )
+          // .filter(seg => // filter unfinished Corners
+          //   !seg.neighbors.start.availableEndLength && !seg.availableStartLength // remove once finalSubShapes implemented!!
+          // )
           .filter(seg => // filter corners with minimum curvature
-            seg.neighbors.start.availableEndLength <= cellRadius || seg.availableStartLength <= cellRadius
+            seg.neighbors.start.availableEndLength > cellRadius || seg.availableStartLength > cellRadius
           )
       })
       return corners
     }).flat(2)
-    console.log(`corners`, corners)
-    if (corners.isEmpty) {
+    console.log(`shapeCorners`, shapeCorners)
+    if (shapeCorners.isEmpty) {
+      console.error(`recalcdCells: Cells remain the same!`)
       return this.cells
     } else {
       let removeCells = new OpArray // cells to remove
       let addCells = new OpArray // cells to add
-      corners.forEach(seg => {
+      shapeCorners.forEach(seg => {
+        //FIXME: it appears that arcRadius is not correct
         const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
         const neighbor = seg.neighbors.start
         const arcRadius = seg.availableStartLength // arcRadius : only correct if corner is circular arc. use min otherwise
         const startCorner = neighbor.finalCubicEndVert// startCorner of arc
         const normalCorner = seg.start // normal pointer of arc
         const endCorner = seg.finalCubicStartVert // endCorner of arc
-        const origin = startCorner.add(seg.lineVector)// origin of arc
-        const squareVerts = [startCorner, normalCorner, endCorner, origin].gridVertSorted
+        const origin = Vertex.add(startCorner, segment(normalCorner, endCorner).lineVector)// origin of arc
+        const squareVerts = OpArray.from([startCorner, normalCorner, endCorner, origin]).gridVertSorted
+        console.log(`squareVerts`, squareVerts)
         let cornerCells = this.grid.cells.filter(cell => // find cells within arc square
           cell.center.x > squareVerts[0].x
           && cell.center.y > squareVerts[0].y
           && cell.center.x < squareVerts[3].x
           && cell.center.y < squareVerts[3].y
         )
+        console.log(`cornerCells`, cornerCells.map(c => c.id))
         //FIXME: cellRadius should be replaced with something that takes insetScale into account
         if (isOutsideCorner) {
           cornerCells.forEach(cell => {
             const length = segment(origin, cell.center).length + cellRadius
+            console.log(`${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
             if (length > arcRadius) { removeCells.push(cell) }
           })
         } else {
-          //FIXME: this is probably wrong, maybe sketch it out
           cornerCells.forEach(cell => {
             const length = segment(origin, cell.center).length - cellRadius
             if (length > arcRadius) { addCells.push(cell) }
@@ -2671,7 +2668,10 @@ class Island extends ProtoLayer {
       let newCells = this.cells
         .union(addCells, 'id')
         .exclude(removeCells, 'id')
-
+      console.log(`this.cells`, this.cells.map(c => c.id))
+      console.log(`addCells`, addCells.map(c => c.id))
+      console.log(`removeCells`, removeCells.map(c => c.id))
+      console.log(`newCells`, newCells.map(c => c.id))
       return newCells
     }
   }
@@ -3089,7 +3089,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = true
+    this.drawShapeLabelDeBug = false
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
