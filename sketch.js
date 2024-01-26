@@ -44,13 +44,14 @@ function setup() {
   setupPrefs()
   setupColors()
   setupBackground()
+  console.groupCollapsed(`setupFeatures`)
   setupFeatures()
+  console.groupEnd()
   gridTests2()
   // const mill = new ProtoMill()
   // mill.mkProtoType()
 
   //TESTING
-  functionTestPrint()
   createGUI()
   console.log('random R useage', R.useage)
   console.log('random RuID useage', RuID.useage)
@@ -280,7 +281,7 @@ function gridTests2() {
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
-  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.3 * 2 })
+  const shadeStack2 = Shade.neuShadeSVGFactory({ mag: minCellSize * 0.3 * 2 * 1 })
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
@@ -306,7 +307,7 @@ function gridTests2() {
   const shader6 = createFilter().dropShadow(shadeStack6)
 
   const shadeStack7 = Shade.neuShadeSVGFactory({
-    mag: minCellSize * 0.125 * 4,
+    mag: minCellSize * 0.125 * 4 * 2,
     vector: Shade.shadVect().rotate(180)
   })
   const shader7 = createFilter().dropShadow(shadeStack7)
@@ -425,14 +426,18 @@ function gridTests2() {
   group001.createPerimiters('maxCorners', Direction.All)
   group002?.createPerimiters('maxCorners', Direction.Cardinal)
   group003?.createPerimiters('maxCorners', Direction.Cardinal) // will need to create check to make sure all groups used
-  console.log(`groups`, grid.groups)
-
-  grid.customizeShapes()
+  // console.log(`groups`, grid.groups)
 
   console.error(`  ######################   `)
+  console.groupCollapsed(`CustomizeShapes`)
+  grid.customizeShapes()
+  console.groupEnd()
+
+  console.error(`  ######################   `)
+  console.log(``)
   // console.log(`when does this happen?`)
 
-
+  //MARK: group000
   // group000.createSubIslands({
   //   // direction: Direction.Horizontal,
   //   filter: shader3,
@@ -451,31 +456,128 @@ function gridTests2() {
     // direction: Direction.All,
     filter: shader4,
     // insetScale: .25,
-    insetScale: .7,
+    // insetScale: .5,
   })
 
-
-
-
-  group001.createSubIslands({
-    direction: Direction.All,
-    filter: shader7,
-    // insetScale: 1.75,
-    // insetScale: 1.3,
+  group000.createSubIslands({
+    direction: Direction.None,
+    filter: shader4,
+    // insetScale: .25,
+    insetScale: .5,
   })
+
+  //MARK: group001
+  // group001.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader0,
+  //   insetScale: .5,
+  // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader7,
+  //   // insetScale: 1.75,
+  //   // insetScale: .95,
+  // })
 
   group001.createSubIslands({
     direction: Direction.All,
     filter: shader0,
-    insetScale: .7,
+    // insetScale: 1.75,
+    insetScale: .95,
   })
 
   // group001.createSubIslands({
   //   direction: Direction.All,
+  //   filter: shader8,
+  //   // insetScale: 1.75,
+  //   insetScale: .7,
+  // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
   //   filter: shader2,
   //   // insetScale: 1.75,
-  //   insetScale: .9,
+  //   insetScale: .8,
   // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .7,
+  // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .6,
+  // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .5,
+  // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .4,
+  // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .3,
+  // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .2,
+  // })
+
+
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .15,
+  // })
+
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .1,
+  // })
+
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: 1.75,
+  //   insetScale: .5,
+  // })
+
+  // group001.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader7,
+  //   // insetScale: 1.75,
+  //   // insetScale: .5,
+  // })
+
+
+
+  //MARK: group002
 
   // group002?.createSubIslands({
   //   // direction: Direction.All,
@@ -484,10 +586,20 @@ function gridTests2() {
   //   insetScale: .8,
   // })
 
+
+
+
   group002?.createSubIslands({
     // direction: Direction.All,
-    filter: shader8,
-    insetScale: .6,
+    filter: shader4,
+    insetScale: .2,
+    // insetScale: .6,
+  })
+
+  group002?.createSubIslands({
+    // direction: Direction.All,
+    filter: shader0,
+    insetScale: .5,
     // insetScale: .6,
   })
 
@@ -504,6 +616,8 @@ function gridTests2() {
   //   // insetScale: .2,
   //   insetScale: .2,
   // })
+
+  //MARK: group003
 
   // group003?.createSubIslands({
   //   // direction: Direction.All,
@@ -527,7 +641,7 @@ function gridTests2() {
 
   group003?.createSubIslands({
     // direction: Direction.All,
-    filter: shader2,
+    filter: shader3,
     // insetScale: .25,
     insetScale: .9,
   })
@@ -560,6 +674,9 @@ function gridTests2() {
     insetScale: .2,
   })
 
+
+  //MARK: group004
+
   // group004.createSubIslands({
   //   // direction: Direction.All,
   //   filter: shader5,
@@ -572,7 +689,7 @@ function gridTests2() {
 
   console.log('all layers', S.allLayers)
   console.log(`grid`, grid)
-  console.log(grid.cellRows.flat().map(cell => cell.center))
+  // console.log(grid.cellRows.flat().map(cell => cell.center))
 }
 
 // MARK: DRAWING FUNCS
