@@ -225,7 +225,7 @@ class ProtoLayer {
   //METH: 
   setInsetScale(scale) {
     this._insetScale = scale instanceof Vertex ? scale : vert(scale)
-    console.log('ProtoLayer insetScale', this.insetScale)
+    // console.log('ProtoLayer insetScale', this.insetScale)
     this.drawElement()
   }
   //METH: 
@@ -727,32 +727,25 @@ class Grid extends ProtoLayer {
   get takenCells() { return this.cells.filter(cell => cell.taken) }
   get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }
   get isFull() { return this.availableCells.length === 0 }
+  get lastGroup() { return this.groups.last() }
   get biggestGroup() {
     return this.groups.reduce((max, grp) => {
       if (grp.cells.length > max.cells.length) { return grp }
       else { return max }
     })
   }
+  //NOTE: perimeters must be created for every group!
   get perimeterIslands() { return this.groups.map(g => g.perimeterIslands).flat() }
-  get islands() { return this.groups.map(g => g.islands.union(g.perimeterIslands)).flat() }
-  get lastGroup() { return this.groups.last() }
+  get islands() { return this.groups.map(g => g.islands.union(g.perimeterIslands, [`id`])).flat() }
   get shapes() { return this.islands.map(i => i.shapes).flat() }
-  // FIXME: need to reconfigure the formation of perimeters before this will work properly
-  // NOTE: created a minCorners function that might fix this? Need to re-evaluate.
   get allSimpleSubShapes() {
-    // console.log(`this.groups`, this.groups)
-    let simpShapes = this.groups
-      .map(g => g.perimeterIslands).flat()
-      //FIXME: ultimately perimeters must be created for every group and all it's shapes! 
-      .compacted // must compact because only groups that have assignPerimeters called on them will have islands?!?
-      // console.log(`simpShapes 1`, simpShapes)
-      // simpShapes = simpShapes
+    let simpShapes = this.perimeterIslands
+      // .compacted // should not have to compact because perimeters must be created for every group!
       .map(i => i.shapes).flat()
       .map(s => s.simpleSubShapes).flat()
 
     return simpShapes
   }
-  // get islands() { return this.createIslands({ selection: this.cells }) }
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
@@ -1037,21 +1030,24 @@ class Grid extends ProtoLayer {
     drawFilter = true,
   } = {}) {
     let cells, group, island
-    if (!groupID && !islandID && !selection) {
+    if (!groupID && !islandID && !selection) {  // "taken/available" mode - currently unused, probably DEPRECATE!
       if (taken) { cells = this.takenCells }
       else { cells = this.availableCells }
       // if (filter) { this.setFilter(filter) }
     }
     if (!selection) {
-      if (groupID) {
+      //TODO: could/should I migrate from ID to direct reference?
+      if (groupID) {                            // "group" mode finds & creates islands within a group
         group = this.groupNamed(groupID)
         cells = group?.cells || OpArray.empty
         // group?.setFilter(filter)
         if (group) { protoParent = group }
       }
-      if (islandID) {
+      //TODO: could/should I migrate from ID to direct reference?
+      if (islandID) {                           // "island" mode finds & creates islands within an island
         island = this.islandNamed(islandID)
         cells = island?.cells || OpArray.empty
+        console.warn(`island found for ${islandID}?`, island)
         // island?.setFilter(filter)
         if (island) { protoParent = island }
       }
@@ -1060,7 +1056,6 @@ class Grid extends ProtoLayer {
     }
     if (cells.isEmpty) { return }
     let tempIslands = new OpArray
-
 
     while (cells.length > 0) {
       let cell = cells[0]
@@ -1131,15 +1126,15 @@ class Grid extends ProtoLayer {
       tempIslands.push(newIsland)
     }
     // console.log(`  $$$  `)
-    // console.log(`tempIslands`, tempIslands)
+    console.log(`tempIslands`, tempIslands.map(i => i.id))
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) {
       this.updateCells()
     }
     //FIXME: filter Islands the isPerimeter === false, only creating shapes for non-perimeters
-    tempIslands.forEach(e => {
-      // this.updateCells({ islandID: islandID })
-      e.createShape()
+    tempIslands.forEach(isle => {
+      this.updateCells({ island: isle })
+      isle.createShape()
     }
     )
     return tempIslands
@@ -1197,7 +1192,7 @@ class Grid extends ProtoLayer {
         console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
         return
       }
-      console.log(` ** findColinear seg`, seg)
+      // console.log(` ** findColinear seg`, seg)
       const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
 
       const colWrapper = (seg, isNeighbor = false) => {
@@ -1206,41 +1201,41 @@ class Grid extends ProtoLayer {
         const turn = isNeighbor ? 'end' : 'start'
         const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
         const name = isNeighbor ? `end` : `start`
-        console.log(` ** findColinear seg`, info(seg))
+        // console.log(` ** findColinear seg`, info(seg))
 
-        console.log(`cubicVert`, cubicVert)
+        // console.log(`cubicVert`, cubicVert)
 
         let overlappers = overlapSegs(seg) // colinear wraps overlap seg
-        console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
-        overlappers = overlappers
+          // console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
+          // overlappers = overlappers
           .filter(s => s.direction.equals(wrapDir)) // colinear wraps point in opposite direction as seg
-        console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
-        overlappers = overlappers
+          // console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
+          // overlappers = overlappers
           .filter(s => s.turns[turn].isLeft) // colinear wraps turn left
-        console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
-        overlappers = overlappers
+          // console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
+          // overlappers = overlappers
           .filter(s => s.vertIsOnLine(cubicVert)) // colinear wraps will contain the transferrable cubicVert
-        console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-        overlappers = overlappers
+          // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+          // overlappers = overlappers
           .filter(s => !s.start.equals(cubicVert, 2) && !s.end.equals(cubicVert, 2))// colWraps ends !== cubicVert
-        console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-        console.log(``)
+        // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+        // console.log(``)
         return overlappers
       }
 
       const wrapperStart = colWrapper(seg)
       const wrapperEnd = colWrapper(neighbor, true)
 
-      console.log(`--> wrapperStart`, wrapperStart)
-      console.log(`--> wrapperEnd`, wrapperEnd)
-      console.log(``)
+      // console.log(`--> wrapperStart`, wrapperStart)
+      // console.log(`--> wrapperEnd`, wrapperEnd)
+      // console.log(``)
 
       if (wrapperStart.length === 1 && wrapperEnd.length === 1) { // only valid when both contain single segment
-        console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
+        // console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
         // console.log(seg)
-        console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
-        console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
-        console.log(``)
+        // console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
+        // console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+        // console.log(``)
         wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
         wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
 
@@ -1256,7 +1251,7 @@ class Grid extends ProtoLayer {
       } // must be an inside corner, so end of seg turns Left
       const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
 
-      console.log(` %$#** FindAdjacent Seg`, info(seg))
+      // console.log(` %$#** FindAdjacent Seg`, info(seg))
       // with current implementation, all adjacent sides will be with current shape. Intergrids might change this?
       const shape = this.shapeNamed(seg.parentID)
       const subShapes = shape.simpleSubShapes.flat()
@@ -1269,32 +1264,32 @@ class Grid extends ProtoLayer {
         const normCoord = segDir.rotated(90).moveCoord // normals always point left 90deg from segment direction
         const normal = segment(cubicVert, Vertex.add(cubicVert, Vertex.mult(normCoord, shape.cellBounds.size)))
         const name = isNeighbor ? `end` : `start`
-        console.log(` ** findAdjacent seg`, info(seg))
-        console.log(`normal`, normal.string)
+        // console.log(` ** findAdjacent seg`, info(seg))
+        // console.log(`normal`, normal.string)
 
         let adjs = subShapes
-        console.log(`${name} adj subshapes `, adjs.map(s => info(s)))
-        adjs = adjs
+          // console.log(`${name} adj subshapes `, adjs.map(s => info(s)))
+          // adjs = adjs
           .filter(s => s.direction.equals(adjDir)) // adjacent wraps point in opposite direction as seg
-        console.log(`${name} adj opposites `, adjs.map(s => info(s)))
-        adjs = adjs
+          // console.log(`${name} adj opposites `, adjs.map(s => info(s)))
+          // adjs = adjs
           .filter(s => s.turns[turn].isRight) // adjacent wraps turn right
-        console.log(`${name} adj rightTurns `, adjs.map(s => info(s)))
-        adjs = adjs
+          // console.log(`${name} adj rightTurns `, adjs.map(s => info(s)))
+          // adjs = adjs
           .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null) // adjWraps intersect normal
           .compacted
-        console.log(`${name} adj intersections `, adjs.map(s => [info(s[0]), s[1]]))
-        adjs = adjs
+          // console.log(`${name} adj intersections `, adjs.map(s => [info(s[0]), s[1]]))
+          // adjs = adjs
           .filter(s => !s[0].start.equals(s[1], 2) && !s[0].end.equals(s[1], 2)) // adjWraps cant have ends on normal
-        console.log(`${name} adj intersections colinear`, adjs)
-        adjs = adjs
+          // console.log(`${name} adj intersections colinear`, adjs)
+          // adjs = adjs
           .sort((a, b) => segment(seg[name], a[1]).length - segment(seg[name], b[1]).length)
-        console.log(`${name} adj intersections sorted`, adjs.map(s => info(s[0])))
-        console.log(`${name} adj intersections sorted`, adjs.map(s => s[0].length))
+        // console.log(`${name} adj intersections sorted`, adjs.map(s => info(s[0])))
+        // console.log(`${name} adj intersections sorted`, adjs.map(s => s[0].length))
         adjs = adjs[0]
-        console.log(`${name} adjs final`, adjs ? info(adjs[0]) : undefined)
+        // console.log(`${name} adjs final`, adjs ? info(adjs[0]) : undefined)
         // console.log(`${name} adjs final`, adjs[0].map(s => info(s)))
-        console.log(``)
+        // console.log(``)
 
         return adjs
       }
@@ -1302,9 +1297,9 @@ class Grid extends ProtoLayer {
       const wrapperStart = adjWrapper(seg)
       const wrapperEnd = adjWrapper(neighbor, true)
 
-      console.log(`--> wrapperStart`, wrapperStart)
-      console.log(`--> wrapperEnd`, wrapperEnd)
-      console.log(``)
+      // console.log(`--> wrapperStart`, wrapperStart)
+      // console.log(`--> wrapperEnd`, wrapperEnd)
+      // console.log(``)
 
       if (wrapperStart && wrapperEnd) {
         if (wrapperStart[0].neighbors.end.id !== wrapperEnd[0].id) {
@@ -1317,33 +1312,33 @@ class Grid extends ProtoLayer {
           return
         }
 
-        console.log(`!!! ADJACENT WRAPPED CORNER FOUND !!!`)
+        // console.log(`!!! ADJACENT WRAPPED CORNER FOUND !!!`)
         // console.log(seg)
-        console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
-        console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+        // console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
+        // console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
         const startGap = segment(seg.finalCubicStartVert, wrapperStart[1])
         const endGap = segment(neighbor.finalCubicEndVert, wrapperEnd[1])
-        console.log(`startGap`, startGap.length, startGap.string)
-        console.log(`endGap`, endGap.length, endGap.string)
-        console.log(``)
+        // console.log(`startGap`, startGap.length, startGap.string)
+        // console.log(`endGap`, endGap.length, endGap.string)
+        // console.log(``)
         const startGapLength = roundToDec(startGap.length, 3)
         const endGapLength = roundToDec(endGap.length, 3)
         if (startGapLength === endGapLength) {
-          console.warn(`Wrapped both segments`)
+          // console.warn(`Wrapped both segments`)
           wrapperStart[0].addCubicEndVert(wrapperStart[1])
           wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
-          console.log(``)
+          // console.log(``)
           return wrapperStart[0]
         }
 
         else if (startGapLength < endGapLength) {
-          console.log(`Wrapped end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
+          // console.log(`Wrapped end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
           wrapperStart[0].addCubicEndVert(wrapperStart[1])
         } else {
-          console.log(`Wrapped start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
+          // console.log(`Wrapped start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
           wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
         }
-        console.log(``)
+        // console.log(``)
 
       }
     }
@@ -1379,7 +1374,7 @@ class Grid extends ProtoLayer {
     const createQuadShapes = (mode) => {
       const sumSides = (sides) => sides.reduce((a, b) => a + b)
 
-      console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
+      // console.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
       //FIXME: need to filter out outer subShapes that wrap/outline an inner subShape
       const quads = this.allSimpleSubShapes
         .filter(sub => sub.length === 4)// filter for 4-sided shapes
@@ -1387,8 +1382,8 @@ class Grid extends ProtoLayer {
         .sort((a, b) => sumSides(b) - sumSides(a)) // sort smallest to largest
       // .copy
       // console.log(`this.allSimpleSubShapes`, this.allSimpleSubShapes)
-      console.log('quads', quads)
-      console.log(`quad parts`, quads.map(quad => quad.map(seg => seg.part.value)))
+      // console.log('quads', quads)
+      // console.log(`quad parts`, quads.map(quad => quad.map(seg => seg.part.value)))
 
       let processor
       switch (mode) {
@@ -1627,9 +1622,9 @@ class Grid extends ProtoLayer {
   setFrameRadii() { FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize) }
   //METH:
   setInsetScale(scale) {
-    console.log('Grid setInsetScale', scale)
+    // console.log('Grid setInsetScale', scale)
     super.setInsetScale(scale)
-    console.log('Grid insetScale', this.insetScale)
+    // console.log('Grid insetScale', this.insetScale)
     this.setFrameRadii()
     this.updateCells()
   }
@@ -2122,21 +2117,21 @@ class Grid extends ProtoLayer {
   }
   //METH:
   //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
-  updateCells({ groupID, islandID } = {}) {
+  updateCells({ groupID, island } = {}) {
     // console.log(`updating Cells ${groupID}, ${islandID}`)
     if (arguments.length === 0) {
       this.cells.forEach(cell => cell.drawElement())
     }
-    let groups, islands
 
+    let groups, islands
     if (groupID) { groups = [this.groupNamed(groupID)] }
     else { groups = this.groups }
     groups.forEach(group => this.updateGroup(group))
 
-    if (islandID) {
-      islands = [this.islandNamed(groupID)]
+    if (island) {
+      islands = [island]
       // console.log(`all islands: `, this.islands)
-      // console.log(`islands found: `, islands)
+      console.log(`updateCells: islands found: `, islands)
     }
     else { islands = this.islands }
     islands.forEach(island => this.updateIsland(island))
@@ -2198,7 +2193,7 @@ class CellGroup extends ProtoLayer {
   grid
   cells = new OpArray
   perimeterIslands = new OpArray // Island-Shapes defining outer boundaries of all Island shapes to be allowed within
-  islands = new OpArray
+  // islands = new OpArray
 
   constructor(protoParent, svgParent, grid) {
     super({
@@ -2215,6 +2210,9 @@ class CellGroup extends ProtoLayer {
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'group') }
   get testColor() { return protoColor(255, 127, 0, 1) }
+
+  //FIXME: get this implementation of islands to work with update cells and createIslands so the createShapes will work when called by createSubIslands-->createIslands-->createShapes!!! 
+  get islands() { return this.perimeterIslands.map(pIsle => pIsle.allSubIslands).flat() }
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
   get boundsRect() { return this.cellBounds.boundsRect }
@@ -2250,29 +2248,46 @@ class CellGroup extends ProtoLayer {
         console.error(`${perimeterType} is invalid Perimeter Type`)
     }
     const groupID = this.id
-    // console.log(`createPerimiters groupID`, groupID)
+    console.warn(`createPerimiters for:`, groupID)
+    console.groupCollapsed(`grid.createIslands`)
     this.perimeterIslands = this.grid.createIslands({
       groupID: this.id,
       direction: direction,
       perimeterType: perimeterType,
       drawFilter: false,
     })
+
+    console.groupEnd()
+    console.log(``)
   }
   //METH: createSimpleSubShapes() : 
   //FIXME: finish implementation to make createPerimiters work with min-corners
   createSimpleSubShapes() { this.perimeterIslands.forEach(pIsles => pIsles.createSimpleSubShapes()) }
   //METH: createSubIslands() :
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
-    if (this.islands.isEmpty) {
-      console.log(`creating subIslands`, this.id, direction.name, insetScale)
-      this.perimeterIslands.forEach(i =>
-        i.createSubIslands({
-          direction: direction,
-          filter: filter,
-          insetScale: insetScale,
-          // drawFilter: drawFilter,
-        }))
-    }
+    console.warn(`createSubIslands called on ${this.id}, this.islands =`, this.islands.map(i => i.id))
+    console.groupCollapsed(`Island.createSubIslands`)
+    // if (this.islands.isEmpty) {
+    // console.log(`creating subIslands`, this.id, direction.name, insetScale)
+    this.perimeterIslands.forEach(i =>
+      i.createSubIslands({
+        direction: direction,
+        filter: filter,
+        insetScale: insetScale,
+        // drawFilter: drawFilter,
+      }))
+    // } else {
+    //   console.warn(`tried creating subIslands, but this.islands.isEmpty`)
+    //   this.perimeterIslands.forEach(i =>
+    //     i.createSubIslands({
+    //       direction: direction,
+    //       filter: filter,
+    //       insetScale: insetScale,
+    //       // drawFilter: drawFilter,
+    //     }))
+    // }
+    console.groupEnd()
+    console.log(``)
   }
   // #endregion
   // MARK: Geometry Methods
@@ -2449,6 +2464,7 @@ class Island extends ProtoLayer {
       drawFilter: drawFilter,
       allowsProtoErrors: allowsProtoErrors,
     })
+    console.error(`creating new island with arguments:`, arguments)
     this.cells = cells
     this._filter = filter
     this.grid = grid
@@ -2459,13 +2475,28 @@ class Island extends ProtoLayer {
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
     this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
     if (stored) { this.finishSetup(S.Islands) }
-    // console.log('new Island', cells.map(e => e.id))
+    console.log('new Island made', this.id)
     // this.color = R.random_hash(3, '#')
   }
   // MARK: Computed Properties
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'island') }
   get testColor() { return protoColor(255, 230, 0, 1) }
+
+  get allSubIslands() {
+    let allSubs = new OpArray
+
+    const collectSubIslands = (island) => {
+      if (island.subIslands) {
+        island.subIslands.forEach(sub => {
+          allSubs.push(sub)
+          collectSubIslands(sub)
+        })
+      }
+    }
+    collectSubIslands(this)
+    return allSubs
+  }
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.groupID, islandID: this.id }) }
   get cellAnchor() { return this.cellBounds.cellAnchor }
@@ -2517,14 +2548,29 @@ class Island extends ProtoLayer {
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
     // console.log(`Island ${this.id} createSubIslands`)
     if (this.subIslands) {
+      // recursive dive to create subIslands on the bottom-most (visually top-most) subIslands
+      console.warn(`Divers go down! This.subIslands = `, this.subIslands)
       this.subIslands.forEach(isle =>
-        isle.createSubIslands({ direction: direction, filter: filter, insetScale: insetScale, drawFilter: drawFilter })
+        isle.createSubIslands({
+          direction: direction,
+          filter: filter,
+          insetScale: insetScale,
+          drawFilter: drawFilter
+        })
       )
       return
     }
 
     let subIslands
-    if (!this.allowsProtoErrors) { // protect Island stacking from visual errors
+    if (this.allowsProtoErrors) { // create unprotected Island stacks with potential visual errors!!!
+      subIslands = this.grid.createIslands({
+        islandID: this.id,
+        direction: direction,
+        filter: filter,
+        insetScale: insetScale,
+        drawFilter: drawFilter,
+      })
+    } else { // protect Island stacking from visual errors
       // console.log(`parent direction: `, this.direction.name)
       // console.log(`child direction: `, direction.name)
       // console.log(`parent direction hierarchy: `, this.directionHierarchy)
@@ -2556,24 +2602,18 @@ class Island extends ProtoLayer {
           insetScale: insetScale,
           drawFilter: drawFilter,
         })
-      } else {
+      }
+      if (this.hierarchyFrom(direction) < this.directionHierarchy) {
+        console.warn(`creating new subIslands with direction: ${direction.name} under: ${this.id}`)
         subIslands = this.grid.createIslands({
           islandID: this.id,
+
           direction: direction,
           filter: filter,
           insetScale: insetScale,
           drawFilter: drawFilter,
         })
       }
-
-    } else { // create unprotected Island stacks with potential visual errors
-      subIslands = this.grid.createIslands({
-        islandID: this.id,
-        direction: direction,
-        filter: filter,
-        insetScale: insetScale,
-        drawFilter: drawFilter,
-      })
     }
     this.subIslands = subIslands
     // console.log(`new subShapes`, subIslands.map(isle => isle.shapes.map(shape => shape)))
@@ -2679,9 +2719,9 @@ class Island extends ProtoLayer {
 
   //METH:
   createShape(insetScale) {
-    // console.log('createShape insetScale', insetScale)
+    console.log(`createShape for ${this.id}, insetScale`, insetScale)
     let segments = OpArray.format(this.exposedSegments)
-    // console.log(`segments`, segments)
+    console.log(`segments`, segments)
     let subShapes = new OpArray
     let shapeIter = 0
     let subShapeIter = 0
@@ -2738,10 +2778,12 @@ class Island extends ProtoLayer {
             }
             // console.log(``)
             // console.log(this.grid.groups)
-            // console.log(this)
+            // console.log(this.id)
+            // console.group(`testgroup`)
             // console.log(`subShape ${this.id} iter ${subShapeIter}`, segments)
             // console.log(`thisSeg`, thisSeg)
             // console.log(`nextSeg`, nextSeg)
+            // console.groupEnd()
             thisSeg.assignNeighbors({ end: nextSeg })
             nextSeg.assignNeighbors({ start: thisSeg })
             fillstack.push(nextSeg)
@@ -2824,13 +2866,11 @@ class Shape extends ProtoLayer {
   island
   subShapes
   simpleSubShapes
-  // finalSubShapes
   testVerts
   testColor
 
   constructor({
     subShapes,
-    // finalSubShapes,
     simpleSubShapes,
     protoParent,
     svgParent,
@@ -2844,7 +2884,6 @@ class Shape extends ProtoLayer {
       drawFilter: protoParent.drawFilter,
     })
     this.subShapes = subShapes ? subShapes : new OpArray
-    // this.finalSubShapes = finalSubShapes ? finalSubShapes : new OpArray
     this.simpleSubShapes = simpleSubShapes ? simpleSubShapes : new OpArray
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
@@ -2865,10 +2904,6 @@ class Shape extends ProtoLayer {
   get hasSubShapes() { return this.subShapes.length > 1 }
   get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
   get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
-  // TODO: possibly DEPRECATE? Currently unused
-  // get turns() { return this.subShapes.map(sub => sub.map(seg => seg.turns)) }
-  // TODO: possibly DEPRECATE? Currently unused
-  // get parts() { return this.subShapes.map(sub => sub.map(seg => seg.part)) }
   get allSegments() { return this.subShapes.flat() }
   get assignedVerts() {
     return this.subShapes.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
@@ -2916,7 +2951,7 @@ class Shape extends ProtoLayer {
   get svg() {
     let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
       segPath: e,
-      cornerMin: .5
+      cornerMin: 0
     }))
     if (result instanceof Array) {
       result = result.join(' ')
@@ -3089,7 +3124,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = false
+    this.drawShapeLabelDeBug = true
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
