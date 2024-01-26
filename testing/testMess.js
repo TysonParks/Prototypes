@@ -37,6 +37,7 @@ function functionTestPrint() {
   // print(similarNeighborsIndices(32))
   // similarSlicedNeighborsIndices(16)
   // similarGridNeighbors(16)
+  console.groupCollapsed(`TestMess`)
 
   // NOTE: ProtoSegment Tests
   console.log(`ProtoSegment Tests`)
@@ -586,6 +587,8 @@ function functionTestPrint() {
   //NOTE: Shade tests
   // print('Shade tests')
   // print(Look.neuShade())
+
+  console.groupEnd()
 }
 
 //-------------------------------------------------------------------------

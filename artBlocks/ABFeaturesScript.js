@@ -96,6 +96,8 @@ function calculateFeatures(token = tokenData) {
     // #region Private Methods
     //METH:
     #calcFeatures() {
+      console.groupCollapsed(`AB.calcFeatures`)
+
       const r = this.r
       // grid dependencies
       this.x = this.#calcX(r)
@@ -128,6 +130,8 @@ function calculateFeatures(token = tokenData) {
       // shape dependencies
       this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
       this.shrinkwrap = this.enums.shrinkWrap.feature(r) === 'True'
+
+      console.groupEnd()
     }
     // #endregion
     // MARK: Grid Methods
