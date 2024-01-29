@@ -984,6 +984,9 @@ class Grid extends ProtoLayer {
   //METH: 
   validNeighbors({ selection = this.cells, bounds = this.cellBounds(), directions = Direction.All.directions } = {}) {
     let cells = OpArray.from(new Set(selection.flatMap(e => e.validNeighborsCoords(directions, bounds))))
+    console.log(`validNeighbors selection`, selection.map(c => c.id))
+    console.log(`validNeighbors cells`, cells.map(c => c.id))
+    cells = cells
       .unique(['x', 'y']) // unique based upon x and y values
       .gridVertSorted // sort by y then x values
       .map(e => this.cellAtCoords(e.x, e.y)) // map to cells
@@ -1029,34 +1032,37 @@ class Grid extends ProtoLayer {
     insetScale = 1,
     drawFilter = true,
   } = {}) {
+    console.groupCollapsed(`grid.createIslands`)
+    console.log(`Arguments:`, arguments[0])
     let cells, group, island
     if (!groupID && !islandID && !selection) {  // "taken/available" mode - currently unused, probably DEPRECATE!
       if (taken) { cells = this.takenCells }
       else { cells = this.availableCells }
       // if (filter) { this.setFilter(filter) }
     }
-    if (!selection) {
-      //TODO: could/should I migrate from ID to direct reference?
-      if (groupID) {                            // "group" mode finds & creates islands within a group
-        group = this.groupNamed(groupID)
-        cells = group?.cells || OpArray.empty
-        // group?.setFilter(filter)
-        if (group) { protoParent = group }
-      }
-      //TODO: could/should I migrate from ID to direct reference?
-      if (islandID) {                           // "island" mode finds & creates islands within an island
-        island = this.islandNamed(islandID)
-        cells = island?.cells || OpArray.empty
-        console.warn(`island found for ${islandID}?`, island)
-        // island?.setFilter(filter)
-        if (island) { protoParent = island }
-      }
-    } else {
-      cells = OpArray.from(selection)
+    // if (!selection) {
+    //TODO: could/should I migrate from ID to direct reference?
+    if (groupID) {                            // "group" mode finds & creates islands within a group
+      group = this.groupNamed(groupID)
+      cells = group?.cells || OpArray.empty
+      // group?.setFilter(filter)
+      if (group) { protoParent = group }
     }
-    if (cells.isEmpty) { return }
+    //TODO: could/should I migrate from ID to direct reference?
+    if (islandID) {                           // "island" mode finds & creates islands within an island
+      island = this.islandNamed(islandID)
+      cells = island?.cells || OpArray.empty
+      console.warn(`island found for ${islandID}?`, island)
+      // island?.setFilter(filter)
+      if (island) { protoParent = island }
+    }
+    if (selection) { cells = OpArray.from(selection) }
+    if (cells.isEmpty) {
+      console.groupEnd()
+      return
+    }
+    console.log(`cells`, cells.map(c => c.id))
     let tempIslands = new OpArray
-
     while (cells.length > 0) {
       let cell = cells[0]
       let islanders = OpArray.from([cell])
@@ -1070,19 +1076,27 @@ class Grid extends ProtoLayer {
           let current = fillstack.pop()
           if (current.islandChecked) { continue }
           let neighbors = this.validNeighbors({ selection: [current], bounds: bounds, directions: direction.directions })
+          console.log(`validNeighbors-neighbors`, neighbors.map(c => c.id))
+          neighbors = neighbors
             .filter(e => !e.islandChecked)
+          console.log(`islandChecked-neighbors`, neighbors.map(c => c.id))
           //NOTE: I can't remember why I wrote this logic to work with goupID and islandID. Else case makes sense. This might be a source of problems down the road, or an avenue for something interesting. 
           //TODO: Actually, I wonder if this might be affecting symmetrize bugs? INVESTIGATE!!!
-          if (taken) {
-            if (groupID) { neighbors = neighbors.filter(e => e.groupID === groupID) }
-            if (islandID) { neighbors = neighbors.filter(e => e.islandIDs.has(islandID)) }
-            else { neighbors = neighbors.filter(e => e.taken) }
-          } else {
-            if (groupID) { neighbors = neighbors.filter(e => e.groupID !== groupID) }
-            if (islandID) { neighbors = neighbors.filter(e => !(e.islandIDs.has(islandID))) }
-            else { neighbors = neighbors.filter(e => e.available) }
-          }
+          // if (taken) {
+          console.log(`islandChecked-neighbors`, neighbors.map(c => Array.from(c.islandIDs)).join(` `))
+          if (groupID) { neighbors = neighbors.filter(e => e.groupID === groupID) } // find neighbors in group
+          console.log(`groupID-neighbors`, neighbors.map(c => c.id))
+          if (islandID) { neighbors = neighbors.filter(e => e.islandIDs.has(islandID)) } // find neighbors in island
+          else { neighbors = neighbors.filter(e => e.taken) } // find neighbors that are taken
+          console.log(`islandID-neighbors`, neighbors.map(c => c.id))
+          // } else {
+          //   if (groupID) { neighbors = neighbors.filter(e => e.groupID !== groupID) }
+          //   if (islandID) { neighbors = neighbors.filter(e => !(e.islandIDs.has(islandID))) }
+          //   else { neighbors = neighbors.filter(e => e.available) }
+          // }
 
+          if (selection) { neighbors = neighbors.intersect(selection, ['id']) } // filter neighbors from selection
+          console.log(`selection-neighbors`, neighbors.map(c => c.id))
           neighbors.forEach(e => fillstack.push(e))
           current.islandChecked = true
           islanders.push(current)
@@ -1095,7 +1109,7 @@ class Grid extends ProtoLayer {
       findIslanders()
       cells = cells.exclude(islanders, ['id'])
       islanders.forEach(e => e.islandChecked = false)
-      // console.log(`cells`, cells.map(c => c.id))
+      console.log(`islandID`, islandID)
 
       let newIsland = new Island({
         cells: islanders,
@@ -1135,15 +1149,23 @@ class Grid extends ProtoLayer {
     tempIslands.forEach(isle => {
       this.updateCells({ island: isle })
       isle.createShape()
-    }
-    )
+      console.log(`completed Island ${isle.id} cell-islandIDs`, isle.cells)
+      // console.log(`completed Island ${isle.id} cell-islandIDs`, isle.cells.forEach(c => Array.from(c.islandIDs)).join(` `))
+    })
+
+    console.groupEnd()
+    console.log(``)
     return tempIslands
   }
   // #endregion
   // MARK: Shape Methods
   // #region Shape Methods
   //METH:
-  createSimpleSubShapes() { this.groups.forEach(g => g.createSimpleSubShapes()) }
+  createSimpleSubShapes() {
+    console.group(`GRID.createSimpleSubShapes called!!!`)
+    this.groups.forEach(g => g.createSimpleSubShapes())
+    console.groupEnd()
+  }
   //METH: drawShapes()
   drawShapes() { this.shapes.forEach(s => s.drawElement()) }
 
@@ -1168,10 +1190,7 @@ class Grid extends ProtoLayer {
     }
     // else { console.log(`there is NOT a minCorners Group`) }
 
-
     this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
-
-
 
     //FUNC: colinearOverlaps(seg) : finds all segments that are overlap input segment
     const overlapSegs = (seg) => {
@@ -1457,27 +1476,6 @@ class Grid extends ProtoLayer {
       wrapOutsideCorners(quads.flat())
     }
 
-    //FUNC: reorderSimples : reorders currentSimples
-    const sortedSimples = () => {
-      let currentSimples = this.allSimpleSubShapes
-        // .sort() // 
-        .flat() // flatten subShapes into allSegments
-        // .filter(s => !s.hasSomeCubicVerts)
-        // .filter(s => !s.isStair)
-        // .filter(s => !s.isUTurnIn)
-        .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-        // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-        // .sort((a, b) => b.isUTurnIn - a.isUTurnIn) // sort UTurnIn first
-        .sort((a, b) => b.isStair - a.isStair) // sort Stairs first
-        // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-        .sort((a, b) => b.isUTurnOut - a.isUTurnOut) // sort UTurnOuts first
-
-        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-
-      return currentSimples
-    }
-
     //FUNC: sortUTurnOuts() : sorting for createUTurnOuts()
     const sortUTurnOuts = () => {
       return this.allSimpleSubShapes
@@ -1489,7 +1487,6 @@ class Grid extends ProtoLayer {
       // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
       // return utoSimples
     }
-
     //FUNC: createUTurnOuts()
     const createUTurnOuts = () => {
       let curved = new OpArray
@@ -2262,10 +2259,14 @@ class CellGroup extends ProtoLayer {
   }
   //METH: createSimpleSubShapes() : 
   //FIXME: finish implementation to make createPerimiters work with min-corners
-  createSimpleSubShapes() { this.perimeterIslands.forEach(pIsles => pIsles.createSimpleSubShapes()) }
+  createSimpleSubShapes() {
+    console.group(`${this.id}.createSimpleSubShapes called!!!`)
+    this.perimeterIslands.forEach(pIsles => pIsles.createSimpleSubShapes())
+    console.groupEnd()
+  }
   //METH: createSubIslands() :
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
-    console.warn(`createSubIslands called on ${this.id}, this.islands =`, this.islands.map(i => i.id))
+    console.warn(`${this.id}.createSubIslands, this.islands =`, this.islands.map(i => i.id))
     console.groupCollapsed(`Island.createSubIslands`)
     // if (this.islands.isEmpty) {
     // console.log(`creating subIslands`, this.id, direction.name, insetScale)
@@ -2464,7 +2465,7 @@ class Island extends ProtoLayer {
       drawFilter: drawFilter,
       allowsProtoErrors: allowsProtoErrors,
     })
-    console.error(`creating new island with arguments:`, arguments)
+    console.log(`New Island! with arguments:`, arguments[0])
     this.cells = cells
     this._filter = filter
     this.grid = grid
@@ -2475,7 +2476,8 @@ class Island extends ProtoLayer {
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
     this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
     if (stored) { this.finishSetup(S.Islands) }
-    console.log('new Island made', this.id)
+    console.log(`new (${this.type})-type Island completed:`, this.id)
+    console.log(``)
     // this.color = R.random_hash(3, '#')
   }
   // MARK: Computed Properties
@@ -2546,10 +2548,10 @@ class Island extends ProtoLayer {
   // #region Methods
   //METH:
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
-    // console.log(`Island ${this.id} createSubIslands`)
+    console.groupCollapsed(`${this.id} Island.createSubIslands`)
     if (this.subIslands) {
       // recursive dive to create subIslands on the bottom-most (visually top-most) subIslands
-      console.warn(`Divers go down! This.subIslands = `, this.subIslands)
+      console.error(`Divers go down! This.subIslands = `, this.subIslands.map(i => i.id))
       this.subIslands.forEach(isle =>
         isle.createSubIslands({
           direction: direction,
@@ -2558,6 +2560,7 @@ class Island extends ProtoLayer {
           drawFilter: drawFilter
         })
       )
+      console.groupEnd()
       return
     }
 
@@ -2571,20 +2574,16 @@ class Island extends ProtoLayer {
         drawFilter: drawFilter,
       })
     } else { // protect Island stacking from visual errors
-      // console.log(`parent direction: `, this.direction.name)
-      // console.log(`child direction: `, direction.name)
-      // console.log(`parent direction hierarchy: `, this.directionHierarchy)
-      // console.log(`child direction hierarchy: `, this.hierarchyFrom(direction))
-      if (this.hierarchyFrom(direction) > this.directionHierarchy) {
+      if (this.hierarchyFrom(direction) > this.directionHierarchy) { // new direction cannot be greater than current
         console.error(`trying to create SubIslands out of hierarchy. changing direction to "${this.direction.name}"`)
         direction = this.direction
       }
-      if (direction.isAll && insetScale < 0.75) { // ordinal corner connecters visually disconnect with inset< 0.75
+      if (direction.isAll && insetScale < 0.75) { // ordinal corner connecters visually disconnect with inset < 0.75
         console.error(`trying to create SubIslands with All and inset < 0.75. changing direction to Cardinal`)
         direction = Direction.Cardinal
       }
-      if (direction.equals(this.direction)) { // safest/fastest to copy Island,esp calculated Shape for straight inset
-        console.log(`copying island for new island`)
+      if (direction.equals(this.direction)) { // same direction: safest/fastest to copy Island and apply new inset
+        console.log(`copying island ${this.id}`)
         // copy this island but change inset, set filter, set drawFilter
         const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
         // console.log(`created subIsland: `, subIsland)
@@ -2593,21 +2592,22 @@ class Island extends ProtoLayer {
       if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) { // hierarchy > 1 curves can crop cells
         // recalculate cells based upon current shape/inset vs. intended shape/inset
         console.log(`  triggering a recalcdCells on ${this.id}`)
-        const newCells = this.recalcdCells(insetScale)
+        const newCells = this.recalcdCells({ newInsetScale: insetScale })
         subIslands = this.grid.createIslands({
           selection: newCells,
+          islandID: this.id,
           protoParent: this,
           direction: direction,
           filter: filter,
           insetScale: insetScale,
           drawFilter: drawFilter,
         })
-      }
-      if (this.hierarchyFrom(direction) < this.directionHierarchy) {
-        console.warn(`creating new subIslands with direction: ${direction.name} under: ${this.id}`)
+        // console.log(`subIslands: `, subIslands)
+        subIslands?.forEach(i => i.createSimpleSubShapes())
+      } else if (this.hierarchyFrom(direction) < this.directionHierarchy) { // new direction needs new island creation
+        console.warn(`creating ${this.id} subIslands with direction: ${direction.name}`)
         subIslands = this.grid.createIslands({
           islandID: this.id,
-
           direction: direction,
           filter: filter,
           insetScale: insetScale,
@@ -2616,6 +2616,8 @@ class Island extends ProtoLayer {
       }
     }
     this.subIslands = subIslands
+    console.log(`new subIslands: `, subIslands)
+    console.groupEnd()
     // console.log(`new subShapes`, subIslands.map(isle => isle.shapes.map(shape => shape)))
   }
   //METH: copy(insetScale) : create copy 
@@ -2641,24 +2643,29 @@ class Island extends ProtoLayer {
       drawFilter: drawFilter
     })
     newIsland.shapes = this.shapes.map(s => s.copy({ insetScale: insetScale, protoParent: newIsland, island: newIsland }))
+    this.grid.updateCells({ island: newIsland })
     // console.log(`newIsland`, newIsland)
     return newIsland
   }
   //METH: recalcdCells(shapes, newInsetScale) : 
-  recalcdCells(newInsetScale, shapes = this.shapes) {
+  //FIXME: need to incorporate loft!!
+  //FIXME: absolute should activate previous mode (sub simpleSubShapes for insetSubShapes & no newInsetScale usage)
+  //FIXME: maybe also a threshold?
+  //FIXME: fix arcRadius calculation to make this work with non-square grid cells
+  recalcdCells({ newInsetScale, loft, shapes = this.shapes, absolute = false, padding = 0.2 } = {}) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
-    console.warn(`recalcdCells shapes`, shapes)
-    if (shapes.every(s => s.simpleSubShapes.isEmpty)) { console.error(`cannot recalcdCells because shape has no simpleSubShapes`) }
+    if (shapes.every(s => s.simpleSubShapes.isEmpty)) {
+      console.error(`cannot recalcdCells because shape has no simpleSubShapes`)
+      return this.cells
+    }
+    console.groupCollapsed(`recalcdCells shapes`, shapes)
     const cellRadius = this.grid.minCellWidth / 2
     // let newCells = this.cells
     let shapeCorners = shapes.flat().map(s => {
       // console.log(`s.simpleSubShapes`, s.simpleSubShapes)
-      const corners = s.simpleSubShapes.map(sub => {
+      const corners = s.insetSubShapes.map(sub => {
         console.log(`sub`, sub)
         return sub
-          // .filter(seg => // filter unfinished Corners
-          //   !seg.neighbors.start.availableEndLength && !seg.availableStartLength // remove once finalSubShapes implemented!!
-          // )
           .filter(seg => // filter corners with minimum curvature
             seg.neighbors.start.availableEndLength > cellRadius || seg.availableStartLength > cellRadius
           )
@@ -2668,6 +2675,7 @@ class Island extends ProtoLayer {
     console.log(`shapeCorners`, shapeCorners)
     if (shapeCorners.isEmpty) {
       console.error(`recalcdCells: Cells remain the same!`)
+      console.groupEnd()
       return this.cells
     } else {
       let removeCells = new OpArray // cells to remove
@@ -2693,13 +2701,13 @@ class Island extends ProtoLayer {
         //FIXME: cellRadius should be replaced with something that takes insetScale into account
         if (isOutsideCorner) {
           cornerCells.forEach(cell => {
-            const length = segment(origin, cell.center).length + cellRadius
+            const length = segment(origin, cell.center).length + cellRadius * (newInsetScale + padding)
             console.log(`${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
             if (length > arcRadius) { removeCells.push(cell) }
           })
         } else {
           cornerCells.forEach(cell => {
-            const length = segment(origin, cell.center).length - cellRadius
+            const length = segment(origin, cell.center).length - cellRadius * (newInsetScale + padding)
             if (length > arcRadius) { addCells.push(cell) }
           })
         }
@@ -2712,8 +2720,10 @@ class Island extends ProtoLayer {
       console.log(`addCells`, addCells.map(c => c.id))
       console.log(`removeCells`, removeCells.map(c => c.id))
       console.log(`newCells`, newCells.map(c => c.id))
+      console.groupEnd()
       return newCells
     }
+
   }
   //METH:
 
@@ -2824,7 +2834,11 @@ class Island extends ProtoLayer {
     console.error('Undefined directionHierachy')
   }
   //METH: createSimpleSubShapes(minCorners) : direct all shapes to createSimpleSubShapes 
-  createSimpleSubShapes() { this.shapes.forEach(s => s.createSimpleSubShapes()) }
+  createSimpleSubShapes() {
+    console.group(`${this.id}.createSimpleSubShapes called!!!`)
+    this.shapes.forEach(s => s.createSimpleSubShapes())
+    console.groupEnd()
+  }
   //METH:
   cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
     return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, directions: directions })
@@ -2951,7 +2965,7 @@ class Shape extends ProtoLayer {
   get svg() {
     let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
       segPath: e,
-      cornerMin: 0
+      cornerMin: min(this.insetSize.x / 2, this.insetSize.y / 2)
     }))
     if (result instanceof Array) {
       result = result.join(' ')
@@ -2997,12 +3011,13 @@ class Shape extends ProtoLayer {
 
   // MARK: methods
   // #region methods
-  //METH: 
+  //METH: : create initial SimpleSubShapes with minCorners to be refined by customizeShapes
   createSimpleSubShapes() {
+    console.warn(`${this.id}.createSimpleSubShapes called!!!`)
     this.simpleSubShapes = this.subShapes.map(sub =>
       SegPath.refine(sub, this.id, this.island.perimeterType === 'minCorners')
     )
-    // this.drawElement()
+    this.drawElement()
     // console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
@@ -3040,6 +3055,7 @@ class Shape extends ProtoLayer {
     this.assignElement()
     // console.log(`created new shape`, this.id)
     // this.createSimpleSubShapes()
+    console.warn(`${this.id}.drawElement`)
     this.drawElement()
   }
   //METH:
@@ -3124,7 +3140,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = true
+    this.drawShapeLabelDeBug = false
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
