@@ -2272,8 +2272,6 @@ class CellGroup extends ProtoLayer {
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     console.warn(`${this.id}.createSubIslands, this.islands =`, this.islands.map(i => i.id))
     console.groupCollapsed(`Island.createSubIslands`)
-    // if (this.islands.isEmpty) {
-    // console.log(`creating subIslands`, this.id, direction.name, insetScale)
     this.perimeterIslands.forEach(i =>
       i.createSubIslands({
         direction: direction,
@@ -2281,16 +2279,6 @@ class CellGroup extends ProtoLayer {
         insetScale: insetScale,
         // drawFilter: drawFilter,
       }))
-    // } else {
-    //   console.warn(`tried creating subIslands, but this.islands.isEmpty`)
-    //   this.perimeterIslands.forEach(i =>
-    //     i.createSubIslands({
-    //       direction: direction,
-    //       filter: filter,
-    //       insetScale: insetScale,
-    //       // drawFilter: drawFilter,
-    //     }))
-    // }
     console.groupEnd()
     console.log(``)
   }
@@ -2580,11 +2568,11 @@ class Island extends ProtoLayer {
     } else { // protect Island stacking from visual errors
       if (this.hierarchyFrom(direction) > this.directionHierarchy) { // new direction cannot be greater than current
         console.error(`trying to create SubIslands out of hierarchy. changing direction to "${this.direction.name}"`)
-        direction = this.direction
+        direction = this.direction // downgrade newDirection to same as current Island
       }
-      if (direction.isAll && insetScale < 0.75) { // ordinal corner connecters visually disconnect with inset < 0.75
+      if (direction.isAll && insetScale < 0.75) { // ordinal corner connecters visually collapse with inset < 0.75
         console.error(`trying to create SubIslands with All and inset < 0.75. changing direction to Cardinal`)
-        direction = Direction.Cardinal
+        direction = Direction.Cardinal // downgrade newDirection to Cardinal to avoid collapse/overlap
       }
       if (direction.equals(this.direction)) { // same direction: safest/fastest to copy Island and apply new inset
         console.log(`copying island ${this.id}`)
@@ -2593,30 +2581,23 @@ class Island extends ProtoLayer {
         // console.log(`created subIsland: `, subIsland)
         subIslands = OpArray.from([subIsland])
       }
-      if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) { // hierarchy > 1 curves can crop cells
-        // recalculate cells based upon current shape/inset vs. intended shape/inset
-        console.log(`  triggering a recalcdCells on ${this.id}`)
-        const newCells = this.recalcdCells({ newInsetScale: insetScale })
-        subIslands = this.grid.createIslands({
+      if (this.hierarchyFrom(direction) < this.directionHierarchy) { // new direction needs new island creation
+        console.warn(`creating ${this.id} subIslands with direction: ${direction.name}`)
+        let newCells
+        if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {// hierarchy > 1 curves can crop cells
+          console.log(`  triggering a recalcdCells on ${this.id}`)
+          newCells = this.recalcdCells({ newInsetScale: insetScale })
+        }
+        subIslands = this.grid.createIslands({ // create new Islands with new direction
           selection: newCells,
           islandID: this.id,
-          protoParent: this,
           direction: direction,
           filter: filter,
           insetScale: insetScale,
           drawFilter: drawFilter,
         })
-        // console.log(`subIslands: `, subIslands)
-        subIslands?.forEach(i => i.createSimpleSubShapes())
-      } else if (this.hierarchyFrom(direction) < this.directionHierarchy) { // new direction needs new island creation
-        console.warn(`creating ${this.id} subIslands with direction: ${direction.name}`)
-        subIslands = this.grid.createIslands({
-          islandID: this.id,
-          direction: direction,
-          filter: filter,
-          insetScale: insetScale,
-          drawFilter: drawFilter,
-        })
+        subIslands?.forEach(i => i.createSimpleSubShapes()) // must create SimpleSubShapes for new Islands
+
       }
     }
     this.subIslands = subIslands
@@ -2656,7 +2637,12 @@ class Island extends ProtoLayer {
   //FIXME: absolute should activate previous mode (sub simpleSubShapes for insetSubShapes & no newInsetScale usage)
   //FIXME: maybe also a threshold?
   //FIXME: fix arcRadius calculation to make this work with non-square grid cells
-  recalcdCells({ newInsetScale, loft, shapes = this.shapes, absolute = false, padding = 0.1 } = {}) {
+  recalcdCells({
+    newInsetScale,
+    loft,
+    shapes = this.shapes,
+    absolute = false,
+    padding = 0.1 } = {}) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
     if (shapes.every(s => s.simpleSubShapes.isEmpty)) {
       console.error(`cannot recalcdCells because shape has no simpleSubShapes`)
@@ -2688,7 +2674,8 @@ class Island extends ProtoLayer {
         //FIXME: it appears that arcRadius is not correct
         const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
         const neighbor = seg.neighbors.start
-        const arcRadius = seg.availableStartLength // arcRadius : only correct if corner is circular arc. use min otherwise
+        //NOTE: arcRadius: only correct if corner is circular arc and cell aspect is square
+        const arcRadius = min(seg.availableStartLength, neighbor.availableEndLength)
         const startCorner = neighbor.finalCubicEndVert// startCorner of arc
         const normalCorner = seg.start // normal pointer of arc
         const endCorner = seg.finalCubicStartVert // endCorner of arc
