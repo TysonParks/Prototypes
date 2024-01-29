@@ -1299,7 +1299,7 @@ class Grid extends ProtoLayer {
           .compacted
           // console.log(`${name} adj intersections `, adjs.map(s => [info(s[0]), s[1]]))
           // adjs = adjs
-          .filter(s => !s[0].start.equals(s[1], 2) && !s[0].end.equals(s[1], 2)) // adjWraps cant have ends on normal
+          .filter(s => !s[0].start.equals(s[1], 1) && !s[0].end.equals(s[1], 1)) // adjWraps cant have ends on normal
           // console.log(`${name} adj intersections colinear`, adjs)
           // adjs = adjs
           .sort((a, b) => segment(seg[name], a[1]).length - segment(seg[name], b[1]).length)
