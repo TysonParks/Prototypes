@@ -1378,19 +1378,6 @@ class Grid extends ProtoLayer {
       }
     }
 
-    //TODO: DEPRECATE 
-    //FUNC: wrapInsideCorners() : recursive combination of colinear/adjacent wrap functions for inside corners
-    // const wrapInsideCorners = (segs) => {
-    //   const adjacents = colinears.map(seg => findAdjacentWrappedCorner(seg)).compacted
-    //   if (adjacents.length > 0) {
-    //     const colinears = segs.map(seg => findColinearWrappedCorner(seg)).compacted
-    //     if (colinears.length > 0) {
-    //       wrapInsideCorners(colinears)
-    //     }
-    //   }
-    // }
-
-
     //MARK: QUAD SHAPES
     //FUNC: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
     //TODO: need to add an ABFeature to select these!!!
@@ -2597,7 +2584,7 @@ class Island extends ProtoLayer {
           drawFilter: drawFilter,
         })
         subIslands?.forEach(i => i.createSimpleSubShapes()) // must create SimpleSubShapes for new Islands
-
+        //FIXME: // need to process subIslands like we do quadProcessing in customizeShapes
       }
     }
     this.subIslands = subIslands
