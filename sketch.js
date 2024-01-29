@@ -261,7 +261,7 @@ function gridTests2() {
   let gridX = R.random_int(4, 10)
   // gridX = 6
 
-  grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
+  grid = new Grid(FRAME, { x: gridX, y: gridX * 1 })
   // grid = new Grid(FRAME, { x: 10, y: 10 })
   let gridInset = R.random_num(0.75, 0.95)
 
@@ -609,15 +609,20 @@ function gridTests2() {
     insetScale: .7,
   })
 
-
-
-
   group002?.createSubIslands({
-    direction: Direction.Vertical,
-    filter: shader1,
-    insetScale: .55,
+    direction: Direction.Horizontal,
+    filter: shader2,
+    insetScale: .4,
     // insetScale: .6,
   })
+
+
+  // group002?.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader1,
+  //   insetScale: .1,
+  //   // insetScale: .6,
+  // })
 
   // group002?.createSubIslands({
   //   direction: Direction.None,
