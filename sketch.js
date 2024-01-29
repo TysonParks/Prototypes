@@ -613,7 +613,7 @@ function gridTests2() {
 
 
   group002?.createSubIslands({
-    direction: Direction.Horizontal,
+    direction: Direction.Vertical,
     filter: shader1,
     insetScale: .55,
     // insetScale: .6,
