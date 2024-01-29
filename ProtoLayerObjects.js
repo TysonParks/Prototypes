@@ -1075,6 +1075,7 @@ class Grid extends ProtoLayer {
         while (fillstack.length > 0) {
           let current = fillstack.pop()
           if (current.islandChecked) { continue }
+          console.warn(`current cell: ${current.id}`)
           let neighbors = this.validNeighbors({ selection: [current], bounds: bounds, directions: direction.directions })
           console.log(`validNeighbors-neighbors`, neighbors.map(c => c.id))
           neighbors = neighbors
@@ -1083,20 +1084,23 @@ class Grid extends ProtoLayer {
           //NOTE: I can't remember why I wrote this logic to work with goupID and islandID. Else case makes sense. This might be a source of problems down the road, or an avenue for something interesting. 
           //TODO: Actually, I wonder if this might be affecting symmetrize bugs? INVESTIGATE!!!
           // if (taken) {
-          console.log(`islandChecked-neighbors`, neighbors.map(c => Array.from(c.islandIDs)).join(` `))
-          if (groupID) { neighbors = neighbors.filter(e => e.groupID === groupID) } // find neighbors in group
-          console.log(`groupID-neighbors`, neighbors.map(c => c.id))
-          if (islandID) { neighbors = neighbors.filter(e => e.islandIDs.has(islandID)) } // find neighbors in island
-          else { neighbors = neighbors.filter(e => e.taken) } // find neighbors that are taken
-          console.log(`islandID-neighbors`, neighbors.map(c => c.id))
-          // } else {
-          //   if (groupID) { neighbors = neighbors.filter(e => e.groupID !== groupID) }
-          //   if (islandID) { neighbors = neighbors.filter(e => !(e.islandIDs.has(islandID))) }
-          //   else { neighbors = neighbors.filter(e => e.available) }
-          // }
+          console.log(`islandChecked-neighbors islandIDs`, neighbors.map(c => Array.from(c.islandIDs)).join(` `))
 
-          if (selection) { neighbors = neighbors.intersect(selection, ['id']) } // filter neighbors from selection
-          console.log(`selection-neighbors`, neighbors.map(c => c.id))
+          if (selection) { // filter neighbors from selection
+            neighbors = neighbors.intersect(selection, ['id'])
+            console.log(`selection-neighbors`, neighbors.map(c => c.id))
+          } else {
+            if (groupID) {// find neighbors in group
+              neighbors = neighbors.filter(e => e.groupID === groupID)
+              console.log(`groupID-neighbors`, neighbors.map(c => c.id))
+            }
+            if (islandID) {// find neighbors in island
+              neighbors = neighbors.filter(e => e.islandIDs.has(islandID))
+              console.log(`islandID-neighbors`, neighbors.map(c => c.id))
+            }
+            else { neighbors = neighbors.filter(e => e.taken) } // find neighbors that are taken
+          }
+
           neighbors.forEach(e => fillstack.push(e))
           current.islandChecked = true
           islanders.push(current)
@@ -2652,7 +2656,7 @@ class Island extends ProtoLayer {
   //FIXME: absolute should activate previous mode (sub simpleSubShapes for insetSubShapes & no newInsetScale usage)
   //FIXME: maybe also a threshold?
   //FIXME: fix arcRadius calculation to make this work with non-square grid cells
-  recalcdCells({ newInsetScale, loft, shapes = this.shapes, absolute = false, padding = 0.2 } = {}) {
+  recalcdCells({ newInsetScale, loft, shapes = this.shapes, absolute = false, padding = 0.1 } = {}) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
     if (shapes.every(s => s.simpleSubShapes.isEmpty)) {
       console.error(`cannot recalcdCells because shape has no simpleSubShapes`)
@@ -3141,7 +3145,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = false
+    this.drawShapeLabelDeBug = true
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
