@@ -220,11 +220,7 @@ class SegPath {
   }
   //METH: refine() : remove colinear segments to simplify seg path to single segments connecting corners
   static refine(segPath, parentID, minCorners = false) {
-    let report = false
-    if (parentID === `shp004` && segPath.length === 8) {
-      console.warn(`refine segPath`, segPath)
-      report = true
-    }
+    let report = false // DEBUG
 
     let newPath = new OpArray
     let prevSeg = undefined
