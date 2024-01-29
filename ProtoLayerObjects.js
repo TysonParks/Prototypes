@@ -2716,6 +2716,7 @@ class Island extends ProtoLayer {
       let newCells = this.cells
         .union(addCells, 'id')
         .exclude(removeCells, 'id')
+        .gridVertSorted
       console.log(`this.cells`, this.cells.map(c => c.id))
       console.log(`addCells`, addCells.map(c => c.id))
       console.log(`removeCells`, removeCells.map(c => c.id))
