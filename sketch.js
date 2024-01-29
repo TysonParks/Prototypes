@@ -239,6 +239,8 @@ class ProtoMill {
   //METH:
   setTensions() {
     //TODO: tense, curve, and fit shapes using Grid.customizeShapes()
+    // maybe call this "nestle"? It's nice because it's like nest + cuddle
+    // "snuggle" might be more human/relatable
   }
   //METH:
   setShaders() {
@@ -260,7 +262,7 @@ function gridTests2() {
   // gridX = 6
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
-  // grid = new Grid(FRAME, { x: 8, y: 14 })
+  // grid = new Grid(FRAME, { x: 10, y: 10 })
   let gridInset = R.random_num(0.75, 0.95)
 
   FRAME.setInsetScale(.95)
@@ -273,11 +275,11 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -2 * 1 })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -2 * 1.5 })
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.1 * 4 })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.1 * 10 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
@@ -452,19 +454,33 @@ function gridTests2() {
   //   // insetScale: .8,
   // })
 
-  group000.createSubIslands({
-    // direction: Direction.All,
-    filter: shader4,
-    // insetScale: .25,
-    // insetScale: .5,
-  })
+  // group000.createSubIslands({
+  //   direction: Direction.Cardinal,
+  //   filter: shader4,
+  //   // insetScale: .25,
+  //   insetScale: .5,
+  // })
 
   group000.createSubIslands({
-    direction: Direction.None,
-    filter: shader4,
+    direction: Direction.Cardinal,
+    filter: shader0,
     // insetScale: .25,
-    insetScale: .5,
+    insetScale: .2,
   })
+
+  // group000.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader1,
+  //   // insetScale: .25,
+  //   insetScale: .1,
+  // })
+
+  // group000.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader8,
+  //   // insetScale: .25,
+  //   insetScale: .2,
+  // })
 
   //MARK: group001
   // group001.createSubIslands({
@@ -482,16 +498,23 @@ function gridTests2() {
 
   group001.createSubIslands({
     direction: Direction.All,
-    filter: shader0,
-    // insetScale: 1.75,
-    insetScale: .95,
+    filter: shader7,
+    insetScale: 1,
+    // insetScale: .95,
   })
 
   // group001.createSubIslands({
   //   direction: Direction.All,
-  //   filter: shader8,
+  //   filter: shader2,
   //   // insetScale: 1.75,
-  //   insetScale: .7,
+  //   insetScale: 1.6,
+  // })
+
+  // group001.createSubIslands({
+  //   direction: Direction.Vertical,
+  //   filter: shader0,
+  //   // insetScale: 2,
+  //   insetScale: .6,
   // })
 
   // group001.createSubIslands({
@@ -579,29 +602,29 @@ function gridTests2() {
 
   //MARK: group002
 
+  group002?.createSubIslands({
+    // direction: Direction.All,
+    filter: shader2,
+    // insetScale: .2,
+    insetScale: .7,
+  })
+
+
+
+
+  group002?.createSubIslands({
+    direction: Direction.Horizontal,
+    filter: shader1,
+    insetScale: .55,
+    // insetScale: .6,
+  })
+
   // group002?.createSubIslands({
-  //   // direction: Direction.All,
+  //   direction: Direction.None,
   //   filter: shader1,
-  //   // insetScale: .2,
-  //   insetScale: .8,
+  //   // insetScale: .7,
+  //   insetScale: .4,
   // })
-
-
-
-
-  group002?.createSubIslands({
-    // direction: Direction.All,
-    filter: shader4,
-    insetScale: .2,
-    // insetScale: .6,
-  })
-
-  group002?.createSubIslands({
-    // direction: Direction.All,
-    filter: shader0,
-    insetScale: .5,
-    // insetScale: .6,
-  })
 
   // group002?.createSubIslands({
   //   // direction: Direction.All,
@@ -639,12 +662,12 @@ function gridTests2() {
   //   insetScale: 1.2,
   // })
 
-  group003?.createSubIslands({
-    // direction: Direction.All,
-    filter: shader3,
-    // insetScale: .25,
-    insetScale: .9,
-  })
+  // group003?.createSubIslands({
+  //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: 1,
+  // })
 
   // group003?.createSubIslands({
   //   // direction: Direction.All,
@@ -653,11 +676,18 @@ function gridTests2() {
   //   insetScale: .8,
   // })
 
+  group003?.createSubIslands({
+    // direction: Direction.All,
+    filter: shader0,
+    // insetScale: .25,
+    insetScale: 1,
+  })
+
   // group003?.createSubIslands({
   //   // direction: Direction.All,
-  //   filter: shader2,
+  //   filter: shader7,
   //   // insetScale: .25,
-  //   insetScale: .6,
+  //   insetScale: 1.8,
   // })
 
   // group003?.createSubIslands({
@@ -667,12 +697,19 @@ function gridTests2() {
   //   insetScale: .4,
   // })
 
-  group003?.createSubIslands({
-    // direction: Direction.All,
-    filter: shader2,
-    // insetScale: .25,
-    insetScale: .2,
-  })
+  // group003?.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader1,
+  //   // insetScale: .25,
+  //   insetScale: .2,
+  // })
+
+  // group003?.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader1,
+  //   // insetScale: .25,
+  //   insetScale: .2,
+  // })
 
 
   //MARK: group004
