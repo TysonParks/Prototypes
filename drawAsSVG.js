@@ -919,10 +919,24 @@ class ProtoSegment extends Segment {
       console.error(`segment ${this.id} without turns has no cornerVerts`)
       return
     }
-
     return {
       start: (this.turns?.start.value !== 0) ? this.start : undefined,
       end: (this.turns?.end.value !== 0) ? this.end : undefined,
+    }
+  }
+
+  get corners() {
+    const startDir = this.neighbors.start.direction
+    const endDir = this.direction
+    const startTurn = this.turns?.start
+    const endTurn = this.turns?.end
+    const corner = (dir, turn) => {
+      const turnAdd = turn.value === 1 ? 0 : 1
+      return new Corner((dir.value + turnAdd) % 4)
+    }
+    return {
+      start: (startTurn !== 0) ? corner(startDir, startTurn) : undefined,
+      end: (endTurn !== 0) ? corner(endDir, endTurn) : undefined,
     }
   }
 
