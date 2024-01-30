@@ -12,6 +12,10 @@ class Aspect {
     this.name = this.#getName(number)
   }
 
+  get isSquare() { return this.value === 0 }
+  get isPortrait() { return this.value === 1 }
+  get isLandscape() { return this.value === 2 }
+
   #getName(number) { return this.#descriptions[number] }
 
   static fromRatio(ratio) {
@@ -35,12 +39,19 @@ class Corner {
   static DownLeft = new Corner(3)
 
   constructor(number) {
-    this.name = this.#getName(number)
+    this.value = number
   }
 
-  #getName(number) { return this.#descriptions[number] }
+  get name() { return this.#descriptions[this.value] }
+  get isUpLeft() { return this.value === 0 }
+  get isUpRight() { return this.value === 1 }
+  get isDownRight() { return this.value === 2 }
+  get isDownLeft() { return this.value === 3 }
 
-  get value() { return this.#descriptions.findIndex(e => e === this.name) }
+  get isUp() { return this.value < 2 }
+  get isRight() { return this.isUpRight || this.isDownRight }
+  get isDown() { return !this.isUp }
+  get isLeft() { return !this.isRight }
 
   #descriptions = [
     'upLeft',  // 0
