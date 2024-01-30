@@ -832,34 +832,40 @@ class Grid extends ProtoLayer {
   }
   //METH: 
   cellSpanBetween(indexA, indexB) { return this.cellSpanRowsBetween(indexA, indexB).flat() }
-  //METH: 
+  //METH: neighbor() : Cell : find neighbor cell by direction
   neighbor(cellIndex, direction) {
-    let coords = this.cellAt(cellIndex).neighborCoords(direction)
-    if (this.coordsAreInGrid(coords.x, coords.y)) {
+    let coords = this.cellAt(cellIndex).neighborCoords(direction) // get neighbor coords
+    if (this.coordsAreInGrid(coords.x, coords.y)) {               // verify coords are inside grid
       return this.cells.find(e => e.coords.equals(coords))
     } else { return }
   }
-  //METH: 
+  //METH: #neighborIs() : BOOL : if certain neighbor is available, in certain island, or in certain group
+  #neighborIs({ cellIndex, direction, groupID, islandID } = {}) {
+    let neighbor = this.neighbor(cellIndex, direction)        // find neighbor 
+    if (neighbor) {
+      if (groupID) { return neighbor.groupID === groupID }     // test group membership
+      if (islandID) { return neighbor.islandIDs.has(islandID) } // test island membership
+      return neighbor.available                               // test availability
+    }
+    return false
+  }
+  //METH: neighborIsAvailable() : BOOL : if certain neighbor is available
   neighborIsAvailable(cellIndex, direction) {
-    let neighbor = this.neighbor(cellIndex, direction)
-    if (neighbor) { return neighbor.available }
-    return false
+    return this.#neighborIs({ cellIndex: cellIndex, direction: direction })
   }
-  //METH: 
-  neighborIsTaken(cellIndex, direction) { return !this.neighborIsAvailable(cellIndex, direction) }
-  //METH: 
+  //METH: neighborIsTaken() : BOOL : if certain neighbor is taken
+  neighborIsTaken(cellIndex, direction) {
+    return !this.neighborIsAvailable(cellIndex, direction)
+  }
+  //METH: neighborIsInIsland() : BOOL : if certain neighbor is in certain Island
   neighborIsInIsland(cellIndex, direction, islandID) {
-    let neighbor = this.neighbor(cellIndex, direction)
-    if (neighbor) { return neighbor.islandIDs.has(islandID) }
-    return false
+    return this.#neighborIs({ cellIndex: cellIndex, direction: direction, islandID: islandID })
   }
-  //METH: 
+  //METH: neighborIsInGroup() : BOOL : if certain neighbor is in certain group
   neighborIsInGroup(cellIndex, direction, groupID) {
-    let neighbor = this.neighbor(cellIndex, direction)
-    if (neighbor) { return neighbor.groupID === groupID }
-    return false
+    return this.#neighborIs({ cellIndex: cellIndex, direction: direction, groupID: groupID })
   }
-  //METH: 
+  //METH: exposedDirections() : Direction : directions with NO neighbors, i.e. where edges/corners should be drawn
   exposedDirections({ cellIndex, groupID, islandID } = {}) {
     const dirs = Direction.All.directions
     if (groupID) {
@@ -886,7 +892,7 @@ class Grid extends ProtoLayer {
       .map(f => this.cellAt(cellIndex).corner(f))
     // .gridVertSorted
   }
-  //METH: cellIsIsolated() : 
+  //METH: cellIsIsolated() : if cell does NOT have neighbors in given direction, by group, island, or taken (default)
   cellIsIsolated({ cellIndex, groupID, islandID, direction = Direction.Cardinal } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID }).includesMany(direction.directions, ['value'])
   }
@@ -1016,7 +1022,7 @@ class Grid extends ProtoLayer {
   //   // .sort()
   // }
   //METH: 
-  ordinalCorners({ selection = this.cells, groupID, islandID } = {}) {
+  ordinalConnectedCells({ selection = this.cells, groupID, islandID } = {}) {
     let ordinals = selection.filter()
   }
   // #endregion
