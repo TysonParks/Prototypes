@@ -261,7 +261,7 @@ function gridTests2() {
   let gridX = R.random_int(4, 10)
   // gridX = 6
 
-  grid = new Grid(FRAME, { x: gridX, y: gridX * 1 })
+  grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 10, y: 10 })
   let gridInset = R.random_num(0.75, 0.95)
 
@@ -376,9 +376,9 @@ function gridTests2() {
   // console.log('randDirection', randDir)
   let group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: 1 })
-  let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  // let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
 
-  // let group002 = grid.randGroup({ amount: 0.5 })
+  let group002 = grid.randGroup({ amount: 0.5 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
@@ -425,9 +425,9 @@ function gridTests2() {
   insetScale = .8
 
   group000.createPerimiters('maxCorners', Direction.Cardinal)
-  group001.createPerimiters('maxCorners', Direction.All)
+  group001?.createPerimiters('maxCorners', Direction.Cardinal)
   group002?.createPerimiters('maxCorners', Direction.Cardinal)
-  group003?.createPerimiters('maxCorners', Direction.Cardinal) // will need to create check to make sure all groups used
+  group003?.createPerimiters('maxCorners', Direction.All) // will need to create check to make sure all groups used
   // console.log(`groups`, grid.groups)
 
   console.error(`  ######################   `)
@@ -465,7 +465,7 @@ function gridTests2() {
     direction: Direction.Cardinal,
     filter: shader0,
     // insetScale: .25,
-    insetScale: .2,
+    insetScale: .8,
   })
 
   // group000.createSubIslands({
@@ -496,10 +496,10 @@ function gridTests2() {
   //   // insetScale: .95,
   // })
 
-  group001.createSubIslands({
+  group001?.createSubIslands({
     direction: Direction.All,
     filter: shader7,
-    insetScale: 1,
+    insetScale: .7,
     // insetScale: .95,
   })
 
@@ -603,18 +603,18 @@ function gridTests2() {
   //MARK: group002
 
   group002?.createSubIslands({
-    // direction: Direction.All,
+    direction: Direction.All,
     filter: shader2,
     // insetScale: .2,
     insetScale: .7,
   })
 
-  group002?.createSubIslands({
-    direction: Direction.Horizontal,
-    filter: shader2,
-    insetScale: .4,
-    // insetScale: .6,
-  })
+  // group002?.createSubIslands({
+  //   direction: Direction.Vertical,
+  //   filter: shader2,
+  //   insetScale: .2,
+  //   // insetScale: .6,
+  // })
 
 
   // group002?.createSubIslands({
@@ -682,10 +682,10 @@ function gridTests2() {
   // })
 
   group003?.createSubIslands({
-    // direction: Direction.All,
+    direction: Direction.All,
     filter: shader0,
     // insetScale: .25,
-    insetScale: 1,
+    insetScale: .8,
   })
 
   // group003?.createSubIslands({

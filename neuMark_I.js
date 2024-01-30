@@ -316,7 +316,7 @@ p5.Element.prototype.boxShadow = function (value) {
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = 45, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
+  static shadVect(angle = 15, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
   static maxComponent(vector = this.shadVect()) {
     return vector.y
     // return max(this.x, this.y)
