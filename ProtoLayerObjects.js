@@ -720,6 +720,7 @@ class Grid extends ProtoLayer {
   get rowCount() { return this.gridCellBounds.rowCount }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
+  get cellAspect() { return this.cellSize.aspect }
   get minCellWidth() { return min(this.cellSize.x, this.cellSize.y) }
   get cells() { return this.cellRows.flat() }
   get cellColumns() { return this.cellRowsFlipped() }
@@ -860,13 +861,14 @@ class Grid extends ProtoLayer {
   }
   //METH: 
   exposedDirections({ cellIndex, groupID, islandID } = {}) {
+    const dirs = Direction.All.directions
     if (groupID) {
-      return Direction.All.directions.filter(e => !this.neighborIsInGroup(cellIndex, e, groupID))
+      return dirs.filter(e => !this.neighborIsInGroup(cellIndex, e, groupID))
     }
     if (islandID) {
-      return Direction.All.directions.filter(e => !this.neighborIsInIsland(cellIndex, e, islandID))
+      return dirs.filter(e => !this.neighborIsInIsland(cellIndex, e, islandID))
     }
-    return Direction.All.directions.filter(e => !this.neighborIsAvailable(cellIndex, e))
+    return dirs.filter(e => !this.neighborIsAvailable(cellIndex, e))
   }
   //METH: 
   //TODO: add sort??
@@ -884,30 +886,31 @@ class Grid extends ProtoLayer {
       .map(f => this.cellAt(cellIndex).corner(f))
     // .gridVertSorted
   }
-  //METH: 
-  cellIsIsolated({ cellIndex, groupID, islandID, directions = Direction.Cardinal.directions } = {}) {
-    return this.exposedDirections({ cellIndex, groupID, islandID }).includesMany(directions, ['value'])
+  //METH: cellIsIsolated() : 
+  cellIsIsolated({ cellIndex, groupID, islandID, direction = Direction.Cardinal } = {}) {
+    return this.exposedDirections({ cellIndex, groupID, islandID }).includesMany(direction.directions, ['value'])
   }
   //METH: 
-  vertNormals({ cellIndex, groupID, islandID, directions = Direction.Ordinal.directions } = {}) {
-    return directions.map(e => {
-      const adj = OpArray.from(e.adjacents.directions)
-      const exposed = OpArray.from(this.exposedDirections({ cellIndex: cellIndex, groupID: groupID, islandID: islandID }))
-      const exposedAdj = adj.intersect(exposed, ['value'])
-      const exposedDirect = exposed.some(f => f.value === e.value)
+  //TODO: DEPRECATED : unused
+  // vertNormals({ cellIndex, groupID, islandID, direction = Direction.Ordinal } = {}) {
+  //   return direction.directions.map(e => {
+  //     const adj = OpArray.from(e.adjacents.directions)
+  //     const exposed = OpArray.from(this.exposedDirections({ cellIndex: cellIndex, groupID: groupID, islandID: islandID }))
+  //     const exposedAdj = adj.intersect(exposed, ['value'])
+  //     const exposedDirect = exposed.some(f => f.value === e.value)
 
-      if (exposedDirect) {
-        if (exposedAdj.length === 1) { return exposedAdj[0] }
-      } else {
-        if (exposedAdj.length === 1) {
-          if (exposedAdj[0].value === adj[0].value) {
-            return adj[0].previous()
-          } else { return adj[1].next() }
-        }
-      }
-      return e
-    })
-  }
+  //     if (exposedDirect) {
+  //       if (exposedAdj.length === 1) { return exposedAdj[0] }
+  //     } else {
+  //       if (exposedAdj.length === 1) {
+  //         if (exposedAdj[0].value === adj[0].value) {
+  //           return adj[0].previous()
+  //         } else { return adj[1].next() }
+  //       }
+  //     }
+  //     return e
+  //   })
+  // }
   //METH: 
   neighbors(cellIndex) { return Direction.All.directions.map(e => this.neighbor(cellIndex, e)) }
   //METH: 
@@ -982,8 +985,8 @@ class Grid extends ProtoLayer {
     return selection
   }
   //METH: 
-  validNeighbors({ selection = this.cells, bounds = this.cellBounds(), directions = Direction.All.directions } = {}) {
-    let cells = OpArray.from(new Set(selection.flatMap(e => e.validNeighborsCoords(directions, bounds))))
+  validNeighbors({ selection = this.cells, bounds = this.cellBounds(), direction = Direction.All } = {}) {
+    let cells = OpArray.from(new Set(selection.flatMap(e => e.validNeighborsCoords(direction, bounds))))
     console.log(`validNeighbors selection`, selection.map(c => c.id))
     console.log(`validNeighbors cells`, cells.map(c => c.id))
     cells = cells
@@ -1006,10 +1009,15 @@ class Grid extends ProtoLayer {
       .gridVertSorted // sort by y, x 
   }
   //METH: 
-  allVertNormals({ selection, groupID, islandID } = {}) {
-    return selection
-      .flatMap(e => this.vertNormals({ cellIndex: e, groupID: groupID, islandID: islandID }))
-    // .sort()
+  //TODO: DEPRECATE : unused
+  // allVertNormals({ selection, groupID, islandID } = {}) {
+  //   return selection
+  //     .flatMap(e => this.vertNormals({ cellIndex: e, groupID: groupID, islandID: islandID }))
+  //   // .sort()
+  // }
+  //METH: 
+  ordinalCorners({ selection = this.cells, groupID, islandID } = {}) {
+    let ordinals = selection.filter()
   }
   // #endregion
   // MARK: createIslands Method
@@ -1076,7 +1084,7 @@ class Grid extends ProtoLayer {
           let current = fillstack.pop()
           if (current.islandChecked) { continue }
           console.warn(`current cell: ${current.id}`)
-          let neighbors = this.validNeighbors({ selection: [current], bounds: bounds, directions: direction.directions })
+          let neighbors = this.validNeighbors({ selection: [current], bounds: bounds, direction: direction })
           console.log(`validNeighbors-neighbors`, neighbors.map(c => c.id))
           neighbors = neighbors
             .filter(e => !e.islandChecked)
@@ -1149,7 +1157,6 @@ class Grid extends ProtoLayer {
     if (stored) {
       this.updateCells()
     }
-    //FIXME: filter Islands the isPerimeter === false, only creating shapes for non-perimeters
     tempIslands.forEach(isle => {
       this.updateCells({ island: isle })
       isle.createShape()
@@ -1170,8 +1177,34 @@ class Grid extends ProtoLayer {
     this.groups.forEach(g => g.createSimpleSubShapes())
     console.groupEnd()
   }
-  //METH: drawShapes()
-  drawShapes() { this.shapes.forEach(s => s.drawElement()) }
+  //TODO: DEPRECATE
+  // //METH: drawShapes()
+  // drawShapes() { this.shapes.forEach(s => s.drawElement()) }
+
+  //METH: createCubicCorners
+  createCubicCorners(subShapes) {
+    //FUNC: sortCorners()
+    const sortCorners = (subShapes) => {
+      return subShapes
+        .flat()
+        .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+    }
+
+    let corners = sortCorners(subShapes)
+    console.log(`sorted Corners`, corners)
+    let outsideCorners = new OpArray
+    while (corners.length > 0) {
+      let seg = corners[0]
+      seg = seg.hasCubicStartVert ? seg : seg.neighbors.start
+      const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
+      seg.addDistancedEndCornerVerts(radius)
+      if (seg.turns.end.isRight) { outsideCorners.push(seg) }
+      corners = sortCorners(subShapes)
+    }
+    return outsideCorners
+  }
 
   //MARK: CUSTOMIZE SHAPES
   //METH:
@@ -1533,27 +1566,31 @@ class Grid extends ProtoLayer {
       }
     }
 
-    //FUNC: sortCorners()
-    const sortCorners = () => {
-      return this.allSimpleSubShapes
-        .flat()
-        .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-    }
+
 
     //FUNC: createCorners()
-    const createCorners = () => {
-      let corners = sortCorners()
-      // console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
-      while (corners.length > 0) {
-        let seg = corners[0]
-        seg = seg.hasCubicStartVert ? seg : seg.neighbors.start
-        const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
-        seg.addDistancedEndCornerVerts(radius)
-        if (seg.turns.end.isRight) { wrapOutsideCorners(seg) }
-        corners = sortCorners()
-      }
+    const createCorners = (subShapes) => {
+      // //FUNC: sortCorners()
+      // const sortCorners = (subShapes) => {
+      //   return subShapes
+      //     .flat()
+      //     .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+      //     .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+      //     .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+      // }
+
+      // let corners = sortCorners(subShapes)
+      // // console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
+      // while (corners.length > 0) {
+      //   let seg = corners[0]
+      //   seg = seg.hasCubicStartVert ? seg : seg.neighbors.start
+      //   const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
+      //   seg.addDistancedEndCornerVerts(radius)
+      const oustideCorners = this.createCubicCorners(subShapes)
+      oustideCorners.forEach(seg => wrapOutsideCorners(seg))
+      // if (seg.turns.end.isRight) { wrapOutsideCorners(seg) }
+      //   corners = sortCorners(subShapes)
+      // }
     }
 
     //FUNC: finish()
@@ -1569,7 +1606,7 @@ class Grid extends ProtoLayer {
     createQuadShapes(0)
     createUTurnOuts()
     // createStairs()
-    createCorners()
+    createCorners(this.allSimpleSubShapes)
     finish()
 
     // console.log(`currentSimples`, sortedSimples().map(s => s.id))
@@ -1799,7 +1836,7 @@ class Grid extends ProtoLayer {
     }
     while (amount > 0) {
       if (selection.length > 0) {
-        const outline = this.validNeighbors({ selection: selection, directions: direction.directions })
+        const outline = this.validNeighbors({ selection: selection, direction: direction })
           .filter(cell => cell.available)
         if (newGroup === true) { group = undefined } //allow assign to create new group
         if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
@@ -1827,7 +1864,7 @@ class Grid extends ProtoLayer {
     let newSelection = new OpArray
     while (amount > 0) {
       if (selection.length > 0) {
-        const outline = this.validNeighbors({ selection: selection, directions: direction.directions })
+        const outline = this.validNeighbors({ selection: selection, direction: direction })
         // console.log('temp outline', outline)
         newSelection.push(...outline)
         selection = newSelection.sort((a, b) => a.index - b.index)
@@ -1846,9 +1883,8 @@ class Grid extends ProtoLayer {
     if (amount < 1) { return new OpArray }
     // console.log('inline amount', amount)
     const bounds = this.cellBounds()
-    const directions = direction.directions
     let inlineEdges = new OpArray //store edge rows/columns/corners that can't be outlined, to be inlined
-    directions.forEach(dir => {
+    direction.directions.forEach(dir => {
       const name = dir.names[0]
       // console.log('direction name', name)
       if (dir.isOrdinal) {
@@ -2280,8 +2316,8 @@ class CellGroup extends ProtoLayer {
   //METH:
   exposedCorners(cellIndex) { return this.grid.exposedCorners({ cellIndex: cellIndex, groupID: this.id }) }
   //METH:
-  cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
-    this.grid.cellIsIsolated({ cellIndex: cellIndex, groupID: this.id, directions: directions })
+  cellIsIsolated(cellIndex, direction = Direction.Cardinal) {
+    this.grid.cellIsIsolated({ cellIndex: cellIndex, groupID: this.id, direction: direction })
   }
   // #endregion
 }
@@ -2320,6 +2356,31 @@ class Cell extends ProtoLayer {
   get boundsRect() { }
   get anchor() { return this.grid.cellAnchor(this.coords.x, this.coords.y) }
   get size() { return this.grid.cellSize }
+  get aspect() { return this.size.aspect }
+  get minRadius() { return min(this.size.x, this.size.y) / 2 }
+
+  get arcOrigins() { // origins for arcs when rect is given max rounded corners
+    let start, end
+    if (this.aspect.isSquare) {
+      start = this.center
+      end = this.center
+    }
+    if (this.aspect.isPortrait) {
+      const x = this.center.x
+      const yStart = this.anchor.y + this.minRadius
+      const yEnd = this.anchor.y + this.size.y - this.minRadius
+      start = vert(x, yStart)
+      end = vert(x, yEnd)
+    }
+    if (this.aspect.isLandscape) {
+      const y = this.center.y
+      const xStart = this.anchor.x + this.minRadius
+      const xEnd = this.anchor.x + this.size.x - this.minRadius
+      start = vert(xStart, y)
+      end = vert(xEnd, y)
+    }
+    return { start: start, end: end }
+  }
 
   get look() {
     const clear = SVGLook.clear
@@ -2345,7 +2406,7 @@ class Cell extends ProtoLayer {
   get hasACorner() { return this.segments.some(seg => seg.isCorner) }
   get hasAFlat() { return this.segments.some(seg => seg.isFlat) }
 
-  get cardinalNeighbors() { return this.allNeighborsCoords(Direction.Cardinal.directions) }
+  get cardinalNeighbors() { return this.allNeighborsCoords(Direction.Cardinal) }
   get neighborSegments() {
     const cell = this.grid.neighbor(this.index, Direction.Right)
     return cell?.segments
@@ -2356,12 +2417,12 @@ class Cell extends ProtoLayer {
   //METH:
   neighborCoords(direction) { return Vertex.add(this.coords, direction.moveCoord) }
   //METH:
-  allNeighborsCoords(directions = Direction.All.directions) {
-    return directions.map(e => this.neighborCoords(e))
+  allNeighborsCoords(direction = Direction.All) {
+    return direction.directions.map(e => this.neighborCoords(e))
   }
   //METH:
-  validNeighborsCoords(directions = Direction.All.directions, bounds = this.grid.cellBounds,) {
-    return this.allNeighborsCoords(directions).filter(e => this.grid.coordsAreInBounds(e.x, e.y, bounds))
+  validNeighborsCoords(direction = Direction.All, bounds = this.grid.cellBounds,) {
+    return this.allNeighborsCoords(direction).filter(e => this.grid.coordsAreInBounds(e.x, e.y, bounds))
   }
   //METH:
   neighborSegment(direction) {
@@ -2490,7 +2551,7 @@ class Island extends ProtoLayer {
   get cellCount() { return this.cells.length }
 
   get isSingle() {
-    return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index, Direction.All.directions))
+    return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index, Direction.All))
   }
   get isCardinalSingle() {
     return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index))
@@ -2499,15 +2560,15 @@ class Island extends ProtoLayer {
   get isOrdinalCapsule() { return this.cellCount === 2 && this.isOrdinal }
 
   get isHorizontal() {
-    return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Vertical.directions))
+    return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Vertical))
   }
   get isVertical() {
-    return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Horizontal.directions))
+    return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Horizontal))
   }
   get isLine() { return this.isSingle || this.isHorizontal || this.isVertical }
   get isCardinal() {
     return !this.isSingle
-      && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Ordinal.directions))
+      && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Ordinal))
   }
   get isOrdinal() { return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index)) }
 
@@ -2521,6 +2582,10 @@ class Island extends ProtoLayer {
   }
   get exposedCorners() {
     return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
+  }
+
+  get ordinalCells() {
+    return this.cells.filter(c => this.cellIsIsolated(c.index, Direction.Ordinal))
   }
   // #endregion
   // MARK: Methods
@@ -2583,11 +2648,24 @@ class Island extends ProtoLayer {
           insetScale: insetScale,
           drawFilter: drawFilter,
         })
-        subIslands?.forEach(i => i.createSimpleSubShapes()) // must create SimpleSubShapes for new Islands
+        // if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {
+        subIslands?.forEach(i => {
+          i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
+          i.shapes.forEach(shape => {
+            console.log(shape.simpleSubShapes)
+            this.grid.createCubicCorners(shape.simpleSubShapes)
+            shape.drawElement()
+          })
+        })
+        // }
+
+
+
         //FIXME: // need to process subIslands like we do quadProcessing in customizeShapes
       }
     }
     this.subIslands = subIslands
+    // this.subIslands.forEach(i => i.drawShapes())
     console.log(`new subIslands: `, subIslands)
     console.groupEnd()
     // console.log(`new subShapes`, subIslands.map(isle => isle.shapes.map(shape => shape)))
@@ -2629,7 +2707,8 @@ class Island extends ProtoLayer {
     loft,
     shapes = this.shapes,
     absolute = false,
-    padding = 0.1 } = {}) {
+    padding = 0.2
+  } = {}) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
     if (shapes.every(s => s.simpleSubShapes.isEmpty)) {
       console.error(`cannot recalcdCells because shape has no simpleSubShapes`)
@@ -2660,8 +2739,11 @@ class Island extends ProtoLayer {
       shapeCorners.forEach(seg => {
         //FIXME: it appears that arcRadius is not correct
         const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
+        const cornerPos = seg.corners.start // position of normalCorner
         const neighbor = seg.neighbors.start
         //NOTE: arcRadius: only correct if corner is circular arc and cell aspect is square
+        //FIXME: try to fix bug when trying to create hierarchy 0/1 subIslands on non-square celled grids 
+        //FIXME: issue may be in usage of cell.center as this assumes cells to be square
         const arcRadius = min(seg.availableStartLength, neighbor.availableEndLength)
         const startCorner = neighbor.finalCubicEndVert// startCorner of arc
         const normalCorner = seg.start // normal pointer of arc
@@ -2669,28 +2751,57 @@ class Island extends ProtoLayer {
         const origin = Vertex.add(startCorner, segment(normalCorner, endCorner).lineVector)// origin of arc
         const squareVerts = OpArray.from([startCorner, normalCorner, endCorner, origin]).gridVertSorted
         console.log(`squareVerts`, squareVerts)
-        let cornerCells = this.grid.cells.filter(cell => // find cells within arc square
-          cell.center.x > squareVerts[0].x
-          && cell.center.y > squareVerts[0].y
-          && cell.center.x < squareVerts[3].x
-          && cell.center.y < squareVerts[3].y
-        )
+
+        const cellOrigin = (cell, remove = true) => {
+          // console.warn(`arcOrigins`, cell.arcOrigins)
+          if (cell.aspect.isPortrait) {   // isPortrait
+            if (remove) {
+              return cornerPos.isUp ? cell.arcOrigins.start : cell.arcOrigins.end
+            } else {
+              return cornerPos.isDown ? cell.arcOrigins.start : cell.arcOrigins.end
+            }
+          }
+          if (cell.aspect.isLandscape) {  // isLandscape
+            if (remove) {
+              return cornerPos.isLeft ? cell.arcOrigins.start : cell.arcOrigins.end
+            } else {
+              return cornerPos.isRight ? cell.arcOrigins.start : cell.arcOrigins.end
+            }
+          }
+          return cell.center              // isSquare
+        }
+
+
+        let cornerCells = this.grid.cells.filter(cell => {// find cells within arc square
+          const origin = cell.center
+          // const origin = cellOrigin(cell)
+          // console.log(`${cell.id}: cellCenter: ${cell.center.string}, origin: ${origin.string}, squareVerts: `, [squareVerts[0].string, squareVerts[2].string])
+          return origin.x > squareVerts[0].x
+            && origin.y > squareVerts[0].y
+            && origin.x < squareVerts[3].x
+            && origin.y < squareVerts[3].y
+        })
         console.log(`cornerCells`, cornerCells.map(c => c.id))
-        //FIXME: cellRadius should be replaced with something that takes insetScale into account
+
+
+
         if (isOutsideCorner) {
           cornerCells.forEach(cell => {
-            const length = segment(origin, cell.center).length + cellRadius * (newInsetScale + padding)
-            console.log(`${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
+            const length = segment(origin, cellOrigin(cell)).length + cellRadius * (newInsetScale + padding)
+            console.log(`rem ${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
             if (length > arcRadius) { removeCells.push(cell) }
           })
         } else {
           cornerCells.forEach(cell => {
-            const length = segment(origin, cell.center).length - cellRadius * (newInsetScale + padding)
+            const length = segment(origin, cellOrigin(cell, false)).length - cellRadius * (newInsetScale + padding)
+            console.log(`add ${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
             if (length > arcRadius) { addCells.push(cell) }
           })
         }
 
       })
+      addCells = addCells.unique([`id`]).gridVertSorted
+      removeCells = removeCells.unique([`id`]).gridVertSorted
       let newCells = this.cells
         .union(addCells, 'id')
         .exclude(removeCells, 'id')
@@ -2704,9 +2815,11 @@ class Island extends ProtoLayer {
     }
 
   }
-  //METH:
-
-  //METH:
+  //METH: drawShapes()
+  drawShapes() {
+    this.shapes.forEach(s => s.drawElement())
+  }
+  //METH: createShape()
   createShape(insetScale) {
     console.log(`createShape for ${this.id}, insetScale`, insetScale)
     let segments = OpArray.format(this.exposedSegments)
@@ -2802,6 +2915,7 @@ class Island extends ProtoLayer {
     })
     // this.shape = thisShape
     this.shapes.push(thisShape)
+    // this.drawElement()
     // print(`END Shape Test`)
   }
   //METH: hierarchyFrom(direction) : hierarchy weight used to prevent overlaps in island stacks
@@ -2819,8 +2933,8 @@ class Island extends ProtoLayer {
     console.groupEnd()
   }
   //METH:
-  cellIsIsolated(cellIndex, directions = Direction.Cardinal.directions) {
-    return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, directions: directions })
+  cellIsIsolated(cellIndex, direction = Direction.Cardinal) {
+    return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, direction: direction })
   }
   //METH:
   exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, islandID: this.id }) }
@@ -2996,7 +3110,7 @@ class Shape extends ProtoLayer {
     this.simpleSubShapes = this.subShapes.map(sub =>
       SegPath.refine(sub, this.id, this.island.perimeterType === 'minCorners')
     )
-    this.drawElement()
+    // this.drawElement()
     // console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
@@ -3049,7 +3163,14 @@ class Shape extends ProtoLayer {
 
   //METH:
   drawElement() {
-    // console.log('drawElement: ', this.id, this)
+    console.group()
+    console.error('drawElement: ', this.id, this)
+    console.log(`simpleSubShapes`, this.simpleSubShapes[0])
+    console.log(`simpleSubShape hasCubicVerts?`, this.simpleSubShapes[0]?.map(seg => seg.hasBothCubicVerts))
+    console.log(this.simpleSubShapes[0]?.map(seg => seg.string))
+    console.log(`cubicStart`, this.simpleSubShapes[0]?.map(seg => seg.closestCubicStartVert?.string))
+    console.log(`cubicEnd`, this.simpleSubShapes[0]?.map(seg => seg.closestCubicEndVert?.string))
+
     const path = createSVGElt('path')
     // console.log(this.filter.id)
 
@@ -3144,6 +3265,7 @@ class Shape extends ProtoLayer {
     // print(this)
     // print(this.size)
     // print(this.insetSize)
+    console.groupEnd()
   }
   //METH:
   testDrawVerts() {
