@@ -726,10 +726,10 @@ class Grid extends ProtoLayer {
   get cellColumns() { return this.cellRowsFlipped() }
   get availableCells() { return this.cells.filter(cell => cell.available) }
   get takenCells() { return this.cells.filter(cell => cell.taken) }
-  get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }
+  get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }                // UNUSED
   get isFull() { return this.availableCells.length === 0 }
   get lastGroup() { return this.groups.last() }
-  get biggestGroup() {
+  get biggestGroup() {                                                                         // UNUSED
     return this.groups.reduce((max, grp) => {
       if (grp.cells.length > max.cells.length) { return grp }
       else { return max }
@@ -751,7 +751,7 @@ class Grid extends ProtoLayer {
   // MARK: Geometry Methods
   // #region Geometry Methods
   //METH:
-  cellNamed(id) { return this.cells.find(c => c.id = id) }
+  cellNamed(id) { return this.cells.find(c => c.id = id) }                                     // UNUSED
   //METH: 
   cellAnchor(x, y) { return Vertex.mult(this.cellSize, vert(x, y)).add(this.insetAnchor) }
   //METH: 
@@ -778,15 +778,15 @@ class Grid extends ProtoLayer {
   //METH: 
   cellAt(cellIndex) { return this.cells.find(e => e.index === cellIndex) }
   //METH: 
-  rowContaining(cellIndex) { return this.cellRows[this.coords(cellIndex).y] }
+  rowContaining(cellIndex) { return this.cellRows[this.coords(cellIndex).y] }                 // UNUSED
   //METH: 
-  columnContaining(cellIndex) { return this.cellColumns[this.coords(cellIndex).x] }
+  columnContaining(cellIndex) { return this.cellColumns[this.coords(cellIndex).x] }           // UNUSED
   //METH: 
-  rowContains(rowIndex, cellIndex) { return this.coords(cellIndex).y === rowIndex }
+  rowContains(rowIndex, cellIndex) { return this.coords(cellIndex).y === rowIndex }           // UNUSED
   //METH: 
-  columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }
+  columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }  // UNUSED
   //METH:
-  cellIsInAnIsland(cellIndex) {
+  cellIsInAnIsland(cellIndex) {                                                               // UNUSED (caller)
     return this.islands.some(isle => isle.cells.some(cell => cell.index === cellIndex))
   }
   //METH: 
@@ -834,13 +834,15 @@ class Grid extends ProtoLayer {
   cellSpanBetween(indexA, indexB) { return this.cellSpanRowsBetween(indexA, indexB).flat() }
   //METH: neighbor() : Cell : find neighbor cell by direction
   neighbor(cellIndex, direction) {
+    console.log(`Grid.neighbor: ${cellIndex}, ${direction.vals}`)
     let coords = this.cellAt(cellIndex).neighborCoords(direction) // get neighbor coords
-    if (this.coordsAreInGrid(coords.x, coords.y)) {               // verify coords are inside grid
+    if (this.coordsAreInGrid(coords?.x, coords?.y)) {               // verify coords are inside grid
       return this.cells.find(e => e.coords.equals(coords))
-    } else { return }
+    }
   }
   //METH: #neighborIs() : BOOL : if certain neighbor is available, in certain island, or in certain group
   #neighborIs({ cellIndex, direction, groupID, islandID } = {}) {
+    console.log(`#neighborIs: ${direction.vals}`)
     let neighbor = this.neighbor(cellIndex, direction)        // find neighbor 
     if (neighbor) {
       if (groupID) { return neighbor.groupID === groupID }     // test group membership
@@ -917,12 +919,17 @@ class Grid extends ProtoLayer {
   //     return e
   //   })
   // }
-  //METH: 
-  neighbors(cellIndex) { return Direction.All.directions.map(e => this.neighbor(cellIndex, e)) }
-  //METH: 
-  availableNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(e => e.available) }
-  //METH: 
-  takenNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(e => e.taken) }
+  //METH: neighbors() : [Cell]
+  neighbors(cellIndex) { return Direction.All.directions.map(dir => this.neighbor(cellIndex, dir)) }
+  //METH: availableNeighbors() : [Cell]
+  availableNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.available) }       // UNUSED
+  //METH: takenNeighbors() : [Cell]
+  takenNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.taken) }               // UNUSED
+  //METH: ordinalNeghbors() : [Cell]
+  ordinalNeighbors(cellIndex) {                                                                           // UNUSED
+    return Direction.Ordinal.directions.map(dir => this.neighbor(cellIndex, dir))
+  }
+
   // #endregion
   // MARK: Selection Methods
   // #region Selection Methods
@@ -945,17 +952,8 @@ class Grid extends ProtoLayer {
     }
     return OpArray.from(rows.values())
   }
-  //FIXME: this method doesn't work, fix or deprecate if unnecessary
-  //METH: ensure a selection is 2D array
-  ensure2D(selection) {
-    if (selection.is2d) {
-      return selection
-    } else {
-      return this.toCellRows(selection)
-    }
-  }
   //METH: randomly transforms a 1D or 2D selection array into a 2D CellRows array
-  randTransformedCells(selection) {
+  randTransformedCells(selection) {                                                                 // UNUSED
     return this.transformedCellRows({
       selection: selection,
       start: R.random_int(0, 3),
@@ -1021,9 +1019,29 @@ class Grid extends ProtoLayer {
   //     .flatMap(e => this.vertNormals({ cellIndex: e, groupID: groupID, islandID: islandID }))
   //   // .sort()
   // }
-  //METH: 
+  //FIXME: FINISH THIS IMPLEMENTATION!! Apply it to Island.allToCardinalCopy() for use in createSubIslands()
+  //METH: ordinalConnectedCells() : [Cell] : find all ordinally connected cells in a selection
   ordinalConnectedCells({ selection = this.cells, groupID, islandID } = {}) {
-    let ordinals = selection.filter()
+    //FUNC: ordinalNeighbors()  : find ordinally connected neighbors of a cell
+    const ordinalNeighbors = (cell) => {
+      let validOrdinals = new OpArray
+      Direction.Ordinal.directions.forEach(dir => {
+        // console.log(`Grid.ordinalNeighbors: ${dir.vals}, `, dir.adjacents.directions)
+        const neighbor = this.neighborIsInIsland(cell.index, dir, islandID)
+        const adjacents = dir.adjacents.directions.map(adjDir => this.neighborIsInIsland(cell.index, adjDir, islandID))
+        console.warn(`ordinalConnectedCells: neighbor: ${neighbor.id}, adjacents:${adjacents?.map(c => c.id)}}`)
+        if (neighbor && adjacents.every(adj => !adj)) { validOrdinals.push(this.neighbor(cell.index, dir)) }
+      })
+      return validOrdinals
+    }
+
+    let ordinals = selection
+      .map(cell => ordinalNeighbors(cell)) // get ordinalNeighbors of every cell in selection
+      .flat().unique(['id']) // flatten and reduce to unique
+      .intersect(selection, ['id']) // intersect with selection to find ordinal neighbors within selection
+    // if (groupID) { ordinals = ordinals.filter(cell => cell.groupID === groupID) } // filter group
+    // if (islandID) { ordinals = ordinals.filter(cell => cell.islandIDs.has(islandID)) } // filter island
+    return ordinals
   }
   // #endregion
   // MARK: createIslands Method
@@ -1935,7 +1953,6 @@ class Grid extends ProtoLayer {
     const isQuad = direction.equals(Direction.Cardinal) // Horizontal/Vertical = HALF, Cardinal = QUAD
     console.log('isQuad', isQuad)
     if (!selection.is2D) { selection = this.toCellRows(selection) }
-    // selection = this.ensure2D(selection) // ensure selection is 2D
     const bounds = this.cellBounds({ selection: selection }) // get cellBounds of selection
     console.log('bounds', bounds)
 
@@ -2406,7 +2423,7 @@ class Cell extends ProtoLayer {
   get x() { return this.coords.x }
   get y() { return this.coords.y }
   get taken() { return !this.available }
-  get isInAnIsland() { return this.grid.cellIsInAnIsland(this.index) }
+  get isInAnIsland() { return this.grid.cellIsInAnIsland(this.index) }                          // UNUSED
   get hasAUTurn() { return this.segments.some(seg => seg.isUTurn) }
   get hasAStair() { return this.segments.some(seg => seg.isStair) }
   get hasACorner() { return this.segments.some(seg => seg.isCorner) }
@@ -2424,7 +2441,7 @@ class Cell extends ProtoLayer {
   neighborCoords(direction) { return Vertex.add(this.coords, direction.moveCoord) }
   //METH:
   allNeighborsCoords(direction = Direction.All) {
-    return direction.directions.map(e => this.neighborCoords(e))
+    return direction.directions.map(dir => this.neighborCoords(dir)).compacted
   }
   //METH:
   validNeighborsCoords(direction = Direction.All, bounds = this.grid.cellBounds,) {
@@ -2590,8 +2607,8 @@ class Island extends ProtoLayer {
     return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
   }
 
-  get ordinalCells() {
-    return this.cells.filter(c => this.cellIsIsolated(c.index, Direction.Ordinal))
+  get ordinalConnectedCells() {
+    return this.grid.ordinalConnectedCells({ selection: this.cells, islandID: this.id })
   }
   // #endregion
   // MARK: Methods
@@ -2631,6 +2648,8 @@ class Island extends ProtoLayer {
       if (direction.isAll && insetScale < 0.75) { // ordinal corner connecters visually collapse with inset < 0.75
         console.error(`trying to create SubIslands with All and inset < 0.75. changing direction to Cardinal`)
         direction = Direction.Cardinal // downgrade newDirection to Cardinal to avoid collapse/overlap
+        const cellsToChange = this.ordinalConnectedCells
+        console.warn(`cellsToChange`, cellsToChange)
       }
       if (direction.equals(this.direction)) { // same direction: safest/fastest to copy Island and apply new inset
         console.log(`copying island ${this.id}`)
@@ -2948,7 +2967,7 @@ class Island extends ProtoLayer {
   // MARK: TODO Methods
   // #region TODO Methods
   //TODO: Finish Intergrids after submission
-  interGridClosure = (cell) => { this.grid.validNeighbors([cell], this.cellBounds, Direction.Cartesian).length === 3 }
+  interGridClosure = (cell) => { this.grid.validNeighbors({ selection: [cell], bounds: this.cellBounds, direction: Direction.Cartesian }).length === 3 }
   get canHaveInterGrid() {
     return this.grid.shrunkSelection(this.cells).length > 0
     // let cells = this.grid.shrunkSelection(this.cells)
