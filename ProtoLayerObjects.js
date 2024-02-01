@@ -8,6 +8,7 @@
 // MARK: ProtoLayer SuperClass
 
 // CLASS: ProtoLayer
+// SIZE: 239 lines
 class ProtoLayer {
   protoParent // ProtoLayer
   _type
@@ -251,6 +252,7 @@ class ProtoLayer {
 Object.assign(ProtoLayer.prototype, identifiableStored)
 
 // CLASS: Frame
+// SIZE: 112 lines
 class Frame extends ProtoLayer {
   bleed
   bleedRect
@@ -366,6 +368,7 @@ class Frame extends ProtoLayer {
 }
 
 // CLASS: SelectionBounds
+// SIZE: 320 lines
 class SelectionBounds {
   selection
   grid
@@ -688,6 +691,7 @@ class SelectionBounds {
 }
 
 // CLASS: Grid
+// SIZE: 1542 lines
 class Grid extends ProtoLayer {
   gridSize
   cellRows
@@ -834,15 +838,13 @@ class Grid extends ProtoLayer {
   cellSpanBetween(indexA, indexB) { return this.cellSpanRowsBetween(indexA, indexB).flat() }
   //METH: neighbor() : Cell : find neighbor cell by direction
   neighbor(cellIndex, direction) {
-    console.log(`Grid.neighbor: ${cellIndex}, ${direction.vals}`)
-    let coords = this.cellAt(cellIndex).neighborCoords(direction) // get neighbor coords
+    let coords = this.cellAt(cellIndex).neighborCoords(direction)   // get neighbor coords
     if (this.coordsAreInGrid(coords?.x, coords?.y)) {               // verify coords are inside grid
       return this.cells.find(e => e.coords.equals(coords))
     }
   }
   //METH: #neighborIs() : BOOL : if certain neighbor is available, in certain island, or in certain group
   #neighborIs({ cellIndex, direction, groupID, islandID } = {}) {
-    console.log(`#neighborIs: ${direction.vals}`)
     let neighbor = this.neighbor(cellIndex, direction)        // find neighbor 
     if (neighbor) {
       if (groupID) { return neighbor.groupID === groupID }     // test group membership
@@ -1019,30 +1021,30 @@ class Grid extends ProtoLayer {
   //     .flatMap(e => this.vertNormals({ cellIndex: e, groupID: groupID, islandID: islandID }))
   //   // .sort()
   // }
-  //FIXME: FINISH THIS IMPLEMENTATION!! Apply it to Island.allToCardinalCopy() for use in createSubIslands()
+  //FIXME: DEPRECATE: solved the allToCardinal copy issue with SegPath.cutAllToCardinal() instead
   //METH: ordinalConnectedCells() : [Cell] : find all ordinally connected cells in a selection
-  ordinalConnectedCells({ selection = this.cells, groupID, islandID } = {}) {
-    //FUNC: ordinalNeighbors()  : find ordinally connected neighbors of a cell
-    const ordinalNeighbors = (cell) => {
-      let validOrdinals = new OpArray
-      Direction.Ordinal.directions.forEach(dir => {
-        // console.log(`Grid.ordinalNeighbors: ${dir.vals}, `, dir.adjacents.directions)
-        const neighbor = this.neighborIsInIsland(cell.index, dir, islandID)
-        const adjacents = dir.adjacents.directions.map(adjDir => this.neighborIsInIsland(cell.index, adjDir, islandID))
-        console.warn(`ordinalConnectedCells: neighbor: ${neighbor.id}, adjacents:${adjacents?.map(c => c.id)}}`)
-        if (neighbor && adjacents.every(adj => !adj)) { validOrdinals.push(this.neighbor(cell.index, dir)) }
-      })
-      return validOrdinals
-    }
+  // ordinalConnectedCells({ selection = this.cells, groupID, islandID } = {}) {
+  //   //FUNC: ordinalNeighbors()  : find ordinally connected neighbors of a cell
+  //   const ordinalNeighbors = (cell) => {
+  //     let validOrdinals = new OpArray
+  //     Direction.Ordinal.directions.forEach(dir => {
+  //       // console.log(`Grid.ordinalNeighbors: ${dir.vals}, `, dir.adjacents.directions)
+  //       const neighbor = this.neighborIsInIsland(cell.index, dir, islandID)
+  //       const adjacents = dir.adjacents.directions.map(adjDir => this.neighborIsInIsland(cell.index, adjDir, islandID))
+  //       // console.warn(`ordinalConnectedCells: neighbor: ${neighbor.id}, adjacents:${adjacents?.map(c => c.id)}}`)
+  //       if (neighbor && adjacents.every(adj => !adj)) { validOrdinals.push(this.neighbor(cell.index, dir)) }
+  //     })
+  //     return validOrdinals
+  //   }
 
-    let ordinals = selection
-      .map(cell => ordinalNeighbors(cell)) // get ordinalNeighbors of every cell in selection
-      .flat().unique(['id']) // flatten and reduce to unique
-      .intersect(selection, ['id']) // intersect with selection to find ordinal neighbors within selection
-    // if (groupID) { ordinals = ordinals.filter(cell => cell.groupID === groupID) } // filter group
-    // if (islandID) { ordinals = ordinals.filter(cell => cell.islandIDs.has(islandID)) } // filter island
-    return ordinals
-  }
+  //   let ordinals = selection
+  //     .map(cell => ordinalNeighbors(cell)) // get ordinalNeighbors of every cell in selection
+  //     .flat().unique(['id']) // flatten and reduce to unique
+  //     .intersect(selection, ['id']) // intersect with selection to find ordinal neighbors within selection
+  //   // if (groupID) { ordinals = ordinals.filter(cell => cell.groupID === groupID) } // filter group
+  //   // if (islandID) { ordinals = ordinals.filter(cell => cell.islandIDs.has(islandID)) } // filter island
+  //   return ordinals
+  // }
   // #endregion
   // MARK: createIslands Method
   // #region createIslands Method
@@ -1611,6 +1613,7 @@ class Grid extends ProtoLayer {
       //   const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
       //   seg.addDistancedEndCornerVerts(radius)
       const oustideCorners = this.createCubicCorners(subShapes)
+      console.log(`outsideCorners`, oustideCorners)
       oustideCorners.forEach(seg => wrapOutsideCorners(seg))
       // if (seg.turns.end.isRight) { wrapOutsideCorners(seg) }
       //   corners = sortCorners(subShapes)
@@ -2234,6 +2237,7 @@ class Grid extends ProtoLayer {
 }
 
 // CLASS: CellGroup
+// SIZE: 109 lines
 class CellGroup extends ProtoLayer {
   perimeterType
   direction
@@ -2346,6 +2350,7 @@ class CellGroup extends ProtoLayer {
 }
 
 // CLASS: Cell
+// SIZE: 145 lines
 class Cell extends ProtoLayer {
   grid
   index
@@ -2494,6 +2499,7 @@ class Cell extends ProtoLayer {
 }
 
 // CLASS: Island
+// SIZE: 519 lines
 class Island extends ProtoLayer {
   grid
   groupID
@@ -2606,10 +2612,10 @@ class Island extends ProtoLayer {
   get exposedCorners() {
     return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
   }
-
-  get ordinalConnectedCells() {
-    return this.grid.ordinalConnectedCells({ selection: this.cells, islandID: this.id })
-  }
+  //TODO: DEPRECATED
+  // get ordinalConnectedCells() {
+  //   return this.grid.ordinalConnectedCells({ selection: this.cells, islandID: this.id })
+  // }
   // #endregion
   // MARK: Methods
   // #region Methods
@@ -2632,7 +2638,9 @@ class Island extends ProtoLayer {
     }
 
     let subIslands
-    if (this.allowsProtoErrors) { // create unprotected Island stacks with potential visual errors!!!
+    //FIXME: This appears to not be working at all!
+    // create unprotected Island stacks with potential visual errors!!!
+    if (this.allowsProtoErrors) {
       subIslands = this.grid.createIslands({
         islandID: this.id,
         direction: direction,
@@ -2640,30 +2648,42 @@ class Island extends ProtoLayer {
         insetScale: insetScale,
         drawFilter: drawFilter,
       })
-    } else { // protect Island stacking from visual errors
+    } else {
+      //MARK: Change new direction
+      // protect Island stacking from visual overlapping errors
       if (this.hierarchyFrom(direction) > this.directionHierarchy) { // new direction cannot be greater than current
         console.error(`trying to create SubIslands out of hierarchy. changing direction to "${this.direction.name}"`)
         direction = this.direction // downgrade newDirection to same as current Island
       }
-      if (direction.isAll && insetScale < 0.75) { // ordinal corner connecters visually collapse with inset < 0.75
+      // ordinal corner connecters visually collapse with inset < 0.75
+      if (direction.isAll && insetScale < 0.75) {
         console.error(`trying to create SubIslands with All and inset < 0.75. changing direction to Cardinal`)
-        direction = Direction.Cardinal // downgrade newDirection to Cardinal to avoid collapse/overlap
-        const cellsToChange = this.ordinalConnectedCells
-        console.warn(`cellsToChange`, cellsToChange)
+        direction = Direction.Cardinal // downgrade newDirection to Cardinal to avoid collapse/overlap 
       }
-      if (direction.equals(this.direction)) { // same direction: safest/fastest to copy Island and apply new inset
+
+      //MARK: Process new direction
+      // same direction: safest/fastest to copy Island and apply new inset
+      if (direction.equals(this.direction)) {
         console.log(`copying island ${this.id}`)
         // copy this island but change inset, set filter, set drawFilter
         const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
         // console.log(`created subIsland: `, subIsland)
         subIslands = OpArray.from([subIsland])
       }
-      if (this.hierarchyFrom(direction) < this.directionHierarchy) { // new direction needs new island creation
+      // new direction needs new island creation
+      if (this.hierarchyFrom(direction) < this.directionHierarchy) {
         console.warn(`creating ${this.id} subIslands with direction: ${direction.name}`)
-        let newCells
-        if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {// hierarchy > 1 curves can crop cells
+
+        if (this.direction.isAll && direction.isCardinal) {
+          const segsToChange = this.shapes
+            .map(shape => shape.simpleSubShapes.map(sub => SegPath.cutAllToCardinal(sub)))
+            .flat(2)
+          console.warn(`segsToChange`, segsToChange)
+        }
+
+        else if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {// hierarchy > 1 curves can crop cells
           console.log(`  triggering a recalcdCells on ${this.id}`)
-          newCells = this.recalcdCells({ newInsetScale: insetScale })
+          const newCells = this.recalcdCells({ newInsetScale: insetScale })
         }
         subIslands = this.grid.createIslands({ // create new Islands with new direction
           selection: newCells,
@@ -2673,7 +2693,6 @@ class Island extends ProtoLayer {
           insetScale: insetScale,
           drawFilter: drawFilter,
         })
-        // if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {
         subIslands?.forEach(i => {
           i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
           i.shapes.forEach(shape => {
@@ -2682,11 +2701,6 @@ class Island extends ProtoLayer {
             shape.drawElement()
           })
         })
-        // }
-
-
-
-        //FIXME: // need to process subIslands like we do quadProcessing in customizeShapes
       }
     }
     this.subIslands = subIslands
@@ -2701,6 +2715,7 @@ class Island extends ProtoLayer {
     filter = this.filter,
     drawFilter = this.drawFilter,
     protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
+    shapes,
   } = {}) {
     // console.log(`copying island`, this.id)
     const newIsland = new Island({
@@ -2717,7 +2732,17 @@ class Island extends ProtoLayer {
       stored: this.stored,
       drawFilter: drawFilter
     })
-    newIsland.shapes = this.shapes.map(s => s.copy({ insetScale: insetScale, protoParent: newIsland, island: newIsland }))
+
+    if (shapes) {
+      newIsland.shapes = shapes
+    } else {
+      newIsland.shapes = this.shapes.map(s => s.copy({
+        protoParent: newIsland,
+        island: newIsland,
+        insetScale: insetScale,
+      }))
+    }
+
     this.grid.updateCells({ island: newIsland })
     // console.log(`newIsland`, newIsland)
     return newIsland
@@ -2924,6 +2949,8 @@ class Island extends ProtoLayer {
         subShapes.push(subShape)
         if (subShapes.length === 1) { // re-sort inner subshapes for counter-clockwise processing
           segments = segments
+            //FIXME: test .counterGridVertSorted now that Segments have x and y, then remove custom sort below
+            // .counterGridVertSorted
             .sort((a, b) => a.start.y - b.start.y || b.start.x - a.start.x) // sort by y, -x 
         }
 
@@ -2964,6 +2991,7 @@ class Island extends ProtoLayer {
   //METH:
   exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, islandID: this.id }) }
   // #endregion
+
   // MARK: TODO Methods
   // #region TODO Methods
   //TODO: Finish Intergrids after submission
@@ -2994,6 +3022,7 @@ class Island extends ProtoLayer {
 }
 
 // CLASS: Shape
+// SIZE: 314 lines
 class Shape extends ProtoLayer {
   island
   subShapes
@@ -3151,11 +3180,12 @@ class Shape extends ProtoLayer {
     insetScale,
     protoParent,
     island,
+    simpleSubShapes = this.simpleSubShapes,
   } = {}) {
     const newShape = new Shape({
       // subShapes: this.subShapes.map(sub => sub.map(seg => seg.copy)),
       // finalSubShapes: this.finalSubShapes,
-      simpleSubShapes: this.simpleSubShapes,
+      simpleSubShapes: simpleSubShapes,
       protoParent: protoParent,
       svgParent: protoParent.svgParent,
       island: island,
