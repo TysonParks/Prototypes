@@ -22,6 +22,7 @@
 // NOTE: •Objects use 2 less characters per line and are likely more readable
 
 // FUNC: calculateFeatures
+// SIZE: 832 lines
 function calculateFeatures(token = tokenData) {
   let featureSet
 
@@ -864,6 +865,7 @@ function calculateFeatures(token = tokenData) {
 
 
 //MARK: UNUSED FEATURES
+// SIZE: 103 lines
 function unusedFeatures() {
   const lengths = {
     // MARK: Currently unused
@@ -969,8 +971,8 @@ function unusedFeatures() {
   ]
 }
 
-
 // MARK: DEPRECATE
+// SIZE: 61 lines
 // #region DEPRECATE
 
 // CLASS: GOpt : grammar options

@@ -1,4 +1,5 @@
 // CLASS: Store
+// SIZE: 36 lines
 class Store {
   constructor() {
     this.Frame = new ProtoStorage('frame', 1)
@@ -38,6 +39,7 @@ class Store {
 }
 
 // CLASS: ProtoStorage
+// SIZE: 43 lines
 class ProtoStorage {
   shortName
   #pad

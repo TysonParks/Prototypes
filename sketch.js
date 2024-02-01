@@ -65,7 +65,6 @@ function draw() {
 }
 
 
-
 // MARK: SETUP FUNCS
 // FUNC: sizeFrame()
 function sizeFrame() {
@@ -117,6 +116,8 @@ function setupBackground() {
   FRAME = new Frame(BG)
 }
 
+//CLASS: ProtoMill
+// SIZE: 134 lines
 class ProtoMill {
   grid
   minCellSize
@@ -287,7 +288,7 @@ function gridTests2() {
   const shader2 = createFilter().dropShadow(shadeStack2)
   // console.log('shadeStack2', shadeStack2)
 
-  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * -.2 * 4 })
+  const shadeStack3 = Shade.neuShadeSVGFactory({ mag: minCellSize * -.2 * 2 })
   const shader3 = createFilter().dropShadow(shadeStack3)
 
   const shadeStack4 = Shade.neuShadeSVGFactory({
@@ -604,7 +605,7 @@ function gridTests2() {
 
   group002?.createSubIslands({
     direction: Direction.All,
-    filter: shader2,
+    filter: shader3,
     // insetScale: .2,
     insetScale: .7,
   })
@@ -674,12 +675,12 @@ function gridTests2() {
   //   insetScale: 1,
   // })
 
-  // group003?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .25,
-  //   insetScale: .8,
-  // })
+  group003?.createSubIslands({
+    direction: Direction.All,
+    filter: shader2,
+    // insetScale: .25,
+    insetScale: .8,
+  })
 
   group003?.createSubIslands({
     direction: Direction.All,

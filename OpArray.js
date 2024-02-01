@@ -4,27 +4,8 @@
 //MARK: Constants
 const PI = Math.PI
 
-// CLASS: Set
-Set.prototype.equals = function (set, props) {
-  const thisArray = OpArray.from(this)
-  const thatArray = OpArray.from(set)
-  return thisArray.equals(thatArray, props)
-}
-
-// CLASS: Array
-// PROTOTYPE: Array extension last() function
-Array.prototype.last = function () {
-  return this[this.lastIndex]
-}
-
-// PROTOTYPE: Array extension 'lastIndex' property
-Object.defineProperty(Array.prototype, 'lastIndex', {
-  get: function () {
-    return this.length - 1
-  }
-})
-
 // CLASS: OpArray
+// SIZE: 296 lines
 class OpArray extends Array {
   constructor(...args) {
     super(...args)
@@ -56,7 +37,8 @@ class OpArray extends Array {
   get compacted() { return this.filter(e => e !== undefined && e !== null && e !== '') } // from lodash?
   get reversed() { return this.copy.reverse() }
   get numSorted() { return this.copy.sort((a, b) => a - b) }
-  get gridVertSorted() { return this.copy.sort((a, b) => a.y - b.y || a.x - b.x) } // sort by y then x values 
+  get gridVertSorted() { return this.copy.sort((a, b) => a.y - b.y || a.x - b.x) } // sort by y then x values
+  get counterGridVertSorted() { return this.copy.sort((a, b) => a.y - b.y || b.x - a.x) } // sort by y then -x values
 
   // MARK: 2D operations
   get is2D() {
@@ -128,16 +110,12 @@ class OpArray extends Array {
     }
   }
 
-
-
   // MARK: Key Value / Boolean
   kvMap(props) {
     if (this.isEmpty) { return new Map() }
     props = OpArray.format(props)
     let clean = this.compacted
     const kvArray = clean.map(el => {
-      // print(clean)
-      // print(props)
       const key = props.map(k => el[k]).join('-')
       return [key, el]
     })
@@ -220,7 +198,6 @@ class OpArray extends Array {
   }
 
   boolOp(vals, props, fn) {
-    // print('using boolOp')
     vals = OpArray.format(vals)
     props = OpArray.format(props)
     const isObjectArray = (this[0] instanceof Object)
@@ -234,11 +211,7 @@ class OpArray extends Array {
       a = this
       b = vals
     }
-    // print(kv)
-    // print(`a: ${a}, b: ${b}`)
-    // print(a, b)
     res = fn(a, b)
-    // print(res)
     if (typeof res === 'boolean') { return res }
     res.sort((a, b) => a - b)
     if (isObjectArray) {
@@ -331,42 +304,39 @@ class OpArray extends Array {
   }
 }
 
-//MARK: Object prototype extentions
-// NOTE: Made with GPT-4 April 17,2023
-// if (!Object.prototype.map) {
-//   Object.defineProperty(Object.prototype, 'map', {
-//     value: function (callback, thisArg) {
-//       const result = {}
-//       for (const key in this) {
-//         if (this.hasOwnProperty(key)) {
-//           result[key] = callback.call(thisArg, this[key], key, this)
-//         }
-//       }
-//       return result
-//     },
-//     enumerable: false
-//   })
-// }
+// CLASS: Array EXTENSIONS
+// SIZE: 13 lines
+// #region Array EXTENSIONS
+// PROTOTYPE: Array extension last() function
+Array.prototype.last = function () {
+  return this[this.lastIndex]
+}
 
+// PROTOTYPE: Array extension 'lastIndex' property
+Object.defineProperty(Array.prototype, 'lastIndex', {
+  get: function () {
+    return this.length - 1
+  }
+})
+// #endregion 
+
+// CLASS: Set EXTENSIONS
+// SIZE:  4 lines
+Set.prototype.equals = function (set, props) {
+  const thisArray = OpArray.from(this)
+  const thatArray = OpArray.from(set)
+  return thisArray.equals(thatArray, props)
+}
+
+// CLASS: Object EXTENSIONS
+// SIZE: 11 lines
+// PROTOTYPE: Object extension map() function
 Object.prototype.map = function (callback) {
   const result = {};
 
   for (const key in this) {
     if (this.hasOwnProperty(key)) {
       const mappedValue = callback(this[key], key, this);
-      result[key] = mappedValue;
-    }
-  }
-
-  return result;
-}
-
-function objectMap(obj, callback) {
-  const result = {};
-
-  for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      const mappedValue = callback(obj[key], key, obj);
       result[key] = mappedValue;
     }
   }

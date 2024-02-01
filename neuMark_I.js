@@ -2,6 +2,7 @@
 
 // TODO: after most work is complete check to see how many of these are actually used and clean where needed
 // CLASS: CS
+// SIZE: 33 lines
 class CS {
   static inset = 'inset'
   // static space = ' '
@@ -89,6 +90,7 @@ p5.Element.prototype.label = function (text, color, direction) {
 
 
 // CLASS: SVGLook
+// SIZE: 84 lines
 class SVGLook {
 
   static get blackAndWhite() {
@@ -177,6 +179,7 @@ class SVGLook {
 
 
 // CLASS: Look
+// SIZE: 
 class Look {
 
   static islandShape(path, color = randomColor().toString('#rrggbbaa')) {
@@ -313,6 +316,7 @@ p5.Element.prototype.boxShadow = function (value) {
 }
 
 // CLASS: Shade
+// SIZE: 163 lines
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
@@ -491,6 +495,7 @@ function protoColor() {
 }
 
 // CLASS: ProtoColor
+// SIZE: 68 lines
 class ProtoColor extends p5.Color {
   constructor(pInt, args) {
     super(pInt, args)

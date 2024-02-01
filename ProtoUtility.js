@@ -1,4 +1,5 @@
 // ENUM: Aspect
+// SIZE: 30 lines
 class Aspect {
   static Square = new Aspect(0)
   static Portrait = new Aspect(1)
@@ -32,6 +33,7 @@ class Aspect {
 }
 
 // ENUM: Corner
+// SIZE: 27 lines
 class Corner {
   static UpLeft = new Corner(0)
   static UpRight = new Corner(1)
@@ -62,6 +64,7 @@ class Corner {
 }
 
 // ENUM: Direction
+// SIZE: 231 lines
 class Direction {
 
   static None = new Direction()
@@ -296,6 +299,7 @@ class Direction {
 }
 
 // ENUM: Turn
+// SIZE: 58 lines
 class Turn {
   static Left = new Turn(-1)
   static Straight = new Turn(0)
@@ -357,6 +361,7 @@ class Turn {
 }
 
 // ENUM: EdgePart
+// SIZE: 102 lines
 class EdgePart {
   // static Flat = new EdgePart(0)     // SS
   // static Corner = new EdgePart(10)  // LS, RS, SL, SR
@@ -587,6 +592,7 @@ function equalsRoundedDec(num1, num2, decimalPlaces) {
 
 // TODO: consider the intersection with the DOM Range interface
 // CLASS: Range
+// SIZE: 27 lines
 function range(start = 0, end = 1) { return new Range(start, end) }
 class Range {
   constructor(start = 0, end = 1) {

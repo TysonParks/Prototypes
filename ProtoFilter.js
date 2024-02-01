@@ -1,142 +1,5 @@
-//PROTOTYPE: p5 extension createElementNS(namespaceURI, qualifiedName)
-p5.prototype.createElementNS = function (namespaceURI, qualifiedName) {
-  let elt = document.createElementNS(namespaceURI, qualifiedName)
-  return addElement(elt, this)
-}
-
-//PROTOTYPE: p5 extension createSVGElt(qualifiedName)
-p5.prototype.createSVGElt = function (qualifiedName = 'svg', layout) {
-  const elt = document.createElementNS(SVG.xmlns, qualifiedName)
-  const p5Element = addElement(elt, this)
-  if (layout) { p5Element.layout(layout) }
-  return p5Element
-}
-
-//PROTOTYPE: p5 extension createSVG(width, height)
-p5.prototype.createSVG = function (width, height) {
-  return svg = createSVGElt()
-    .attribute(SVG.width, `${width}`)
-    .attribute(SVG.height, `${height}`)
-}
-
-// NOTE: Created with GPT-4 on Fri Jan 13, 2024
-//PROTOTYPE: p5 extension createSVGText
-p5.prototype.createSVGText = function (content, x = 0, y = 0) {
-  const textElt = this.createSVGElt('text').html(content)
-  textElt.attribute('x', x)
-  textElt.attribute('y', y)
-  return textElt
-}
-// NOTE: Created with GPT-4 on Fri Jan 13, 2024
-//PROTOTYPE: p5.Element extension setText
-p5.Element.prototype.setText = function (content) {
-  if (this.type === 'svg' && this.elt.tagName === 'text') {
-    this.html(content)
-  }
-  return this
-}
-
-//PROTOTYPE: p5.Element extension addToClassList(newClass)
-p5.Element.prototype.addToClassList = function (newClass) {
-  // print(`addToClassList():`)
-  // print(newClass)
-  let newClasses
-  if (newClass instanceof Array) {
-    // print('newClass is a Array')
-    newClasses = OpArray.from(newClass)
-  }
-  if (typeof newClass === 'string') {
-    // print('newClass is a String')
-    newClasses = OpArray.from(newClass.split(' '))
-  } else {
-    // print('newClass is undefined')
-    return this
-  }
-  if (this.elt.classList.length > 0) {
-    const oldClasses = OpArray.from(this.elt.classList.value.split(' '))
-    this.elt.classList.value = oldClasses.union(newClasses).join(' ')
-  } else {
-    this.elt.classList.value = newClasses.join('')
-  }
-  return this
-}
-
-//PROTOTYPE: p5.Element extension layout(x, y, width, height)
-p5.Element.prototype.layout = function (x, y, width, height, padding = 0) {
-  if (arguments.length === 1) {
-    x = x.x
-    y = x.y
-    width = x.width
-    height = x.height
-  }
-  this
-    .attribute('x', x - padding)
-    .attribute('y', y - padding)
-    .attribute('width', width + padding * 2)
-    .attribute('height', height + padding * 2)
-  return this
-}
-//PROTOTYPE: p5.Element extension viewBox(x, y, width, height)
-p5.Element.prototype.viewBox = function (x, y, width, height, padding = 0) {
-  if (arguments.length === 1) {
-    x = x.x
-    y = x.y
-    width = x.width
-    height = x.height
-  }
-  this.attribute('viewBox', `${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`)
-  return this
-}
-
-// PROTOTYPE: p5.Element extension 'type' property
-Object.defineProperty(p5.Element.prototype, 'type', {
-  get: function () {
-    if (this.elt instanceof HTMLElement) {
-      return 'html'
-    } else if (this.elt instanceof SVGElement) {
-      return 'svg'
-    } else {
-      return 'unknown'
-    }
-  }
-})
-
-// PROTOTYPE: p5.Element extension 'p5Parent' property
-Object.defineProperty(p5.Element.prototype, 'p5Parent', {
-  get: function () {
-    const parentHTMLElement = this.parent()
-    return parentHTMLElement ? select('#' + parentHTMLElement.id) : null
-  }
-})
-
-
-
-//PROTOTYPE: p5.Element extension attributeNS(nameSpaceURI, attr, value)
-p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
-  //handling for checkboxes and radios to ensure options get
-  //attributes not divs
-  if (
-    this.elt.firstChild != null &&
-    (this.elt.firstChild.type === 'checkbox' ||
-      this.elt.firstChild.type === 'radio')
-  ) {
-    if (typeof value === 'undefined') {
-      return this.elt.firstChild.getAttributeNS(nameSpaceURI, attr)
-    } else {
-      for (let i = 0; i < this.elt.childNodes.length; i++) {
-        this.elt.childNodes[i].setAttributeNS(nameSpaceURI, attr, value)
-      }
-    }
-  } else if (typeof value === 'undefined') {
-    return this.elt.getAttributeNS(nameSpaceURI, attr)
-  } else {
-    this.elt.setAttributeNS(nameSpaceURI, attr, value)
-    return this
-  }
-}
-
-
 // ENUM: SVG
+// SIZE: 33 lines
 class SVG {
   static svg = `svg`
   static style = `style`
@@ -195,39 +58,13 @@ function addElement(elt, pInst, media) {
   return c
 }
 
-// NOTE: Created with GPT-4 on Fri Mar 24, 2023
-//PROTOTYPE: p5.Element extension blur(radius)
-p5.Element.prototype.blur = function (radius) {
-  const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
-  const [x, y, width, height] = viewBox
-  const padding = Math.ceil(radius * 3)
-  const newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' ')
-  const filterID = 'blur-' + Math.floor(Math.random() * 100000)
 
-  const filter = createSVGElt('filter')
-    .attribute('id', filterID)
-    .attribute('x', '-50%')
-    .attribute('y', '-50%')
-    .attribute('width', '200%')
-    .attribute('height', '200%')
-    .parent(this.parent())
-
-  createSVGElt('feGaussianBlur')
-    .attribute('in', 'SourceGraphic')
-    .attribute('stdDeviation', radius)
-    .parent(filter)
-
-  this.attribute('filter', `url(#${filterID})`)
-    .attribute('viewBox', newViewBox)
-
-  return this
-}
-
+//CLASS: ProtoFilter
+// SIZE: 355 lines
 function createFilter() {
   return new ProtoFilter()
 }
 
-//CLASS: ProtoFilter
 class ProtoFilter {
   filter
   defs
@@ -522,42 +359,8 @@ class ProtoFilter {
 Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides store,ID, and UID functionality
 
 
-//PROTOTYPE: p5.Element extension applyFilter(filterInstance, scale = 1)
-p5.Element.prototype.applyFilter = function (filterInstance, scale = 3, time = 0) {
-  if (filterInstance) { filterInstance.applyFilterToElement(this, scale, time) }
-  return this
-}
-
-//PROTOTYPE: p5.Element extension crossfadeElements(fromElement, toElement, duration, onComplete)
-p5.prototype.crossfadeElements = async function (fromElement, toElement, duration, onComplete) {
-  console.log('fromElement', fromElement)
-  console.log('toElement', toElement)
-  const startTime = performance.now()
-  const fromElementOpacity = parseFloat(fromElement.attribute("opacity") || "1")
-  const toElementOpacity = parseFloat(toElement.attribute("opacity") || "1")
-
-  const step = (timestamp) => {
-    const elapsed = timestamp - startTime
-    const progress = Math.min(elapsed / duration, 1)
-
-    fromElement.attribute("opacity", fromElementOpacity * (1 - progress))
-    toElement.attribute("opacity", toElementOpacity * progress)
-
-    if (progress < 1) {
-      requestAnimationFrame(step)
-    } else {
-      if (onComplete) {
-        onComplete()
-      }
-    }
-  }
-
-  requestAnimationFrame(step)
-}
-
-
-
 // CLASS: StrokeMaskFilter
+// SIZE: 77 lines
 class StrokeMaskFilter extends ProtoFilter {
   constructor() {
     super()
@@ -637,10 +440,211 @@ class StrokeMaskFilter extends ProtoFilter {
 
 }
 
+
+//CLASS: p5js EXTENSIONS
+// SIZE: 204 lines
+// #region p5js EXTENSIONS
+//PROTOTYPE: p5 extension createElementNS(namespaceURI, qualifiedName)
+p5.prototype.createElementNS = function (namespaceURI, qualifiedName) {
+  let elt = document.createElementNS(namespaceURI, qualifiedName)
+  return addElement(elt, this)
+}
+
+//PROTOTYPE: p5 extension createSVGElt(qualifiedName)
+p5.prototype.createSVGElt = function (qualifiedName = 'svg', layout) {
+  const elt = document.createElementNS(SVG.xmlns, qualifiedName)
+  const p5Element = addElement(elt, this)
+  if (layout) { p5Element.layout(layout) }
+  return p5Element
+}
+
+//PROTOTYPE: p5 extension createSVG(width, height)
+p5.prototype.createSVG = function (width, height) {
+  return svg = createSVGElt()
+    .attribute(SVG.width, `${width}`)
+    .attribute(SVG.height, `${height}`)
+}
+
+// NOTE: Created with GPT-4 on Fri Jan 13, 2024
+//PROTOTYPE: p5 extension createSVGText
+p5.prototype.createSVGText = function (content, x = 0, y = 0) {
+  const textElt = this.createSVGElt('text').html(content)
+  textElt.attribute('x', x)
+  textElt.attribute('y', y)
+  return textElt
+}
+// NOTE: Created with GPT-4 on Fri Jan 13, 2024
+//PROTOTYPE: p5.Element extension setText
+p5.Element.prototype.setText = function (content) {
+  if (this.type === 'svg' && this.elt.tagName === 'text') {
+    this.html(content)
+  }
+  return this
+}
+
+//PROTOTYPE: p5.Element extension addToClassList(newClass)
+p5.Element.prototype.addToClassList = function (newClass) {
+  // print(`addToClassList():`)
+  // print(newClass)
+  let newClasses
+  if (newClass instanceof Array) {
+    // print('newClass is a Array')
+    newClasses = OpArray.from(newClass)
+  }
+  if (typeof newClass === 'string') {
+    // print('newClass is a String')
+    newClasses = OpArray.from(newClass.split(' '))
+  } else {
+    // print('newClass is undefined')
+    return this
+  }
+  if (this.elt.classList.length > 0) {
+    const oldClasses = OpArray.from(this.elt.classList.value.split(' '))
+    this.elt.classList.value = oldClasses.union(newClasses).join(' ')
+  } else {
+    this.elt.classList.value = newClasses.join('')
+  }
+  return this
+}
+
+//PROTOTYPE: p5.Element extension layout(x, y, width, height)
+p5.Element.prototype.layout = function (x, y, width, height, padding = 0) {
+  if (arguments.length === 1) {
+    x = x.x
+    y = x.y
+    width = x.width
+    height = x.height
+  }
+  this
+    .attribute('x', x - padding)
+    .attribute('y', y - padding)
+    .attribute('width', width + padding * 2)
+    .attribute('height', height + padding * 2)
+  return this
+}
+//PROTOTYPE: p5.Element extension viewBox(x, y, width, height)
+p5.Element.prototype.viewBox = function (x, y, width, height, padding = 0) {
+  if (arguments.length === 1) {
+    x = x.x
+    y = x.y
+    width = x.width
+    height = x.height
+  }
+  this.attribute('viewBox', `${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`)
+  return this
+}
+
+// PROTOTYPE: p5.Element extension 'type' property
+Object.defineProperty(p5.Element.prototype, 'type', {
+  get: function () {
+    if (this.elt instanceof HTMLElement) {
+      return 'html'
+    } else if (this.elt instanceof SVGElement) {
+      return 'svg'
+    } else {
+      return 'unknown'
+    }
+  }
+})
+
+// PROTOTYPE: p5.Element extension 'p5Parent' property
+Object.defineProperty(p5.Element.prototype, 'p5Parent', {
+  get: function () {
+    const parentHTMLElement = this.parent()
+    return parentHTMLElement ? select('#' + parentHTMLElement.id) : null
+  }
+})
+
+//PROTOTYPE: p5.Element extension attributeNS(nameSpaceURI, attr, value)
+p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
+  //handling for checkboxes and radios to ensure options get
+  //attributes not divs
+  if (
+    this.elt.firstChild != null &&
+    (this.elt.firstChild.type === 'checkbox' ||
+      this.elt.firstChild.type === 'radio')
+  ) {
+    if (typeof value === 'undefined') {
+      return this.elt.firstChild.getAttributeNS(nameSpaceURI, attr)
+    } else {
+      for (let i = 0; i < this.elt.childNodes.length; i++) {
+        this.elt.childNodes[i].setAttributeNS(nameSpaceURI, attr, value)
+      }
+    }
+  } else if (typeof value === 'undefined') {
+    return this.elt.getAttributeNS(nameSpaceURI, attr)
+  } else {
+    this.elt.setAttributeNS(nameSpaceURI, attr, value)
+    return this
+  }
+}
+
+// NOTE: Created with GPT-4 on Fri Mar 24, 2023
+//PROTOTYPE: p5.Element extension blur(radius)
+p5.Element.prototype.blur = function (radius) {
+  const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
+  const [x, y, width, height] = viewBox
+  const padding = Math.ceil(radius * 3)
+  const newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' ')
+  const filterID = 'blur-' + Math.floor(Math.random() * 100000)
+
+  const filter = createSVGElt('filter')
+    .attribute('id', filterID)
+    .attribute('x', '-50%')
+    .attribute('y', '-50%')
+    .attribute('width', '200%')
+    .attribute('height', '200%')
+    .parent(this.parent())
+
+  createSVGElt('feGaussianBlur')
+    .attribute('in', 'SourceGraphic')
+    .attribute('stdDeviation', radius)
+    .parent(filter)
+
+  this.attribute('filter', `url(#${filterID})`)
+    .attribute('viewBox', newViewBox)
+
+  return this
+}
+
+//PROTOTYPE: p5.Element extension applyFilter(filterInstance, scale = 1)
+p5.Element.prototype.applyFilter = function (filterInstance, scale = 3, time = 0) {
+  if (filterInstance) { filterInstance.applyFilterToElement(this, scale, time) }
+  return this
+}
+
+//PROTOTYPE: p5.Element extension crossfadeElements(fromElement, toElement, duration, onComplete)
+p5.prototype.crossfadeElements = async function (fromElement, toElement, duration, onComplete) {
+  console.log('fromElement', fromElement)
+  console.log('toElement', toElement)
+  const startTime = performance.now()
+  const fromElementOpacity = parseFloat(fromElement.attribute("opacity") || "1")
+  const toElementOpacity = parseFloat(toElement.attribute("opacity") || "1")
+
+  const step = (timestamp) => {
+    const elapsed = timestamp - startTime
+    const progress = Math.min(elapsed / duration, 1)
+
+    fromElement.attribute("opacity", fromElementOpacity * (1 - progress))
+    toElement.attribute("opacity", toElementOpacity * progress)
+
+    if (progress < 1) {
+      requestAnimationFrame(step)
+    } else {
+      if (onComplete) {
+        onComplete()
+      }
+    }
+  }
+
+  requestAnimationFrame(step)
+}
+
 // PROTOTYPE: p5.Element extension applyStrokeMask(color, width)
 p5.Element.prototype.applyStrokeMask = function (color, width) {
   const strokeMaskFilter = new StrokeMaskFilter().strokeMask(color, width)
   strokeMaskFilter.applyFilterToElement(this)
   return this
 }
+// #endregion
 
