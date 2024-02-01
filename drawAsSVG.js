@@ -16,6 +16,7 @@ const info = (seg) => {
 }
 
 //CLASS: SVGPath
+// SIZE: 178 lines
 class SVGPath {
   //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
@@ -197,7 +198,49 @@ class SVGPath {
 }
 
 //CLASS: SegPath
+// SIZE: 158 lines
 class SegPath {
+  //METH: cutAllToCardinal()
+  static cutAllToCardinal(segPath) {
+
+    //FUNC: shared() : find segments with shared startPoint to input seg's endPoint
+    const shared = (seg) => {
+      const pairs = segPath.filter(s => seg.end.equals(s.start, 4)) // seg.end = s.start
+      if (pairs.length === 2) { return [seg, pairs] } // ordinal connections will have two connections 
+    }
+
+    const sharedStarts = segPath.map(seg => shared(seg)).compacted // find all ordinal corner segments
+    console.log(`sharedStarts`, sharedStarts)
+
+    sharedStarts.forEach(s => { // swap segment neighbors and remove cubic verts at corners
+      const [seg, [nextA, nextB]] = s
+      let newNeighbor
+      if (seg.neighbors.end.id === nextA.id) { newNeighbor = nextB }      // nextA was initial neighbor
+      else if (seg.neighbors.end.id === nextB.id) { newNeighbor = nextA } // nextB was initial neighbor
+      else { console.error(`cutAllToCardinal Error: unexpected case hit, please investigate!`) } // Error just in case
+      seg.assignNeighbors({ end: newNeighbor })   // swap seg's endNeighbor
+      seg.clearCubicEndVerts                      // clear seg's CubicEndVerts 
+      newNeighbor.assignNeighbors({ start: seg }) // swap newNeighbor's startNeighbor
+      newNeighbor.clearCubicStartVerts            // clear newNeighbor's clearCubicStartVerts 
+    })
+
+    let newPaths = new OpArray
+    let oldPath = segPath.copy
+    while (oldPath.length > 0) {
+      const first = oldPath[0]
+      const newPath = first.sortedSegPath
+      newPaths.push(newPath)
+      oldPath = oldPath.exclude(newPath, ['id'])
+    }
+    console.log(`newPaths`, newPaths.map(path => path.map(seg => seg.id)))
+
+
+    //FIXME: NEXT STEP: recalculate corners!
+    //FIXME: FINAL STEP: return paths and assign them as new subshapes in new shape copy
+    //FIXME: ALSO: add an early bailout if no sharedStarts are found, just return original segPath
+    return newPaths
+  }
+
   // METH: fromVertPath() : convert array of verts to a shape path made of Segments
   static fromVertPath({ vertPath, refine = true, parentID } = {}) {
     // console.log('vertPath', vertPath)
@@ -317,6 +360,7 @@ class SegPath {
 }
 
 //CLASS: VertPath
+// SIZE: 80 lines
 class VertPath {
   //METH: fromSegPath()
   static fromSegPath(segPath) {
@@ -400,6 +444,7 @@ class VertPath {
 }
 
 //CLASS: ProtoSVG
+// SIZE: 123 lines
 class ProtoSVG {
 
   // MARK: File export methods
@@ -527,6 +572,7 @@ class ProtoSVG {
 
 // MARK: Proto Geometry Classes
 // CLASS: Vertex
+// SIZE: 109 lines
 function vert(x = 0, y = 0) {
   if (x instanceof Array) { return new Vertex(x[0], x[1]) }
   if (x instanceof Object || x instanceof p5.Vector) { return new Vertex(x.x, x.y) }
@@ -639,6 +685,7 @@ class Vertex extends p5.Vector {
 }
 
 // CLASS: Segment 
+// SIZE: 199 lines
 function segment(start, end) {
   return new Segment(start, end)
 }
@@ -665,6 +712,9 @@ class Segment {
   set start(vert) { this._start = vert }
   get end() { return this._end }
   set end(vert) { this._end = vert }
+
+  get x() { return this.start.x }
+  get y() { return this.start.y }
 
   get mid() { return this.pointOnsegment(0.5) }
 
@@ -838,6 +888,7 @@ class Segment {
 }
 
 // CLASS: ProtoSegment
+// SIZE: 356 lines
 function protoSegment({ start, end, parentID, id, islandIDs } = {}) {
   return new ProtoSegment(start, end, parentID, id, islandIDs)
 }
@@ -863,7 +914,7 @@ class ProtoSegment extends Segment {
   }
 
   get turns() {
-    if (!this.neighbors.start || !this.neighbors.end) {
+    if (!this.hasBothNeighbors) {
       console.error(`segment ${this.id} without neighbors has no turns`)
       return
     }
@@ -880,7 +931,7 @@ class ProtoSegment extends Segment {
   }
 
   get normals() {
-    if (!this.neighbors.start || !this.neighbors.end) {
+    if (!this.hasBothNeighbors) {
       console.error(`segment ${this.id} without neighbors has no normals`)
       return
     }
@@ -908,10 +959,12 @@ class ProtoSegment extends Segment {
   get isFlat() { return this.part?.isFlat }
   get isCorner() { return this.part?.isCorner }
 
+  get hasBothNeighbors() { return this.neighbors.start && this.neighbors.end }
+
   get hasInsideTurn() { return this.turns?.start.name === 'Left' || this.turns?.end.name === 'Left' }
 
   get cornerVerts() {
-    if (!this.neighbors.start || !this.neighbors.end) {
+    if (!this.hasBothNeighbors) {
       console.error(`segment ${this.id} without neighbors has no cornerVerts`)
       return
     }
@@ -940,11 +993,51 @@ class ProtoSegment extends Segment {
     }
   }
 
+  get segPath() {
+    if (!this.hasBothNeighbors) {
+      console.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
+      return
+    }
+    let path = new OpArray
+    let open = true
+    let seg
+    while (open) {
+      if (!seg) { seg = this }
+      path.push(seg)
+      seg = seg.neighbors.end
+      if (seg.id === this.id) { open = false }
+    }
+    const firstSeg = path.gridVertSorted[0]
+    const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
+    const sortedPath = path.shifted(shiftIndex)
+
+    return path
+  }
+  //TODO: find and test implementations!
+  get sortedSegPath() {
+    const path = this.segPath
+    const firstSeg = path.gridVertSorted[0]
+    const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
+    return path.shifted(shiftIndex)
+  }
+  //TODO: find and test implementations!
+  get counterSortedSegPath() {
+    const path = this.segPath
+    const firstSeg = path.counterGridVertSorted[0]
+    const reversedPath = path.reversed
+    const shiftIndex = reversedPath.findIndex(s => s.id === firstSeg.id)
+    return reversedPath.shifted(shiftIndex)
+  }
+
+
+
   get hasCubicStartVert() { return this.cubicVerts.start.length > 0 }
   get hasCubicEndVert() { return this.cubicVerts.end.length > 0 }
   get hasSomeCubicVerts() { return this.hasCubicStartVert || this.hasCubicEndVert }
   get hasNoCubicVerts() { return !this.hasSomeCubicVerts }
-  get hasOnlyOneCubicVert() { return (this.hasCubicStartVert || this.hasCubicEndVert) && !(this.hasBothCubicVerts) }
+  get hasOnlyOneCubicVert() {
+    return (this.hasCubicStartVert || this.hasCubicEndVert) && !(this.hasBothCubicVerts)
+  }
   get hasBothCubicVerts() { return this.hasCubicStartVert && this.hasCubicEndVert }
   get cubicVertCount() {
     if (this.hasBothCubicVerts) { return 2 }
@@ -1117,6 +1210,10 @@ class ProtoSegment extends Segment {
     this.addDistancedStartCornerVerts(distance)
     this.addDistancedEndCornerVerts(distance)
   }
+
+  clearCubicStartVerts() { this.cubicVerts.start = new OpArray }
+  clearCubicEndVerts() { this.cubicVerts.end = new OpArray }
+
 
   #addCubicVert(vert, start) {
     let cubicVerts = start ? this.cubicVerts.start : this.cubicVerts.end
