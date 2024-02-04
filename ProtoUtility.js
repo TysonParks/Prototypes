@@ -528,7 +528,7 @@ function getKeyByValue(object, value) {
 
 //MARK: Number Utilities
 // FUNC: constrainAngle(angle) : keep angle between -PI and PI
-const constrainAngle = (angle) => {
+function constrainAngle(angle) {
   angle = angle % (2 * PI)
   if (angle > PI) { angle -= 2 * PI }
   if (angle <= -PI) { angle += 2 * PI }
@@ -625,7 +625,7 @@ class Range {
 
 // Sequence generator function (commonly referred to as "range", e.g. Clojure, PHP etc)
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
-const rangeArray = (start, stop, step = 1) => OpArray.from({ length: (stop - start) / step + 1 }, (_, i) => start + (i * step))
+function rangeArray(start, stop, step = 1) { return OpArray.from({ length: (stop - start) / step + 1 }, (_, i) => start + (i * step)) }
 
 //TODO: DEPRECATE? - included in ABFeatureScript.js - actually no, because they are wrapped in calculateFeatures()
 // MARK: Helper Methods
