@@ -55,7 +55,7 @@ class SVGPath {
       }
     })
 
-    //FUNC: simplify(curve) : convert each vert into roundedDec coord pair array
+    //ARROW: simplify(curve) : convert each vert into roundedDec coord pair array
     const simplify = (curve) => {
       return curve.map(vert =>
         vert.array.map(coord => roundToDec(coord, 4))
@@ -96,10 +96,10 @@ class SVGPath {
     let lineStartLoc = bisector - straightness * bisector
     let lineEndLoc = bisector + straightness * (1 - bisector)
 
-    //FUNC: offset
+    //ARROW: offset
     const offset = () => random ? R.random_num(0.1, 1.5) : curvature
 
-    //FUNC: makeSegmentCircular
+    //ARROW: makeSegmentCircular
     const makeSegmentCircular = (segment, startLoc = lineStartLoc) => {
       control1 = segment.scaledStartPoint(bezCircleConst, startLoc)
       lineStart = segment.pointOnsegment(startLoc)
@@ -108,7 +108,7 @@ class SVGPath {
       return [control1, lineStart, lineEnd, control2]
     }
 
-    //FUNC: makePrevSegmentCircular
+    //ARROW: makePrevSegmentCircular
     const makePrevSegmentCircular = () => {
       if (curves.length === 0) { return }
       let prevCoords = curves.pop()
@@ -203,7 +203,7 @@ class SegPath {
   //METH: cutAllToCardinal()
   static cutAllToCardinal(segPath) {
 
-    //FUNC: shared() : find segments with shared startPoint to input seg's endPoint
+    //FUNCINNER : shared() : find segments with shared startPoint to input seg's endPoint
     const shared = (seg) => {
       const pairs = segPath.filter(s => seg.end.equals(s.start, 4)) // seg.end = s.start
       if (pairs.length === 2) { return [seg, pairs] } // ordinal connections will have two connections 
@@ -218,10 +218,12 @@ class SegPath {
       if (seg.neighbors.end.id === nextA.id) { newNeighbor = nextB }      // nextA was initial neighbor
       else if (seg.neighbors.end.id === nextB.id) { newNeighbor = nextA } // nextB was initial neighbor
       else { console.error(`cutAllToCardinal Error: unexpected case hit, please investigate!`) } // Error just in case
+      // console.log(`${seg.hasBothCubicVerts}`)
       seg.assignNeighbors({ end: newNeighbor })   // swap seg's endNeighbor
-      seg.clearCubicEndVerts                      // clear seg's CubicEndVerts 
+      seg.clearCubicEndVerts()                      // clear seg's CubicEndVerts 
       newNeighbor.assignNeighbors({ start: seg }) // swap newNeighbor's startNeighbor
-      newNeighbor.clearCubicStartVerts            // clear newNeighbor's clearCubicStartVerts 
+      newNeighbor.clearCubicStartVerts()            // clear newNeighbor's clearCubicStartVerts 
+      // console.log(`${seg.hasBothCubicVerts}`)
     })
 
     let newPaths = new OpArray
@@ -229,10 +231,11 @@ class SegPath {
     while (oldPath.length > 0) {
       const first = oldPath[0]
       const newPath = first.sortedSegPath
+      // console.log(`newPath`, newPath)
       newPaths.push(newPath)
       oldPath = oldPath.exclude(newPath, ['id'])
     }
-    console.log(`newPaths`, newPaths.map(path => path.map(seg => seg.id)))
+    console.log(`newPaths: ${newPaths.map(path => path.map(seg => seg.hasBothCubicVerts))}`)
 
 
     //FIXME: NEXT STEP: recalculate corners!
