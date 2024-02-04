@@ -266,8 +266,8 @@ function gridTests2() {
   // grid = new Grid(FRAME, { x: 10, y: 10 })
   let gridInset = R.random_num(0.75, 0.95)
 
-  FRAME.setInsetScale(.95)
-  grid.setInsetScale(.85)
+  // FRAME.setInsetScale(.95)
+  grid.setInsetScale(.8)
 
   const minCellSWidth = grid.minCellWidth
   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
@@ -329,8 +329,8 @@ function gridTests2() {
 
   // const frameInset = R.random_num(0.02, 0.18)
 
-  // FRAME.setFilter(shader3)
-  // grid.setFilter(shader1)
+  // FRAME.setFilter(shader4)
+  // grid.setFilter(shader2)
   // console.log('FRAME Filter', FRAME.filter.id)
   // console.log('gridFilter', grid.filter.id)
 
@@ -360,7 +360,7 @@ function gridTests2() {
 
 
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  let group000 = grid.squares({ coverage: 0.25, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  let group000 = grid.squares({ coverage: 0.15, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
   // grid.randGroup({amount:0.2})
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -466,7 +466,7 @@ function gridTests2() {
     direction: Direction.Cardinal,
     filter: shader0,
     // insetScale: .25,
-    insetScale: .8,
+    insetScale: 1.1,
   })
 
   // group000.createSubIslands({
@@ -498,9 +498,9 @@ function gridTests2() {
   // })
 
   group001?.createSubIslands({
-    direction: Direction.All,
-    filter: shader7,
-    insetScale: .7,
+    // direction: Direction.All,
+    filter: shader0,
+    insetScale: .75,
     // insetScale: .95,
   })
 
@@ -607,7 +607,7 @@ function gridTests2() {
     direction: Direction.All,
     filter: shader3,
     // insetScale: .2,
-    insetScale: .7,
+    insetScale: .75,
   })
 
   // group002?.createSubIslands({
@@ -679,12 +679,12 @@ function gridTests2() {
     direction: Direction.All,
     filter: shader2,
     // insetScale: .25,
-    insetScale: .8,
+    // insetScale: .95,
   })
 
   group003?.createSubIslands({
     direction: Direction.All,
-    filter: shader0,
+    filter: shader4,
     // insetScale: .25,
     insetScale: .7,
   })
