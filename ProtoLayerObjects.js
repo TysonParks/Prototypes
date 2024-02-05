@@ -900,27 +900,6 @@ class Grid extends ProtoLayer {
   cellIsIsolated({ cellIndex, groupID, islandID, direction = Direction.Cardinal } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID }).includesMany(direction.directions, ['value'])
   }
-  //METH: 
-  //TODO: DEPRECATED : unused
-  // vertNormals({ cellIndex, groupID, islandID, direction = Direction.Ordinal } = {}) {
-  //   return direction.directions.map(e => {
-  //     const adj = OpArray.from(e.adjacents.directions)
-  //     const exposed = OpArray.from(this.exposedDirections({ cellIndex: cellIndex, groupID: groupID, islandID: islandID }))
-  //     const exposedAdj = adj.intersect(exposed, ['value'])
-  //     const exposedDirect = exposed.some(f => f.value === e.value)
-
-  //     if (exposedDirect) {
-  //       if (exposedAdj.length === 1) { return exposedAdj[0] }
-  //     } else {
-  //       if (exposedAdj.length === 1) {
-  //         if (exposedAdj[0].value === adj[0].value) {
-  //           return adj[0].previous()
-  //         } else { return adj[1].next() }
-  //       }
-  //     }
-  //     return e
-  //   })
-  // }
   //METH: neighbors() : [Cell]
   neighbors(cellIndex) { return Direction.All.directions.map(dir => this.neighbor(cellIndex, dir)) }
   //METH: availableNeighbors() : [Cell]
@@ -993,8 +972,8 @@ class Grid extends ProtoLayer {
   //METH: 
   validNeighbors({ selection = this.cells, bounds = this.cellBounds(), direction = Direction.All } = {}) {
     let cells = OpArray.from(new Set(selection.flatMap(e => e.validNeighborsCoords(direction, bounds))))
-    console.log(`validNeighbors selection`, selection.map(c => c.id))
-    console.log(`validNeighbors cells`, cells.map(c => c.id))
+    // console.log(`validNeighbors selection`, selection.map(c => c.id))
+    // console.log(`validNeighbors cells`, cells.map(c => c.id))
     cells = cells
       .unique(['x', 'y']) // unique based upon x and y values
       .gridVertSorted // sort by y then x values
@@ -1014,17 +993,11 @@ class Grid extends ProtoLayer {
       .flatMap(e => this.exposedCorners({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
       .gridVertSorted // sort by y, x 
   }
-  //METH: 
-  //TODO: DEPRECATE : unused
-  // allVertNormals({ selection, groupID, islandID } = {}) {
-  //   return selection
-  //     .flatMap(e => this.vertNormals({ cellIndex: e, groupID: groupID, islandID: islandID }))
-  //   // .sort()
-  // }
+
   //FIXME: DEPRECATE: solved the allToCardinal copy issue with SegPath.cutAllToCardinal() instead
   //METH: ordinalConnectedCells() : [Cell] : find all ordinally connected cells in a selection
   // ordinalConnectedCells({ selection = this.cells, groupID, islandID } = {}) {
-  //   //FUNC: ordinalNeighbors()  : find ordinally connected neighbors of a cell
+  //   //ARROW: ordinalNeighbors()  : find ordinally connected neighbors of a cell
   //   const ordinalNeighbors = (cell) => {
   //     let validOrdinals = new OpArray
   //     Direction.Ordinal.directions.forEach(dir => {
@@ -1065,6 +1038,7 @@ class Grid extends ProtoLayer {
     stored = true,
     insetScale = 1,
     drawFilter = true,
+    createShape = true,
   } = {}) {
     console.groupCollapsed(`grid.createIslands`)
     console.log(`Arguments:`, arguments[0])
@@ -1102,35 +1076,35 @@ class Grid extends ProtoLayer {
       let islanders = OpArray.from([cell])
       let fillstack = []
       //NOTE: Non-recursive flood-fill implementation from: https://codeguppy.com/blog/flood-fill/index.html
-      //FUNC: findIslanders : 
+      //ARROW: findIslanders : 
       const findIslanders = () => {
         fillstack.push(cell)
 
         while (fillstack.length > 0) {
           let current = fillstack.pop()
           if (current.islandChecked) { continue }
-          console.warn(`current cell: ${current.id}`)
+          // console.warn(`current cell: ${current.id}`)
           let neighbors = this.validNeighbors({ selection: [current], bounds: bounds, direction: direction })
-          console.log(`validNeighbors-neighbors`, neighbors.map(c => c.id))
+          // console.log(`validNeighbors-neighbors`, neighbors.map(c => c.id))
           neighbors = neighbors
             .filter(e => !e.islandChecked)
-          console.log(`islandChecked-neighbors`, neighbors.map(c => c.id))
+          // console.log(`islandChecked-neighbors`, neighbors.map(c => c.id))
           //NOTE: I can't remember why I wrote this logic to work with goupID and islandID. Else case makes sense. This might be a source of problems down the road, or an avenue for something interesting. 
           //TODO: Actually, I wonder if this might be affecting symmetrize bugs? INVESTIGATE!!!
           // if (taken) {
-          console.log(`islandChecked-neighbors islandIDs`, neighbors.map(c => Array.from(c.islandIDs)).join(` `))
+          // console.log(`islandChecked-neighbors islandIDs`, neighbors.map(c => Array.from(c.islandIDs)).join(` `))
 
           if (selection) { // filter neighbors from selection
             neighbors = neighbors.intersect(selection, ['id'])
-            console.log(`selection-neighbors`, neighbors.map(c => c.id))
+            // console.log(`selection-neighbors`, neighbors.map(c => c.id))
           } else {
             if (groupID) {// find neighbors in group
               neighbors = neighbors.filter(e => e.groupID === groupID)
-              console.log(`groupID-neighbors`, neighbors.map(c => c.id))
+              // console.log(`groupID-neighbors`, neighbors.map(c => c.id))
             }
             if (islandID) {// find neighbors in island
               neighbors = neighbors.filter(e => e.islandIDs.has(islandID))
-              console.log(`islandID-neighbors`, neighbors.map(c => c.id))
+              // console.log(`islandID-neighbors`, neighbors.map(c => c.id))
             }
             else { neighbors = neighbors.filter(e => e.taken) } // find neighbors that are taken
           }
@@ -1182,10 +1156,14 @@ class Grid extends ProtoLayer {
     //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
     if (stored) {
       this.updateCells()
+      tempIslands.forEach(isle => {
+        this.updateCells({ island: isle })
+        if (createShape) { isle.createShape() }
+      })
     }
     tempIslands.forEach(isle => {
-      this.updateCells({ island: isle })
-      isle.createShape()
+      // this.updateCells({ island: isle })
+      // isle.createShape()
       console.log(`completed Island ${isle.id} cell-islandIDs`, isle.cells)
       // console.log(`completed Island ${isle.id} cell-islandIDs`, isle.cells.forEach(c => Array.from(c.islandIDs)).join(` `))
     })
@@ -1207,9 +1185,78 @@ class Grid extends ProtoLayer {
   // //METH: drawShapes()
   // drawShapes() { this.shapes.forEach(s => s.drawElement()) }
 
-  //METH: createCubicCorners
+  //METH: inWrapColinearCorners() : finds colinear wrapped corners and transfers cubic verts inwards to wrapped
+  inWrapColinearCorners(seg, segCollection) {
+    console.log(`inWrapColinearCorners seg`, seg)
+    console.log(`inWrapColinearCorners segCollection`, segCollection)
+    if (!seg.turns.end.isRight) { // must be an outside corner, so end of seg turns Right
+      console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
+      return
+    }
+    const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
+
+    //ARROW: colWrapper() : ProtoSegment : find colinear wrapper(s) of input segment
+    const colWrapper = (seg, isNeighbor = false) => {
+      const segDir = seg.direction
+      // const wrapDir =  segDir // wrapper will point opposite of segDir
+      const turn = !isNeighbor ? 'end' : 'start'
+      const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
+      const name = isNeighbor ? `end` : `start`
+      // console.log(` ** findColinear seg`, info(seg))
+      console.log(`cubicVert`, cubicVert)
+
+      let overlappers = segCollection.flat().filter(s => s.isOverlappingWith(seg)) // colinear wraps overlap seg
+      console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
+      overlappers = overlappers
+        .filter(s => s.direction.equals(segDir)) // colinear wraps point in same direction as seg
+      console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
+      overlappers = overlappers
+        .filter(s => s.turns[turn].isRight) // colinear wraps turn left
+      console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
+      overlappers = overlappers
+        .filter(s => s.vertIsOnLine(cubicVert)) // colinear wraps will contain the transferrable cubicVert
+      console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+      overlappers = overlappers
+        .filter(s => !s.start.equals(cubicVert, 2) && !s.end.equals(cubicVert, 2))// colWraps ends !== cubicVert
+      console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+      console.log(``)
+      return overlappers
+    }
+
+    const wrapperStart = colWrapper(seg)
+    const wrapperEnd = colWrapper(neighbor, true)
+
+    console.log(`--> wrapperStart`, wrapperStart)
+    console.log(`--> wrapperEnd`, wrapperEnd)
+    console.log(``)
+
+    if (wrapperStart.length === 1 && wrapperEnd.length === 1) { // only valid when both contain single segment
+      // console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
+      // console.log(seg)
+      // console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
+      // console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+      // console.log(``)
+      // if (normalMode) {
+      //   wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
+      //   wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
+      // } else {
+      seg.clearCubicEndVerts
+      seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)
+      neighbor.clearCubicStartVerts
+      neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert)
+      // }
+      return wrapperStart[0] // return wrapperStart only for adjacent wrapping
+    }
+  }
+
+  //METH: inWrapOutsideCorners() : 
+  inWrapOutsideCorners(insideSegs, outsideSegs) {
+    insideSegs.forEach(seg => this.inWrapColinearCorners(seg, outsideSegs))
+  }
+
+  //METH: createCubicCorners() :
   createCubicCorners(subShapes) {
-    //FUNC: sortCorners()
+    //ARROW: sortCorners()
     const sortCorners = (subShapes) => {
       return subShapes
         .flat()
@@ -1232,8 +1279,10 @@ class Grid extends ProtoLayer {
     return outsideCorners
   }
 
+
+
   //MARK: CUSTOMIZE SHAPES
-  //METH:
+  //METH: customizeShapes() :
   customizeShapes(diagonals = false) {
     const cellRadius = roundToDec(this.minCellWidth / 2)
 
@@ -1255,11 +1304,11 @@ class Grid extends ProtoLayer {
 
     this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
-    //FUNC: colinearOverlaps(seg) : finds all segments that are overlap input segment
-    const overlapSegs = (seg) => {
-      return this.allSimpleSubShapes.flat().filter(s => s.isOverlappingWith(seg))
+    //ARROW: overlapSegs(seg) : finds all segments that are overlap input segment
+    const overlapSegs = (seg, segCollection = this.allSimpleSubShapes) => {
+      return segCollection.flat().filter(s => s.isOverlappingWith(seg))
     }
-    //FUNC: info ; temp logging helper for wrappedCorner methods
+    //ARROW: info ; temp logging helper for wrappedCorner methods
     const info = (seg) => {
       return {
         dir: seg.direction.name,
@@ -1268,7 +1317,7 @@ class Grid extends ProtoLayer {
         midPoint: seg.mid.string,
       }
     }
-    //FUNC: findColinearWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to wrappers
+    //ARROW: findColinearWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to wrappers
     const findColinearWrappedCorner = (seg) => {
       if (!seg.turns.end.isRight) { // must be an outside corner, so end of seg turns Right
         console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
@@ -1318,6 +1367,7 @@ class Grid extends ProtoLayer {
         // console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
         // console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
         // console.log(``)
+
         wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
         wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
 
@@ -1325,7 +1375,7 @@ class Grid extends ProtoLayer {
       }
     }
 
-    //FUNC: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
+    //ARROW: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
     const findAdjacentWrappedCorner = (seg) => {
       if (!seg.turns.start.isLeft) {
         console.error(`findAdjacentWrappedCorner only works on segment corners starting in left turns `)
@@ -1425,7 +1475,7 @@ class Grid extends ProtoLayer {
       }
     }
 
-    //FUNC: wrapOutsideCorners() : recursive combination of colinear/adjacent wrap functions for outside corners
+    //ARROW: wrapOutsideCorners() : recursive combination of colinear/adjacent wrap functions for outside corners
     const wrapOutsideCorners = (segs) => {
       segs = OpArray.format(segs)
       const colinears = segs.map(seg => findColinearWrappedCorner(seg)).compacted
@@ -1438,7 +1488,7 @@ class Grid extends ProtoLayer {
     }
 
     //MARK: QUAD SHAPES
-    //FUNC: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
+    //ARROW: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
     //TODO: need to add an ABFeature to select these!!!
     const createQuadShapes = (mode) => {
       const sumSides = (sides) => sides.reduce((a, b) => a + b)
@@ -1511,7 +1561,7 @@ class Grid extends ProtoLayer {
         default:
       }
 
-      //FUNC: assignQuad() : assign cubic verts using radii from cornerMap
+      //ARROW: assignQuad() : assign cubic verts using radii from cornerMap
       const assignQuad = (quad, cornerMap) => {
         cornerMap.forEach((cMap, i) => quad[i].addDistancedStartCornerVerts(cMap))
       }
@@ -1526,7 +1576,7 @@ class Grid extends ProtoLayer {
       wrapOutsideCorners(quads.flat())
     }
 
-    //FUNC: sortUTurnOuts() : sorting for createUTurnOuts()
+    //ARROW: sortUTurnOuts() : sorting for createUTurnOuts()
     const sortUTurnOuts = () => {
       return this.allSimpleSubShapes
         .flat()
@@ -1537,7 +1587,7 @@ class Grid extends ProtoLayer {
       // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
       // return utoSimples
     }
-    //FUNC: createUTurnOuts()
+    //ARROW: createUTurnOuts()
     const createUTurnOuts = () => {
       let curved = new OpArray
       let uTOs = sortUTurnOuts()
@@ -1569,7 +1619,7 @@ class Grid extends ProtoLayer {
       wrapOutsideCorners(curved)
     }
 
-    //FUNC: sortUTurnOuts() : sorting for createUTurnOuts()
+    //ARROW: sortUTurnOuts() : sorting for createUTurnOuts()
     const sortStairs = () => {
       return this.allSimpleSubShapes
         .flat()
@@ -1581,7 +1631,7 @@ class Grid extends ProtoLayer {
       // return utoSimples
     }
     //TODO: Finish implementation for creating diagonal lines
-    //FUNC: createUTurnOuts()
+    //ARROW: createUTurnOuts()
     const createStairs = () => {
       let curved = new OpArray
       let stairs = sortStairs(this.allSimpleSubShapes)
@@ -1594,9 +1644,9 @@ class Grid extends ProtoLayer {
 
 
 
-    //FUNC: createCorners()
+    //ARROW: createCorners()
     const createCorners = (subShapes) => {
-      // //FUNC: sortCorners()
+      // //ARROW: sortCorners()
       // const sortCorners = (subShapes) => {
       //   return subShapes
       //     .flat()
@@ -1620,7 +1670,7 @@ class Grid extends ProtoLayer {
       // }
     }
 
-    //FUNC: finish()
+    //ARROW: finish()
     const finish = () => {
       this.allSimpleSubShapes.flat().forEach(s => {
         s.matchStartCorner()
@@ -1630,7 +1680,7 @@ class Grid extends ProtoLayer {
     }
 
 
-    createQuadShapes(0)
+    createQuadShapes(1)
     createUTurnOuts()
     // createStairs()
     createCorners(this.allSimpleSubShapes)
@@ -1784,7 +1834,7 @@ class Grid extends ProtoLayer {
       let shrunkSelection = available.exclude(inlineSelection, 'id') //shrunk selection by excluding inline
       // console.log('shrunkSelection', shrunkSelection.map(e => e.id))
 
-      //FUNC: newSquare() :
+      //ARROW: newSquare() :
       const newSquare = () => {
         let isValid = false
         let cell, square
@@ -2545,10 +2595,11 @@ class Island extends ProtoLayer {
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
     this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
     if (stored) { this.finishSetup(S.Islands) }
-    console.log(`new (${this.type})-type Island completed:`, this.id)
+    console.log(`new (${this.type})-type Island completed:`, this)
     console.log(``)
     // this.color = R.random_hash(3, '#')
   }
+
   // MARK: Computed Properties
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'island') }
@@ -2670,37 +2721,35 @@ class Island extends ProtoLayer {
         // console.log(`created subIsland: `, subIsland)
         subIslands = OpArray.from([subIsland])
       }
-      // new direction needs new island creation
+      // different direction: requires new island and/or shape creation
       if (this.hierarchyFrom(direction) < this.directionHierarchy) {
         console.warn(`creating ${this.id} subIslands with direction: ${direction.name}`)
-
-        if (this.direction.isAll && direction.isCardinal) {
-          const segsToChange = this.shapes
-            .map(shape => shape.simpleSubShapes.map(sub => SegPath.cutAllToCardinal(sub)))
-            .flat(2)
-          console.warn(`segsToChange`, segsToChange)
+        // parent direction is All and new direction is Cardinal: careful reconstruction of current SimpleSubShapes
+        if (this.direction.isAll && direction.isCardinal) { //
+          console.log(`using copyAllToCardinal()`)
+          subIslands = this.copyAllToCardinal(filter, insetScale, drawFilter)
         }
-
-        else if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {// hierarchy > 1 curves can crop cells
+        // parent direction is All/Cardinal: recalculate island cells based on parent shape, then create new islands
+        else if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {
           console.log(`  triggering a recalcdCells on ${this.id}`)
           const newCells = this.recalcdCells({ newInsetScale: insetScale })
-        }
-        subIslands = this.grid.createIslands({ // create new Islands with new direction
-          selection: newCells,
-          islandID: this.id,
-          direction: direction,
-          filter: filter,
-          insetScale: insetScale,
-          drawFilter: drawFilter,
-        })
-        subIslands?.forEach(i => {
-          i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
-          i.shapes.forEach(shape => {
-            console.log(shape.simpleSubShapes)
-            this.grid.createCubicCorners(shape.simpleSubShapes)
-            shape.drawElement()
+          subIslands = this.grid.createIslands({ // create new Islands with new direction
+            selection: newCells,
+            islandID: this.id,
+            direction: direction,
+            filter: filter,
+            insetScale: insetScale,
+            drawFilter: drawFilter,
           })
-        })
+          subIslands?.forEach(i => {
+            i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
+            i.shapes.forEach(shape => {
+              console.log(shape.simpleSubShapes)
+              this.grid.createCubicCorners(shape.simpleSubShapes)
+              shape.drawElement()
+            })
+          })
+        }
       }
     }
     this.subIslands = subIslands
@@ -2715,11 +2764,13 @@ class Island extends ProtoLayer {
     filter = this.filter,
     drawFilter = this.drawFilter,
     protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
+    cells = this.cells,
     shapes,
+    direction = this.direction,
   } = {}) {
     // console.log(`copying island`, this.id)
     const newIsland = new Island({
-      cells: this.cells,
+      cells: cells,
       filter: filter,
       protoParent: protoParent,
       svgParent: protoParent.svgElt, // Test this!!!
@@ -2727,7 +2778,7 @@ class Island extends ProtoLayer {
       grid: this.grid,
       groupID: this.groupID,
       parentIslandID: this.id,
-      direction: this.direction,
+      direction: direction,
       perimeterType: this.perimeterType,
       stored: this.stored,
       drawFilter: drawFilter
@@ -2737,9 +2788,9 @@ class Island extends ProtoLayer {
       newIsland.shapes = shapes
     } else {
       newIsland.shapes = this.shapes.map(s => s.copy({
+        insetScale: insetScale,
         protoParent: newIsland,
         island: newIsland,
-        insetScale: insetScale,
       }))
     }
 
@@ -2747,6 +2798,68 @@ class Island extends ProtoLayer {
     // console.log(`newIsland`, newIsland)
     return newIsland
   }
+  //METH:
+  copyAllToCardinal(filter, insetScale, drawFilter = true) {
+    // let newShapeSubShapes = this.shapes
+    //   .map(shape => {
+    //     const newSubShapes = shape.simpleSubShapes.map(sub => SegPath.cutAllToCardinal(sub))
+    //       .flat()
+    //     console.log(`newSubShapes: ${newSubShapes.map(sub => sub.map(seg => seg.hasBothCubicVerts))}`)
+    //     this.grid.createCubicCorners(newSubShapes)
+    //     return newSubShapes
+    //   })
+    // console.log(`newShapeSubShapes`, newShapeSubShapes)
+    //FIXME: might need to scrap this and start over from new Cardinal Islands that are then fitted to their surroundings
+    //FIXME: I think the current issue is that new islands have all the old cells and are re-building themselves
+    //FIXME: Solution would be to figure out how to find split cells, which is essentially to create new Cardinal Islands
+    //FIXME: Feels like creating a reverse wrapper/snuggler might be less complicated
+    //FIXME: Actually just pulling cells from new Cardinal Islands, might be the easiest.
+    //FIXME: Set stored = false on new Island. Maybe look at grammar/modifier code, like 'outline' for ideas.
+    const cellIslands = this.grid.createIslands({
+      filter: filter,
+      insetScale: insetScale,
+      drawFilter: drawFilter,
+      selection: this.cells,
+      islandID: this.id,
+      direction: Direction.Cardinal,
+      stored: true,
+      createShape: true, // this might NOT be impacting my debug situation - if not please remove on createIslands()
+    })
+    console.log(`cellIslands`, cellIslands.map(is => is.cells.map(c => c.id)))
+    //NOTE: just added this for testing. Should try dropping in newSubShapes from above?
+    const parentSimpleSubShapes = this.shapes.map(shape => shape.simpleSubShapes)
+    cellIslands?.forEach((isle, i) => isle.shapes.forEach(shape => {
+      isle.createSimpleSubShapes()
+      // shape.simpleSubShapes = OpArray.from([newShapeSubShapes[0][i]])
+
+      this.grid.inWrapOutsideCorners(shape.simpleSubShapes.flat(), parentSimpleSubShapes.flat())
+      // this.grid.createCubicCorners(shape.simpleSubShapes)
+
+
+      console.log(`shape`, shape)
+      shape.drawElement()
+    }))
+
+    // const newIslands = newShapeSubShapes.map((shapeSubs, i) => {
+    //   const newIsland = this.copy({
+    //     insetScale: insetScale,
+    //     filter: filter,
+    //     drawFilter: drawFilter,
+    //     cells: cellIslands[i].cells,
+    //     direction: Direction.Cardinal,
+    //   })
+    //   newIsland.shapes = this.shapes.map(s => s.copy({
+    //     insetScale: insetScale,
+    //     protoParent: newIsland,
+    //     island: newIsland,
+    //     simpleSubShapes: shapeSubs,
+    //   }))
+    //   return newIsland
+    // })
+    // console.warn(`newIslands`, newIslands)
+    return cellIslands
+  }
+
   //METH: recalcdCells(shapes, newInsetScale) : 
   //FIXME: need to incorporate loft!!
   //FIXME: absolute should activate previous mode (sub simpleSubShapes for insetSubShapes & no newInsetScale usage)
@@ -2878,7 +2991,7 @@ class Island extends ProtoLayer {
     let shapeIter = 0
     let subShapeIter = 0
 
-    //FUNC: findShape(seg) : find each shape within an island
+    //ARROW: findShape(seg) : find each shape within an island
     const findShape = () => {
       let subShape
       while (segments.length > 0) {
@@ -2887,7 +3000,7 @@ class Island extends ProtoLayer {
         subShape = new OpArray
         let fillstack = []
 
-        //FUNC: findSubShape(seg) : find each subShape within a shape
+        //ARROW: findSubShape(seg) : find each subShape within a shape
         const findSubShape = (seg) => {
           fillstack.push(seg)
 
@@ -3085,6 +3198,7 @@ class Shape extends ProtoLayer {
 
   get insetSubShapes() {
     const subs = this.simpleSubShapes
+    console.log(`subs`, subs)
     let insetSubShapes = subs?.map(sub => {
       let insetSubShape = new OpArray
       let prevInsetSeg
@@ -3220,11 +3334,11 @@ class Shape extends ProtoLayer {
   drawElement() {
     console.group()
     console.error('drawElement: ', this.id, this)
-    console.log(`simpleSubShapes`, this.simpleSubShapes[0])
-    console.log(`simpleSubShape hasCubicVerts?`, this.simpleSubShapes[0]?.map(seg => seg.hasBothCubicVerts))
-    console.log(this.simpleSubShapes[0]?.map(seg => seg.string))
-    console.log(`cubicStart`, this.simpleSubShapes[0]?.map(seg => seg.closestCubicStartVert?.string))
-    console.log(`cubicEnd`, this.simpleSubShapes[0]?.map(seg => seg.closestCubicEndVert?.string))
+    // console.log(`simpleSubShapes`, this.simpleSubShapes[0])
+    // console.log(`simpleSubShape hasCubicVerts?`, this.simpleSubShapes[0]?.map(seg => seg.hasBothCubicVerts))
+    // console.log(this.simpleSubShapes[0]?.map(seg => seg.string))
+    // console.log(`cubicStart`, this.simpleSubShapes[0]?.map(seg => seg.closestCubicStartVert?.string))
+    // console.log(`cubicEnd`, this.simpleSubShapes[0]?.map(seg => seg.closestCubicEndVert?.string))
 
     const path = createSVGElt('path')
     // console.log(this.filter.id)
@@ -3295,7 +3409,7 @@ class Shape extends ProtoLayer {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     }
-    this.drawShapeLabelDeBug = true
+    this.drawShapeLabelDeBug = false
     if (this.drawShapeLabelDeBug) {
       const label = createSVGText(this.id, 0, 0)
       const isShape = this.type !== `Shape`
