@@ -61,10 +61,7 @@ function addElement(elt, pInst, media) {
 
 //CLASS: ProtoFilter
 // SIZE: 355 lines
-function createFilter() {
-  return new ProtoFilter()
-}
-
+function createFilter() { return new ProtoFilter() }
 class ProtoFilter {
   filter
   defs
