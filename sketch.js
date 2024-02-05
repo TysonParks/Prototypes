@@ -360,7 +360,7 @@ function gridTests2() {
 
 
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  let group000 = grid.squares({ coverage: 0.15, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  let group000 = grid.squares({ coverage: 0.1, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
   // grid.randGroup({amount:0.2})
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -377,9 +377,9 @@ function gridTests2() {
   // console.log('randDirection', randDir)
   let group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: 1 })
-  // let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
 
-  let group002 = grid.randGroup({ amount: 0.5 })
+  // let group002 = grid.randGroup({ amount: 0.5 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
@@ -462,19 +462,26 @@ function gridTests2() {
   //   insetScale: .5,
   // })
 
+  // group000.createSubIslands({
+  //   direction: Direction.Cardinal,
+  //   filter: shader8,
+  //   // insetScale: .25,
+  //   insetScale: 1.1,
+  // })
+
   group000.createSubIslands({
-    direction: Direction.Cardinal,
-    filter: shader0,
+    // direction: Direction.Horizontal,
+    filter: shader1,
     // insetScale: .25,
-    insetScale: 1.1,
+    insetScale: .3,
   })
 
-  // group000.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader1,
-  //   // insetScale: .25,
-  //   insetScale: .1,
-  // })
+  group000.createSubIslands({
+    direction: Direction.Cardinal,
+    filter: shader8,
+    // insetScale: .25,
+    insetScale: 1.3,
+  })
 
   // group000.createSubIslands({
   //   direction: Direction.Horizontal,
@@ -607,23 +614,23 @@ function gridTests2() {
     direction: Direction.All,
     filter: shader3,
     // insetScale: .2,
-    insetScale: .75,
+    insetScale: .7,
   })
 
-  // group002?.createSubIslands({
-  //   direction: Direction.Vertical,
-  //   filter: shader2,
-  //   insetScale: .2,
-  //   // insetScale: .6,
-  // })
+  group002?.createSubIslands({
+    // direction: Direction.Vertical,
+    filter: shader3,
+    insetScale: .4,
+    // insetScale: .6,
+  })
 
 
-  // group002?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader1,
-  //   insetScale: .1,
-  //   // insetScale: .6,
-  // })
+  group002?.createSubIslands({
+    // direction: Direction.Horizontal,
+    filter: shader3,
+    insetScale: .1,
+    // insetScale: .6,
+  })
 
   // group002?.createSubIslands({
   //   direction: Direction.None,
@@ -684,9 +691,23 @@ function gridTests2() {
 
   group003?.createSubIslands({
     direction: Direction.All,
-    filter: shader4,
+    filter: shader2,
     // insetScale: .25,
     insetScale: .7,
+  })
+
+  group003?.createSubIslands({
+    direction: Direction.All,
+    filter: shader2,
+    // insetScale: .25,
+    insetScale: .4,
+  })
+
+  group003?.createSubIslands({
+    direction: Direction.All,
+    filter: shader2,
+    // insetScale: .25,
+    insetScale: .1,
   })
 
   // group003?.createSubIslands({

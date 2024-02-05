@@ -320,7 +320,7 @@ p5.Element.prototype.boxShadow = function (value) {
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = 15, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
+  static shadVect(angle = 45, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
   static maxComponent(vector = this.shadVect()) {
     return vector.y
     // return max(this.x, this.y)
@@ -482,9 +482,11 @@ class Shade {
   // #endregion
 }
 
-// TODO: can these functions be generalized into Classes? Or extensions on a Color class?
-// MARK: ProtoColor 
 
+
+
+// CLASS: ProtoColor
+// SIZE: 75 lines
 function protoColor() {
   if (arguments[0] instanceof p5.Color || arguments[0] instanceof ProtoColor) {
     return arguments[0]; // Do nothing if argument is already a color object.
@@ -493,9 +495,6 @@ function protoColor() {
   const args = arguments[0] instanceof Array ? arguments[0] : arguments
   return new ProtoColor(this, args)
 }
-
-// CLASS: ProtoColor
-// SIZE: 68 lines
 class ProtoColor extends p5.Color {
   constructor(pInt, args) {
     super(pInt, args)
