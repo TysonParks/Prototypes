@@ -381,7 +381,8 @@ function gridTests2() {
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: 1 })
   //  group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 1) })
 
-  group003 = grid.randGroup({ amount: 0.6 })
+  group002 = grid.randGroup({ amount: 0.6 })
+  // group003 = grid.randGroup({ amount: 0.6 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
@@ -403,7 +404,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
-  // group003 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
+  group003 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   // const bounds = grid.cellBounds({ selection: grid.cells })
   // const bounds2 = grid.gridCellBounds

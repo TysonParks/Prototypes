@@ -198,10 +198,8 @@ class SVGPath {
 }
 
 //CLASS: SegPath
-// SIZE: 158 lines
+// SIZE: 117 lines
 class SegPath {
-
-
   // METH: fromVertPath() : convert array of verts to a shape path made of Segments
   static fromVertPath({ vertPath, refine = true, parentID } = {}) {
     // console.log('vertPath', vertPath)
