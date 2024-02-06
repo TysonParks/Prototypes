@@ -1,6 +1,6 @@
 //MARK: Useful code that went unused!
 
-class UnusedSegPath {
+class UnusedSegPath extends SegPath {
   //METH: cutAllToCardinal()
   static cutAllToCardinal(segPath) {
 
@@ -46,5 +46,34 @@ class UnusedSegPath {
   }
 }
 
+class UnusedGrid extends Grid {
 
+  // MARK: Selection Methods
+  // #region Selection Methods
+  //FIXME: DEPRECATE: solved the allToCardinal copy issue with SegPath.cutAllToCardinal() instead
+  //METH: ordinalConnectedCells() : [Cell] : find all ordinally connected cells in a selection
+  ordinalConnectedCells({ selection = this.cells, groupID, islandID } = {}) {
+    //ARROW: ordinalNeighbors()  : find ordinally connected neighbors of a cell
+    const ordinalNeighbors = (cell) => {
+      let validOrdinals = new OpArray
+      Direction.Ordinal.directions.forEach(dir => {
+        // console.log(`Grid.ordinalNeighbors: ${dir.vals}, `, dir.adjacents.directions)
+        const neighbor = this.neighborIsInIsland(cell.index, dir, islandID)
+        const adjacents = dir.adjacents.directions.map(adjDir => this.neighborIsInIsland(cell.index, adjDir, islandID))
+        // console.warn(`ordinalConnectedCells: neighbor: ${neighbor.id}, adjacents:${adjacents?.map(c => c.id)}}`)
+        if (neighbor && adjacents.every(adj => !adj)) { validOrdinals.push(this.neighbor(cell.index, dir)) }
+      })
+      return validOrdinals
+    }
+
+    let ordinals = selection
+      .map(cell => ordinalNeighbors(cell)) // get ordinalNeighbors of every cell in selection
+      .flat().unique(['id']) // flatten and reduce to unique
+      .intersect(selection, ['id']) // intersect with selection to find ordinal neighbors within selection
+    // if (groupID) { ordinals = ordinals.filter(cell => cell.groupID === groupID) } // filter group
+    // if (islandID) { ordinals = ordinals.filter(cell => cell.islandIDs.has(islandID)) } // filter island
+    return ordinals
+  }
+  //#endregion
+}
 

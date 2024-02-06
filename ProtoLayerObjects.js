@@ -993,31 +993,6 @@ class Grid extends ProtoLayer {
       .flatMap(e => this.exposedCorners({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
       .gridVertSorted // sort by y, x 
   }
-
-  //FIXME: DEPRECATE: solved the allToCardinal copy issue with SegPath.cutAllToCardinal() instead
-  //METH: ordinalConnectedCells() : [Cell] : find all ordinally connected cells in a selection
-  // ordinalConnectedCells({ selection = this.cells, groupID, islandID } = {}) {
-  //   //ARROW: ordinalNeighbors()  : find ordinally connected neighbors of a cell
-  //   const ordinalNeighbors = (cell) => {
-  //     let validOrdinals = new OpArray
-  //     Direction.Ordinal.directions.forEach(dir => {
-  //       // console.log(`Grid.ordinalNeighbors: ${dir.vals}, `, dir.adjacents.directions)
-  //       const neighbor = this.neighborIsInIsland(cell.index, dir, islandID)
-  //       const adjacents = dir.adjacents.directions.map(adjDir => this.neighborIsInIsland(cell.index, adjDir, islandID))
-  //       // console.warn(`ordinalConnectedCells: neighbor: ${neighbor.id}, adjacents:${adjacents?.map(c => c.id)}}`)
-  //       if (neighbor && adjacents.every(adj => !adj)) { validOrdinals.push(this.neighbor(cell.index, dir)) }
-  //     })
-  //     return validOrdinals
-  //   }
-
-  //   let ordinals = selection
-  //     .map(cell => ordinalNeighbors(cell)) // get ordinalNeighbors of every cell in selection
-  //     .flat().unique(['id']) // flatten and reduce to unique
-  //     .intersect(selection, ['id']) // intersect with selection to find ordinal neighbors within selection
-  //   // if (groupID) { ordinals = ordinals.filter(cell => cell.groupID === groupID) } // filter group
-  //   // if (islandID) { ordinals = ordinals.filter(cell => cell.islandIDs.has(islandID)) } // filter island
-  //   return ordinals
-  // }
   // #endregion
   // MARK: createIslands Method
   // #region createIslands Method
@@ -1186,11 +1161,12 @@ class Grid extends ProtoLayer {
   // drawShapes() { this.shapes.forEach(s => s.drawElement()) }
 
   //METH: inWrapColinearCorners() : finds colinear wrapped corners and transfers cubic verts inwards to wrapped
-  inWrapColinearCorners(seg, segCollection) {
+  inWrapColinearCorners(seg, segCollection, outside = true) {
     console.log(`inWrapColinearCorners seg`, seg)
     console.log(`inWrapColinearCorners segCollection`, segCollection)
-    if (!seg.turns.end.isRight) { // must be an outside corner, so end of seg turns Right
-      console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
+    const isDir = outside ? `isRight` : `isLeft`
+    if (!seg.turns.end[isDir]) { // must be an outside corner, so end of seg turns Right
+      console.error(`inWrapColinearCorners only works on segment corners ending in ${isDir} turns `)
       return
     }
     const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
@@ -1200,7 +1176,9 @@ class Grid extends ProtoLayer {
       const segDir = seg.direction
       // const wrapDir =  segDir // wrapper will point opposite of segDir
       const turn = !isNeighbor ? 'end' : 'start'
-      const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
+      // const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
+
+      const cubicVert = (s) => !isNeighbor ? s.finalCubicEndVert : s.finalCubicStartVert
       const name = isNeighbor ? `end` : `start`
       // console.log(` ** findColinear seg`, info(seg))
       console.log(`cubicVert`, cubicVert)
@@ -1208,16 +1186,16 @@ class Grid extends ProtoLayer {
       let overlappers = segCollection.flat().filter(s => s.isOverlappingWith(seg)) // colinear wraps overlap seg
       console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
       overlappers = overlappers
-        .filter(s => s.direction.equals(segDir)) // colinear wraps point in same direction as seg
+        .filter(s => s.direction.equals(segDir)) // colinear subIsland wraps point in same direction as seg
       console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
       overlappers = overlappers
-        .filter(s => s.turns[turn].isRight) // colinear wraps turn left
+        .filter(s => s.turns[turn][isDir]) // colinear wraps turn left
       console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
       overlappers = overlappers
-        .filter(s => s.vertIsOnLine(cubicVert)) // colinear wraps will contain the transferrable cubicVert
+        .filter(s => seg.vertIsOnLine(cubicVert(s))) // colinear wraps will contain the transferrable cubicVert
       console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
       overlappers = overlappers
-        .filter(s => !s.start.equals(cubicVert, 2) && !s.end.equals(cubicVert, 2))// colWraps ends !== cubicVert
+        .filter(s => !seg.start.equals(cubicVert(s), 2) && !seg.end.equals(cubicVert(s), 2))// colWraps ends !== cubicVert
       console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
       console.log(``)
       return overlappers
@@ -1249,9 +1227,10 @@ class Grid extends ProtoLayer {
     }
   }
 
-  //METH: inWrapOutsideCorners() : 
-  inWrapOutsideCorners(insideSegs, outsideSegs) {
-    insideSegs.forEach(seg => this.inWrapColinearCorners(seg, outsideSegs))
+  //METH: inWrapCorners() : 
+  inWrapCorners(insideSegs, outsideSegs, outside = true) {
+    // console.log(`inWrapCorners called`)
+    insideSegs.forEach(seg => this.inWrapColinearCorners(seg, outsideSegs, outside))
   }
 
   //METH: createCubicCorners() :
@@ -1680,7 +1659,7 @@ class Grid extends ProtoLayer {
     }
 
 
-    createQuadShapes(1)
+    createQuadShapes(0)
     createUTurnOuts()
     // createStairs()
     createCorners(this.allSimpleSubShapes)
@@ -2832,8 +2811,9 @@ class Island extends ProtoLayer {
       isle.createSimpleSubShapes()
       // shape.simpleSubShapes = OpArray.from([newShapeSubShapes[0][i]])
 
-      this.grid.inWrapOutsideCorners(shape.simpleSubShapes.flat(), parentSimpleSubShapes.flat())
-      // this.grid.createCubicCorners(shape.simpleSubShapes)
+      this.grid.inWrapCorners(shape.simpleSubShapes.flat(), parentSimpleSubShapes.flat())
+      this.grid.inWrapCorners(shape.simpleSubShapes.flat(), parentSimpleSubShapes.flat(), false)
+      this.grid.createCubicCorners(shape.simpleSubShapes)
 
 
       console.log(`shape`, shape)
