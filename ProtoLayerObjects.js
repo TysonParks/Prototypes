@@ -1156,9 +1156,6 @@ class Grid extends ProtoLayer {
     this.groups.forEach(g => g.createSimpleSubShapes())
     console.groupEnd()
   }
-  //TODO: DEPRECATE
-  // //METH: drawShapes()
-  // drawShapes() { this.shapes.forEach(s => s.drawElement()) }
 
   //METH: inWrapColinearCorners() : finds colinear wrapped corners and transfers cubic verts inwards to wrapped
   inWrapColinearCorners(seg, segCollection, outside = true) {
@@ -1257,7 +1254,6 @@ class Grid extends ProtoLayer {
     }
     return outsideCorners
   }
-
 
 
   //MARK: CUSTOMIZE SHAPES
