@@ -1,5 +1,6 @@
 //MARK: Useful code that went unused!
 
+//CLASS: UnusedSegPath
 class UnusedSegPath extends SegPath {
   //METH: cutAllToCardinal()
   static cutAllToCardinal(segPath) {
@@ -46,6 +47,7 @@ class UnusedSegPath extends SegPath {
   }
 }
 
+//CLASS: UnusedGrid
 class UnusedGrid extends Grid {
 
   // MARK: Selection Methods
@@ -83,3 +85,143 @@ class UnusedGrid extends Grid {
   // #endregion
 }
 
+//CLASS: UnusedSelectionBounds
+class UnusedSelectionBounds extends SelectionBounds {
+  // MARK: Encoder properties 
+  // #region Encoder methods
+  //NOTE:https://pressbooks.library.upei.ca/statics/chapter/centre-of-mass-composite-shapes/
+  get centerOfMass() {
+    if (this.takenWeight === 1) { return vert(0, 0) }
+    // print(this.cellAnchor)
+    // print(this.cellsCentroid)
+    const xWeight = this.xCellValues
+      .map(x => x - this.cellsCentroid.x - this.cellAnchor.x + 0.5).numSorted
+    const YWeight = this.yCellValues
+      .map(y => y - this.cellsCentroid.y - this.cellAnchor.y + 0.5)
+    // print(xWeight)
+    // print(YWeight)
+    return vert(xWeight.sum / this.selectionCount, -YWeight.sum / this.selectionCount)
+  }
+
+  get encoderRotation() {
+    const com = this.centerOfMass
+    // const dir = this.centerOfMass.quadrantDirection
+    // print(dir)
+    // print(`com.isZero: ${com.isZero}`)
+    switch (this.aspect.value) {
+      case 0: // square
+        // print('square')
+        if (com.isZero) { return 0 }        // (0,0)
+        if (abs(com.x) === abs(com.y)) {    // x.mag = y.mag
+          const angle = com.angleBetween(vert(1, -1))
+          return (4 - round(angle * 2 / PI)) % 4
+        }
+        if (abs(com.x) > abs(com.y)) {      // x.mag > y.mag
+          return (com.x > 0) ? 1 : 3        // x > 0
+        } else {                            // x.mag <= y.mag
+          return (com.y > 0) ? 2 : 0        // y > 0
+        }
+      case 1: // portrait
+        // print('portrait')
+        if (com.isZero) { return 0 }        // (0,0)
+        if (com.y === 0) {                  // y = 0
+          // print('vert is balanced, use hor weight')
+          return (com.x > 0) ? 0 : 2        // x > 0
+        }
+        return (com.y > 0) ? 2 : 0          // y > 0
+      case 2: // landscape
+        // print('landscape')
+        if (com.isZero) { return 1 }        // (0,0)
+        if (com.x === 0) {                  // x = 0
+          // print('hor (rotated vert) is balanced, use vert weight')
+          return (com.y > 0) ? 1 : 3        // y > 0
+        }
+        return (com.x > 0) ? 1 : 3          // x > 0
+    }
+  }
+
+  get encoderRotDegrees() { return this.encoderRotation * 90 }
+
+  get encoderCells() { return this.grid.cellRowsRotated(this.boundCellRows, this.encoderRotDegrees) }
+
+  get encodingCosts() {
+    return vert(
+      this.encodingCellCount - this.encodingWeight('horizontal'),
+      this.encodingCellCount - this.encodingWeight('vertical')
+    )
+  }
+
+  get encodingEfficiency() {
+    return min(this.encodingCosts.x, this.encodingCosts.y) / (this.cellBoundsCount * 2)
+  }
+
+  get encodingCellCount() { return this.isMostlyTaken ? this.availableCount : this.selectionCount }
+
+  //TODO: complete implementation
+  get encodedShape() {
+    let cells
+    if (this.isMostlyTaken) { cells = this.availableCells }
+    else { cells = this.selection }
+
+    // const horCellLines = this.innerCellIslands()
+    const horCellLines = this.horCellIslands
+    // print(horCellLines)
+    const vertCellLines = this.vertCellIslands
+    // print(vertCellLines)
+  }
+  // #endregion
+  // MARK: Encoder methods 
+  // #region Encoder methods 
+  //METH: 
+  encodingWeight(direction) {
+    if (this.isFull) { return 0 }
+    let name
+    if (direction instanceof Direction) { name = direction.name }
+    else { name = direction }
+    let minMax, islands, rowColVals
+    switch (name) {
+      case 'horizontal':
+        minMax = this.yMinMax
+        islands = this.horCellIslands
+        rowColVals = islands.map(e => e.cellAnchor.y - minMax.x).numSorted.unique()
+        break
+      case 'vertical':
+        minMax = this.xMinMax
+        islands = this.vertCellIslands
+        rowColVals = islands.map(e => e.cellAnchor.x - minMax.x).numSorted.unique()
+        break
+      default:
+        throw new Error('Invalid Direction: Only horizontal and vertical accepted')
+    }
+    // print(`${name} islands`)
+    // print(islands)
+    const islandSavings = islands.filter(e => e.cellCount > 2)
+      .map(e => e.cellCount - 2)
+      .sum
+
+    // print(`${name} rowColVals: ${rowColVals}`)
+    // print(`skippingloop:`)
+
+    let skipping = false
+    let skips = 0
+    for (let i = 0; i <= (minMax.y - minMax.x); i++) {
+      // print(`index: ${i}`)
+      if (rowColVals.some(e => e === i)) {
+        // print(`index: ${i} is not skipping`)
+        if (skipping) {
+          skips++
+          skipping = false
+        }
+      } else {
+        // print(`index: ${i} is skipping`)
+        if (!skipping) { skipping = true }
+      }
+    }
+    // print(`${name} islandSavings: ${islandSavings}`)
+    print(`${name} skips: ${skips}`)
+    // print(`${name} Total: ${islandSavings - skips}`)
+    // print(``)
+    return islandSavings - skips
+  }
+  // #endregion
+}
