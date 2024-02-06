@@ -10,14 +10,14 @@
 // CLASS: ProtoLayer
 // SIZE: 239 lines
 class ProtoLayer {
-  protoParent // ProtoLayer
+  protoParent   // ProtoLayer
   _type
   _insetScale
   _filter
   _filterLoft
-  svgParent // 'SVG' p5.Element
-  svgElt
-  rect // 'rect' p5.Element
+  svgParent     // 'SVG' p5.Element
+  svgElt        // 'SVG' p5.Element
+  rect          // 'rect' p5.Element
   drawSVG
   drawRect
   drawFilter
@@ -53,16 +53,16 @@ class ProtoLayer {
   // #region View Properties
 
   get type() { return this._type }
-  get padding() { return 20 }
+  get padding() { return 20 }                                               // UNUSED
 
-  get testLook() { return SVGLook.test() }
-  get blackLook() { }
-  get protoLook() { return SVGLook.clear }
-  get testColor() { return protoColor(0, 230, 230, 1) }
+  get testLook() { return SVGLook.test() }                                  // UNUSED
+  get blackLook() { }                                                       // UNUSED
+  get protoLook() { return SVGLook.clear }                                  // UNUSED
+  get testColor() { return protoColor(0, 230, 230, 1) }                     // UNUSED
 
-  get color() { return protoColor(230) }
+  get color() { return protoColor(230) }                                    // UNUSED
 
-  get look() {
+  get look() {                                                              // UNUSED
     const clear = SVGLook.clear
     const stroke = testingControls.borders ? SVGLook.testStroke() : []
     const fill = testingControls.testColors ? SVGLook.testFill() : []
@@ -83,21 +83,18 @@ class ProtoLayer {
     if (this.protoParent?.filter) { return this.protoParent.filter }
   }
 
-  get filterLoft() { return this._filterLoft ?? 0 }
-  get loft() { return this.protoParent.loft + this.filterLoft }
+  get filterLoft() { return this._filterLoft ?? 0 }                         // UNUSED
+  get loft() { return this.protoParent.loft + this.filterLoft }             // UNUSED
   // #endregion
   // MARK: Computed Properties
   // #region Computed Properties
   get parentID() { return this.protoParent?.id ?? this.svgParent.id() }
 
   get boundsRect() { return this.protoParent?.insetBoundsRect }
-
   get anchor() { return vert(this.boundsRect.x, this.boundsRect.y) }
   get size() { return vert(this.boundsRect.width, this.boundsRect.height) }
-
   get insetAnchor() { return this.anchorFor(this.insetSize) }
   get insetSize() { return Vertex.mult(this.size, this.insetScale) }
-
   get insetBoundsRect() {
     return DOMRect.fromRect(
       {
@@ -1557,10 +1554,7 @@ class Grid extends ProtoLayer {
         .flat()
         .filter(s => s.isUTurnOut) // only include UTurnOut segments
         .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
-        // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
         .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-      // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-      // return utoSimples
     }
     //ARROW: createUTurnOuts()
     const createUTurnOuts = () => {
