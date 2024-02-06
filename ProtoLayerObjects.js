@@ -2156,13 +2156,6 @@ class Grid extends ProtoLayer {
   // MARK: Grammar Assignment Methods
   // #region Grammar AssignmentMethods
   //METH:
-  //TODO: DEPRECATED
-  // assignGroupPerimeter(groupID, perimeterType, direction) {
-  //   const group = this.groupNamed(groupID)
-  //   if (!group) { console.error(`groupID ${groupID} is invalid`) }
-  //   group?.createPerimiters(perimeterType, direction)
-  // }
-  //METH:
   assignCells(selection, groupID) {
     // console.log('selection', selection)
     if (selection.isEmpty) { return }
