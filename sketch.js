@@ -260,7 +260,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  // gridX = 6
+  // gridX = 3
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 10, y: 10 })
@@ -276,7 +276,7 @@ function gridTests2() {
   //inset: maxShadow <= min(cellSize.x, cellsize.y)
   //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
 
-  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -2 * 1.5 })
+  const shadeStack0 = Shade.neuShadeSVGFactory({ mag: minCellSize * -2.6 * 1 })
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
@@ -316,7 +316,7 @@ function gridTests2() {
   const shader7 = createFilter().dropShadow(shadeStack7)
 
   const shadeStack8 = Shade.neuShadeSVGFactory({
-    mag: minCellSize * -2.8 * 1,
+    mag: minCellSize * -1.8 * 1,
     vector: Shade.shadVect().rotate(180)
   })
   const shader8 = createFilter().dropShadow(shadeStack8)
@@ -334,6 +334,8 @@ function gridTests2() {
   // console.log('FRAME Filter', FRAME.filter.id)
   // console.log('gridFilter', grid.filter.id)
 
+
+  let group000, group001, group002, group003
   // grid.randGroup({amount:1 / grid.cellCount})
   // grid.randomComb({
   //   selection: (grid.cellRows
@@ -360,7 +362,7 @@ function gridTests2() {
 
 
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  let group000 = grid.squares({ coverage: 0.1, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  group000 = grid.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
   // grid.randGroup({amount:0.2})
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
@@ -370,16 +372,16 @@ function gridTests2() {
   // const outlineDir2 = new Direction([1, 3])
   // console.log('outlineDir2', outlineDir2)
   // grid.randGroup({amount:0.1})
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(0, 2), newGroup: false })
+  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(0, 1), newGroup: false })
   // grid.randGroup({ amount: 0.05 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
-  let group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
-  // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: 1 })
-  let group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: 1 })
+  //  group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 1) })
 
-  // let group002 = grid.randGroup({ amount: 0.5 })
+  group003 = grid.randGroup({ amount: 0.6 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
@@ -401,7 +403,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
-  let group003 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
+  // group003 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   // const bounds = grid.cellBounds({ selection: grid.cells })
   // const bounds2 = grid.gridCellBounds
@@ -469,26 +471,35 @@ function gridTests2() {
   //   insetScale: 1.1,
   // })
 
-  group000.createSubIslands({
-    // direction: Direction.Horizontal,
-    filter: shader1,
-    // insetScale: .25,
-    insetScale: .3,
-  })
 
-  group000.createSubIslands({
-    direction: Direction.Cardinal,
-    filter: shader8,
-    // insetScale: .25,
-    insetScale: 1.3,
-  })
 
   // group000.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader8,
+  //   // direction: Direction.Horizontal,
+  //   filter: shader4,
   //   // insetScale: .25,
-  //   insetScale: .2,
+  //   insetScale: 1,
   // })
+
+  group000.createSubIslands({
+    // direction: Direction.Vertical,
+    filter: shader5,
+    // insetScale: .25,
+    insetScale: .7,
+  })
+
+  group000.createSubIslands({
+    // direction: Direction.Vertical,
+    filter: shader8,
+    // insetScale: .25,
+    insetScale: .7,
+  })
+
+  group000.createSubIslands({
+    direction: Direction.Vertical,
+    filter: shader1,
+    // insetScale: .25,
+    insetScale: .2,
+  })
 
   //MARK: group001
   // group001.createSubIslands({
@@ -507,7 +518,7 @@ function gridTests2() {
   group001?.createSubIslands({
     // direction: Direction.All,
     filter: shader0,
-    insetScale: .75,
+    insetScale: .7,
     // insetScale: .95,
   })
 
@@ -626,7 +637,7 @@ function gridTests2() {
 
 
   group002?.createSubIslands({
-    // direction: Direction.Horizontal,
+    direction: Direction.Horizontal,
     filter: shader3,
     insetScale: .1,
     // insetScale: .6,
@@ -648,9 +659,16 @@ function gridTests2() {
 
   // group002?.createSubIslands({
   //   // direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .2,
+  //   insetScale: .1,
+  // })
+
+  // group002?.createSubIslands({
+  //   // direction: Direction.All,
   //   filter: shader1,
   //   // insetScale: .2,
-  //   insetScale: .2,
+  //   insetScale: .8,
   // })
 
   //MARK: group003
@@ -682,11 +700,18 @@ function gridTests2() {
   //   insetScale: 1,
   // })
 
+  // group003?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   // insetScale: .95,
+  // })
+
   group003?.createSubIslands({
     direction: Direction.All,
     filter: shader2,
     // insetScale: .25,
-    // insetScale: .95,
+    // insetScale: .4,
   })
 
   group003?.createSubIslands({
