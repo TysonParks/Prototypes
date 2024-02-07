@@ -211,7 +211,7 @@ class SegPath {
     let previousSeg = undefined
     for (let i = 0; i < vertCount; i++) {
       let seg = protoSegment({ start: vert(vertPath[i]), end: vert(vertPath[i + 1]), parentID: parentID })
-      if (refine === true && previousSeg !== undefined && seg.angle === previousSeg.angle) {
+      if (refine === true && !!previousSeg && seg.angle === previousSeg.angle) {
         seg = protoSegment({ start: previousSeg.start, end: seg.end, parentID: parentID })
         segmentPath.pop()
       } // combine segments with same angle
@@ -239,7 +239,7 @@ class SegPath {
       //FIXME: Current bug prevents last->first connection of colinear segments
       //FIXME: This might also be fixed by repairing the bug that starts interior shapes with left-most segment
       //FIXME: FIX BOTH!!! As both will create separate edgecases
-      if (prevSeg !== undefined && seg.direction.equals(prevSeg.direction)) { // if two segments are in line/flat
+      if (!!prevSeg && seg.direction.equals(prevSeg.direction)) { // if two segments are in line/flat
         if (report) {
           console.log(`seg`, seg.id)
           console.log(`prevSeg`, prevSeg.id)
@@ -854,8 +854,8 @@ class Segment {
 
 // CLASS: ProtoSegment
 // SIZE: 356 lines
-function protoSegment({ start, end, parentID, id, islandIDs } = {}) {
-  return new ProtoSegment(start, end, parentID, id, islandIDs)
+function protoSegment({ start, end, parentID, id, islandIDs, cubicVerts, neighbors } = {}) {
+  return new ProtoSegment(start, end, parentID, id, islandIDs, cubicVerts, neighbors)
 }
 
 class ProtoSegment extends Segment {
@@ -864,14 +864,16 @@ class ProtoSegment extends Segment {
   islandIDs
   taken = false
 
-  cubicVerts = { start: new OpArray, end: new OpArray }
+  cubicVerts = { start: undefined, end: undefined }
   neighbors = { start: undefined, end: undefined }
 
-  constructor(start, end, parentID, id, islandIDs) {
+  constructor(start, end, parentID, id, islandIDs, cubicVerts, neighbors) {
     super(start, end)
     this.parentID = parentID
     this.islandIDs = islandIDs
     this.id = id
+    if (cubicVerts) { this.cubicVerts = cubicVerts }
+    if (neighbors) { this.neighbors = neighbors }
     if (!this.direction.allAreCardinal) {
       console.error(`this segment is not Cardinal!`)
       console.log(this)
@@ -900,7 +902,7 @@ class ProtoSegment extends Segment {
       console.error(`segment ${this.id} without neighbors has no normals`)
       return
     }
-    if (this.angle === undefined) { console.error(`segment ${this.id} has no angle!`, this) }
+    if (!this.angle) { console.error(`segment ${this.id} has no angle!`, this) }
 
     const normals =
     {
@@ -996,8 +998,8 @@ class ProtoSegment extends Segment {
 
   //MARK: Cubic Verts
 
-  get hasCubicStartVert() { return this.cubicVerts.start.length > 0 }                     //CHANGE to !!
-  get hasCubicEndVert() { return this.cubicVerts.end.length > 0 }                         //CHANGE to !!
+  get hasCubicStartVert() { return !!this.cubicVerts.start }
+  get hasCubicEndVert() { return !!this.cubicVerts.end }
   get hasSomeCubicVerts() { return this.hasCubicStartVert || this.hasCubicEndVert }
   get hasNoCubicVerts() { return !this.hasSomeCubicVerts }
   get hasOnlyOneCubicVert() {
@@ -1008,15 +1010,6 @@ class ProtoSegment extends Segment {
     if (this.hasBothCubicVerts) { return 2 }
     if (this.hasOnlyOneCubicVert) { return 1 }
     if (!this.hasSomeCubicVerts) { return 0 }
-  }
-
-  get closestCubicStartVert() {                                                           //DEPRECATE
-    return this.cubicVerts.start.sort((a, b) =>
-      Vertex.sub(this.start, a).roundedMag() - Vertex.sub(this.start, b).roundedMag())[0]
-  }
-  get closestCubicEndVert() {                                                             //DEPRECATE
-    return this.cubicVerts.end.sort((a, b) =>
-      Vertex.sub(this.end, a).roundedMag() - Vertex.sub(this.end, b).roundedMag())[0]
   }
 
   get finalCubicStartVert() {
@@ -1038,10 +1031,10 @@ class ProtoSegment extends Segment {
     else {
       let startLength, endLength
       if (this.hasCubicStartVert) {
-        startLength = Vertex.sub(this.closestCubicStartVert, this.start).mag()              //CHANGE closest to exact
+        startLength = this.start.dist(this.cubicVerts.start)            //CHANGE closest to exact
       }
       if (this.hasCubicEndVert) {
-        endLength = Vertex.sub(this.closestCubicEndVert, this.end).mag()                    //CHANGE closest to exact
+        endLength = this.end.dist(this.cubicVerts.end)                     //CHANGE closest to exact
       }
       if (startLength && endLength) { // this.hasBothCubicVerts
         if (approxToDec(startLength, 2, 1) + approxToDec(endLength, 2, 1) > approxToDec(this.length, 2, 2)) {
@@ -1111,22 +1104,8 @@ class ProtoSegment extends Segment {
     this.addDistancedEndCornerVerts(distance)
   }
 
-  clearCubicStartVerts() { this.cubicVerts.start = new OpArray }  //DEPRECATE
-  clearCubicEndVerts() { this.cubicVerts.end = new OpArray }      //DEPRECATE
-
-  replaceCubicStartVerts(vert) {                                  //DEPRECATE
-    this.clearCubicStartVerts
-    this.addCubicStartVert(vert)
-  }
-  replaceCubicEndVerts(vert) {                                    //DEPRECATE
-    this.clearCubicEndVerts
-    this.addCubicEndVert(vert)
-  }
-
-
   #addCubicVert(vert, start) {
-    let cubicVerts = start ? this.cubicVerts.start : this.cubicVerts.end
-
+    const cubicVert = start ? this.cubicVerts.start : this.cubicVerts.end
     if (vert instanceof Vertex) {
       if (!this.vertIsOnLine(vert)) {
         console.error(`trying to assign a cubicVert that is not on this segment`)
@@ -1134,18 +1113,16 @@ class ProtoSegment extends Segment {
         console.log(`this.segment`, info(this))
         return
       }
-      if (start ? this.hasCubicStartVert : this.hasCubicEndVert) {
-        const availableLength = start ? this.availableStartLength : this.availableEndLength
+      if (cubicVert) {
+        // const availableLength = start ? this.availableStartLength : this.availableEndLength
         const terminus = start ? this.start : this.end
-        if (vert.dist(terminus) >= availableLength) { return }
+        if (vert.dist(terminus) >= cubicVert.dist(terminus)) { return }
       }
-
-      if (cubicVerts.some(v => v.equals(vert, 2))) {                    //DEPRECATE
-        // console.warn(`segment already contains this cubicVert`)
-        return
+      if (start) {
+        this.cubicVerts.start = vert
+      } else {
+        this.cubicVerts.end = vert
       }
-      cubicVerts.push(vert)                                             //CHANGE to direct assignment
-      // cubicVerts = cubicVerts.unique()
     }
   }
 
@@ -1170,7 +1147,9 @@ class ProtoSegment extends Segment {
       end: this.end,
       parentID: this.parentID,
       id: `${this.id}-${copyNumber}`,
-      islandIDs: this.islandIDs
+      islandIDs: this.islandIDs,
+      cubicVerts: this.cubicVerts,
+      neighbors: this.neighbors,
     })
   }
   //METH: insetCopy
@@ -1187,18 +1166,19 @@ class ProtoSegment extends Segment {
     const insetEnd = Vertex.add(this.end, endMove) // new inset segment end
     if (insetEnd.x < 0 || insetEnd.y < 0) { console.warn(`created insetEnd with negative values`) }
 
+    const cubicMove = Vertex.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
+    const insetCubicStart = Vertex.add(this.cubicVerts.start, cubicMove)
+    const insetCubicEnd = Vertex.add(this.cubicVerts.end, cubicMove)
+    const insetCubicVerts = { start: insetCubicStart, end: insetCubicEnd } // assign new inset cubicVerts
+
     const insetCopy = protoSegment({ // new inset segment 
       start: insetStart,
       end: insetEnd,
       parentID: this.id,
       id: `${this.id}-inset(${roundToDec(insetScale.x, 2)})`,
-      islandIDs: this.islandIDs
+      islandIDs: this.islandIDs,
+      cubicVerts: insetCubicVerts,
     })
-
-    const cubicMove = Vertex.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
-    const insetCubicStarts = this.cubicVerts.start.map(v => Vertex.add(v, cubicMove))
-    const insetCubicEnds = this.cubicVerts.end.map(v => Vertex.add(v, cubicMove))
-    insetCopy.cubicVerts = { start: insetCubicStarts, end: insetCubicEnds } // assign new inset cubicVerts
 
     return insetCopy
   }
