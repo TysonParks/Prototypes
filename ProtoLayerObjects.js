@@ -1040,21 +1040,27 @@ class Grid extends ProtoLayer {
       // console.log(` ** findColinear seg`, info(seg))
       console.log(`cubicVert`, cubicVert)
 
-      let overlappers = segCollection.flat().filter(s => s.isOverlappingWith(seg)) // colinear wraps overlap seg
-      console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
-      overlappers = overlappers
-        .filter(s => s.direction.equals(segDir)) // colinear subIsland wraps point in same direction as seg
-      console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
-      overlappers = overlappers
-        .filter(s => s.turns[turn][isDir]) // colinear wraps turn left
-      console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
-      overlappers = overlappers
-        .filter(s => seg.vertIsOnLine(cubicVert(s))) // colinear wraps will contain the transferrable cubicVert
-      console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-      overlappers = overlappers
-        .filter(s => !seg.start.equals(cubicVert(s), 2) && !seg.end.equals(cubicVert(s), 2))// colWraps ends !== cubicVert
-      console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-      console.log(``)
+      let overlappers = segCollection.flat()
+        .filter(s =>
+          s.isOverlappingWith(seg) // colinear wraps overlap seg
+          && s.direction.equals(segDir) // colinear subIsland wraps point in same direction as seg
+          && s.turns[turn][isDir] // colinear wraps turn left
+          && seg.vertIsOnLine(cubicVert(s, true)) // colinear wraps will contain the transferrable cubicVert
+        )
+      // console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
+      // overlappers = overlappers
+      // .filter(s => s.direction.equals(segDir)) // colinear subIsland wraps point in same direction as seg
+      // console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
+      // overlappers = overlappers
+      // .filter(s => s.turns[turn][isDir]) // colinear wraps turn left
+      // console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
+      // overlappers = overlappers
+      // .filter(s => seg.vertIsOnLine(cubicVert(s))) // colinear wraps will contain the transferrable cubicVert
+      // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+      // overlappers = overlappers
+      // .filter(s => !seg.start.equals(cubicVert(s), 2) && !seg.end.equals(cubicVert(s), 2))// colWraps ends !== cubicVert
+      // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+      // console.log(``)
       return overlappers
     }
 
