@@ -1075,10 +1075,8 @@ class Grid extends ProtoLayer {
       //   wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
       //   wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
       // } else {
-      seg.clearCubicEndVerts
-      seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)
-      neighbor.clearCubicStartVerts
-      neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert)
+      seg.replaceCubicEndVerts(wrapperStart[0].finalCubicEndVert)
+      neighbor.replaceCubicStartVerts(wrapperEnd[0].finalCubicStartVert)
       // }
       return wrapperStart[0] // return wrapperStart only for adjacent wrapping
     }
@@ -1117,8 +1115,8 @@ class Grid extends ProtoLayer {
 
 
   //MARK: CUSTOMIZE SHAPES
-  //METH: customizeShapes() :
-  customizeShapes(diagonals = false) {
+  //METH: nestleShapes() :
+  nestleShapes(diagonals = false) {
     const cellRadius = roundToDec(this.minCellWidth / 2)
 
     //TODO: can minCorners be handled elsewhere?
@@ -1152,6 +1150,7 @@ class Grid extends ProtoLayer {
         midPoint: seg.mid.string,
       }
     }
+    //FIXME: move out of nestleShapes
     //ARROW: findColinearWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to wrappers
     const findColinearWrappedCorner = (seg) => {
       if (!seg.turns.end.isRight) { // must be an outside corner, so end of seg turns Right
@@ -1172,18 +1171,23 @@ class Grid extends ProtoLayer {
         // console.log(`cubicVert`, cubicVert)
 
         let overlappers = overlapSegs(seg) // colinear wraps overlap seg
-          // console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
-          // overlappers = overlappers
-          .filter(s => s.direction.equals(wrapDir)) // colinear wraps point in opposite direction as seg
-          // console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
-          // overlappers = overlappers
-          .filter(s => s.turns[turn].isLeft) // colinear wraps turn left
-          // console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
-          // overlappers = overlappers
-          .filter(s => s.vertIsOnLine(cubicVert)) // colinear wraps will contain the transferrable cubicVert
-          // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-          // overlappers = overlappers
-          .filter(s => !s.start.equals(cubicVert, 2) && !s.end.equals(cubicVert, 2))// colWraps ends !== cubicVert
+          .filter(s =>
+            s.direction.equals(wrapDir)
+            && s.turns[turn].isLeft
+            && s.vertIsOnLine(cubicVert, true)
+          )
+        // console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
+        // overlappers = overlappers
+        // .filter(s => s.direction.equals(wrapDir)) // colinear wraps point in opposite direction as seg
+        // console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
+        // overlappers = overlappers
+        // .filter(s => s.turns[turn].isLeft) // colinear wraps turn left
+        // console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
+        // overlappers = overlappers
+        // .filter(s => s.vertIsOnLine(cubicVert, true)) // colinear wraps will contain the transferrable cubicVert
+        // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
+        // overlappers = overlappers
+        // .filter(s => !s.start.equals(cubicVert, 2) && !s.end.equals(cubicVert, 2))// colWraps ends !== cubicVert
         // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
         // console.log(``)
         return overlappers
@@ -1209,7 +1213,7 @@ class Grid extends ProtoLayer {
         return wrapperStart[0] // return wrapperStart only for adjacent wrapping
       }
     }
-
+    //FIXME: move out of nestleShapes
     //ARROW: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
     const findAdjacentWrappedCorner = (seg) => {
       if (!seg.turns.start.isLeft) {
@@ -1235,12 +1239,16 @@ class Grid extends ProtoLayer {
         // console.log(`normal`, normal.string)
 
         let adjs = subShapes
+          .filter(s =>
+            s.direction.equals(adjDir)
+            && s.turns[turn].isRight
+          )
           // console.log(`${name} adj subshapes `, adjs.map(s => info(s)))
           // adjs = adjs
-          .filter(s => s.direction.equals(adjDir)) // adjacent wraps point in opposite direction as seg
+          // .filter(s => s.direction.equals(adjDir)) // adjacent wraps point in opposite direction as seg
           // console.log(`${name} adj opposites `, adjs.map(s => info(s)))
           // adjs = adjs
-          .filter(s => s.turns[turn].isRight) // adjacent wraps turn right
+          // .filter(s => s.turns[turn].isRight) // adjacent wraps turn right
           // console.log(`${name} adj rightTurns `, adjs.map(s => info(s)))
           // adjs = adjs
           .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null) // adjWraps intersect normal
@@ -1309,18 +1317,31 @@ class Grid extends ProtoLayer {
 
       }
     }
-
-    //ARROW: wrapOutsideCorners() : recursive combination of colinear/adjacent wrap functions for outside corners
-    const wrapOutsideCorners = (segs) => {
-      segs = OpArray.format(segs)
-      const colinears = segs.map(seg => findColinearWrappedCorner(seg)).compacted
-      if (colinears.length > 0) {
+    //FIXME: move out of nestleShapes
+    //ARROW: outWrapOutsideCorners() : recursive combination of colinear/adjacent wrap functions for outside corners
+    const outWrapOutsideCorners = (segCollection) => {
+      segCollection = OpArray.format(segCollection)
+      const colinears = segCollection.map(seg => findColinearWrappedCorner(seg)).compacted
+      if (!colinears.isEmpty) {
         const adjacents = colinears.map(seg => findAdjacentWrappedCorner(seg)).compacted
-        if (adjacents.length > 0) {
-          wrapOutsideCorners(adjacents)
+        if (!adjacents.isEmpty) {
+          outWrapOutsideCorners(adjacents)
         }
       }
     }
+    //FIXME: move out of nestleShapes
+    //ARROW: outWrapAdjInsideCorners() : recursive combination of adjacent/colinear wrap functions for inside corners
+    const outWrapAdjInsideCorners = (segCollection) => {
+      segCollection = OpArray.format(segCollection)
+      const adjacents = segCollection.map(seg => findAdjacentWrappedCorner(seg)).compacted
+      if (!adjacents.isEmpty) {
+        const colinears = adjacents.map(seg => findColinearWrappedCorner(seg)).compacted
+        if (!colinears.isEmpty) {
+          outWrapAdjInsideCorners(colinears)
+        }
+      }
+    }
+
 
     //MARK: QUAD SHAPES
     //ARROW: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
@@ -1408,21 +1429,24 @@ class Grid extends ProtoLayer {
         console.log(``)
         console.log(`    QUAD`, i, quad[0].parentID)
       })
-      wrapOutsideCorners(quads.flat())
+      outWrapOutsideCorners(quads.flat())
     }
 
-    //ARROW: sortUTurnOuts() : sorting for createUTurnOuts()
-    const sortUTurnOuts = () => {
-      return this.allSimpleSubShapes
-        .flat()
-        .filter(s => s.isUTurnOut) // only include UTurnOut segments
-        .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
-        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-    }
+
     //ARROW: createUTurnOuts()
-    const createUTurnOuts = () => {
+    const createUTurnOuts = (out = true) => {
+
+      //ARROW: sortUTurnOuts() : sorting for createUTurnOuts()
+      const sortUTurns = (out = true) => {
+        return this.allSimpleSubShapes
+          .flat()
+          .filter(s => out ? s.isUTurnOut : s.isUTurnIn) // only include UTurnOut segments
+          .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
+          .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+      }
+
       let curved = new OpArray
-      let uTOs = sortUTurnOuts()
+      let uTOs = sortUTurns(out)
       while (uTOs.length > 0) {
         const seg = uTOs[0]
         const startNeighbor = seg.neighbors.start
@@ -1434,24 +1458,26 @@ class Grid extends ProtoLayer {
           seg.addBothDistancedCornerVerts(startRadius)
           curved.push(startNeighbor)
           curved.push(seg)
-          // wrapOutsideCorners(startNeighbor)
-          // wrapOutsideCorners(seg)
+          // outWrapOutsideCorners(startNeighbor)
+          // outWrapOutsideCorners(seg)
         }
         else if (startRadius < endRadius) {
           seg.addDistancedStartCornerVerts(startRadius)
           curved.push(startNeighbor)
-          // wrapOutsideCorners(startNeighbor)
+          // outWrapOutsideCorners(startNeighbor)
         } else {
           seg.addDistancedEndCornerVerts(endRadius)
           curved.push(seg)
-          // wrapOutsideCorners(seg)
+          // outWrapOutsideCorners(seg)
         }
-        uTOs = sortUTurnOuts(this.allSimpleSubShapes)
+        uTOs = uTOs
+          .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
+          .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
       }
-      wrapOutsideCorners(curved)
+      outWrapOutsideCorners(curved)
     }
 
-    //ARROW: sortUTurnOuts() : sorting for createUTurnOuts()
+    //ARROW: sortStairs() : sorting for createStairs()
     const sortStairs = () => {
       return this.allSimpleSubShapes
         .flat()
@@ -1463,7 +1489,7 @@ class Grid extends ProtoLayer {
       // return utoSimples
     }
     //TODO: Finish implementation for creating diagonal lines
-    //ARROW: createUTurnOuts()
+    //ARROW: createStairs()
     const createStairs = () => {
       let curved = new OpArray
       let stairs = sortStairs(this.allSimpleSubShapes)
@@ -1496,8 +1522,8 @@ class Grid extends ProtoLayer {
       //   seg.addDistancedEndCornerVerts(radius)
       const oustideCorners = this.createCubicCorners(subShapes)
       console.log(`outsideCorners`, oustideCorners)
-      oustideCorners.forEach(seg => wrapOutsideCorners(seg))
-      // if (seg.turns.end.isRight) { wrapOutsideCorners(seg) }
+      oustideCorners.forEach(seg => outWrapOutsideCorners(seg))
+      // if (seg.turns.end.isRight) { outWrapOutsideCorners(seg) }
       //   corners = sortCorners(subShapes)
       // }
     }
@@ -1506,8 +1532,8 @@ class Grid extends ProtoLayer {
     const finish = () => {
       this.allSimpleSubShapes.flat().forEach(s => {
         s.matchStartCorner()
-        if (s.turns.end.isRight) { wrapOutsideCorners(s) }
-        // wrapOutsideCorners(s)
+        if (s.turns.end.isRight) { outWrapOutsideCorners(s) }
+        // outWrapOutsideCorners(s)
       })
     }
 
@@ -1521,7 +1547,7 @@ class Grid extends ProtoLayer {
     // console.log(`currentSimples`, sortedSimples().map(s => s.id))
     // console.log(`currentSimples turns`, sortedSimples().map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
 
-    console.log(`  %%%% end customizeShapes %%%%`)
+    console.log(`  %%%% end nestleShapes %%%%`)
     console.log(``)
   }
   // #endregion
@@ -3098,7 +3124,7 @@ class Shape extends ProtoLayer {
 
   // MARK: methods
   // #region methods
-  //METH: : create initial SimpleSubShapes with minCorners to be refined by customizeShapes
+  //METH: : create initial SimpleSubShapes with minCorners to be refined by nestleShapes
   createSimpleSubShapes() {
     console.warn(`${this.id}.createSimpleSubShapes called!!!`)
     this.simpleSubShapes = this.subShapes.map(sub =>
