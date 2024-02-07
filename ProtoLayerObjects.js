@@ -1075,8 +1075,8 @@ class Grid extends ProtoLayer {
       //   wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
       //   wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
       // } else {
-      seg.replaceCubicEndVerts(wrapperStart[0].finalCubicEndVert)
-      neighbor.replaceCubicStartVerts(wrapperEnd[0].finalCubicStartVert)
+      seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)
+      neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert)
       // }
       return wrapperStart[0] // return wrapperStart only for adjacent wrapping
     }
