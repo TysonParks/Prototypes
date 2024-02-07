@@ -88,7 +88,7 @@ class UnusedGrid extends Grid {
 //CLASS: UnusedSelectionBounds
 class UnusedSelectionBounds extends SelectionBounds {
   // MARK: Encoder properties 
-  // #region Encoder methods
+  // #region Encoder properties
   //NOTE:https://pressbooks.library.upei.ca/statics/chapter/centre-of-mass-composite-shapes/
   get centerOfMass() {
     if (this.takenWeight === 1) { return vert(0, 0) }
