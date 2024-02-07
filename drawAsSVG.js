@@ -996,8 +996,8 @@ class ProtoSegment extends Segment {
 
   //MARK: Cubic Verts
 
-  get hasCubicStartVert() { return this.cubicVerts.start.length > 0 }
-  get hasCubicEndVert() { return this.cubicVerts.end.length > 0 }
+  get hasCubicStartVert() { return this.cubicVerts.start.length > 0 }                     //CHANGE to !!
+  get hasCubicEndVert() { return this.cubicVerts.end.length > 0 }                         //CHANGE to !!
   get hasSomeCubicVerts() { return this.hasCubicStartVert || this.hasCubicEndVert }
   get hasNoCubicVerts() { return !this.hasSomeCubicVerts }
   get hasOnlyOneCubicVert() {
@@ -1010,11 +1010,11 @@ class ProtoSegment extends Segment {
     if (!this.hasSomeCubicVerts) { return 0 }
   }
 
-  get closestCubicStartVert() {
+  get closestCubicStartVert() {                                                           //DEPRECATE
     return this.cubicVerts.start.sort((a, b) =>
       Vertex.sub(this.start, a).roundedMag() - Vertex.sub(this.start, b).roundedMag())[0]
   }
-  get closestCubicEndVert() {
+  get closestCubicEndVert() {                                                             //DEPRECATE
     return this.cubicVerts.end.sort((a, b) =>
       Vertex.sub(this.end, a).roundedMag() - Vertex.sub(this.end, b).roundedMag())[0]
   }
@@ -1038,10 +1038,10 @@ class ProtoSegment extends Segment {
     else {
       let startLength, endLength
       if (this.hasCubicStartVert) {
-        startLength = Vertex.sub(this.closestCubicStartVert, this.start).mag()
+        startLength = Vertex.sub(this.closestCubicStartVert, this.start).mag()              //CHANGE closest to exact
       }
       if (this.hasCubicEndVert) {
-        endLength = Vertex.sub(this.closestCubicEndVert, this.end).mag()
+        endLength = Vertex.sub(this.closestCubicEndVert, this.end).mag()                    //CHANGE closest to exact
       }
       if (startLength && endLength) { // this.hasBothCubicVerts
         if (approxToDec(startLength, 2, 1) + approxToDec(endLength, 2, 1) > approxToDec(this.length, 2, 2)) {
@@ -1111,14 +1111,14 @@ class ProtoSegment extends Segment {
     this.addDistancedEndCornerVerts(distance)
   }
 
-  clearCubicStartVerts() { this.cubicVerts.start = new OpArray }
-  clearCubicEndVerts() { this.cubicVerts.end = new OpArray }
+  clearCubicStartVerts() { this.cubicVerts.start = new OpArray }  //DEPRECATE
+  clearCubicEndVerts() { this.cubicVerts.end = new OpArray }      //DEPRECATE
 
-  replaceCubicStartVerts(vert) {
+  replaceCubicStartVerts(vert) {                                  //DEPRECATE
     this.clearCubicStartVerts
     this.addCubicStartVert(vert)
   }
-  replaceCubicEndVerts(vert) {
+  replaceCubicEndVerts(vert) {                                    //DEPRECATE
     this.clearCubicEndVerts
     this.addCubicEndVert(vert)
   }
@@ -1140,11 +1140,11 @@ class ProtoSegment extends Segment {
         if (vert.dist(terminus) >= availableLength) { return }
       }
 
-      if (cubicVerts.some(v => v.equals(vert, 2))) {
+      if (cubicVerts.some(v => v.equals(vert, 2))) {                    //DEPRECATE
         // console.warn(`segment already contains this cubicVert`)
         return
       }
-      cubicVerts.push(vert)
+      cubicVerts.push(vert)                                             //CHANGE to direct assignment
       // cubicVerts = cubicVerts.unique()
     }
   }
