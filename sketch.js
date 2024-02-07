@@ -239,7 +239,7 @@ class ProtoMill {
   }
   //METH:
   setTensions() {
-    //TODO: tense, curve, and fit shapes using Grid.customizeShapes()
+    //TODO: tense, curve, and fit shapes using Grid.nestleShapes()
     // maybe call this "nestle"? It's nice because it's like nest + cuddle
     // "snuggle" might be more human/relatable
   }
@@ -280,7 +280,7 @@ function gridTests2() {
   const shader0 = createFilter().dropShadow(shadeStack0)
   // console.log('shadeStack0', shadeStack0)
 
-  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.1 * 10 })
+  const shadeStack1 = Shade.neuShadeSVGFactory({ mag: minCellSize * -0.6 * 1 })
   const shader1 = createFilter().dropShadow(shadeStack1)
   // console.log('shadeStack1', shadeStack1)
 
@@ -381,7 +381,7 @@ function gridTests2() {
   grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: 1 })
   //  group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 1) })
 
-  group002 = grid.randGroup({ amount: 0.6 })
+  group002 = grid.randGroup({ amount: 0.5 })
   // group003 = grid.randGroup({ amount: 0.6 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
@@ -404,6 +404,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.All, true)
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
+
   group003 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   // const bounds = grid.cellBounds({ selection: grid.cells })
@@ -435,8 +436,8 @@ function gridTests2() {
   // console.log(`groups`, grid.groups)
 
   console.error(`  ######################   `)
-  console.groupCollapsed(`CustomizeShapes`)
-  grid.customizeShapes()
+  console.groupCollapsed(`nestleShapes`)
+  grid.nestleShapes()
   console.groupEnd()
 
   console.error(`  ######################   `)
@@ -624,25 +625,46 @@ function gridTests2() {
 
   group002?.createSubIslands({
     direction: Direction.All,
-    filter: shader3,
+    filter: shader8,
     // insetScale: .2,
-    insetScale: .7,
+    insetScale: .8,
   })
 
-  group002?.createSubIslands({
-    // direction: Direction.Vertical,
-    filter: shader3,
-    insetScale: .4,
-    // insetScale: .6,
-  })
+  // group002?.createSubIslands({
+  //   // direction: Direction.Vertical,
+  //   filter: shader3,
+  //   insetScale: .4,
+  //   // insetScale: .6,
+  // })
 
 
-  group002?.createSubIslands({
-    direction: Direction.Horizontal,
-    filter: shader3,
-    insetScale: .1,
-    // insetScale: .6,
-  })
+  // group002?.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader3,
+  //   insetScale: .7,
+  //   // insetScale: .6,
+  // })
+
+  // group002?.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader8,
+  //   insetScale: .4,
+  //   // insetScale: .6,
+  // })
+
+  // group002?.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader0,
+  //   insetScale: .4,
+  //   // insetScale: .6,
+  // })
+
+  // group002?.createSubIslands({
+  //   direction: Direction.Horizontal,
+  //   filter: shader8,
+  //   insetScale: .6,
+  //   // insetScale: .6,
+  // })
 
   // group002?.createSubIslands({
   //   direction: Direction.None,
@@ -658,12 +680,12 @@ function gridTests2() {
   //   insetScale: .4,
   // })
 
-  // group002?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .2,
-  //   insetScale: .1,
-  // })
+  group002?.createSubIslands({
+    direction: Direction.None,
+    filter: shader1,
+    // insetScale: .2,
+    insetScale: .3,
+  })
 
   // group002?.createSubIslands({
   //   // direction: Direction.All,

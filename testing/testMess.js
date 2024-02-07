@@ -63,6 +63,9 @@ function functionTestPrint() {
 
   console.log(`seg2 is colinear with seg3? (true)`, seg2.isColinearWith(seg3))
 
+  console.log(`distance between vert0 and vert1 (1)`, vert0.dist(vert1))
+  console.log(`distance between vert1 and vert2 (0.75)`, vert1.dist(vert2))
+
   // NOTE: hash display
   // print(printInputToGridRows(values32x8bit, 4, 8))
   // print(pointsToHex5s(similarGridNeighbors(32, 4, 8, values32x8bit)))
