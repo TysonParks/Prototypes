@@ -1254,8 +1254,8 @@ class Grid extends ProtoLayer {
 
         let adjs = subShapes
           .filter(s =>
-            s.direction.equals(adjDir)
-            && s.turns[turn].isRight
+            s.direction.equals(adjDir)  // adjacent wraps point in opposite direction as seg
+            && s.turns[turn].isRight    // adjacent wraps turn right
           )
           // console.log(`${name} adj subshapes `, adjs.map(s => info(s)))
           // adjs = adjs
@@ -1456,26 +1456,26 @@ class Grid extends ProtoLayer {
           .flat()
           .filter(s => out ? s.isUTurnOut : s.isUTurnIn) // only include UTurnOut segments
           .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
-          .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+          .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
       }
 
-      let curved = new OpArray
+      let curved = new OpArray                            // processed corner/seg storage
       let uTOs = sortUTurns(out)
       while (uTOs.length > 0) {
-        const seg = uTOs[0]
+        const seg = uTOs.pop()                            // pop gets segs with smallest minCubicLength first
         const startNeighbor = seg.neighbors.start
         const endNeighbor = seg.neighbors.end
         const startRadius = min(startNeighbor.availableEndLength, seg.availableStartLength)
         const endRadius = min(seg.availableEndLength, endNeighbor.availableStartLength)
 
-        if (approxToDec(startRadius) === approxToDec(endRadius)) {
+        if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corners
           seg.addBothDistancedCornerVerts(startRadius)
           curved.push(startNeighbor)
           curved.push(seg)
           // outWrapOutsideCorners(startNeighbor)
           // outWrapOutsideCorners(seg)
         }
-        else if (startRadius < endRadius) {
+        else if (startRadius < endRadius) {               // curve smallest corner
           seg.addDistancedStartCornerVerts(startRadius)
           curved.push(startNeighbor)
           // outWrapOutsideCorners(startNeighbor)
@@ -1484,11 +1484,8 @@ class Grid extends ProtoLayer {
           curved.push(seg)
           // outWrapOutsideCorners(seg)
         }
-        uTOs = uTOs
-          .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
-          .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
       }
-      outWrapOutsideCorners(curved)
+      outWrapOutsideCorners(curved)                       // outWrap processed corners
     }
 
     //ARROW: sortStairs() : sorting for createStairs()
@@ -3218,15 +3215,15 @@ class Shape extends ProtoLayer {
 
     if (this.drawFilter) {
       if (S.Effects.db[0][1]) {
-        let maxWidthDivisor = 20
+        // let maxWidthDivisor = 20
         // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.25 }
-        let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
-        strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
+        // let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
+        // strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
 
         // console.log('shape insetScale', this.insetScale)
-        const insetScaleX = this.insetScale.x
-        const posInset = insetScaleX >= 0
-        strokeMaskWidth = 1 * (posInset ? 1 - insetScaleX : insetScaleX) * this.grid.cellSize.x
+        // const insetScaleX = this.insetScale.x
+        // const posInset = insetScaleX >= 0
+        // strokeMaskWidth = 1 * (posInset ? 1 - insetScaleX : insetScaleX) * this.grid.cellSize.x
         // strokeMaskWidth = -.6 * this.grid.cellSize.x
         // console.log('insetScaleX', insetScaleX)
         // console.log('strokeMaskWidth', strokeMaskWidth)
@@ -3238,7 +3235,7 @@ class Shape extends ProtoLayer {
           .attribute('fill-opacity', 1)
           // .attribute('fill', protoColor(255))
           // .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
-          .applyFilter(this.filter, 2)
+          .applyFilter(this.filter, 3)
       }
     } else {
       this.drawPerimeterDeBug = false
