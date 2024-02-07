@@ -655,7 +655,7 @@ class Grid extends ProtoLayer {
   }
   //METH: 
   cellSegmentBetween(indexA, indexB) {
-    const indices = [indexA, indexB].sort((a, b) => a - b)
+    const indices = [indexA, indexB].numSorted
     // print(indices)
     const a = this.coords(indices[0])
     const b = this.coords(indices[1])
@@ -683,7 +683,7 @@ class Grid extends ProtoLayer {
   }
   //METH: 
   cellSpanRowsBetween(indexA, indexB) {
-    const indices = [indexA, indexB].sort((a, b) => a - b)
+    const indices = [indexA, indexB].numSorted
     // print(indices)
     const a = this.coords(indices[0])
     const b = this.coords(indices[1])
@@ -845,7 +845,8 @@ class Grid extends ProtoLayer {
   allExposedSides({ selection, groupID, islandID } = {}) {
     return selection
       .flatMap(e => this.exposedSides({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
-      .sort((a, b) => a.start.y - b.start.y || a.start.x - b.start.x) // sort by y, x 
+      .gridVertSorted
+    // .sort((a, b) => a.start.y - b.start.y || a.start.x - b.start.x) // sort by y, x 
   }
   //METH: 
   allExposedCorners({ selection, groupID, islandID } = {}) {
@@ -1114,7 +1115,14 @@ class Grid extends ProtoLayer {
       const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
       seg.addDistancedEndCornerVerts(radius)
       if (seg.turns.end.isRight) { outsideCorners.push(seg) }
-      corners = sortCorners(subShapes)
+      // corners = sortCorners(subShapes)
+      if (seg.hasBothCubicVerts) {
+        // find and remove seg from array
+      }
+      corners = corners
+        .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
     }
     return outsideCorners
   }
@@ -2897,7 +2905,7 @@ class Island extends ProtoLayer {
               nextSeg = next.find(e => e.direction.equals(nextDirection))
               // console.log(`thisSeg here`, thisSeg)
               // console.log(`nextSeg here`, nextSeg)
-              if (nextSeg === undefined) { console.error('unexpected 2nd segment') }
+              if (!nextSeg) { console.error('unexpected 2nd segment') }
             }
             // console.log(``)
             // console.log(this.grid.groups)
@@ -2920,9 +2928,9 @@ class Island extends ProtoLayer {
         subShapes.push(subShape)
         if (subShapes.length === 1) { // re-sort inner subshapes for counter-clockwise processing
           segments = segments
-            //FIXME: test .counterGridVertSorted now that Segments have x and y, then remove custom sort below
-            // .counterGridVertSorted
-            .sort((a, b) => a.start.y - b.start.y || b.start.x - a.start.x) // sort by y, -x 
+            //TODO: test .counterGridVertSorted now that Segments have x and y, then remove custom sort below
+            .counterGridVertSorted
+          // .sort((a, b) => a.start.y - b.start.y || b.start.x - a.start.x) // sort by y, -x 
         }
 
       }
