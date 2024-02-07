@@ -709,7 +709,13 @@ class Segment {
   }
 
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
-  vertIsOnLine(vert) {
+  vertIsOnLine(vert, excludeEnds = false) {
+    if (excludeEnds) {
+      if (vert.equals(this.start, 2) || vert.equals(this.end, 2)) {
+        return false
+      }
+    }
+
     // Check if vert is within the bounding box of the segment
     if (!this.vertIsInBounds(vert)) {
       console.log(`vertIsOnLine vert is not in bounds`)
@@ -988,7 +994,7 @@ class ProtoSegment extends Segment {
     return reversedPath.shifted(shiftIndex)
   }
 
-
+  //MARK: Cubic Verts
 
   get hasCubicStartVert() { return this.cubicVerts.start.length > 0 }
   get hasCubicEndVert() { return this.cubicVerts.end.length > 0 }
@@ -1003,13 +1009,6 @@ class ProtoSegment extends Segment {
     if (this.hasOnlyOneCubicVert) { return 1 }
     if (!this.hasSomeCubicVerts) { return 0 }
   }
-
-  // get cubicVertsToStartLengths() {
-  //   return this.cubicVerts.start.map(vert => Vertex.sub(this.start, vert).roundedMag()).numsorted
-  // }
-  // get cubicVertsToEndLengths() {
-  //   return this.cubicVerts.end.map(vert => Vertex.sub(this.end, vert).roundedMag()).numsorted
-  // }
 
   get closestCubicStartVert() {
     return this.cubicVerts.start.sort((a, b) =>
@@ -1084,6 +1083,85 @@ class ProtoSegment extends Segment {
 
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
+  //TODO: do I actually want/need this?
+  assignMid() {
+    this.addCubicStartVert(this.mid)
+    this.addCubicEndVert(this.mid)
+  }
+
+  addCubicStartVert(vert) { this.#addCubicVert(vert, true) }
+  addCubicEndVert(vert) { this.#addCubicVert(vert, false) }
+  addBothCubicVerts(vert) {
+    this.addCubicStartVert(vert)
+    this.addCubicEndVert(vert)
+  }
+  addDistancedCubicStartVert(distance) { this.addCubicStartVert(this.distancedStartPoint(distance)) }
+  addDistancedCubicEndVert(distance) { this.addCubicEndVert(this.distancedEndPoint(distance)) }
+
+  addDistancedStartCornerVerts(distance) {
+    this.neighbors.start.addDistancedCubicEndVert(distance)
+    this.addDistancedCubicStartVert(distance)
+  }
+  addDistancedEndCornerVerts(distance) {
+    this.addDistancedCubicEndVert(distance)
+    this.neighbors.end.addDistancedCubicStartVert(distance)
+  }
+  addBothDistancedCornerVerts(distance) {
+    this.addDistancedStartCornerVerts(distance)
+    this.addDistancedEndCornerVerts(distance)
+  }
+
+  clearCubicStartVerts() { this.cubicVerts.start = new OpArray }
+  clearCubicEndVerts() { this.cubicVerts.end = new OpArray }
+
+  replaceCubicStartVerts(vert) {
+    this.clearCubicStartVerts
+    this.addCubicStartVert(vert)
+  }
+  replaceCubicEndVerts(vert) {
+    this.clearCubicEndVerts
+    this.addCubicEndVert(vert)
+  }
+
+
+  #addCubicVert(vert, start) {
+    let cubicVerts = start ? this.cubicVerts.start : this.cubicVerts.end
+
+    if (vert instanceof Vertex) {
+      if (!this.vertIsOnLine(vert)) {
+        console.error(`trying to assign a cubicVert that is not on this segment`)
+        console.log(`off-line vert`, vert)
+        console.log(`this.segment`, info(this))
+        return
+      }
+      if (start ? this.hasCubicStartVert : this.hasCubicEndVert) {
+        const availableLength = start ? this.availableStartLength : this.availableEndLength
+        const terminus = start ? this.start : this.end
+        if (vert.dist(terminus) >= availableLength) { return }
+      }
+
+      if (cubicVerts.some(v => v.equals(vert, 2))) {
+        // console.warn(`segment already contains this cubicVert`)
+        return
+      }
+      cubicVerts.push(vert)
+      // cubicVerts = cubicVerts.unique()
+    }
+  }
+
+  matchStartCorner() {
+    const startMin = min(this.availableStartLength, this.neighbors.start.availableEndLength)
+    this.addDistancedStartCornerVerts(startMin)
+  }
+  matchEndCorner() {
+    const endMin = min(this.availableEndLength, this.neighbors.end.availableStartLength)
+    this.addDistancedEndCornerVerts(endMin)
+  }
+  matchCorners() {
+    this.matchStartCorner()
+    this.matchEndCorner()
+  }
+
   //METH: copy
   get copy() {
     const copyNumber = this.id.includes(`copy`) ? `copy` + String(+this.id.slice(-2) + 1).padStart(1, '0') : `copy0`
@@ -1142,68 +1220,7 @@ class ProtoSegment extends Segment {
     }
   }
 
-  //TODO: do I actually want/need this?
-  assignMid() {
-    this.addCubicStartVert(this.mid)
-    this.addCubicEndVert(this.mid)
-  }
 
-  addCubicStartVert(vert) { this.#addCubicVert(vert, true) }
-  addCubicEndVert(vert) { this.#addCubicVert(vert, false) }
-  addBothCubicVerts(vert) {
-    this.addCubicStartVert(vert)
-    this.addCubicEndVert(vert)
-  }
-  addDistancedCubicStartVert(distance) { this.addCubicStartVert(this.distancedStartPoint(distance)) }
-  addDistancedCubicEndVert(distance) { this.addCubicEndVert(this.distancedEndPoint(distance)) }
-
-  addDistancedStartCornerVerts(distance) {
-    this.neighbors.start.addDistancedCubicEndVert(distance)
-    this.addDistancedCubicStartVert(distance)
-  }
-  addDistancedEndCornerVerts(distance) {
-    this.addDistancedCubicEndVert(distance)
-    this.neighbors.end.addDistancedCubicStartVert(distance)
-  }
-  addBothDistancedCornerVerts(distance) {
-    this.addDistancedStartCornerVerts(distance)
-    this.addDistancedEndCornerVerts(distance)
-  }
-
-  clearCubicStartVerts() { this.cubicVerts.start = new OpArray }
-  clearCubicEndVerts() { this.cubicVerts.end = new OpArray }
-
-
-  #addCubicVert(vert, start) {
-    let cubicVerts = start ? this.cubicVerts.start : this.cubicVerts.end
-    if (vert instanceof Vertex) {
-      if (!this.vertIsOnLine(vert)) {
-        console.error(`trying to assign a cubicVert that is not on this segment`)
-        console.log(`off-line vert`, vert)
-        console.log(`this.segment`, info(this))
-        return
-      }
-      if (cubicVerts.some(v => v.equals(vert, 2))) {
-        // console.warn(`segment already contains this cubicVert`)
-        return
-      }
-      cubicVerts.push(vert)
-      // cubicVerts = cubicVerts.unique()
-    }
-  }
-
-  matchStartCorner() {
-    const startMin = min(this.availableStartLength, this.neighbors.start.availableEndLength)
-    this.addDistancedStartCornerVerts(startMin)
-  }
-  matchEndCorner() {
-    const endMin = min(this.availableEndLength, this.neighbors.end.availableStartLength)
-    this.addDistancedEndCornerVerts(endMin)
-  }
-  matchCorners() {
-    this.matchStartCorner()
-    this.matchEndCorner()
-  }
 }
 
 
