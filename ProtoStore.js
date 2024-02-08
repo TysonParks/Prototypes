@@ -6,7 +6,8 @@ class Store {
     this.Layers = new ProtoStorage('layr', 1)
     this.Grids = new ProtoStorage('grd', 2)
     this.Cells = new ProtoStorage('cell')
-    this.Groups = new ProtoStorage('grp')
+    this.CellGroups = new ProtoStorage('celGrp')
+    this.ShapeGroups = new ProtoStorage('shpGrp')
     this.Islands = new ProtoStorage('isle')
     this.Shapes = new ProtoStorage('shp')
     // this.Segments = new ProtoStorage('seg')
@@ -23,7 +24,8 @@ class Store {
     return [
       ...this.Frame.db,
       ...this.Grids.db,
-      ...this.Groups.db,
+      ...this.CellGroups.db,
+      ...this.ShapeGroups.db,
       ...this.Islands.db,
       ...this.Shapes.db,
       ...this.Effects.db,
