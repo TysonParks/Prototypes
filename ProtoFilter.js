@@ -297,52 +297,84 @@ class ProtoFilter {
   }
 
   //MARK: Utility methods
-  applyFilterToElement(element, scale = 3, time = 0) {
+  applyFilterToElement({ element, size, padding = 0, time = 0 } = {}) {
     if (!this.type) { return this }
+    console.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
+    console.warn(`applyFilter padding: ${padding}`)
+    const aspect = size.x / size.y
+    //FIXME: I might be able to use absolute values, but they probably need to be relative to the entire canvas?
+    //FIXME: This means I need to bring in the anchor as well. Maybe I can even just use my .layout method?
+    let scaleWidth, scaleHeight
+    if (aspect >= 1) {
+      scaleHeight = aspect
+      scaleWidth = 1
+    } else {
+      scaleHeight = 1
+      scaleWidth = 1 / aspect
+    }
 
-    const anchor = (scale - 1) * -50;
-    const size = scale * 100;
+    const x = ceil(-padding.x / size.x * 100 * scaleWidth)
+    const y = ceil(-padding.y / size.y * 100 * scaleHeight)
+
+    const width = 200 * padding.x / size.x * scaleWidth + 100
+    const height = 200 * padding.y / size.y * scaleHeight + 100
+
+    console.warn(`element`, element)
+    console.warn(`applyFilter x: ${x}, y: ${y}`)
+    console.warn(`applyFilter width: ${width}, height: ${height}`)
+
+    // const anchor = (scale - 1) * -50 - padding
+    // const size = scale * 100
     this.filter
-      .attribute("x", `${anchor}%`)
-      .attribute("y", `${anchor}%`)
-      .attribute("width", `${size}%`)
-      .attribute("height", `${size}%`);
+      // .attribute("x", `-48%`)
+      // .attribute("y", `-5%`)
+      // .attribute("width", `200%`)
+      // .attribute("height", `200%`)
+      .attribute("x", `${x}%`)
+      .attribute("y", `${y}%`)
+      .attribute("width", `${width}%`)
+      .attribute("height", `${height}%`)
+    // .attribute("x", `${-padding.x}`)
+    // .attribute("y", `${-padding.y}`)
+    // .attribute("width", `${size.x + 2 * padding.x}%`)
+    // .attribute("height", `${size.y + 2 * padding.y}%`)
+    console.warn(`this.filter x`, this.filter.attribute("x"))
+    console.warn(`this.filter y`, this.filter.attribute("y"))
+    console.warn(`this.filter width`, this.filter.attribute("width"))
+    console.warn(`this.filter height`, this.filter.attribute("height"))
 
-    const parentSVG = element.elt.ownerSVGElement;
-    const filterUrl = `url(#${this.id})`;
+    const parentSVG = element.elt.ownerSVGElement
+    const filterUrl = `url(#${this.id})`
 
-    let newGroup = parentSVG.querySelector(`g[filter="${filterUrl}"][id^="${this.id}-"]`);
+    let newGroup = parentSVG.querySelector(`g[filter="${filterUrl}"][id^="${this.id}-"]`)
     if (!newGroup) {
       newGroup = createSVGElt("g")
         .id(`${this.id}-${element.id()}`)
         .attribute("filter", filterUrl)
-        .parent(parentSVG);
-      newGroup.child(this.defs);
+        .parent(parentSVG)
+      newGroup.child(this.defs)
     }
 
     if (time > 0) {
-      const oldGroup = element.p5Parent;
+      const oldGroup = element.p5Parent
       if (oldGroup !== newGroup) {
         crossfadeElements(oldGroup, newGroup, time, () => {
-          element.parent(newGroup);
+          element.parent(newGroup)
           if (oldGroup.childElementCount === 0) {
-            oldGroup.remove();
+            oldGroup.remove()
           }
-        });
+        })
       }
     } else {
-      element.parent(newGroup);
-      const oldGroup = element.p5Parent;
+      element.parent(newGroup)
+      const oldGroup = element.p5Parent
       if (oldGroup.childElementCount === 0) {
-        oldGroup.remove();
+        oldGroup.remove()
       }
     }
   }
 
-
-
-
-  updateFilter(shadows, scale = 3, time = 0) {
+  updateFilter(shadows, size = 3, time = 0) {
 
   }
 
@@ -397,10 +429,8 @@ class StrokeMaskFilter extends ProtoFilter {
       .parent(this.mask);
   }
 
-  applyFilterToElement(element) {
-    if (!this.type) {
-      return this
-    }
+  applyFilterToElement({ element } = {}) {
+    if (!this.type) { return this }
 
     const parentSVG = element.elt.ownerSVGElement
 
@@ -604,9 +634,9 @@ p5.Element.prototype.blur = function (radius) {
   return this
 }
 
-//PROTOTYPE: p5.Element extension applyFilter(filterInstance, scale = 1)
-p5.Element.prototype.applyFilter = function (filterInstance, scale = 3, time = 0) {
-  if (filterInstance) { filterInstance.applyFilterToElement(this, scale, time) }
+//PROTOTYPE: p5.Element extension applyFilter(filter, scale = 1)
+p5.Element.prototype.applyFilter = function ({ filter, size, padding = 0, time = 0 } = {}) {
+  if (filter) { filter.applyFilterToElement({ element: this, size: size, padding: padding, time: time }) }
   return this
 }
 
@@ -640,7 +670,7 @@ p5.prototype.crossfadeElements = async function (fromElement, toElement, duratio
 // PROTOTYPE: p5.Element extension applyStrokeMask(color, width)
 p5.Element.prototype.applyStrokeMask = function (color, width) {
   const strokeMaskFilter = new StrokeMaskFilter().strokeMask(color, width)
-  strokeMaskFilter.applyFilterToElement(this)
+  strokeMaskFilter.applyFilterToElement({ element: this })
   return this
 }
 // #endregion
