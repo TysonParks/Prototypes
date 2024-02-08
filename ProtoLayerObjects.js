@@ -210,7 +210,7 @@ class ProtoLayer {
 
       if (this.drawFilter) {
         if (this.filter) {
-          this.rect.applyFilter(this.filter, 2)
+          this.rect.applyFilter({ filter: this.filter, size: this.insetSize })
         }
       }
     }
@@ -357,7 +357,7 @@ class Frame extends ProtoLayer {
       // .attribute('fill', ProtoColor.randomHighHue().setSaturation(10))
       .attribute(`fill`, frameColor)
       .attribute('fill-opacity', '1')
-    // .applyFilter(this.filter, 2)
+    // .applyFilter({ filter: this.filter, size: 2 })
 
     // this.testElementsDraw()
   }
@@ -2157,6 +2157,7 @@ class CellGroup extends ProtoLayer {
   cells = new OpArray
   perimeterIslands = new OpArray // Island-Shapes defining outer boundaries of all Island shapes to be allowed within
   // islands = new OpArray
+  shapesGroups = new OpArray // rendering layer storage
 
   constructor(protoParent, svgParent, grid) {
     super({
@@ -2165,8 +2166,8 @@ class CellGroup extends ProtoLayer {
       drawSVG: false,
     })
     this.grid = grid
-    this._type = 'Group'
-    this.finishSetup(S.Groups)
+    this._type = 'CellGroup'
+    this.finishSetup(S.CellGroups)
   }
 
   // MARK: Computed Properties
@@ -2244,6 +2245,16 @@ class CellGroup extends ProtoLayer {
     console.groupEnd()
     console.log(``)
   }
+  //METH: createShapeGroup() :
+  createShapeGroup(filter, direction = Direction.Cardinal, insetScale = 1) {
+    const shapeGroup = new ShapeGroup({
+      protoParent: this.protoParent,
+      grid: this.grid,
+      filter: filter,
+      insetScale: insetScale,
+      direction: direction
+    })
+  }
   // #endregion
   // MARK: Geometry Methods
   // #region Geometry Methods
@@ -2259,6 +2270,28 @@ class CellGroup extends ProtoLayer {
     this.grid.cellIsIsolated({ cellIndex: cellIndex, groupID: this.id, direction: direction })
   }
   // #endregion
+}
+
+// CLASS: ShapeGroup
+// SIZE: 16 lines
+class ShapeGroup extends ProtoLayer {
+  cellGroup
+  svgGroup
+  shapes
+  constructor({ protoParent, svgParent, grid, filter, insetScale, direction }) {
+    super({
+      protoParent: protoParent,
+      svgParent: svgParent,
+      insetScale: insetScale,
+      filter: filter
+    })
+    this.grid = grid
+    this.direction = direction
+    this._type = 'ShapeGroup'
+    this.finishSetup(S.ShapeGroups)
+  }
+
+
 }
 
 // CLASS: Cell
@@ -2392,7 +2425,7 @@ class Cell extends ProtoLayer {
           .attribute('fill-opacity', '0')
           .attribute('fill', protoColor(230))
         // .applyStrokeMask('black', 20)
-        // .applyFilter(S.Effects.db[1][1], 2 / this.insetScale)
+        // .applyFilter({filter:S.Effects.db[1][1], size:2 / this.insetScale})
       }
       if (this.available) {
         // this.insetScale = 0.5
@@ -2401,7 +2434,7 @@ class Cell extends ProtoLayer {
           .attribute('fill-opacity', '0')
           .attribute('fill', protoColor(230))
         // .applyStrokeMask('black', 10)
-        // .applyFilter(S.Effects.db[1][1], 2 / this.insetScale)
+        // .applyFilter({filter:S.Effects.db[1][1], size:2 / this.insetScale})
       }
 
       this.rect
@@ -3235,7 +3268,7 @@ class Shape extends ProtoLayer {
           .attribute('fill-opacity', 1)
           // .attribute('fill', protoColor(255))
           // .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
-          .applyFilter(this.filter, 3)
+          .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
       }
     } else {
       this.drawPerimeterDeBug = false
