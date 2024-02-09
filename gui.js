@@ -1,7 +1,7 @@
 let gui
 
 let testingControls = {
-  hashNumber: 69,
+  hashNumber: 4,
   lastHash: true,
   labels: true,
   borders: false,
@@ -109,7 +109,17 @@ function keyPressed() {
   if (key === 's') {
     // console.log('s pressed')
     const scale = 1
+    // const rez = vert(500, 900)
+    // const rez = vert(569, 1024)
+    // const rez = vert(1000, 1800)
+    // const rez = vert(1138, 2048)
+    // const rez = vert(2000, 3600)
+    // const rez = vert(2276, 4096)
     const rez = vert(4000, 7200)
+    // const rez = vert(4551, 8192)
+    // const rez = vert(8000, 14400)
+    // const rez = vert(9102, 16384) // MAX RESOLUTION
+    // const rez = vert(10000, 18000)
     const scaledRez = rez.mult(scale)
     const rezString = `${scaledRez.x}x${scaledRez.y}`
     const date = getCurrentDateString()
