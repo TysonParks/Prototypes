@@ -551,7 +551,7 @@ class SelectionBounds {
 }
 
 // CLASS: Grid
-// SIZE: 1542 lines
+// SIZE: 1514 lines
 class Grid extends ProtoLayer {
   gridSize
   cellRows
@@ -602,12 +602,12 @@ class Grid extends ProtoLayer {
   //NOTE: perimeters must be created for every group!
   get perimeterIslands() { return this.groups.map(g => g.perimeterIslands).flat() }
   get islands() { return this.groups.map(g => g.islands.union(g.perimeterIslands, [`id`])).flat() }
-  get shapes() { return this.islands.map(i => i.shapes).flat() }
+  get shapes() { return this.islands.map(i => i.shape).flat() }
   get allSimpleSubShapes() {
     let simpShapes = this.perimeterIslands
       // .compacted // should not have to compact because perimeters must be created for every group!
-      .map(i => i.shapes).flat()
-      .map(s => s.simpleSubShapes).flat()
+      .map(i => i.shape.simpleSubShapes).flat()
+
 
     return simpShapes
   }
@@ -635,7 +635,10 @@ class Grid extends ProtoLayer {
   //METH: 
   islandNamed(name) { return this.islands.find(e => e.id === name) || null }
   //METH: 
-  shapeNamed(name) { return this.shapes.find(e => e.id === name) || null }
+  shapeNamed(name) {
+    console.log(this.shapes)
+    return this.shapes.find(e => e.id === name) || null
+  }
   // #endregion
   // MARK: CellIndex Methods
   // #region CellIndex Methods
@@ -2149,14 +2152,14 @@ class Grid extends ProtoLayer {
 }
 
 // CLASS: CellGroup
-// SIZE: 109 lines
+// SIZE: 120 lines
 class CellGroup extends ProtoLayer {
   perimeterType
   direction
   grid
+  islandLevel
   cells = new OpArray
   perimeterIslands = new OpArray // Island-Shapes defining outer boundaries of all Island shapes to be allowed within
-  // islands = new OpArray
   shapesGroups = new OpArray // rendering layer storage
 
   constructor(protoParent, svgParent, grid) {
@@ -2220,7 +2223,7 @@ class CellGroup extends ProtoLayer {
       perimeterType: perimeterType,
       drawFilter: false,
     })
-
+    this.islandLevel = 0
     console.groupEnd()
     console.log(``)
   }
@@ -2235,25 +2238,41 @@ class CellGroup extends ProtoLayer {
   createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     console.warn(`${this.id}.createSubIslands, this.islands =`, this.islands.map(i => i.id))
     console.groupCollapsed(`Island.createSubIslands`)
-    this.perimeterIslands.forEach(i =>
-      i.createSubIslands({
+    const newIslands = this.perimeterIslands.map(pIsle =>
+      pIsle.createSubIslands({
+        islandLevel: this.islandLevel + 1,
         direction: direction,
         filter: filter,
         insetScale: insetScale,
         // drawFilter: drawFilter,
       }))
+    if (!newIslands.isEmpty) {
+      this.islandLevel += 1
+      this.createShapeGroup({
+        islands: newIslands.flat(this.islandLevel).compacted,
+        filter: filter,
+        islandLevel: this.islandLevel,
+        direction: direction,
+        insetScale: insetScale,
+      })
+    }
+
     console.groupEnd()
     console.log(``)
   }
   //METH: createShapeGroup() :
-  createShapeGroup(filter, direction = Direction.Cardinal, insetScale = 1) {
+  createShapeGroup({ islands, filter, islandLevel, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     const shapeGroup = new ShapeGroup({
-      protoParent: this.protoParent,
+      islands: islands,
+      protoParent: this,
       grid: this.grid,
       filter: filter,
       insetScale: insetScale,
-      direction: direction
+      direction: direction,
+      islandLevel: islandLevel,
+      drawSVG: false,
     })
+    this.shapesGroups.push(shapeGroup)
   }
   // #endregion
   // MARK: Geometry Methods
@@ -2273,25 +2292,44 @@ class CellGroup extends ProtoLayer {
 }
 
 // CLASS: ShapeGroup
-// SIZE: 16 lines
+// SIZE: 45 lines
 class ShapeGroup extends ProtoLayer {
+  islands
   cellGroup
   svgGroup
   shapes
-  constructor({ protoParent, svgParent, grid, filter, insetScale, direction }) {
+  islandLevel
+  constructor({ islands, islandLevel, protoParent, svgParent, grid, filter, insetScale, direction }) {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
       filter: filter
     })
+    this.islands = islands
     this.grid = grid
     this.direction = direction
+    this.islandLevel = islandLevel
     this._type = 'ShapeGroup'
     this.finishSetup(S.ShapeGroups)
   }
 
+  createSVGGroup() {
+    const svgGroup = createElementNS(SVG.xmlns, 'g')
+    const isleLvl = this.islandLevel.toString().padStart(2, '0')
+    svgGroup
+      .attribute('id', `${this.id}-${this.protoParent.id}-lvl${isleLvl}`)
+      .parent(this.svgParent)
+    this.svgGroup = svgGroup
+  }
 
+  //METH: finishSetup() override :
+  finishSetup(store) {
+    this.storeObject(store)
+    // this.assignElement()
+    this.createSVGGroup()
+    // this.drawElement()
+  }
 }
 
 // CLASS: Cell
@@ -2444,7 +2482,7 @@ class Cell extends ProtoLayer {
 }
 
 // CLASS: Island
-// SIZE: 519 lines
+// SIZE: 523 lines
 class Island extends ProtoLayer {
   grid
   groupID
@@ -2452,7 +2490,7 @@ class Island extends ProtoLayer {
   cells
   subIslands
   islandLevel
-  shapes = new OpArray
+  shape
   direction
   perimeterType
 
@@ -2463,6 +2501,7 @@ class Island extends ProtoLayer {
     svgParent,
     grid,
     groupID,
+    islandLevel,
     parentIslandID,
     direction = Direction.Cardinal,
     perimeterType = `maxCorners`,
@@ -2566,12 +2605,13 @@ class Island extends ProtoLayer {
   // MARK: Methods
   // #region Methods
   //METH:
-  createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
+  createSubIslands({ filter, islandLevel, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
     console.groupCollapsed(`${this.id} Island.createSubIslands`)
     if (this.subIslands) {
       // recursive dive to create subIslands on the bottom-most (visually top-most) subIslands
       console.error(`Divers go down! This.subIslands = `, this.subIslands.map(i => i.id))
-      this.subIslands.forEach(isle =>
+      console.groupEnd()
+      return this.subIslands.map(isle =>
         isle.createSubIslands({
           direction: direction,
           filter: filter,
@@ -2579,8 +2619,6 @@ class Island extends ProtoLayer {
           drawFilter: drawFilter
         })
       )
-      console.groupEnd()
-      return
     }
 
     let subIslands
@@ -2638,11 +2676,9 @@ class Island extends ProtoLayer {
           })
           subIslands?.forEach(i => {
             i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
-            i.shapes.forEach(shape => {
-              console.log(shape.simpleSubShapes)
-              this.grid.createCubicCorners(shape.simpleSubShapes)
-              shape.drawElement()
-            })
+            console.log(i.shape.simpleSubShapes)
+            this.grid.createCubicCorners(i.shape.simpleSubShapes)
+            i.shape.drawElement()
           })
         }
       }
@@ -2651,7 +2687,8 @@ class Island extends ProtoLayer {
     // this.subIslands.forEach(i => i.drawShapes())
     console.log(`new subIslands: `, subIslands)
     console.groupEnd()
-    // console.log(`new subShapes`, subIslands.map(isle => isle.shapes.map(shape => shape)))
+    return subIslands
+    // console.log(`new subShapes`, subIslands.map(isle => isle.shape))
   }
   //METH: copy(insetScale) : create copy 
   copy({
@@ -2660,7 +2697,7 @@ class Island extends ProtoLayer {
     drawFilter = this.drawFilter,
     protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
     cells = this.cells,
-    shapes,
+    shape,
     direction = this.direction,
   } = {}) {
     // console.log(`copying island`, this.id)
@@ -2679,14 +2716,14 @@ class Island extends ProtoLayer {
       drawFilter: drawFilter
     })
 
-    if (shapes) {
-      newIsland.shapes = shapes
+    if (shape) {
+      newIsland.shape = shape
     } else {
-      newIsland.shapes = this.shapes.map(s => s.copy({
+      newIsland.shape = this.shape.copy({
         insetScale: insetScale,
         protoParent: newIsland,
         island: newIsland,
-      }))
+      })
     }
 
     this.grid.updateCells({ island: newIsland })
@@ -2695,21 +2732,6 @@ class Island extends ProtoLayer {
   }
   //METH:
   copyAllToCardinal(filter, insetScale, drawFilter = true) {
-    // let newShapeSubShapes = this.shapes
-    //   .map(shape => {
-    //     const newSubShapes = shape.simpleSubShapes.map(sub => SegPath.cutAllToCardinal(sub))
-    //       .flat()
-    //     console.log(`newSubShapes: ${newSubShapes.map(sub => sub.map(seg => seg.hasBothCubicVerts))}`)
-    //     this.grid.createCubicCorners(newSubShapes)
-    //     return newSubShapes
-    //   })
-    // console.log(`newShapeSubShapes`, newShapeSubShapes)
-    //FIXME: might need to scrap this and start over from new Cardinal Islands that are then fitted to their surroundings
-    //FIXME: I think the current issue is that new islands have all the old cells and are re-building themselves
-    //FIXME: Solution would be to figure out how to find split cells, which is essentially to create new Cardinal Islands
-    //FIXME: Feels like creating a reverse wrapper/snuggler might be less complicated
-    //FIXME: Actually just pulling cells from new Cardinal Islands, might be the easiest.
-    //FIXME: Set stored = false on new Island. Maybe look at grammar/modifier code, like 'outline' for ideas.
     const cellIslands = this.grid.createIslands({
       filter: filter,
       insetScale: insetScale,
@@ -2722,41 +2744,21 @@ class Island extends ProtoLayer {
     })
     console.log(`cellIslands`, cellIslands.map(is => is.cells.map(c => c.id)))
     //NOTE: just added this for testing. Should try dropping in newSubShapes from above?
-    const parentSimpleSubShapes = this.shapes.map(shape => shape.simpleSubShapes)
-    cellIslands?.forEach((isle, i) => isle.shapes.forEach(shape => {
+    const parentSimpleSubShapes = this.shape.simpleSubShapes
+    cellIslands?.forEach((isle, i) => {
       isle.createSimpleSubShapes()
-      // shape.simpleSubShapes = OpArray.from([newShapeSubShapes[0][i]])
 
-      this.grid.inWrapCorners(shape.simpleSubShapes.flat(), parentSimpleSubShapes.flat())
-      this.grid.inWrapCorners(shape.simpleSubShapes.flat(), parentSimpleSubShapes.flat(), false)
+      this.grid.inWrapCorners(shape.simpleSubShapes, parentSimpleSubShapes)
+      this.grid.inWrapCorners(shape.simpleSubShapes, parentSimpleSubShapes, false)
       this.grid.createCubicCorners(shape.simpleSubShapes)
-
 
       console.log(`shape`, shape)
       shape.drawElement()
-    }))
-
-    // const newIslands = newShapeSubShapes.map((shapeSubs, i) => {
-    //   const newIsland = this.copy({
-    //     insetScale: insetScale,
-    //     filter: filter,
-    //     drawFilter: drawFilter,
-    //     cells: cellIslands[i].cells,
-    //     direction: Direction.Cardinal,
-    //   })
-    //   newIsland.shapes = this.shapes.map(s => s.copy({
-    //     insetScale: insetScale,
-    //     protoParent: newIsland,
-    //     island: newIsland,
-    //     simpleSubShapes: shapeSubs,
-    //   }))
-    //   return newIsland
-    // })
-    // console.warn(`newIslands`, newIslands)
+    })
     return cellIslands
   }
 
-  //METH: recalcdCells(shapes, newInsetScale) : 
+  //METH: recalcdCells(shape, newInsetScale) : 
   //FIXME: need to incorporate loft!!
   //FIXME: absolute should activate previous mode (sub simpleSubShapes for insetSubShapes & no newInsetScale usage)
   //FIXME: maybe also a threshold?
@@ -2764,29 +2766,25 @@ class Island extends ProtoLayer {
   recalcdCells({
     newInsetScale,
     loft,
-    shapes = this.shapes,
+    shape = this.shape,
     absolute = false,
     padding = 0.2
   } = {}) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
-    if (shapes.every(s => s.simpleSubShapes.isEmpty)) {
+    if (shape.simpleSubShapes.isEmpty) {
       console.error(`cannot recalcdCells because shape has no simpleSubShapes`)
       return this.cells
     }
-    console.groupCollapsed(`recalcdCells shapes`, shapes)
+    console.groupCollapsed(`recalcdCells shape`, shape)
     const cellRadius = this.grid.minCellWidth / 2
     // let newCells = this.cells
-    let shapeCorners = shapes.flat().map(s => {
-      // console.log(`s.simpleSubShapes`, s.simpleSubShapes)
-      const corners = s.insetSubShapes.map(sub => {
-        console.log(`sub`, sub)
-        return sub
-          .filter(seg => // filter corners with minimum curvature
-            seg.neighbors.start.availableEndLength > cellRadius || seg.availableStartLength > cellRadius
-          )
-      })
-      return corners
-    }).flat(2)
+    let shapeCorners = shape.insetSubShapes.map(sub => {
+      console.log(`sub`, sub)
+      return sub
+        .filter(seg => // filter corners with minimum curvature
+          seg.neighbors.start.availableEndLength > cellRadius || seg.availableStartLength > cellRadius
+        )
+    }).flat(1)
     console.log(`shapeCorners`, shapeCorners)
     if (shapeCorners.isEmpty) {
       console.error(`recalcdCells: Cells remain the same!`)
@@ -2875,9 +2873,7 @@ class Island extends ProtoLayer {
 
   }
   //METH: drawShapes()
-  drawShapes() {
-    this.shapes.forEach(s => s.drawElement())
-  }
+  drawShapes() { this.shape.drawElement() }
   //METH: createShape()
   createShape(insetScale) {
     console.log(`createShape for ${this.id}, insetScale`, insetScale)
@@ -2974,8 +2970,7 @@ class Island extends ProtoLayer {
       island: this,
       insetScale: insetScale
     })
-    // this.shape = thisShape
-    this.shapes.push(thisShape)
+    this.shape = thisShape
     // this.drawElement()
     // print(`END Shape Test`)
   }
@@ -2987,10 +2982,10 @@ class Island extends ProtoLayer {
     if (direction.isNone) { return 0 }
     console.error('Undefined directionHierachy')
   }
-  //METH: createSimpleSubShapes(minCorners) : direct all shapes to createSimpleSubShapes 
+  //METH: createSimpleSubShapes(minCorners) : direct all shape to createSimpleSubShapes 
   createSimpleSubShapes() {
     console.group(`${this.id}.createSimpleSubShapes called!!!`)
-    this.shapes.forEach(s => s.createSimpleSubShapes())
+    this.shape.createSimpleSubShapes()
     console.groupEnd()
   }
   //METH:
@@ -3031,7 +3026,7 @@ class Island extends ProtoLayer {
 }
 
 // CLASS: Shape
-// SIZE: 314 lines
+// SIZE: 315 lines
 class Shape extends ProtoLayer {
   island
   subShapes
