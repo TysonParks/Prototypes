@@ -32,7 +32,6 @@ class SVG {
   static feGaussianBlur = `feGaussianBlur`
   static feFlood = `feFlood`
   static feComposite = `feComposite`
-
 }
 
 // make .attr() prototype extension that gets and sets attributes similar to p5's .style() 
