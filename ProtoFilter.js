@@ -101,6 +101,12 @@ class ProtoFilter {
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
 
+    createSVGElt('feGaussianBlur')
+      .attribute('in', 'SourceAlpha')
+      .attribute('stdDeviation', 0)
+      .attribute('result', 'blurredAlpha')
+      .parent(this.filter)
+
     createSVGElt("feFlood")
       .attribute("flood-color", "transparent")
       .attribute("flood-opacity", 0)
@@ -112,7 +118,7 @@ class ProtoFilter {
     let outsetResult = 'SourceGraphic'
 
 
-    // INSET
+    // FUNC: buildFilter()
     function buildFilter(shadows, filter, inset, clearInset) {
       let prevMode = 'normal'
       for (const shadow of shadows) {
@@ -315,8 +321,8 @@ class ProtoFilter {
     const x = ceil(-padding.x / size.x * 100 * scaleWidth)
     const y = ceil(-padding.y / size.y * 100 * scaleHeight)
 
-    const width = 200 * padding.x / size.x * scaleWidth + 100
-    const height = 200 * padding.y / size.y * scaleHeight + 100
+    const width = ceil(200 * padding.x / size.x * scaleWidth + 100)
+    const height = ceil(200 * padding.y / size.y * scaleHeight + 100)
 
     console.warn(`element`, element)
     console.warn(`applyFilter x: ${x}, y: ${y}`)
@@ -535,6 +541,7 @@ p5.Element.prototype.addToClassList = function (newClass) {
 
 //PROTOTYPE: p5.Element extension layout(x, y, width, height)
 p5.Element.prototype.layout = function (x, y, width, height, padding = 0) {
+  console.log(`layout arguments`, arguments)
   if (arguments.length === 1) {
     x = x.x
     y = x.y
