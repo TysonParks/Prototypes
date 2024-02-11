@@ -390,7 +390,7 @@ class ProtoFilter {
   }
 }
 
-Object.assign(ProtoFilter.prototype, identifiableStored) // this mixin provides store,ID, and UID functionality
+Object.assign(ProtoFilter.prototype, IdentifiableStored) // this mixin provides store,ID, and UID functionality
 
 
 // CLASS: StrokeMaskFilter

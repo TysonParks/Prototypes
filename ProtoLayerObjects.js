@@ -261,8 +261,8 @@ class ProtoLayer {
   //METH: 
   static equal(a, b) { return a.uid === b.uid }
 }
-Object.assign(ProtoLayer.prototype, identifiableStored)
-Object.assign(ProtoLayer.prototype, debuggableProtoLayer)
+Object.assign(ProtoLayer.prototype, IdentifiableStored)
+Object.assign(ProtoLayer.prototype, Debuggable)
 
 
 // CLASS: Frame 
