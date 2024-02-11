@@ -117,14 +117,4 @@ const identifiableProtocol = {
 // MIXIN: identifiableStored: a mixin composition of storedProtocol and identifiableProtocol
 const identifiableStored = Object.assign({}, storedProtocol, identifiableProtocol)
 
-// MIXIN: randomExtended: mixin to add UID hash creation functionality to Random
-const randomExtended = {
-  //METH: random_hash : default length 4 -> 16bit hash
-  random_hash(length = 4, prefix = '0x') {
-    let x = "0123456789abcdef", hash = prefix
-    for (let i = length; i > 0; --i) {
-      hash += x[Math.floor(this.random_dec() * x.length)]
-    }
-    return hash
-  }
-}
+
