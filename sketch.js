@@ -260,13 +260,13 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  // gridX = 3
+  // gridX = 15
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 10, y: 17 })
   let gridInset = R.random_num(0.75, 0.95)
 
-  // FRAME.setInsetScale(.95)
+  FRAME.setInsetScale(.999)
   grid.setInsetScale(.8)
 
   const minCellSWidth = grid.minCellWidth
@@ -519,9 +519,9 @@ function gridTests2() {
   // })
 
   group001?.createSubIslands({
-    // direction: Direction.All,
+    // direction: Direction.PosOrdinal,
     filter: shader0,
-    insetScale: .7,
+    insetScale: .6,
     // insetScale: .95,
   })
 
