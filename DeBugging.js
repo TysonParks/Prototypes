@@ -1,5 +1,5 @@
-// MIXIN: debuggableProtoLayer : mixin for displaying debug info
-const debuggableProtoLayer = {
+// MIXIN: Debuggable : mixin for displaying debug info on ProtoLayers
+const Debuggable = {
   drawLabel: false,
   drawRect: false,
   drawPerimeter: false,
