@@ -111,7 +111,9 @@ const Stored = {
 const Identifiable = {
   uid: 'unassigned',
   //METH: assignUID() :
-  assignUID() { this.uid = RuID.random_hash() }
+  assignUID() { this.uid = RuID.random_hash() },
+
+  equals(identifiable) { return this.uid === identifiable.uid }
 }
 
 // MIXIN: IdentifiableStored: mixin composition of Stored and Identifiable
