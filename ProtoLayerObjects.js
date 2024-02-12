@@ -48,10 +48,16 @@ class ProtoLayer {
     this.drawRect = drawRect
     this.drawFilter = drawFilter
     this.allowsProtoErrors = allowsProtoErrors
+
+    // this.drawLabel = true
+    // this.drawDeBugRect = true
+    // this.drawPerimeter = true
+    // this.drawInset = true
+
     this.assignUID()
   }
 
-  // MARK: View Properties
+  // MARK: ProtoLayer View Properties
   // #region View Properties
 
   get type() { return this._type }
@@ -88,7 +94,7 @@ class ProtoLayer {
   get filterLoft() { return this._filterLoft ?? 0 }                         // UNUSED
   get loft() { return this.protoParent.loft + this.filterLoft }             // UNUSED
   // #endregion
-  // MARK: Computed Properties
+  // MARK: ProtoLayer Computed Properties
   // #region Computed Properties
   get parentID() { return this.protoParent?.id ?? this.svgParent.id() }
 
@@ -153,7 +159,7 @@ class ProtoLayer {
     }
   }
   // #endregion
-  // MARK: Geometry Methods
+  // MARK: ProtoLayer Geometry Methods
   // #region Geometry Methods
   //METH: 
   corner(direction) { return this.corners[direction.name] }
@@ -167,19 +173,39 @@ class ProtoLayer {
     return Vertex.sub(this.size, amount).div(this.size)
   }
   // #endregion
-  // MARK: Setup Methods
+  // MARK: ProtoLayer Settings Methods
+  // #region Settings Methods
+  //METH: 
+  resize() { this.drawElement() }
+  //METH: setInsetScale()
+  setInsetScale(scale) {
+    this._insetScale = scale instanceof Vertex ? scale : vert(scale)
+    // console.log('ProtoLayer insetScale', this.insetScale)
+    this.drawElement()
+  }
+  //METH: setFilter()
+  setFilter(filter) {
+    // console.log(`setting filter of ${this.id} to ${filter?.id}`)
+    this._filter = filter
+    this.drawElement()
+  }
+  //METH: setFilterLoft()
+  setFilterLoft(loft) { this._filterLoft = loft }
+  // #endregion
+  // MARK: ProtoLayer Setup Methods
   // #region Setup Methods
   //METH: 
   finishSetup(store) {
     this.storeObject(store)
     this.assignElement()
     this.drawElement()
+    this.showDeBug()
   }
   //METH: 
   assignElement() {
     if (this.drawSVG || this.drawRect) {
       console.groupCollapsed(`assignElement ${this.id}`)
-      console.warn(this.cellBounds)
+      // console.warn(this.cellBounds())
       if (this.drawSVG) {
         console.log(`${this.id} layout SVG: anchor: ${this.anchor.string}, size: ${this.size.string}`)
         this.svgElt = createSVGElt().id(this.id)
@@ -220,6 +246,7 @@ class ProtoLayer {
           .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
           .attribute('rx', `${this.cornerRadius}`)
           .attribute('ry', `${this.cornerRadius}`)
+          .attribute('fill', 'red')
 
         if (this.drawFilter) {
           if (this.filter) {
@@ -230,37 +257,9 @@ class ProtoLayer {
       console.groupEnd()
     }
   }
-  //METH: 
-  resize() { this.drawElement() }
   // #endregion
-  // MARK: Layer Grammar Methods
-  // #region LayerGrammar Methods
-  //METH: 
-  setInsetScale(scale) {
-    this._insetScale = scale instanceof Vertex ? scale : vert(scale)
-    // console.log('ProtoLayer insetScale', this.insetScale)
-    this.drawElement()
-  }
-  //METH: 
-  setFilter(filter) {
-    // console.log(`setting filter of ${this.id} to ${filter?.id}`)
-    this._filter = filter
-    this.drawElement()
-  }
-  //METH: 
-  setFilterLoft(loft) {
-    this._filterLoft = loft
-  }
-
-  //TODO: implement this!
-  drawChildElements() {
-
-  }
-  // #endregion
-  // MARK: Static Methods
-  //METH: 
-  static equal(a, b) { return a.uid === b.uid }
 }
+// CLASS: ProtoLayer Mixin/Protocol Assignment
 Object.assign(ProtoLayer.prototype, IdentifiableStored)
 Object.assign(ProtoLayer.prototype, Debuggable)
 
@@ -285,6 +284,7 @@ class Frame extends ProtoLayer {
     this.finishSetup(S.Frame)
   }
 
+  // MARK: Frame View Properties
   get look() { return SVGLook.clear }
   get testLook() { return Look.test(this.size, 'frame') }
   get testColor() { return protoColor(200, 200, 200) }
@@ -298,6 +298,7 @@ class Frame extends ProtoLayer {
     ]
   }
 
+  // MARK: Frame Computed Properties
   get anchor() { return vert(0, 0) }
   get size() { return vert(100, 200) }
   get boundsRect() {
@@ -324,9 +325,9 @@ class Frame extends ProtoLayer {
     this.drawElement()
   }
 
-  // MARK: Setup Methods
+  // MARK: Frame Setup Methods
   // #region Setup Methods
-  //METH: 
+  //METH: assignElement()
   assignElement() {
     this.bleed = createSVGElt().id('bleed')
       .parent(this.svgParent)
@@ -357,7 +358,7 @@ class Frame extends ProtoLayer {
 
     // this.testElementsSetup()
   }
-  //METH: 
+  //METH: drawElement()
   drawElement() {
     this.bleed
       .attribute('width', `${frameSize.x}`)
@@ -401,7 +402,7 @@ class SelectionBounds {
     this.islandID = islandID
   }
 
-  // MARK: Properties
+  // MARK: SelectionBounds Properties
   // #region Properties
   get selectionCount() { return this.selection.length }
   get availableCount() { return this.availableCells.length }
@@ -486,7 +487,7 @@ class SelectionBounds {
   get cellsCentroid() { return Vertex.div(this.cellBoundsSize, 2) }
   get centroid() { return Vertex.mult(this.cellsCentroid, this.cellSize) }
   //#endregion
-  // MARK: Methods
+  // MARK: SelectionBounds Methods
   // #region Methods
   //METH: takes a Cardinal Direction and returns a row selection of corresponding half of the cellBounds
   half(direction) {
@@ -546,7 +547,7 @@ class SelectionBounds {
   }
   // #endregion
   // TODO: try adding selection and bounds parameters and then feeding them transformed matrices
-  // MARK: Island Methods
+  // MARK: SelectionBounds Island Methods
   // #region Island Methods
   //METH: 
   innerCellIslands({ taken = true, stored = false, direction = Direction.Horizontal } = {}) {
@@ -579,7 +580,7 @@ class Grid extends ProtoLayer {
   gridSize
   cellRows
   cellRowsPref
-  gridCellBounds
+  // gridCellBounds
   groups = new OpArray
 
   constructor(protoParent, gridSize, insetScale, transform) {
@@ -587,25 +588,31 @@ class Grid extends ProtoLayer {
       protoParent: protoParent,
       insetScale: insetScale,
       drawSVG: true,
-      // drawRect: true,
+      drawRect: true,
     })
     if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
     this._type = 'Grid'
+
+    // this.drawLabel = true
+    // this.drawDeBugRect = true
+    // this.drawPerimeter = true
+    this.drawInset = true
+
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
     this.cellRowsPref = this.transformedCellRows(transform)
-    this.gridCellBounds = this.cellBounds()
+    // this.gridCellBounds = this.cellBounds()
     this.setFrameRadii()
   }
 
-  // MARK: Computed Properties
+  // MARK: Grid Computed Properties
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'grid') }
   get testColor() { return protoColor(0, 230, 0, 90) }
   get cornerRadius() { return this.minCellWidth / 2 }
 
-  // get gridCellBounds() { return this.cellBounds() }          // migrated to property for better performance
+  get gridCellBounds() { return this.cellBounds() }          // migrate to property for better performance?? Probably not!
   get columnCount() { return this.gridCellBounds.columnCount }
   get rowCount() { return this.gridCellBounds.rowCount }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
@@ -638,7 +645,7 @@ class Grid extends ProtoLayer {
     return simpShapes
   }
   // #endregion
-  // MARK: Geometry Methods
+  // MARK: Grid Geometry Methods
   // #region Geometry Methods
   //METH:
   cellNamed(id) { return this.cells.find(c => c.id = id) }                                     // UNUSED
@@ -649,7 +656,7 @@ class Grid extends ProtoLayer {
   //METH: 
   coords(index) { return gridCoords(index, this.gridSize.x) }
   //METH: 
-  coordsAreInBounds(x, y, bounds = this.cellBounds()) {
+  coordsAreInBounds(x, y, bounds = this.gridCellBounds) {
     return bounds.xCellMin <= x && x <= bounds.xCellMax && bounds.yCellMin <= y && y <= bounds.yCellMax
   }
   //METH: 
@@ -666,7 +673,7 @@ class Grid extends ProtoLayer {
     return this.shapes.find(e => e.id === name) || null
   }
   // #endregion
-  // MARK: CellIndex Methods
+  // MARK: Grid CellIndex Methods
   // #region CellIndex Methods
   //METH: 
   cellAt(cellIndex) { return this.cells.find(e => e.index === cellIndex) }
@@ -801,7 +808,7 @@ class Grid extends ProtoLayer {
   }
 
   // #endregion
-  // MARK: Selection Methods
+  // MARK: Grid Selection Methods
   // #region Selection Methods
   //METH: 
   cellBounds({ selection = this.cells, groupID, islandID } = {}) {
@@ -859,7 +866,7 @@ class Grid extends ProtoLayer {
     return selection
   }
   //METH: 
-  validNeighbors({ selection = this.cells, bounds = this.cellBounds(), direction = Direction.All } = {}) {
+  validNeighbors({ selection = this.cells, bounds = this.gridCellBounds, direction = Direction.All } = {}) {
     let cells = OpArray.from(new Set(selection.flatMap(e => e.validNeighborsCoords(direction, bounds))))
     // console.log(`validNeighbors selection`, selection.map(c => c.id))
     // console.log(`validNeighbors cells`, cells.map(c => c.id))
@@ -884,7 +891,7 @@ class Grid extends ProtoLayer {
       .gridVertSorted // sort by y, x 
   }
   // #endregion
-  // MARK: createIslands Method
+  // MARK: Grid createIslands Method
   // #region createIslands Method
   //TODO: add transform functionality
   //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
@@ -898,7 +905,7 @@ class Grid extends ProtoLayer {
     direction = Direction.Cardinal,
     perimeterType = `maxCorners`,
     protoParent = this,
-    bounds = this.cellBounds(),
+    bounds = this.gridCellBounds,
     taken = true,
     stored = true,
     insetScale = 1,
@@ -1038,7 +1045,7 @@ class Grid extends ProtoLayer {
     return tempIslands
   }
   // #endregion
-  // MARK: Shape Methods
+  // MARK: Grid Shape Methods
   // #region Shape Methods
   //METH:
   createSimpleSubShapes() {
@@ -1591,7 +1598,7 @@ class Grid extends ProtoLayer {
     console.log(``)
   }
   // #endregion
-  // MARK: Setup Methods
+  // MARK: Grid Setup Methods
   // #region Setup Methods
   //METH:
   cellRowsRotated(degree = 90, selection = this.cellRows) { return selection.rotated2D(normalizeDegree(degree)) }
@@ -1629,7 +1636,7 @@ class Grid extends ProtoLayer {
     this.updateCells()
   }
   // #endregion
-  // MARK: Cell Grammar Ops
+  // MARK: Grid Cell Grammar Ops
   // #region Cell Grammar Ops
   //METH:
   insetCells(scale, groupID) {
@@ -1646,7 +1653,7 @@ class Grid extends ProtoLayer {
     cells.forEach(e => e.setInsetScale(scale))
   }
   // #endregion
-  // MARK: Grammar Generators
+  // MARK: Grid Grammar Generators
   // #region Grammar Generators
   //METH:
   randGroup({ selection = this.availableCells, amount } = {}) { return this.assignCells(selection.randReduce(amount)) }
@@ -1780,7 +1787,7 @@ class Grid extends ProtoLayer {
   //METH:
   snake() { }
   // #endregion
-  // MARK: Grammar Modifiers
+  // MARK: Grid Grammar Modifiers
   // #region Grammar Modifiers
   //METH: iterative outliner driven by directions
   outline({
@@ -1857,7 +1864,7 @@ class Grid extends ProtoLayer {
   inline(selection, amount = 1, direction = Direction.All) {
     if (amount < 1) { return new OpArray }
     // console.log('inline amount', amount)
-    const bounds = this.cellBounds()
+    const bounds = this.gridCellBounds
     let inlineEdges = new OpArray //store edge rows/columns/corners that can't be outlined, to be inlined
     direction.directions.forEach(dir => {
       const name = dir.names[0]
@@ -2017,7 +2024,7 @@ class Grid extends ProtoLayer {
     assignSym(transformed, destination)
   }
   // #endregion
-  // MARK: Grammar Enum Methods
+  // MARK: Grid Grammar Enum Methods
   // #region Grammar Enum Methods
   //METH:
   useSeed(named, coverage, selection = this.availableCells) {
@@ -2076,7 +2083,7 @@ class Grid extends ProtoLayer {
     }
   }
   // #endregion
-  // MARK: Grammar Assignment Methods
+  // MARK: Grid Grammar Assignment Methods
   // #region Grammar AssignmentMethods
   //METH:
   assignCells(selection, groupID) {
@@ -2160,8 +2167,6 @@ class Grid extends ProtoLayer {
     })
   }
   // #endregion
-
-
 }
 
 // CLASS: CellGroup
@@ -2182,7 +2187,7 @@ class CellGroup extends ProtoLayer {
       protoParent: protoParent,
       svgParent: svgParent,
       drawSVG: true,
-      drawRect: true,
+      // drawRect: true,
       insetScale: 1,
     })
     if (cells) { this.cells = cells }
@@ -2191,7 +2196,7 @@ class CellGroup extends ProtoLayer {
     this.finishSetup(S.CellGroups)
   }
 
-  // MARK: Computed Properties
+  // MARK: CellGroup Computed Properties
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'group') }
   get testColor() { return protoColor(255, 127, 0, 1) }
@@ -2204,7 +2209,7 @@ class CellGroup extends ProtoLayer {
 
   get cellsByIndex() { return this.cells.sort((a, b) => a.index - b.index) }
   // #endregion
-  // MARK: Grid Properties
+  // MARK: CellGroup Grid Properties
   // #region Grid Properties
   get availableCells() { return this.grid.availableCells }
   get validNeighbors() { return this.grid.validNeighbors({ selection: this.cells }) }
@@ -2215,7 +2220,21 @@ class CellGroup extends ProtoLayer {
     return this.grid.allExposedSides({ selection: this.cells, groupID: this.id })
   }
   // #endregion
-  // MARK: Setup Methods
+  // MARK: CellGroup Geometry Methods
+  // #region Geometry Methods
+  //TODO: migrate these methods to cell, grid, or maybe even ProtoLayer???
+  //METH:
+  exposedDirections(cellIndex) { return this.grid.exposedDirections({ cellIndex: cellIndex, groupID: this.id }) }
+  //METH:
+  exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, groupID: this.id }) }
+  //METH:
+  exposedCorners(cellIndex) { return this.grid.exposedCorners({ cellIndex: cellIndex, groupID: this.id }) }
+  //METH:
+  cellIsIsolated(cellIndex, direction = Direction.Cardinal) {
+    this.grid.cellIsIsolated({ cellIndex: cellIndex, groupID: this.id, direction: direction })
+  }
+  // #endregion
+  // MARK: CellGroup Creation Methods
   // #region Setup Methods
   //METH: createPerimiters() : 
   //FIXME: reimplement for proper minCorners functionality that wroks with both omni and cardinal
@@ -2296,20 +2315,7 @@ class CellGroup extends ProtoLayer {
     this.shapesGroups.push(shapeGroup)
   }
   // #endregion
-  // MARK: Geometry Methods
-  // #region Geometry Methods
-  //TODO: migrate these methods to cell, grid, or maybe even ProtoLayer???
-  //METH:
-  exposedDirections(cellIndex) { return this.grid.exposedDirections({ cellIndex: cellIndex, groupID: this.id }) }
-  //METH:
-  exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, groupID: this.id }) }
-  //METH:
-  exposedCorners(cellIndex) { return this.grid.exposedCorners({ cellIndex: cellIndex, groupID: this.id }) }
-  //METH:
-  cellIsIsolated(cellIndex, direction = Direction.Cardinal) {
-    this.grid.cellIsIsolated({ cellIndex: cellIndex, groupID: this.id, direction: direction })
-  }
-  // #endregion
+
 }
 
 // CLASS: ShapeGroup
@@ -2348,11 +2354,14 @@ class ShapeGroup extends ProtoLayer {
     this.finishSetup(S.ShapeGroups)
   }
 
+  // MARK: ShapeGroup Computed Properties
   get cellBounds() { return this.cellGroup.cellBounds }
   get boundsRect() { return this.cellGroup.boundsRect }
 
   get shapes() { return this.islands.map(i => i.shape) }
 
+  // MARK: ShapeGroup Setup Methods
+  //METH: createSVGGroup()
   createSVGGroup() {
     const svgGroup = createElementNS(SVG.xmlns, 'g')
     const isleLvl = this.islandLevel.toString().padStart(2, '0')
@@ -2361,7 +2370,7 @@ class ShapeGroup extends ProtoLayer {
       .parent(this.svgElt)
     this.svgGroup = svgGroup
   }
-
+  //METH: assignShapes()
   assignShapes() {
     this.shapes.forEach(s => {
       s.path.parent(this.svgGroup)
@@ -2375,8 +2384,9 @@ class ShapeGroup extends ProtoLayer {
     this.createSVGGroup()
     // this.assignShapes()
     this.drawElement()
+    this.showDeBug()
   }
-
+  //METH: drawElement() override
   drawElement() {
     // super.drawElement()
     this.svgGroup
@@ -2423,7 +2433,7 @@ class Cell extends ProtoLayer {
     this.finishSetup(S.Cells)
   }
 
-  // MARK: Computed Properties
+  // MARK: Cell Computed Properties
   // #region Computed Properties
   get boundsRect() { }
   get anchor() { return this.grid.cellAnchor(this.coords.x, this.coords.y) }
@@ -2484,7 +2494,7 @@ class Cell extends ProtoLayer {
     return cell?.segments
   }
   // #endregion
-  // MARK: Geometry Methods
+  // MARK: Cell Geometry Methods
   // #region Geometry Methods
   //METH:
   neighborCoords(direction) { return Vertex.add(this.coords, direction.moveCoord) }
@@ -2492,8 +2502,9 @@ class Cell extends ProtoLayer {
   allNeighborsCoords(direction = Direction.All) {
     return direction.directions.map(dir => this.neighborCoords(dir)).compacted
   }
+  //FIXME: check to see if this method is being used. Seems like no, because bounds was not properly assigned before!
   //METH:
-  validNeighborsCoords(direction = Direction.All, bounds = this.grid.cellBounds,) {
+  validNeighborsCoords(direction = Direction.All, bounds = this.grid.gridCellBounds,) {
     return this.allNeighborsCoords(direction).filter(e => this.grid.coordsAreInBounds(e.x, e.y, bounds))
   }
   //METH:
@@ -2503,7 +2514,7 @@ class Cell extends ProtoLayer {
     return cell.segments.filter(seg => seg.equals(side))
   }
   // #endregion
-  // MARK: Setup Methods
+  // MARK: Cell Setup Methods
   //METH:
   drawElement() {
     super.drawElement()
@@ -2597,7 +2608,7 @@ class Island extends ProtoLayer {
     // this.color = R.random_hash(3, '#')
   }
 
-  // MARK: Computed Properties
+  // MARK: Island Computed Properties
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'island') }
   get testColor() { return protoColor(255, 230, 0, 1) }
@@ -2619,7 +2630,6 @@ class Island extends ProtoLayer {
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.groupID, islandID: this.id }) }
   get cellAnchor() { return this.cellBounds.cellAnchor }
-  //TODO: Once inset transitions from filter to geometry will need to refactor
   get insetAnchor() { return this.anchor }
   get insetSize() { return this.size }
 
@@ -2650,7 +2660,7 @@ class Island extends ProtoLayer {
   get isOrdinal() { return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index)) }
 
   get isRectangle() { return !this.isLine && this.cellBounds.isFull }
-  get isSquare() { return this.isRectangle && this.cellBounds.aspect.name === 'square' }
+  get isSquare() { return this.isRectangle && this.cellBounds.aspect.isSquare }
 
   get directionHierarchy() { return this.hierarchyFrom(this.direction) }
 
@@ -2665,163 +2675,26 @@ class Island extends ProtoLayer {
   //   return this.grid.ordinalConnectedCells({ selection: this.cells, islandID: this.id })
   // }
   // #endregion
-  // MARK: Methods
-  // #region Methods
-  //METH:
-  createSubIslands({ filter, islandLevel, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
-    console.groupCollapsed(`${this.id} Island.createSubIslands`)
-    if (this.subIslands) {
-      // recursive dive to create subIslands on the bottom-most (visually top-most) subIslands
-      console.error(`Divers go down! This.subIslands = `, this.subIslands.map(i => i.id))
-      console.groupEnd()
-      return this.subIslands.map(isle =>
-        isle.createSubIslands({
-          direction: direction,
-          filter: filter,
-          insetScale: insetScale,
-          drawFilter: drawFilter
-        })
-      )
-    }
-
-    let subIslands
-    //FIXME: This appears to not be working at all!
-    // create unprotected Island stacks with potential visual errors!!!
-    if (this.allowsProtoErrors) {
-      subIslands = this.grid.createIslands({
-        islandID: this.id,
-        direction: direction,
-        filter: filter,
-        insetScale: insetScale,
-        drawFilter: drawFilter,
-      })
-    } else {
-      //MARK: Change new direction
-      // protect Island stacking from visual overlapping errors
-      if (this.hierarchyFrom(direction) > this.directionHierarchy) { // new direction cannot be greater than current
-        console.error(`trying to create SubIslands out of hierarchy. changing direction to "${this.direction.name}"`)
-        direction = this.direction // downgrade newDirection to same as current Island
-      }
-      // ordinal corner connecters visually collapse with inset < 0.75
-      if (direction.isAll && insetScale < 0.75) {
-        console.error(`trying to create SubIslands with All and inset < 0.75. changing direction to Cardinal`)
-        direction = Direction.Cardinal // downgrade newDirection to Cardinal to avoid collapse/overlap 
-      }
-
-      //MARK: Process new direction
-      // same direction: safest/fastest to copy Island and apply new inset
-      if (direction.equals(this.direction)) {
-        console.log(`copying island ${this.id}`)
-        // copy this island but change inset, set filter, set drawFilter
-        const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
-        // console.log(`created subIsland: `, subIsland)
-        subIslands = OpArray.from([subIsland])
-      }
-      // different direction: requires new island and/or shape creation
-      if (this.hierarchyFrom(direction) < this.directionHierarchy) {
-        console.warn(`creating ${this.id} subIslands with direction: ${direction.name}`)
-        // parent direction is All and new direction is Cardinal: careful reconstruction of current SimpleSubShapes
-        if (this.direction.isAll && direction.isCardinal) { //
-          console.log(`using copyAllToCardinal()`)
-          subIslands = this.copyAllToCardinal(filter, insetScale, drawFilter)
-        }
-        // parent direction is All/Cardinal: recalculate island cells based on parent shape, then create new islands
-        else if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {
-          console.log(`  triggering a recalcdCells on ${this.id}`)
-          const newCells = this.recalcdCells({ newInsetScale: insetScale })
-          subIslands = this.grid.createIslands({ // create new Islands with new direction
-            selection: newCells,
-            islandID: this.id,
-            direction: direction,
-            filter: filter,
-            insetScale: insetScale,
-            drawFilter: drawFilter,
-          })
-          subIslands?.forEach(i => {
-            i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
-            console.log(i.shape.simpleSubShapes)
-            this.grid.createCubicCorners(i.shape.simpleSubShapes)
-            i.shape.drawElement()
-          })
-        }
-      }
-    }
-    this.subIslands = subIslands
-    // this.subIslands.forEach(i => i.drawShapes())
-    console.log(`new subIslands: `, subIslands)
-    console.groupEnd()
-    return subIslands
-    // console.log(`new subShapes`, subIslands.map(isle => isle.shape))
+  // MARK: Island CellIndex Methods
+  // #region Island CellIndex Methods
+  //METH: cellIsIsolated()
+  cellIsIsolated(cellIndex, direction = Direction.Cardinal) {
+    return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, direction: direction })
   }
-  //METH: copy(insetScale) : create copy 
-  copy({
-    insetScale,
-    filter = this.filter,
-    drawFilter = this.drawFilter,
-    protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
-    cells = this.cells,
-    shape,
-    direction = this.direction,
-  } = {}) {
-    // console.log(`copying island`, this.id)
-    const newIsland = new Island({
-      cells: cells,
-      filter: filter,
-      protoParent: protoParent,
-      svgParent: protoParent.svgElt, // Test this!!!
-      insetScale: insetScale,
-      grid: this.grid,
-      groupID: this.groupID,
-      parentIslandID: this.id,
-      direction: direction,
-      perimeterType: this.perimeterType,
-      stored: this.stored,
-      drawFilter: drawFilter
-    })
-
-    if (shape) {
-      newIsland.shape = shape
-    } else {
-      newIsland.shape = this.shape.copy({
-        insetScale: insetScale,
-        protoParent: newIsland,
-        island: newIsland,
-      })
-    }
-
-    this.grid.updateCells({ island: newIsland })
-    // console.log(`newIsland`, newIsland)
-    return newIsland
+  //METH: exposedSides()
+  exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, islandID: this.id }) }
+  // #endregion
+  // MARK: Island Special Methods
+  // #region Island Special Methods
+  //METH: hierarchyFrom() : hierarchy weight used to prevent overlaps in island stacks
+  hierarchyFrom(direction) {
+    if (direction.isAll) { return 3 }
+    if (direction.isCardinal) { return 2 }
+    if (direction.isTwoOpposites) { return 1 }
+    if (direction.isNone) { return 0 }
+    console.error('Undefined directionHierachy')
   }
-  //METH:
-  copyAllToCardinal(filter, insetScale, drawFilter = true) {
-    const cellIslands = this.grid.createIslands({
-      filter: filter,
-      insetScale: insetScale,
-      drawFilter: drawFilter,
-      selection: this.cells,
-      islandID: this.id,
-      direction: Direction.Cardinal,
-      stored: true,
-      createShape: true, // this might NOT be impacting my debug situation - if not please remove on createIslands()
-    })
-    console.log(`cellIslands`, cellIslands.map(is => is.cells.map(c => c.id)))
-    //NOTE: just added this for testing. Should try dropping in newSubShapes from above?
-    const parentSimpleSubShapes = this.shape.simpleSubShapes
-    cellIslands?.forEach((isle, i) => {
-      isle.createSimpleSubShapes()
-
-      this.grid.inWrapCorners(shape.simpleSubShapes, parentSimpleSubShapes)
-      this.grid.inWrapCorners(shape.simpleSubShapes, parentSimpleSubShapes, false)
-      this.grid.createCubicCorners(shape.simpleSubShapes)
-
-      console.log(`shape`, shape)
-      shape.drawElement()
-    })
-    return cellIslands
-  }
-
-  //METH: recalcdCells(shape, newInsetScale) : 
+  //METH: recalcdCells() : cells recalculated to fit within this shape
   //FIXME: need to incorporate loft!!
   //FIXME: absolute should activate previous mode (sub simpleSubShapes for insetSubShapes & no newInsetScale usage)
   //FIXME: maybe also a threshold?
@@ -2935,9 +2808,163 @@ class Island extends ProtoLayer {
     }
 
   }
-  //METH: drawShapes()
-  drawShapes() { this.shape.drawElement() }
-  //METH: createShape()
+  // #endregion
+  // MARK: Island Creation Methods
+  // #region Island Creation Methods
+  //METH: createSubIslands() :
+  createSubIslands({ filter, islandLevel, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
+    console.groupCollapsed(`${this.id} Island.createSubIslands`)
+    if (this.subIslands) {
+      // recursive dive to create subIslands on the bottom-most (visually top-most) subIslands
+      console.error(`Divers go down! This.subIslands = `, this.subIslands.map(i => i.id))
+      console.groupEnd()
+      return this.subIslands.map(isle =>
+        isle.createSubIslands({
+          direction: direction,
+          filter: filter,
+          insetScale: insetScale,
+          drawFilter: drawFilter
+        })
+      )
+    }
+
+    let subIslands
+    //FIXME: This appears to not be working at all!
+    // create unprotected Island stacks with potential visual errors!!!
+    if (this.allowsProtoErrors) {
+      subIslands = this.grid.createIslands({
+        islandID: this.id,
+        direction: direction,
+        filter: filter,
+        insetScale: insetScale,
+        drawFilter: drawFilter,
+      })
+    } else {
+      //NOTE: Change new direction
+      // protect Island stacking from visual overlapping errors
+      if (this.hierarchyFrom(direction) > this.directionHierarchy) { // new direction cannot be greater than current
+        console.error(`trying to create SubIslands out of hierarchy. changing direction to "${this.direction.name}"`)
+        direction = this.direction // downgrade newDirection to same as current Island
+      }
+      // ordinal corner connecters visually collapse with inset < 0.75
+      if (direction.isAll && insetScale < 0.75) {
+        console.error(`trying to create SubIslands with All and inset < 0.75. changing direction to Cardinal`)
+        direction = Direction.Cardinal // downgrade newDirection to Cardinal to avoid collapse/overlap 
+      }
+
+      //NOTE: Process new direction
+      // same direction: safest/fastest to copy Island and apply new inset
+      if (direction.equals(this.direction)) {
+        console.log(`copying island ${this.id}`)
+        // copy this island but change inset, set filter, set drawFilter
+        const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
+        // console.log(`created subIsland: `, subIsland)
+        subIslands = OpArray.from([subIsland])
+      }
+      // different direction: requires new island and/or shape creation
+      if (this.hierarchyFrom(direction) < this.directionHierarchy) {
+        console.warn(`creating ${this.id} subIslands with direction: ${direction.name}`)
+        // parent direction is All and new direction is Cardinal: careful reconstruction of current SimpleSubShapes
+        if (this.direction.isAll && direction.isCardinal) { //
+          console.log(`using copyAllToCardinal()`)
+          subIslands = this.copyAllToCardinal(filter, insetScale, drawFilter)
+        }
+        // parent direction is All/Cardinal: recalculate island cells based on parent shape, then create new islands
+        else if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {
+          console.log(`  triggering a recalcdCells on ${this.id}`)
+          const newCells = this.recalcdCells({ newInsetScale: insetScale })
+          subIslands = this.grid.createIslands({ // create new Islands with new direction
+            selection: newCells,
+            islandID: this.id,
+            direction: direction,
+            filter: filter,
+            insetScale: insetScale,
+            drawFilter: drawFilter,
+          })
+          subIslands?.forEach(i => {
+            i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
+            console.log(i.shape.simpleSubShapes)
+            this.grid.createCubicCorners(i.shape.simpleSubShapes)
+            i.shape.drawElement()
+          })
+        }
+      }
+    }
+    this.subIslands = subIslands
+    // this.subIslands.forEach(i => i.drawShapes())
+    console.log(`new subIslands: `, subIslands)
+    console.groupEnd()
+    return subIslands
+    // console.log(`new subShapes`, subIslands.map(isle => isle.shape))
+  }
+  //METH: copy() : create a copy of this Island
+  copy({
+    insetScale,
+    filter = this.filter,
+    drawFilter = this.drawFilter,
+    protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
+    cells = this.cells,
+    shape,
+    direction = this.direction,
+  } = {}) {
+    // console.log(`copying island`, this.id)
+    const newIsland = new Island({
+      cells: cells,
+      filter: filter,
+      protoParent: protoParent,
+      svgParent: protoParent.svgElt, // Test this!!!
+      insetScale: insetScale,
+      grid: this.grid,
+      groupID: this.groupID,
+      parentIslandID: this.id,
+      direction: direction,
+      perimeterType: this.perimeterType,
+      stored: this.stored,
+      drawFilter: drawFilter
+    })
+
+    if (shape) {
+      newIsland.shape = shape
+    } else {
+      newIsland.shape = this.shape.copy({
+        insetScale: insetScale,
+        protoParent: newIsland,
+        island: newIsland,
+      })
+    }
+
+    this.grid.updateCells({ island: newIsland })
+    // console.log(`newIsland`, newIsland)
+    return newIsland
+  }
+  //METH: copyAllToCardinal() :
+  copyAllToCardinal(filter, insetScale, drawFilter = true) {
+    const cellIslands = this.grid.createIslands({
+      filter: filter,
+      insetScale: insetScale,
+      drawFilter: drawFilter,
+      selection: this.cells,
+      islandID: this.id,
+      direction: Direction.Cardinal,
+      stored: true,
+      createShape: true, // this might NOT be impacting my debug situation - if not please remove on createIslands()
+    })
+    console.log(`cellIslands`, cellIslands.map(is => is.cells.map(c => c.id)))
+    //NOTE: just added this for testing. Should try dropping in newSubShapes from above?
+    const parentSimpleSubShapes = this.shape.simpleSubShapes
+    cellIslands?.forEach((isle, i) => {
+      isle.createSimpleSubShapes()
+
+      this.grid.inWrapCorners(shape.simpleSubShapes, parentSimpleSubShapes)
+      this.grid.inWrapCorners(shape.simpleSubShapes, parentSimpleSubShapes, false)
+      this.grid.createCubicCorners(shape.simpleSubShapes)
+
+      console.log(`shape`, shape)
+      shape.drawElement()
+    })
+    return cellIslands
+  }
+  //METH: createShape() :
   createShape(insetScale) {
     console.log(`createShape for ${this.id}, insetScale`, insetScale)
     let segments = OpArray.format(this.exposedSegments)
@@ -3037,29 +3064,15 @@ class Island extends ProtoLayer {
     // this.drawElement()
     // print(`END Shape Test`)
   }
-  //METH: hierarchyFrom(direction) : hierarchy weight used to prevent overlaps in island stacks
-  hierarchyFrom(direction) {
-    if (direction.isAll) { return 3 }
-    if (direction.isCardinal) { return 2 }
-    if (direction.isTwoOpposites) { return 1 }
-    if (direction.isNone) { return 0 }
-    console.error('Undefined directionHierachy')
-  }
-  //METH: createSimpleSubShapes(minCorners) : direct all shape to createSimpleSubShapes 
+  //METH: createSimpleSubShapes() : direct all shape to createSimpleSubShapes 
   createSimpleSubShapes() {
     console.group(`${this.id}.createSimpleSubShapes called!!!`)
     this.shape.createSimpleSubShapes()
     console.groupEnd()
   }
-  //METH:
-  cellIsIsolated(cellIndex, direction = Direction.Cardinal) {
-    return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, direction: direction })
-  }
-  //METH:
-  exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, islandID: this.id }) }
   // #endregion
 
-  // MARK: TODO Methods
+  // MARK: Island TODO Methods
   // #region TODO Methods
   //TODO: Finish Intergrids after submission
   interGridClosure = (cell) => { this.grid.validNeighbors({ selection: [cell], bounds: this.cellBounds, direction: Direction.Cartesian }).length === 3 }
@@ -3119,6 +3132,7 @@ class Shape extends ProtoLayer {
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
     this.assignSegments()
+    // this.drawPerimeter = true
     this._type = protoParent.type === `Island` ? 'Shape' : `PerimeterShape`
     this.finishSetup(S.Shapes)
   }
@@ -3126,6 +3140,9 @@ class Shape extends ProtoLayer {
   get testLook() { return Look.test(this.size, 'shape') }
 
   get cellBounds() { return this.island.cellBounds }
+  get boundsRect() { return this.cellBounds.boundsRect }
+  get insetAnchor() { return this.anchor }
+  get insetSize() { return this.size }
 
   get group() { return this.island.group }
   get grid() { return this.island.grid }
@@ -3276,6 +3293,7 @@ class Shape extends ProtoLayer {
     // this.createSimpleSubShapes()
     console.warn(`${this.id}.drawElement`)
     this.drawElement()
+    this.showDeBug()
   }
   //METH:
   assignElement() {
@@ -3314,77 +3332,11 @@ class Shape extends ProtoLayer {
 
       this.drawFilter = true
       if (this.drawFilter) {
-        if (S.Effects.db[0][1]) {
-          // let maxWidthDivisor = 20
-          // if (this.island.isSingle || this.island.isVertical || this.island.isHorizontal) { maxWidthDivisor = 1.25 }
-          // let strokeMaskWidth = R.random_num(0, this.grid.cellSize.x / maxWidthDivisor)
-          // strokeMaskWidth = this.grid.cellSize.x / maxWidthDivisor
-
-          // console.log('shape insetScale', this.insetScale)
-          // const insetScaleX = this.insetScale.x
-          // const posInset = insetScaleX >= 0
-          // strokeMaskWidth = 1 * (posInset ? 1 - insetScaleX : insetScaleX) * this.grid.cellSize.x
-          // strokeMaskWidth = -.6 * this.grid.cellSize.x
-          // console.log('insetScaleX', insetScaleX)
-          // console.log('strokeMaskWidth', strokeMaskWidth)
-          // console.log('cellSize', this.grid.cellSize.x)
-          // const posStrokeMask = strokeMaskWidth >= 0
-
-          path
-            .attribute('fill', protoColor(230))
-            // .attribute('fill', protoColor(0, 0, 0))
-            .attribute('fill-opacity', 1)
-            // .attribute('fill', protoColor(255))
-            // .applyStrokeMask(posInset ? 'black' : 'white', strokeMaskWidth)
-            .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
-        }
-      } else {
-        this.drawPerimeterDeBug = false
-        if (this.drawPerimeterDeBug) {
-          const randHue = ProtoColor.randomShadHue()
-          const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
-          path
-            .attribute('d', this.perimeter)
-            .attribute('fill', protoColor(0, 0))
-            .attribute('stroke', randHue)
-            .attribute('stroke-width', `.125`)
-            .attribute('stroke-dasharray', `4 1`)
-        } else {
-          path
-            .attribute('d', this.perimeter)
-            .attribute('fill', protoColor(0, 0))
-        }
-      }
-      this.drawInsetDeBug = false
-      if (this.drawInsetDeBug && this.drawFilter) {
-        const insetPath = createSVGElt('path')
-        insetPath
-          .parent(this.svgElt)
-          .addToClassList(this.id)
-          .addToClassList(this.svgParent.elt.classList.value)
-          .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
-
-        const randHue = ProtoColor.randomShadHue()
-        const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 256)
-        insetPath
-          .attribute('d', this.insetSVG)
-          .attribute('fill', protoColor(0, 0))
-          .attribute('stroke', randHue)
-          .attribute('stroke-width', `.25`)
-          .attribute('stroke-dasharray', `1 1`)
-      }
-      this.drawShapeLabelDeBug = false
-      if (this.drawShapeLabelDeBug) {
-        const label = createSVGText(this.id, 0, 0)
-        const isShape = this.type !== `Shape`
-        const offset = isShape ? vert(1, 4) : vert(1, 8)
-        const font = isShape ? `bold 3px sans-serif` : `3px sans-serif`
-        label
-          .parent(this.svgElt)
-          .addToClassList(this.id)
-          .addToClassList(this.svgParent.elt.classList.value)
-          .layout(this.anchor.x + offset.x, this.anchor.y + offset.y, this.size.x, this.size.y)
-          .style(`font`, font)
+        path
+          .attribute('fill', protoColor(230))
+          // .attribute('fill', protoColor(0, 0))
+          .attribute('fill-opacity', 1)
+          .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
       }
 
       // .svgLook(SVGLook.trendyCactus(path))
@@ -3399,6 +3351,11 @@ class Shape extends ProtoLayer {
       // print(this.size)
       // print(this.insetSize)
     }
+
+    // this.showLabel()
+    this.showRect()
+    // this.showInset()
+    // this.showPerimeter()
     console.groupEnd()
   }
   //METH:
