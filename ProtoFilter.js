@@ -568,11 +568,22 @@ p5.Element.prototype.layout = function (x, y, width, height, padding = 0) {
 }
 //PROTOTYPE: p5.Element extension viewBox(x, y, width, height)
 p5.Element.prototype.viewBox = function (x, y, width, height, padding = 0) {
-  if (arguments.length === 1) {
+  const args = OpArray.from(arguments)
+  // single object input
+  if (args.length === 1) {
     x = x.x
     y = x.y
     width = x.width
     height = x.height
+    if (x[`padding`]) { padding = x[`padding`] }
+  }
+  // (anchor, size, padding) input
+  if (args.length > 1 && args.length < 4 && args.slice(0, 2).every(a => a instanceof Vertex)) {
+    x = args[0].x
+    y = args[0].y
+    width = args[1].x
+    height = args[1].y
+    if (args[2]) { padding = args[2] }
   }
   this.attribute('viewBox', `${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`)
   return this
