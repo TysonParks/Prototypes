@@ -266,8 +266,8 @@ function gridTests2() {
   // grid = new Grid(FRAME, { x: 10, y: 17 })
   let gridInset = R.random_num(0.75, 0.95)
 
-  FRAME.setInsetScale(.999)
-  grid.setInsetScale(.8)
+  // FRAME.setInsetScale(.999)
+  grid.setInsetScale(7 / 9)
 
   const minCellSWidth = grid.minCellWidth
   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)

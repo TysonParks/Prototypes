@@ -3,8 +3,8 @@
 class Store {
   constructor() {
     this.Frame = new ProtoStorage('frame', 1)
-    this.Layers = new ProtoStorage('layr', 1)
-    this.Grids = new ProtoStorage('grd', 2)
+    // this.Layers = new ProtoStorage('layr', 1)
+    this.Grids = new ProtoStorage('grd', 1)
     this.Cells = new ProtoStorage('cell')
     this.CellGroups = new ProtoStorage('celGrp', 1)
     this.ShapeGroups = new ProtoStorage('shpGrp', 2)
