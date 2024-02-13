@@ -61,7 +61,7 @@ const Debuggable = {
       console.log(`showRect layout args`, this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
       deBugRect
         .parent(this.svgElt)
-        .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+        .layout(this.insetAnchor, this.insetSize)
         .attribute('rx', radius)
         .attribute('ry', radius)
       const randHue = ProtoColor.randomShadHue()
@@ -96,7 +96,7 @@ const Debuggable = {
       const insetPath = createSVGElt('path')
       insetPath
         .parent(this.svgElt)
-        .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
+        .layout(this.anchor, this.size)
 
       const randHue = ProtoColor.randomShadHue()
       const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 256)
@@ -109,7 +109,7 @@ const Debuggable = {
     } else {
       const insetRect = createSVGElt('rect')
         .parent(this.svgParent)
-        .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+        .layout(this.insetAnchor, this.insetSize)
         .attribute('rx', 1)
         .attribute('ry', 1)
       const randHue = ProtoColor.randomShadHue()
