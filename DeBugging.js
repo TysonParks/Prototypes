@@ -1,18 +1,18 @@
 // MIXIN: Debuggable : mixin for displaying debug info on ProtoLayers
 const Debuggable = {
-  // deBugAnchor: this.calcAnchor,
-
   drawLabel: false,
   drawDeBugRect: false,
   drawPerimeter: false,
   drawInset: false,
   drawLoft: false,
 
-  //MARK: Debuggable Computed Properties
-  isPerimeterShape() { return this.type === `PerimeterShape` },
-  isShape() { return this.type === `Shape` || this.isPerimeterShape() },
+  // deBugColor: protoColor(255, 0, 0),
 
-  deBugAnchor() {
+  //MARK: Debuggable Computed Properties
+  get isPerimeterShape() { return this.type === `PerimeterShape` },
+  get isShape() { return this.type === `Shape` || this.isPerimeterShape },
+
+  get deBugAnchor() {
     if (this.cellBounds?.selection) {
       return this.cellBounds.selection[0].anchor
     } else {
@@ -34,9 +34,9 @@ const Debuggable = {
     if (this.drawSVG) {
       const label = createSVGText(this.id, 0, 0)
       let offset, font
-      if (this.isShape()) {
-        offset = this.isPerimeterShape() ? vert(1, 4) : vert(1, 8)
-        font = this.isPerimeterShape() ? `bold 3px sans-serif` : `3px sans-serif`
+      if (this.isShape) {
+        offset = this.isPerimeterShape ? vert(1, 4) : vert(1, 8)
+        font = this.isPerimeterShape ? `bold 3px sans-serif` : `3px sans-serif`
       } else {
         offset = vert(1, 4)
         font = `bold 3px sans-serif`
@@ -44,7 +44,7 @@ const Debuggable = {
 
       label
         .parent(this.svgElt)
-        .layout(this.deBugAnchor().x + offset.x, this.deBugAnchor().y + offset.y, this.size.x, this.size.y)
+        .layout(this.deBugAnchor.x + offset.x, this.deBugAnchor.y + offset.y, this.size.x, this.size.y)
         .style(`font`, font)
         .style(CS.textShadow, `1px 1px 2px white`)
     }
@@ -52,45 +52,47 @@ const Debuggable = {
 
   showRect() {
     if (this.drawSVG) {
-      if (this.isShape()) {
+      const radius = 3
+      let deBugRect = createSVGElt('rect').id(`${this.id}-deBugRect`)
+      // if (this.isShape) {
 
-      } else {
-        console.warn(`${this.id} showRect called!`)
-        console.log(`showRect layout args`, this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
-        const deBugRect = createSVGElt('rect')
-          .parent(this.svgElt)
-          .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
-          .attribute('rx', 1)
-          .attribute('ry', 1)
-        const randHue = ProtoColor.randomShadHue()
-        const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
-        deBugRect
-          .attribute('fill', protoColor(0, 0))
-          .attribute('stroke', randHue)
-          .attribute('stroke-width', `.125`)
-          .attribute('stroke-dasharray', `4 1`)
-      }
+      // } else {
+      console.warn(`${this.id} showRect called!`)
+      console.log(`showRect layout args`, this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+      deBugRect
+        .parent(this.svgElt)
+        .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+        .attribute('rx', radius)
+        .attribute('ry', radius)
+      const randHue = ProtoColor.randomShadHue()
+      const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
+      deBugRect
+        .attribute('fill', protoColor(0, 0))
+        .attribute('stroke', randHue)
+        .attribute('stroke-width', `.125`)
+        .attribute('stroke-dasharray', `4 1`)
+      // }
     }
   },
 
   showPerimeter() {
-    if (this.isPerimeterShape()) {
+    if (this.isPerimeterShape) {
       const perimeter = createSVGElt('path')
         .parent(this.svgElt)
         .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
       const randHue = ProtoColor.randomShadHue()
-      const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
+      const lightHue = ProtoColor.randomHighHue()
       perimeter
         .attribute('d', this.perimeter)
         .attribute('fill', protoColor(0, 0))
-        .attribute('stroke', randHue)
+        .attribute('stroke', lightHue)
         .attribute('stroke-width', `.125`)
         .attribute('stroke-dasharray', `4 1`)
     }
   },
 
   showInset() {
-    if (this.isShape()) {
+    if (this.isShape) {
       const insetPath = createSVGElt('path')
       insetPath
         .parent(this.svgElt)
@@ -106,7 +108,7 @@ const Debuggable = {
         .attribute('stroke-dasharray', `1 1`)
     } else {
       const insetRect = createSVGElt('rect')
-        .parent(this.svgElt)
+        .parent(this.svgParent)
         .layout(this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
         .attribute('rx', 1)
         .attribute('ry', 1)
