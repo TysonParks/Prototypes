@@ -11,6 +11,7 @@ const Debuggable = {
   //MARK: Debuggable Computed Properties
   get isPerimeterShape() { return this.type === `PerimeterShape` },
   get isShape() { return this.type === `Shape` || this.isPerimeterShape },
+  get isShapeGroup() { return this.type === `ShapeGroup` },
 
   get deBugAnchor() {
     if (this.cellBounds?.selection) {
@@ -32,17 +33,20 @@ const Debuggable = {
 
   showLabel() {
     if (this.drawSVG) {
-      const label = createSVGText(this.id, 0, 0)
+      if (!this.deBugLabel) { this.deBugLabel = createSVGText(this.id, 0, 0) }
       let offset, font
       if (this.isShape) {
         offset = this.isPerimeterShape ? vert(1, 4) : vert(1, 8)
         font = this.isPerimeterShape ? `bold 3px sans-serif` : `3px sans-serif`
+      } else if (this.isShapeGroup) {
+        offset = vert(1, 8)
+        font = `3px sans-serif`
       } else {
         offset = vert(1, 4)
         font = `bold 3px sans-serif`
       }
 
-      label
+      this.deBugLabel
         .parent(this.svgElt)
         .layout(this.deBugAnchor.x + offset.x, this.deBugAnchor.y + offset.y, this.size.x, this.size.y)
         .style(`font`, font)
@@ -53,20 +57,20 @@ const Debuggable = {
   showRect() {
     if (this.drawSVG) {
       const radius = 3
-      let deBugRect = createSVGElt('rect').id(`${this.id}-deBugRect`)
+      if (!this.deBugRect) { this.deBugRect = createSVGElt('rect').id(`${this.id}-deBugRect`) }
       // if (this.isShape) {
 
       // } else {
       console.warn(`${this.id} showRect called!`)
       console.log(`showRect layout args`, this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
-      deBugRect
+      this.deBugRect
         .parent(this.svgElt)
         .layout(this.insetAnchor, this.insetSize)
         .attribute('rx', radius)
         .attribute('ry', radius)
       const randHue = ProtoColor.randomShadHue()
       const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
-      deBugRect
+      this.deBugRect
         .attribute('fill', protoColor(0, 0))
         .attribute('stroke', randHue)
         .attribute('stroke-width', `.125`)
@@ -77,12 +81,13 @@ const Debuggable = {
 
   showPerimeter() {
     if (this.isPerimeterShape) {
-      const perimeter = createSVGElt('path')
+      if (!this.this.deBugPerimeter) { this.deBugPerimeter = createSVGElt('path') }
+      this.deBugPerimeter
         .parent(this.svgElt)
         .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
       const randHue = ProtoColor.randomShadHue()
       const lightHue = ProtoColor.randomHighHue()
-      perimeter
+      this.deBugPerimeter
         .attribute('d', this.perimeter)
         .attribute('fill', protoColor(0, 0))
         .attribute('stroke', lightHue)
@@ -93,28 +98,29 @@ const Debuggable = {
 
   showInset() {
     if (this.isShape) {
-      const insetPath = createSVGElt('path')
-      insetPath
+      if (!this.deBugInsetPath) { this.deBugInsetPath = createSVGElt('path') }
+      this.deBugInsetPath
         .parent(this.svgElt)
         .layout(this.anchor, this.size)
 
       const randHue = ProtoColor.randomShadHue()
       const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 256)
-      insetPath
+      this.deBugInsetPath
         .attribute('d', this.svg)
         .attribute('fill', protoColor(0, 0))
         .attribute('stroke', randHue)
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     } else {
-      const insetRect = createSVGElt('rect')
+      if (!this.deBugInsetRect) { this.deBugInsetRect = createSVGElt('rect') }
+      this.deBugInsetRect
         .parent(this.svgParent)
         .layout(this.insetAnchor, this.insetSize)
         .attribute('rx', 1)
         .attribute('ry', 1)
       const randHue = ProtoColor.randomShadHue()
       const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
-      insetRect
+      this.deBugInsetRect
         .attribute('fill', protoColor(0, 0))
         .attribute('stroke', randHue)
         .attribute('stroke-width', `.125`)
