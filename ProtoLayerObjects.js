@@ -2214,8 +2214,8 @@ class CellGroup extends ProtoLayer {
     this.grid = grid
     this._type = 'CellGroup'
 
-    this.drawLabel = true
-    this.drawDeBugRect = true
+    // this.drawLabel = true
+    // this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
 
@@ -2380,8 +2380,8 @@ class ShapeGroup extends ProtoLayer {
     this.islandLevel = islandLevel
     this._type = 'ShapeGroup'
 
-    this.drawLabel = true
-    this.drawDeBugRect = true
+    // this.drawLabel = true
+    // this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
 
@@ -2635,8 +2635,8 @@ class Island extends ProtoLayer {
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
     this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
 
-    // this.drawLabel = true
-    // this.drawDeBugRect = true
+    this.drawLabel = true
+    this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
 
@@ -3268,26 +3268,28 @@ class Shape extends ProtoLayer {
   }
   get perimeterPath() { return `path('${this.perimeter}')` }
 
-  get insetSVG() {
-    let result = this.insetSubShapes.map(e =>
-      SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
-    )
-    if (result instanceof Array) {
-      result = result.join(' ')
-    }
-    return result
-  }
-  get insetSVGPath() { return `path('${this.insetSVG}')` }
+  //TODO: DEPRECATE usage
+  // get insetSVG() {
+  //   let result = this.insetSubShapes.map(e =>
+  //     SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
+  //   )
+  //   if (result instanceof Array) {
+  //     result = result.join(' ')
+  //   }
+  //   return result
+  // }
+  // get insetSVGPath() { return `path('${this.insetSVG}')` }
 
-  get finalSVG() {
-    let result = this.simpleSubShapes.map(e =>
-      SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
-    )
-    if (result instanceof Array) {
-      result = result.join(' ')
-    }
-    return result
-  }
+  //TODO: DEPRECATE usage
+  // get finalSVG() {
+  //   let result = this.simpleSubShapes.map(e =>
+  //     SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
+  //   )
+  //   if (result instanceof Array) {
+  //     result = result.join(' ')
+  //   }
+  //   return result
+  // }
 
   get extractedVerts() { return extractVerts(this.svg) }
 
