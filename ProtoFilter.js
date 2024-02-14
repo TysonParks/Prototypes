@@ -302,31 +302,31 @@ class ProtoFilter {
   }
 
   //MARK: Utility methods
-  applyFilterToElement({ element, size, padding = 0, time = 0 } = {}) {
+  applyFilterToElement({ element, size, padding = 20, time = 0 } = {}) {
     if (!this.type) { return this }
     console.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
     console.warn(`applyFilter padding: ${padding}`)
     const aspect = size.x / size.y
     //FIXME: I might be able to use absolute values, but they probably need to be relative to the entire canvas?
     //FIXME: This means I need to bring in the anchor as well. Maybe I can even just use my .layout method?
-    let scaleWidth, scaleHeight
-    if (aspect >= 1) {
-      scaleHeight = aspect
-      scaleWidth = 1
-    } else {
-      scaleHeight = 1
-      scaleWidth = 1 / aspect
-    }
+    // let scaleWidth, scaleHeight
+    // if (aspect >= 1) {
+    //   scaleHeight = aspect
+    //   scaleWidth = 1
+    // } else {
+    //   scaleHeight = 1
+    //   scaleWidth = 1 / aspect
+    // }
 
-    const x = ceil(-padding.x / size.x * 100 * scaleWidth)
-    const y = ceil(-padding.y / size.y * 100 * scaleHeight)
+    const x = ceil(-padding.x / size.x * 100) || 0
+    const y = ceil(-padding.y / size.y * 100) || 0
 
-    const width = ceil(200 * padding.x / size.x * scaleWidth + 100)
-    const height = ceil(200 * padding.y / size.y * scaleHeight + 100)
+    const width = ceil(200 * padding.x / size.x + 100) || 100
+    const height = ceil(200 * padding.y / size.y + 100) || 100
 
-    console.warn(`element`, element)
-    console.warn(`applyFilter x: ${x}, y: ${y}`)
-    console.warn(`applyFilter width: ${width}, height: ${height}`)
+    // console.warn(`element`, element)
+    // console.warn(`applyFilter x: ${x}, y: ${y}`)
+    // console.warn(`applyFilter width: ${width}, height: ${height}`)
 
     // const anchor = (scale - 1) * -50 - padding
     // const size = scale * 100
@@ -339,10 +339,10 @@ class ProtoFilter {
       .attribute("y", `${y}%`)
       .attribute("width", `${width}%`)
       .attribute("height", `${height}%`)
-    // .attribute("x", `${-padding.x}`)
-    // .attribute("y", `${-padding.y}`)
-    // .attribute("width", `${size.x + 2 * padding.x}%`)
-    // .attribute("height", `${size.y + 2 * padding.y}%`)
+    // .attribute("x", `${-size.x}`)
+    // .attribute("y", `${-size.y}`)
+    // .attribute("width", `${size.x + 2 * padding}%`)
+    // .attribute("height", `${size.y + 2 * padding}%`)
     console.warn(`this.filter x`, this.filter.attribute("x"))
     console.warn(`this.filter y`, this.filter.attribute("y"))
     console.warn(`this.filter width`, this.filter.attribute("width"))
