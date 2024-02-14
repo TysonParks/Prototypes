@@ -81,7 +81,7 @@ const Debuggable = {
 
   showPerimeter() {
     if (this.isPerimeterShape) {
-      if (!this.this.deBugPerimeterElt) { this.deBugPerimeterElt = createSVGElt('path') }
+      if (!this.deBugPerimeterElt) { this.deBugPerimeterElt = createSVGElt('path') }
       this.deBugPerimeterElt
         .parent(this.svgElt)
         .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
