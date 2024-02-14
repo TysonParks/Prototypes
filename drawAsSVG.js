@@ -69,8 +69,12 @@ class SVGPath {
 
     const startSVG = `M ${end[0]} C ${end[1]}`
     const curvesSVG = curves.map(c => `${c[0]} ${c[1]} L ${c[2]} C ${c[3]} `)
-    const endSVG = `${end[0]} ${end[1]} Z`
+    // const endSVG = `${end[0]} ${end[1]}`
+    const endSVG = `${end[0]} Z` //only use first coord because Z creates a line closing path loop to first point
     const svgPath = `${startSVG} ${curvesSVG} ${endSVG}`
+    console.log(`end`, end)
+    console.log(`endSVG`, endSVG)
+    console.log(`svgPath`, svgPath)
     return svgPath
   }
 
