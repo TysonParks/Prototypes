@@ -2407,7 +2407,10 @@ class ShapeGroup extends ProtoLayer {
   //METH: assignShapes()
   assignShapes() {
     this.shapes.forEach(s => {
-      s.path.parent(this.svgGroup)
+      const pathCopy = s.path
+      pathCopy
+        .id(`${s.path.id}-copy`)
+        .parent(this.svgGroup)
     })
   }
 
@@ -2416,7 +2419,7 @@ class ShapeGroup extends ProtoLayer {
     this.storeObject(store)
     this.assignElement()
     this.createSVGGroup()
-    // this.assignShapes()
+    this.assignShapes()
     this.drawElement()
     this.showDeBug()
   }
@@ -2439,10 +2442,10 @@ class ShapeGroup extends ProtoLayer {
       .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.anchor, this.size)
       .attribute('fill', protoColor(230))
-      .attribute('fill', protoColor(255, 0, 0))
+      // .attribute('fill', protoColor(255, 0, 0))
       .attribute('fill-opacity', 1)
 
-    // .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
+      .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
   }
 }
 
@@ -2620,6 +2623,7 @@ class Island extends ProtoLayer {
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
+      drawSVG: false,
       drawRect: false,
       drawFilter: drawFilter,
       allowsProtoErrors: allowsProtoErrors,
@@ -2635,8 +2639,8 @@ class Island extends ProtoLayer {
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
     this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
 
-    this.drawLabel = true
-    this.drawDeBugRect = true
+    // this.drawLabel = true
+    // this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
 
@@ -3163,7 +3167,7 @@ class Shape extends ProtoLayer {
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
-      // drawSVG: false,
+      drawSVG: false,
       // drawRect: true,
       drawFilter: false,
       // drawFilter: protoParent.drawFilter,
@@ -3179,7 +3183,7 @@ class Shape extends ProtoLayer {
     // this.drawLabel = true
     // this.drawDeBugRect = true
     // this.drawPerimeter = true
-    this.drawInset = true
+    // this.drawInset = true
 
     this.finishSetup(S.Shapes)
   }
@@ -3335,53 +3339,53 @@ class Shape extends ProtoLayer {
   // MARK: Setup Methods
   // #region Setup Methods
   //METH: 
-  finishSetup(store) {
-    this.storeObject(store)
-    this.assignElement()
-    // console.log(`created new shape`, this.id)
-    // this.createSimpleSubShapes()
-    console.warn(`${this.id}.drawElement`)
-    this.drawElement()
-    this.showDeBug()
-  }
+  // finishSetup(store) {
+  //   this.storeObject(store)
+  //   this.assignElement()
+  //   // console.log(`created new shape`, this.id)
+  //   // this.createSimpleSubShapes()
+  //   console.warn(`${this.id}.drawElement`)
+  //   this.drawElement()
+  //   this.showDeBug()
+  // }
   //METH:
   assignElement() {
-    this.svgElt = createSVGElt().id(this.id)
-      .parent(this.svgParent)
+    super.assignElement()
+    // this.svgElt = createSVGElt().id(this.id)
+    //   .parent(this.svgParent)
+    //   .addToClassList(this.id)
+    //   .addToClassList(this.svgParent.elt.classList.value)
+    //   .layout(this.anchor, this.size, 20)
+    //   .viewBox(this.anchor, this.size, 20)
+
+    this.path = createSVGElt('path')
+      .attribute('d', this.svg)
+      // .parent(this.svgElt)
       .addToClassList(this.id)
-      .addToClassList(this.svgParent.elt.classList.value)
-      .layout(this.anchor, this.size, 20)
-      .viewBox(this.anchor, this.size, 20)
+      // .addToClassList(this.svgParent.elt.classList.value)
+      .layout(this.anchor, this.size)
   }
 
   //METH:
   drawElement() {
     console.group()
-
     console.error('drawElement: ', this.id, this)
-    // console.log(`simpleSubShapes`, this.simpleSubShapes[0])
-    // console.log(`simpleSubShape hasCubicVerts?`, this.simpleSubShapes[0]?.map(seg => seg.hasBothCubicVerts))
-    // console.log(this.simpleSubShapes[0]?.map(seg => seg.string))
-    // console.log(`cubicStart`, this.simpleSubShapes[0]?.map(seg => seg.closestCubicStartVert?.string))
-    // console.log(`cubicEnd`, this.simpleSubShapes[0]?.map(seg => seg.closestCubicEndVert?.string))
 
-    let path = createSVGElt('path')
-    this.path = path
-    // console.log(this.filter.id)
+    if (this.drawSVG) {
+      this.svgElt
+        .layout(this.anchor, this.size, 20)
+        .viewBox(this.anchor, this.size, 20)
+    }
 
     this.drawAnything = true
     if (this.drawAnything) {
       if (this.drawFilter) {
-        path
-          .attribute('d', this.svg)
+        this.path
+          // .attribute('d', this.svg)
           .parent(this.svgElt)
-          .addToClassList(this.id)
-          .addToClassList(this.svgParent.elt.classList.value)
           .layout(this.anchor, this.size)
 
-        // this.drawFilter = true
-
-        path
+        this.path
           .attribute('fill', protoColor(230))
           // .attribute('fill', protoColor(0, 0))
           .attribute('fill-opacity', 1)
@@ -3389,16 +3393,7 @@ class Shape extends ProtoLayer {
       }
 
       // .svgLook(SVGLook.trendyCactus(path))
-
-      this.svgElt
-        .layout(this.anchor, this.size, 20)
-        .viewBox(this.anchor, this.size, 20)
       // .attribute('enable-background', 'accumulate')
-
-      // this.testDrawVerts()
-      // print(this)
-      // print(this.size)
-      // print(this.insetSize)
     }
     console.groupEnd()
   }
