@@ -190,6 +190,11 @@ class ProtoLayer {
   }
   //METH: setFilterLoft()
   setFilterLoft(loft) { this._filterLoft = loft }
+  //METH: updateDisplay()
+  updateDisplay() {
+    this.drawElement()
+    this.showDeBug()
+  }
   // #endregion
   // MARK: ProtoLayer Setup Methods
   // #region Setup Methods
@@ -608,7 +613,7 @@ class Grid extends ProtoLayer {
     // this.drawLabel = true
     // this.drawDeBugRect = true
     // this.drawPerimeter = true
-    this.drawInset = true
+    // this.drawInset = true
 
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
@@ -2145,8 +2150,9 @@ class Grid extends ProtoLayer {
       thisCell.groupID = group.id
       thisCell.available = false
       // thisCell.color = group.color
-      thisCell.drawElement()                                                      // DEPRECATE: we dont render cells!
+      // thisCell.drawElement()                                    // DEPRECATE: we dont render cells!
     })
+    group.updateDisplay()
   }
   //METH:
   updateIsland(island) {
@@ -2156,9 +2162,10 @@ class Grid extends ProtoLayer {
       if (thisCell) {
         thisCell.islandIDs.add(island.id)
         // thisCell.color = island.color
-        thisCell.drawElement()                                                      // DEPRECATE: we dont render cells!
+        // thisCell.drawElement()                                   // DEPRECATE: we dont render cells!
       }
     })
+    island.updateDisplay()
   }
   //METH:
   setAvailability(selection = this.cells, available = false) {
@@ -2199,19 +2206,20 @@ class CellGroup extends ProtoLayer {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
-      drawSVG: true,
-      drawRect: true,
+      // drawSVG: false,
+      // drawRect: true,
       insetScale: 1,
     })
     if (cells) { this.cells = cells }
     this.grid = grid
     this._type = 'CellGroup'
-    this.finishSetup(S.CellGroups)
 
-    // this.drawLabel = true
-    // this.drawDeBugRect = true
+    this.drawLabel = true
+    this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
+
+    this.finishSetup(S.CellGroups)
   }
 
   // MARK: CellGroup Computed Properties
@@ -2308,7 +2316,7 @@ class CellGroup extends ProtoLayer {
         filter: filter,
         islandLevel: this.islandLevel,
         direction: direction,
-        insetScale: insetScale,
+        // insetScale: insetScale,
       })
     }
 
@@ -2321,19 +2329,18 @@ class CellGroup extends ProtoLayer {
       cellGroup: this,
       islands: islands,
       protoParent: this,
-      svgParent: this.grid.svgElt,
+      svgParent: this.svgElt,
       grid: this.grid,
       filter: filter,
       insetScale: insetScale,
       direction: direction,
       islandLevel: islandLevel,
       drawSVG: true,
-      drawRect: true,
+      // drawRect: true,
     })
     this.shapesGroups.push(shapeGroup)
   }
   // #endregion
-
 }
 
 // CLASS: ShapeGroup
@@ -2361,7 +2368,10 @@ class ShapeGroup extends ProtoLayer {
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
-      filter: filter
+      filter: filter,
+      // drawSVG: false,
+      // drawRect: true,
+      drawFilter: false,
     })
     this.cellGroup = cellGroup
     this.islands = islands
@@ -2370,8 +2380,8 @@ class ShapeGroup extends ProtoLayer {
     this.islandLevel = islandLevel
     this._type = 'ShapeGroup'
 
-    // this.drawLabel = true
-    // this.drawDeBugRect = true
+    this.drawLabel = true
+    this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
 
@@ -2412,7 +2422,18 @@ class ShapeGroup extends ProtoLayer {
   }
   //METH: drawElement() override
   drawElement() {
-    // super.drawElement()
+    super.drawElement()
+    if (this.drawRect) {
+      this.rect
+        .attribute('fill', protoColor(0, 0))
+        .attribute('stroke', 'black')
+        .attribute('stroke-width', `.0625`)
+        .attribute('rx', 1)
+        .attribute('ry', 1)
+      // .attribute('stroke-dasharray', `4 4`)
+    }
+
+
     this.svgGroup
       .addToClassList(this.id)
       .addToClassList(this.svgParent.elt.classList.value)
@@ -2445,8 +2466,8 @@ class Cell extends ProtoLayer {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
-      // drawSVG: false,
-      drawRect: true,
+      drawSVG: false,
+      // drawRect: true,
       insetScale: 1,
     })
     if (!(coords instanceof Vertex)) { coords = vert(coords) }
@@ -3144,7 +3165,7 @@ class Shape extends ProtoLayer {
       insetScale: insetScale,
       // drawSVG: false,
       // drawRect: true,
-      // drawFilter: false,
+      drawFilter: false,
       // drawFilter: protoParent.drawFilter,
     })
     this.subShapes = subShapes ? subShapes : new OpArray
@@ -3158,7 +3179,7 @@ class Shape extends ProtoLayer {
     // this.drawLabel = true
     // this.drawDeBugRect = true
     // this.drawPerimeter = true
-    // this.drawInset = true
+    this.drawInset = true
 
     this.finishSetup(S.Shapes)
   }
