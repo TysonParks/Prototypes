@@ -379,8 +379,8 @@ class ProtoFilter {
     }
   }
 
-  updateFilter(shadows, size = 3, time = 0) {
-
+  updateFilter(shadows, clearInset = true) {
+    this.dropShadow(shadows, clearInset = true)
   }
 
 
