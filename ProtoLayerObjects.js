@@ -2397,20 +2397,24 @@ class ShapeGroup extends ProtoLayer {
   // MARK: ShapeGroup Setup Methods
   //METH: createSVGGroup()
   createSVGGroup() {
-    const svgGroup = createElementNS(SVG.xmlns, 'g')
+    this.svgGroup = createElementNS(SVG.xmlns, 'g')
     const isleLvl = this.islandLevel.toString().padStart(2, '0')
-    svgGroup
+    this.svgGroup
       .attribute('id', `${this.id}-${this.protoParent.id}-lvl${isleLvl}`)
       .parent(this.svgElt)
-    this.svgGroup = svgGroup
+      .addToClassList(this.id)
+      .addToClassList(this.svgParent.elt.classList.value)
+    // .attribute('fill-rule', 'evenodd')
+
   }
   //METH: assignShapes()
   assignShapes() {
     this.shapes.forEach(s => {
       const pathCopy = s.path
       pathCopy
-        .id(`${s.path.id}-copy`)
+        .id(`${s.id}-copy`)
         .parent(this.svgGroup)
+      // .attribute('fill-rule', 'evenodd')
     })
   }
 
@@ -2438,13 +2442,10 @@ class ShapeGroup extends ProtoLayer {
 
 
     this.svgGroup
-      .addToClassList(this.id)
-      .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.anchor, this.size)
       .attribute('fill', protoColor(230))
       // .attribute('fill', protoColor(255, 0, 0))
       .attribute('fill-opacity', 1)
-
       .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
   }
 }
