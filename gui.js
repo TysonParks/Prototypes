@@ -1,7 +1,7 @@
 let gui
 
 let testingControls = {
-  hashNumber: 15,
+  hashNumber: 10,
   lastHash: true,
   labels: true,
   borders: false,
@@ -118,8 +118,8 @@ function keyPressed() {
     const rez = vert(4000, 7200)
     // const rez = vert(4551, 8192)
     // const rez = vert(8000, 14400)
-    // const rez = vert(9102, 16384) // MAX RESOLUTION
-    // const rez = vert(10000, 18000)
+    // const rez = vert(9102, 16384) 
+    // const rez = vert(10000, 18000) // MAX RESOLUTION
     const scaledRez = rez.mult(scale)
     const rezString = `${scaledRez.x}x${scaledRez.y}`
     const date = getCurrentDateString()
