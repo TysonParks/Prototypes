@@ -260,7 +260,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  // gridX = 15
+  // gridX = 10
 
   grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
   // grid = new Grid(FRAME, { x: 10, y: 17 })
@@ -406,7 +406,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
-  // group003 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
+  group003 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   // const bounds = grid.cellBounds({ selection: grid.cells })
   // const bounds2 = grid.gridCellBounds
@@ -483,12 +483,12 @@ function gridTests2() {
   //   insetScale: 1,
   // })
 
-  group000?.createSubIslands({
-    // direction: Direction.Vertical,
-    filter: shader8,
-    // insetScale: .25,
-    insetScale: .9,
-  })
+  // group000?.createSubIslands({
+  //   // direction: Direction.Vertical,
+  //   filter: shader8,
+  //   // insetScale: .25,
+  //   insetScale: .9,
+  // })
 
   group000?.createSubIslands({
     // direction: Direction.Vertical,
@@ -497,12 +497,12 @@ function gridTests2() {
     insetScale: .9,
   })
 
-  // group000?.createSubIslands({
-  //   // direction: Direction.Vertical,
-  //   filter: shader8,
-  //   // insetScale: .25,
-  //   insetScale: .9,
-  // })
+  group000?.createSubIslands({
+    // direction: Direction.Vertical,
+    filter: shader8,
+    // insetScale: .25,
+    insetScale: .9,
+  })
 
   // group000?.createSubIslands({
   //   direction: Direction.None,
@@ -540,8 +540,8 @@ function gridTests2() {
   // })
 
   // group001?.createSubIslands({
-  //   direction: Direction.Vertical,
-  //   filter: shader0,
+  //   // direction: Direction.Vertical,
+  //   filter: shader2,
   //   // insetScale: 2,
   //   insetScale: .6,
   // })
@@ -633,14 +633,14 @@ function gridTests2() {
 
   group002?.createSubIslands({
     direction: Direction.All,
-    filter: shader3,
+    filter: shader2,
     // insetScale: .2,
     insetScale: .6,
   })
 
   group002?.createSubIslands({
     direction: Direction.All,
-    filter: shader8,
+    filter: shader4,
     // insetScale: .2,
     insetScale: .6,
   })
@@ -660,12 +660,12 @@ function gridTests2() {
   //   // insetScale: .6,
   // })
 
-  // group002?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader8,
-  //   insetScale: .4,
-  //   // insetScale: .6,
-  // })
+  group002?.createSubIslands({
+    // direction: Direction.Horizontal,
+    filter: shader1,
+    insetScale: .1,
+    // insetScale: .6,
+  })
 
   // group002?.createSubIslands({
   //   direction: Direction.Horizontal,
@@ -747,31 +747,31 @@ function gridTests2() {
 
   group003?.createSubIslands({
     direction: Direction.All,
-    filter: shader2,
+    filter: shader5,
     // insetScale: .25,
-    // insetScale: .4,
+    insetScale: .75,
   })
 
-  group003?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    // insetScale: .25,
-    insetScale: .7,
-  })
+  // group003?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader4,
+  //   // insetScale: .25,
+  //   insetScale: .7,
+  // })
 
-  group003?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    // insetScale: .25,
-    insetScale: .4,
-  })
+  // group003?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: .4,
+  // })
 
-  group003?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    // insetScale: .25,
-    insetScale: .1,
-  })
+  // group003?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: .1,
+  // })
 
   // group003?.createSubIslands({
   //   // direction: Direction.All,
@@ -812,6 +812,8 @@ function gridTests2() {
 
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
+  globalAnimation()
+
   console.log(`  ######################   `)
 
   console.log('all layers', S.allLayers)
@@ -823,7 +825,9 @@ function gridTests2() {
 // FUNC: globalAnimation()
 function globalAnimation() {
   globalControls.shadAngle = (millis() / (1000 * 8)) * 360 % 360
-  // globalControls.shadMag = (millis() / (1000 * 4)) * 64 % 64
+  //create new shadows for every filter
+  // update every filter with new shadows
+  // updateDisplay for every shapeGroup
 
   // displayTime()
   drawObjects()
@@ -849,8 +853,9 @@ function windowResized() {
 
 // FUNC: redrawAll()
 function redrawAll() {
-  print('REDRAW ALL called')
-  BG.size(windowWidth, windowHeight)
+  // print('REDRAW ALL called')
+  // BG.size(windowWidth, windowHeight)
+  S.ShapeGroups.db.forEach(sg => sg[1].updateDisplay())
   // S.allLayers.forEach(e => e.resize())
 }
 
