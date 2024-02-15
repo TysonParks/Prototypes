@@ -315,12 +315,36 @@ p5.Element.prototype.boxShadow = function (value) {
   return this.style(boxShadow, value)
 }
 
+// CLASS: ProtoCut
+class ProtoCut {
+  type
+  depth
+  angle
+  shadeStack
+  filter
+  constructor(type, depth, angle) {
+    this.type = type
+    this.depth = depth
+    this.angle = angle
+
+    this.storeObject()
+  }
+
+  createShadeStack() {
+    this.shadeStack = Shade.neuShadeSVGFactory({ mag: loft })
+  }
+}
+Object.assign(ProtoCut.prototype, IdentifiableStored)
+
+
+
+
 // CLASS: Shade
 // SIZE: 163 lines
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = 45, offset = 16) { return createVector(1, 0).rotate(angle).mult(offset) }
+  static shadVect(angle = globalControls.shadAngle, offset = 64) { return createVector(1, 0).rotate(angle).mult(offset) }
   static maxComponent(vector = this.shadVect()) {
     return vector.y
     // return max(this.x, this.y)
@@ -373,6 +397,9 @@ class Shade {
     // Optimization: reduce neushades stack size based upon mag using Shadow Layer Decay chart
     const keep = () => {
       const root = sqrt(mag)
+      if (root >= 88) { return 14 } // mag >= 7744
+      if (root >= 62) { return 13 } // mag >= 3844
+      if (root >= 44) { return 12 } // mag >= 1936
       if (root >= 31) { return 11 } // mag >= 961
       if (root >= 22) { return 10 } // mag >= 484
       if (root >= 16) { return 9 } // mag >= 256
