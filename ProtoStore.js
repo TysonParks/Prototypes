@@ -16,7 +16,8 @@ class Store {
     // this.Grammars = new ProtoStorage('grmr', 2)
     // this.Looks = new ProtoStorage('look', 2)
     // this.Actions = new ProtoStorage('axn')
-    this.Effects = new ProtoStorage('fx', 1)
+    this.Cuts = new ProtoStorage('cut', 2)
+    this.Effects = new ProtoStorage('fx', 2)
     // this.ElmtGroups = new ProtoStorage('eltGrp', 4)
   }
 
@@ -28,6 +29,7 @@ class Store {
       ...this.ShapeGroups.db,
       ...this.Islands.db,
       ...this.Shapes.db,
+      ...this.Cuts.db,
       ...this.Effects.db,
       // ...this.Cells.db,
     ]
