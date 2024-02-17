@@ -1276,6 +1276,41 @@ class Grid extends ProtoLayer {
     }
   }
 
+  //METH: createUTurns()
+  createUTurns(subShapes = this.allSimpleSubShapes, out = true) {
+    let curved = new OpArray                               // processed corner/seg storage
+    const uTurns = subShapes.flat()
+      .filter(s => out ? s.isUTurnOut : s.isUTurnIn)       // only include UTurnOut segments
+      .filter(s => !s.hasSomeCubicVerts)                   // remove segments with any cubicVerts assigned
+      .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
+
+    while (uTurns.length > 0) {
+      const seg = uTurns.pop()                             // pop gets segs with smallest minCubicLength first
+      const startNeighbor = seg.neighbors.start
+      const endNeighbor = seg.neighbors.end
+      const startRadius = min(startNeighbor.availableEndLength, seg.availableStartLength)
+      const endRadius = min(seg.availableEndLength, endNeighbor.availableStartLength)
+
+      if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
+        seg.addBothDistancedCornerVerts(startRadius)
+        curved.push(startNeighbor)
+        curved.push(seg)
+      }
+      else if (startRadius < endRadius) {                       // curve smallest corner seg: start
+        seg.addDistancedStartCornerVerts(startRadius)
+        curved.push(startNeighbor)
+      } else {                                                  // curve smallest corner seg: end 
+        seg.addDistancedEndCornerVerts(endRadius)
+        curved.push(seg)
+      }
+    }
+    if (out) {
+      this.recursiveOutWrapOutsideCorners(curved)   // colinear outWrap processed corners
+    } else {
+      this.recursiveOutWrapAdjInsideCorners(curved) // adj outWrap processed corners
+    }
+  }
+
   //METH: createCubicCorners() :
   createCubicCorners(subShapes) {
     //ARROW: sortCorners()
@@ -1420,46 +1455,40 @@ class Grid extends ProtoLayer {
       this.recursiveOutWrapOutsideCorners(quads.flat())
     }
 
-    //ARROW: createUTurnOuts()
-    const createUTurnOuts = (out = true) => {
+    // //ARROW: createUTurns()
+    // const createUTurns = (subShapes = this.allSimpleSubShapes, out = true) => {
+    //   let curved = new OpArray                               // processed corner/seg storage
+    //   const uTurns = subShapes.flat()
+    //     .filter(s => out ? s.isUTurnOut : s.isUTurnIn)       // only include UTurnOut segments
+    //     .filter(s => !s.hasSomeCubicVerts)                   // remove segments with any cubicVerts assigned
+    //     .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
 
-      //ARROW: sortUTurnOuts() : sorting for createUTurnOuts()
-      const sortUTurns = (out = true) => {
-        return this.allSimpleSubShapes
-          .flat()
-          .filter(s => out ? s.isUTurnOut : s.isUTurnIn) // only include UTurnOut segments
-          .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
-          .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
-      }
+    //   while (uTurns.length > 0) {
+    //     const seg = uTurns.pop()                             // pop gets segs with smallest minCubicLength first
+    //     const startNeighbor = seg.neighbors.start
+    //     const endNeighbor = seg.neighbors.end
+    //     const startRadius = min(startNeighbor.availableEndLength, seg.availableStartLength)
+    //     const endRadius = min(seg.availableEndLength, endNeighbor.availableStartLength)
 
-      let curved = new OpArray                            // processed corner/seg storage
-      let uTOs = sortUTurns(out)
-      while (uTOs.length > 0) {
-        const seg = uTOs.pop()                            // pop gets segs with smallest minCubicLength first
-        const startNeighbor = seg.neighbors.start
-        const endNeighbor = seg.neighbors.end
-        const startRadius = min(startNeighbor.availableEndLength, seg.availableStartLength)
-        const endRadius = min(seg.availableEndLength, endNeighbor.availableStartLength)
-
-        if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corners
-          seg.addBothDistancedCornerVerts(startRadius)
-          curved.push(startNeighbor)
-          curved.push(seg)
-          // this.recursiveOutWrapOutsideCorners(startNeighbor)
-          // this.recursiveOutWrapOutsideCorners(seg)
-        }
-        else if (startRadius < endRadius) {                       // curve smallest corner
-          seg.addDistancedStartCornerVerts(startRadius)
-          curved.push(startNeighbor)
-          // this.recursiveOutWrapOutsideCorners(startNeighbor)
-        } else {
-          seg.addDistancedEndCornerVerts(endRadius)
-          curved.push(seg)
-          // this.recursiveOutWrapOutsideCorners(seg)
-        }
-      }
-      this.recursiveOutWrapOutsideCorners(curved)                 // outWrap processed corners
-    }
+    //     if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
+    //       seg.addBothDistancedCornerVerts(startRadius)
+    //       curved.push(startNeighbor)
+    //       curved.push(seg)
+    //     }
+    //     else if (startRadius < endRadius) {                       // curve smallest corner seg: start
+    //       seg.addDistancedStartCornerVerts(startRadius)
+    //       curved.push(startNeighbor)
+    //     } else {                                                  // curve smallest corner seg: end 
+    //       seg.addDistancedEndCornerVerts(endRadius)
+    //       curved.push(seg)
+    //     }
+    //   }
+    //   if (out) {
+    //     this.recursiveOutWrapOutsideCorners(curved)   // colinear outWrap processed corners
+    //   } else {
+    //     this.recursiveOutWrapAdjInsideCorners(curved) // adj outWrap processed corners
+    //   }
+    // }
 
     //ARROW: sortStairs() : sorting for createStairs()
     const sortStairs = () => {
@@ -1494,13 +1523,12 @@ class Grid extends ProtoLayer {
       this.allSimpleSubShapes.flat().forEach(s => {
         s.matchStartCorner()
         if (s.turns.end.isRight) { this.recursiveOutWrapOutsideCorners(s) }
-        // this.recursiveOutWrapOutsideCorners(s)
       })
     }
 
     createQuadShapes(0)
     this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)
-    createUTurnOuts()
+    this.createUTurns(this.allSimpleSubShapes)
     // createStairs()
     createCorners(this.allSimpleSubShapes)
     finish()
@@ -2899,6 +2927,7 @@ class Island extends ProtoLayer {
       isle.createSimpleSubShapes()
       const shape = isle.shape
       const simpleSubShapes = isle.shape.simpleSubShapes
+      this.grid.createUTurns(simpleSubShapes, false)
       this.grid.inWrapOutsideCorners(simpleSubShapes, parentSimpleSubShapes)  //
       this.grid.inWrapInsideCorners(simpleSubShapes, parentSimpleSubShapes)   //
       this.grid.createCubicCorners(simpleSubShapes)   //finish remaining corners, required for Cardinal inset < 0.75
