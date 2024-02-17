@@ -252,7 +252,8 @@ class ProtoLayer {
           .layout(this.insetAnchor, this.insetSize)
           .attribute('rx', `${this.cornerRadius}`)
           .attribute('ry', `${this.cornerRadius}`)
-          .attribute('fill', protoColor(0, 64))
+          // .attribute('fill', protoColor(0, 64))
+          .attribute('fill', `black`)
 
 
         if (this.drawFilter) {
@@ -391,6 +392,7 @@ class Frame extends ProtoLayer {
       .attribute('ry', `${this.cornerRadius}`)
       // .attribute('fill', ProtoColor.randomHighHue().setSaturation(10))
       .attribute(`fill`, frameColor)
+      // .attribute(`fill`, 'black')
       .attribute('fill-opacity', '1')
     // .applyFilter({ filter: this.filter, size: 2 })
 
@@ -1072,13 +1074,15 @@ class Grid extends ProtoLayer {
     console.groupEnd()
   }
 
-  //METH: inWrapColinearCorners() : finds colinear wrapped corners and transfers cubic verts inwards to wrapped
-  inWrapColinearCorners(seg, segCollection, outside = true) {
-    console.log(`inWrapColinearCorners seg`, seg)
-    console.log(`inWrapColinearCorners segCollection`, segCollection)
-    const isDir = outside ? `isRight` : `isLeft`
+  //METH: wrapColinearCorner() : finds colinear wrapped corners and transfers cubic verts inwards to wrapped
+  // NOTE: in Grid.nestleShapes(): use outWrapOutsideCorner (outWrap = true, outsideCorner = true)
+  // NOTE: in Island.copyAllToCardinal(): inWrapInsideCorner & inWrapOutsideCorner (outWrap = true, outsideCorner = both)
+  wrapColinearCorner(seg, segCollection, outWrap = true, outsideCorner = true) {
+    // console.log(`wrapColinearCorner seg`, seg)
+    // console.log(`wrapColinearCorner segCollection`, segCollection)
+    const isDir = outsideCorner ? `isRight` : `isLeft`
     if (!seg.turns.end[isDir]) { // must be an outside corner, so end of seg turns Right
-      console.error(`inWrapColinearCorners only works on segment corners ending in ${isDir} turns `)
+      console.error(`wrapColinearCorner only works on segment corners ending in ${isDir} turns `)
       return
     }
     const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
@@ -1086,68 +1090,58 @@ class Grid extends ProtoLayer {
     //ARROW: colWrapper() : ProtoSegment : find colinear wrapper(s) of input segment
     const colWrapper = (seg, isNeighbor = false) => {
       const segDir = seg.direction
-      // const wrapDir =  segDir // wrapper will point opposite of segDir
-      const turn = !isNeighbor ? 'end' : 'start'
-      // const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
+      const wrapDir = outWrap ? segDir.opposites : segDir               // expected direction of wrapper 
+      const turn = isNeighbor === outWrap ? 'end' : 'start'             // which turn to check turn direction of
+      const turnDir = outWrap !== outsideCorner ? `isRight` : `isLeft`  // expected turn direction
+      const vertOnLineCheck = (s) => {            // verify cubicVert is on segment
+        const segment = outWrap ? s : seg         // segment to check
+        const cubicSeg = outWrap ? seg : s        // segment to take cubicVert from
+        const vert = !isNeighbor ? cubicSeg.finalCubicEndVert : cubicSeg.finalCubicStartVert  // cubicVert to check
+        return segment.vertIsOnLine(vert, false)  // vertIsOnLine, but not at start or end points
+      }
 
-      const cubicVert = (s) => !isNeighbor ? s.finalCubicEndVert : s.finalCubicStartVert
-      const name = isNeighbor ? `end` : `start`
       // console.log(` ** findColinear seg`, info(seg))
-      console.log(`cubicVert`, cubicVert)
+      // console.log(`cubicVert`, cubicVert)
 
-      let overlappers = segCollection.flat()
+      let wrapper = segCollection.flat()
         .filter(s =>
-          s.isOverlappingWith(seg) // colinear wraps overlap seg
-          && s.direction.equals(segDir) // colinear subIsland wraps point in same direction as seg
-          && s.turns[turn][isDir] // colinear wraps turn left
-          && seg.vertIsOnLine(cubicVert(s, true)) // colinear wraps will contain the transferrable cubicVert
+          s.isOverlappingWith(seg)        // colinear wraps overlap seg
+          && s.direction.equals(wrapDir)  // colinear subIsland wraps point in same direction as seg
+          && s.turns[turn][turnDir]       // colinear wraps turn left
+          && vertOnLineCheck(s)           // colinear wraps will contain the transferrable cubicVert
         )
-      // console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
-      // overlappers = overlappers
-      // .filter(s => s.direction.equals(segDir)) // colinear subIsland wraps point in same direction as seg
-      // console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
-      // overlappers = overlappers
-      // .filter(s => s.turns[turn][isDir]) // colinear wraps turn left
-      // console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
-      // overlappers = overlappers
-      // .filter(s => seg.vertIsOnLine(cubicVert(s))) // colinear wraps will contain the transferrable cubicVert
-      // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-      // overlappers = overlappers
-      // .filter(s => !seg.start.equals(cubicVert(s), 2) && !seg.end.equals(cubicVert(s), 2))// colWraps ends !== cubicVert
-      // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-      // console.log(``)
-      return overlappers
+      return wrapper
     }
 
-    const wrapperStart = colWrapper(seg)
-    const wrapperEnd = colWrapper(neighbor, true)
+    const wrapperStart = colWrapper(seg)          // find start of corner wrapper
+    const wrapperEnd = colWrapper(neighbor, true) // find end of corner wrapper
 
     console.log(`--> wrapperStart`, wrapperStart)
     console.log(`--> wrapperEnd`, wrapperEnd)
     console.log(``)
 
-    if (wrapperStart.length === 1 && wrapperEnd.length === 1) { // only valid when both contain single segment
-      // console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
-      // console.log(seg)
-      // console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
-      // console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
-      // console.log(``)
-      // if (normalMode) {
-      //   wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
-      //   wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
-      // } else {
-      seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)
-      neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert)
-      // }
+    if (wrapperStart.length === 1 && wrapperEnd.length === 1) {       // only valid when both contain single segment
+      if (outWrap) {
+        wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)      // transfer seg.endVert to wrapperStart
+        wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)   // transfer neighbor.startVert to wrapperEnd
+      } else {
+        seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)        // transfer wrapperStart.endVert to seg
+        neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert) // transfer wrapperEnd.startVert to neighbor
+      }
       return wrapperStart[0] // return wrapperStart only for adjacent wrapping
     }
   }
-
-  //METH: inWrapCorners() : 
-  inWrapCorners(insideSegs, outsideSegs, outside = true) {
-    // console.log(`inWrapCorners called`)
-    insideSegs.forEach(seg => this.inWrapColinearCorners(seg, outsideSegs, outside))
+  //METH: wrapCorners() : 
+  wrapCorners(segs, segCollection, outWrap = true, outsideCorners = true) {
+    return segs.flat().map(seg => this.wrapColinearCorner(seg, segCollection, outWrap, outsideCorners))
   }
+  //METH: outWrapOutsideCorners() : 
+  outWrapOutsideCorners(segs, segCollection) { return this.wrapCorners(segs, segCollection) }
+  //METH: inWrapOutsideCorners() : 
+  inWrapOutsideCorners(segs, segCollection) { return this.wrapCorners(segs, segCollection, false, true) }
+  //METH: inWrapInsideCorners() : 
+  inWrapInsideCorners(segs, segCollection) { return this.wrapCorners(segs, segCollection, false, false) }
+
 
   //METH: createCubicCorners() :
   createCubicCorners(subShapes) {
@@ -1205,10 +1199,6 @@ class Grid extends ProtoLayer {
 
     this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
-    //ARROW: overlapSegs(seg) : finds all segments that are overlap input segment
-    const overlapSegs = (seg, segCollection = this.allSimpleSubShapes) => {
-      return segCollection.flat().filter(s => s.isOverlappingWith(seg))
-    }
     //ARROW: info ; temp logging helper for wrappedCorner methods
     const info = (seg) => {
       return {
@@ -1218,69 +1208,55 @@ class Grid extends ProtoLayer {
         midPoint: seg.mid.string,
       }
     }
-    //FIXME: move out of nestleShapes
+    //FIXME: DEPRECATE
     //ARROW: findColinearWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to wrappers
-    const findColinearWrappedCorner = (seg) => {
-      if (!seg.turns.end.isRight) { // must be an outside corner, so end of seg turns Right
-        console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
-        return
-      }
-      // console.log(` ** findColinear seg`, seg)
-      const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
+    // const findColinearWrappedCorner = (seg, segCollection = this.allSimpleSubShapes) => {
+    //   if (!seg.turns.end.isRight) { // must be an outside corner, so end of seg turns Right
+    //     console.error(`findColinearWrappedCorner only works on segment corners ending in right turns `)
+    //     return
+    //   }
+    //   // console.log(` ** findColinear seg`, seg)
+    //   const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
 
-      const colWrapper = (seg, isNeighbor = false) => {
-        const segDir = seg.direction
-        const wrapDir = segDir.opposites // wrapper will point opposite of segDir
-        const turn = isNeighbor ? 'end' : 'start'
-        const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
-        const name = isNeighbor ? `end` : `start`
-        // console.log(` ** findColinear seg`, info(seg))
+    //   const colWrapper = (seg, isNeighbor = false) => {
+    //     const segDir = seg.direction
+    //     const wrapDir = segDir.opposites // wrapper will point opposite of segDir
+    //     const turn = isNeighbor ? 'end' : 'start'
+    //     const cubicVert = !isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
+    //     // console.log(` ** findColinear seg`, info(seg))
 
-        // console.log(`cubicVert`, cubicVert)
+    //     // console.log(`cubicVert`, cubicVert)
 
-        let overlappers = overlapSegs(seg) // colinear wraps overlap seg
-          .filter(s =>
-            s.direction.equals(wrapDir)
-            && s.turns[turn].isLeft
-            && s.vertIsOnLine(cubicVert, true)
-          )
-        // console.log(`${name} overFilter overlappers`, overlappers.map(o => info(o)))
-        // overlappers = overlappers
-        // .filter(s => s.direction.equals(wrapDir)) // colinear wraps point in opposite direction as seg
-        // console.log(`${name} overFilter opposites`, overlappers.map(o => info(o)))
-        // overlappers = overlappers
-        // .filter(s => s.turns[turn].isLeft) // colinear wraps turn left
-        // console.log(`${name} overFilter turn`, overlappers.map(o => info(o)))
-        // overlappers = overlappers
-        // .filter(s => s.vertIsOnLine(cubicVert, true)) // colinear wraps will contain the transferrable cubicVert
-        // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-        // overlappers = overlappers
-        // .filter(s => !s.start.equals(cubicVert, 2) && !s.end.equals(cubicVert, 2))// colWraps ends !== cubicVert
-        // console.log(`${name} overFilter vertOnLine`, overlappers.map(o => info(o)))
-        // console.log(``)
-        return overlappers
-      }
+    //     let overlappers = segCollection.flat()
+    //       .filter(s =>
+    //         s.isOverlappingWith(seg)            // colinear wraps overlap seg
+    //         && s.direction.equals(wrapDir)      // colinear wraps point in opposite direction as seg
+    //         && s.turns[turn].isLeft             // colinear wraps turn left
+    //         && s.vertIsOnLine(cubicVert, false) // colinear wraps will contain the transferrable cubicVert
+    //       )
+    //     return overlappers
+    //   }
 
-      const wrapperStart = colWrapper(seg)
-      const wrapperEnd = colWrapper(neighbor, true)
+    //   const wrapperStart = colWrapper(seg)
+    //   const wrapperEnd = colWrapper(neighbor, true)
 
-      // console.log(`--> wrapperStart`, wrapperStart)
-      // console.log(`--> wrapperEnd`, wrapperEnd)
-      // console.log(``)
+    //   // console.log(`--> wrapperStart`, wrapperStart)
+    //   // console.log(`--> wrapperEnd`, wrapperEnd)
+    //   // console.log(``)
 
-      if (wrapperStart.length === 1 && wrapperEnd.length === 1) { // only valid when both contain single segment
-        // console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
-        // console.log(seg)
-        // console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
-        // console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
-        // console.log(``)
+    //   if (wrapperStart.length === 1 && wrapperEnd.length === 1) { // only valid when both contain single segment
+    //     // console.log(`!!! COLINEAR WRAPPED CORNER FOUND !!!`)
+    //     // console.log(seg)
+    //     // console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
+    //     // console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+    //     // console.log(``)
 
-        wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
-        wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
+    //     wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)    // transfer seg.endVert to wrapperStart
+    //     wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert) // transfer neghbor.startVert to wrapperEnd
 
-        return wrapperStart[0] // return wrapperStart only for adjacent wrapping
-      }
-    }
+    //     return wrapperStart[0] // return wrapperStart only for adjacent wrapping
+    //   }
+    // }
     //FIXME: move out of nestleShapes
     //ARROW: findPartialWrappedCorner() : finds overlap-based wrapped corners and transfers cubic verts to out wrap
     const findAdjacentWrappedCorner = (seg) => {
@@ -1386,24 +1362,25 @@ class Grid extends ProtoLayer {
       }
     }
     //FIXME: move out of nestleShapes
-    //ARROW: outWrapOutsideCorners() : recursive combination of colinear/adjacent wrap functions for outside corners
-    const outWrapOutsideCorners = (segCollection) => {
+    //ARROW: recursiveOutWrapOutsideCorners() : recursive colinear/adjacent combo wrap functions for outside corners
+    const recursiveOutWrapOutsideCorners = (segCollection) => {
       segCollection = OpArray.format(segCollection)
-      const colinears = segCollection.map(seg => findColinearWrappedCorner(seg)).compacted
+      const colinears = this.outWrapOutsideCorners(segCollection, this.allSimpleSubShapes).compacted
       if (!colinears.isEmpty) {
         const adjacents = colinears.map(seg => findAdjacentWrappedCorner(seg)).compacted
         if (!adjacents.isEmpty) {
-          outWrapOutsideCorners(adjacents)
+          recursiveOutWrapOutsideCorners(adjacents)
         }
       }
     }
+
     //FIXME: move out of nestleShapes
     //ARROW: outWrapAdjInsideCorners() : recursive combination of adjacent/colinear wrap functions for inside corners
     const outWrapAdjInsideCorners = (segCollection) => {
       segCollection = OpArray.format(segCollection)
       const adjacents = segCollection.map(seg => findAdjacentWrappedCorner(seg)).compacted
       if (!adjacents.isEmpty) {
-        const colinears = adjacents.map(seg => findColinearWrappedCorner(seg)).compacted
+        const colinears = this.outWrapOutsideCorners(adjacents, this.allSimpleSubShapes).compacted
         if (!colinears.isEmpty) {
           outWrapAdjInsideCorners(colinears)
         }
@@ -1497,7 +1474,7 @@ class Grid extends ProtoLayer {
         console.log(``)
         console.log(`    QUAD`, i, quad[0].parentID)
       })
-      outWrapOutsideCorners(quads.flat())
+      recursiveOutWrapOutsideCorners(quads.flat())
     }
 
 
@@ -1526,20 +1503,20 @@ class Grid extends ProtoLayer {
           seg.addBothDistancedCornerVerts(startRadius)
           curved.push(startNeighbor)
           curved.push(seg)
-          // outWrapOutsideCorners(startNeighbor)
-          // outWrapOutsideCorners(seg)
+          // recursiveOutWrapOutsideCorners(startNeighbor)
+          // recursiveOutWrapOutsideCorners(seg)
         }
         else if (startRadius < endRadius) {               // curve smallest corner
           seg.addDistancedStartCornerVerts(startRadius)
           curved.push(startNeighbor)
-          // outWrapOutsideCorners(startNeighbor)
+          // recursiveOutWrapOutsideCorners(startNeighbor)
         } else {
           seg.addDistancedEndCornerVerts(endRadius)
           curved.push(seg)
-          // outWrapOutsideCorners(seg)
+          // recursiveOutWrapOutsideCorners(seg)
         }
       }
-      outWrapOutsideCorners(curved)                       // outWrap processed corners
+      recursiveOutWrapOutsideCorners(curved)                       // outWrap processed corners
     }
 
     //ARROW: sortStairs() : sorting for createStairs()
@@ -1587,8 +1564,8 @@ class Grid extends ProtoLayer {
       //   seg.addDistancedEndCornerVerts(radius)
       const oustideCorners = this.createCubicCorners(subShapes)
       console.log(`outsideCorners`, oustideCorners)
-      oustideCorners.forEach(seg => outWrapOutsideCorners(seg))
-      // if (seg.turns.end.isRight) { outWrapOutsideCorners(seg) }
+      oustideCorners.forEach(seg => recursiveOutWrapOutsideCorners(seg))
+      // if (seg.turns.end.isRight) { recursiveOutWrapOutsideCorners(seg) }
       //   corners = sortCorners(subShapes)
       // }
     }
@@ -1597,8 +1574,8 @@ class Grid extends ProtoLayer {
     const finish = () => {
       this.allSimpleSubShapes.flat().forEach(s => {
         s.matchStartCorner()
-        if (s.turns.end.isRight) { outWrapOutsideCorners(s) }
-        // outWrapOutsideCorners(s)
+        if (s.turns.end.isRight) { recursiveOutWrapOutsideCorners(s) }
+        // recursiveOutWrapOutsideCorners(s)
       })
     }
 
@@ -2309,7 +2286,9 @@ class CellGroup extends ProtoLayer {
         insetScale: insetScale,
         // drawFilter: drawFilter,
       }))
+
     if (!newIslands.isEmpty) {
+      console.warn(`newIslands created!!!!`, newIslands.map(i => i.id))
       this.islandLevel += 1
       this.createShapeGroup({
         islands: newIslands.flat(this.islandLevel).compacted,
@@ -2318,6 +2297,8 @@ class CellGroup extends ProtoLayer {
         direction: direction,
         // insetScale: insetScale,
       })
+    } else {
+      console.error(`no newIslands created!`)
     }
 
     console.groupEnd()
@@ -2351,7 +2332,7 @@ class ShapeGroup extends ProtoLayer {
   cellGroup
   islands
   svgGroup
-  // shapes
+  paths = new OpArray
   islandLevel
   constructor({
     cellGroup,
@@ -2415,6 +2396,7 @@ class ShapeGroup extends ProtoLayer {
         .id(`${s.id}-copy`)
         .parent(this.svgGroup)
       // .attribute('fill-rule', 'evenodd')
+      this.paths.push(pathCopy)
     })
   }
 
@@ -2928,6 +2910,7 @@ class Island extends ProtoLayer {
             i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
             console.log(i.shape.simpleSubShapes)
             this.grid.createCubicCorners(i.shape.simpleSubShapes)
+            i.shape.assignElement()
             i.shape.drawElement()
           })
         }
@@ -2975,6 +2958,7 @@ class Island extends ProtoLayer {
         island: newIsland,
       })
     }
+    // newIsland.shape.assignElement()
 
     this.grid.updateCells({ island: newIsland })
     // console.log(`newIsland`, newIsland)
@@ -2997,13 +2981,15 @@ class Island extends ProtoLayer {
     const parentSimpleSubShapes = this.shape.simpleSubShapes
     cellIslands?.forEach((isle, i) => {
       isle.createSimpleSubShapes()
+      const shape = isle.shape
+      this.grid.inWrapOutsideCorners(shape.simpleSubShapes, parentSimpleSubShapes)       //
+      this.grid.inWrapInsideCorners(shape.simpleSubShapes, parentSimpleSubShapes)//
 
-      this.grid.inWrapCorners(shape.simpleSubShapes, parentSimpleSubShapes)
-      this.grid.inWrapCorners(shape.simpleSubShapes, parentSimpleSubShapes, false)
-      this.grid.createCubicCorners(shape.simpleSubShapes)
+      this.grid.createCubicCorners(shape.simpleSubShapes)   //finish remaining corners, required for Cardinal inset < 0.75
 
       console.log(`shape`, shape)
-      shape.drawElement()
+      shape.assignElement()       // assignElement in order to assign path to Shape.path for use in ShapeGroup
+      shape.drawElement()         // DEPRECATE: Now, only shapeGroup element is drawn, using shape's path
     })
     return cellIslands
   }
@@ -3358,7 +3344,7 @@ class Shape extends ProtoLayer {
     //   .addToClassList(this.svgParent.elt.classList.value)
     //   .layout(this.anchor, this.size, 20)
     //   .viewBox(this.anchor, this.size, 20)
-
+    console.warn(`Shape.assignElement() this.svg?`, this.svg)
     this.path = createSVGElt('path')
       .attribute('d', this.svg)
       // .parent(this.svgElt)
@@ -3371,6 +3357,7 @@ class Shape extends ProtoLayer {
   drawElement() {
     console.group()
     console.error('drawElement: ', this.id, this)
+    console.warn(`Shape.drawElement() this.svg?`, this.svg)
 
     if (this.drawSVG) {
       this.svgElt
