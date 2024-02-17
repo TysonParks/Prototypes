@@ -1080,7 +1080,7 @@ class Grid extends ProtoLayer {
   // NOTE: in Grid.nestleShapes(): use outWrapOutsideCorner (outWrap = true, outsideCorner = true)
   // NOTE: in Island.copyAllToCardinal(): inWrapInsideCorner & inWrapOutsideCorner (outWrap = true, outsideCorner = both)
   wrapColinearCorner(seg, segCollection, outWrap = true, outsideCorner = true) {
-    // console.log(`wrapColinearCorner seg`, seg)
+    console.log(`wrapColinearCorner seg`, seg)
     // console.log(`wrapColinearCorner segCollection`, segCollection)
     const isDir = outsideCorner ? `isRight` : `isLeft`
     if (!seg.turns.end[isDir]) { // must be an outside corner, so end of seg turns Right
@@ -1120,16 +1120,31 @@ class Grid extends ProtoLayer {
     console.log(`--> wrapperStart`, wrapperStart)
     console.log(`--> wrapperEnd`, wrapperEnd)
     console.log(``)
-
-    if (wrapperStart.length === 1 && wrapperEnd.length === 1) {       // only valid when both contain single segment
+    //ARROW: transferCubicStart() : 
+    const transferCubicStart = () => {
       if (outWrap) {
         wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)      // transfer seg.endVert to wrapperStart
-        wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)   // transfer neighbor.startVert to wrapperEnd
       } else {
         seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)        // transfer wrapperStart.endVert to seg
+      }
+    }
+    //ARROW: transferCubicEnd() : 
+    const transferCubicEnd = () => {
+      if (outWrap) {
+        wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)   // transfer neighbor.startVert to wrapperEnd
+      } else {
         neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert) // transfer wrapperEnd.startVert to neighbor
       }
-      return wrapperStart[0] // return wrapperStart only for adjacent wrapping
+    }
+
+    if (wrapperStart.length === 1 && wrapperEnd.length === 1) {       // fully wrapped corner
+      transferCubicStart()
+      transferCubicEnd()
+      return wrapperStart[0]                     // return fully wrapped corner for adjacent wrapping
+    } else if (wrapperStart.length === 1) {                           // only start is wrapped
+      transferCubicStart()
+    } else if (wrapperEnd.length === 1) {                             // only end is wrapped
+      transferCubicEnd()
     }
   }
   //METH: wrapCorners() : 
