@@ -319,16 +319,26 @@ p5.Element.prototype.boxShadow = function (value) {
 class ProtoCut {
   type
   depth
-  angle
+  // angle // Computed!
+  angleOffset = 0
   shadeStack
   filter
-  constructor(type, depth, angle) {
+  constructor(type, depth) {
     this.type = type
     this.depth = depth
-    this.angle = angle
 
-    this.storeObject()
+
+    this.storeObject(S.Cuts)
   }
+
+  static i(depth) { return new ProtoCut(`i`, depth) }
+  static stairs(depth, amount) { return new ProtoCut(`stairs`, depth, amount) }
+
+  static j(depth) { return new ProtoCut(`j`, depth) }
+  static r(depth) { return new ProtoCut(`r`, depth) }
+  static f(depthIn, depthOut) { return new ProtoCut(`f`, depthIn, depthOut) }
+
+  static v(depth) { return new ProtoCut(`v`, depth, angleOffset) }
 
   createShadeStack() {
     this.shadeStack = Shade.neuShadeSVGFactory({ mag: loft })
