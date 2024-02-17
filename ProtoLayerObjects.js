@@ -657,12 +657,14 @@ class Grid extends ProtoLayer {
   get islands() { return this.groups.map(g => g.islands.union(g.perimeterIslands, [`id`])).flat() }
   get shapes() { return this.islands.map(i => i.shape).flat() }
   get allSimpleSubShapes() {
-    let simpShapes = this.perimeterIslands
+    return this.perimeterIslands
       // .compacted // should not have to compact because perimeters must be created for every group!
       .map(i => i.shape.simpleSubShapes).flat()
-
-
-    return simpShapes
+  }
+  get allInternalSimpleSubShapes() {
+    return this.perimeterIslands
+      .filter(i => i.shape.simpleSubShapes.length > 1)    // only shapes with more than 1 simpleSubShape are internal
+      .map(i => i.shape.simpleSubShapes.slice(1)).flat()  // remove external subShapes
   }
   // #endregion
   // MARK: Grid Geometry Methods
@@ -1143,6 +1145,7 @@ class Grid extends ProtoLayer {
 
   //METH: outWrapAdjacentInsideCorner() : ProtoSegment :
   outWrapAdjacentInsideCorner(seg, segCollection) {
+    console.log(`seg`, seg)
     if (!seg.turns.start.isLeft) { // must be an inside corner, so end of seg turns Left
       console.error(`outWrapAdjacentInsideCorner only works on segment corners starting in left turns `)
       return
@@ -1231,7 +1234,7 @@ class Grid extends ProtoLayer {
 
   //METH: outWrapAdjacentInsideCorners()
   outWrapAdjacentInsideCorners(segs, segCollection) {
-    return segs.map(seg => this.outWrapAdjacentInsideCorner(seg, segCollection))
+    return segs.flat().map(seg => this.outWrapAdjacentInsideCorner(seg, segCollection))
   }
 
   //METH: recursiveOutWrapOutsideCorners() : recursive colinear/adjacent combo wrap functions for outside corners
@@ -1289,9 +1292,6 @@ class Grid extends ProtoLayer {
     }
     return outsideCorners
   }
-
-
-
 
   //MARK: CUSTOMIZE SHAPES
   //METH: nestleShapes() :
@@ -1405,7 +1405,6 @@ class Grid extends ProtoLayer {
       this.recursiveOutWrapOutsideCorners(quads.flat())
     }
 
-
     //ARROW: createUTurnOuts()
     const createUTurnOuts = (out = true) => {
 
@@ -1434,7 +1433,7 @@ class Grid extends ProtoLayer {
           // this.recursiveOutWrapOutsideCorners(startNeighbor)
           // this.recursiveOutWrapOutsideCorners(seg)
         }
-        else if (startRadius < endRadius) {               // curve smallest corner
+        else if (startRadius < endRadius) {                       // curve smallest corner
           seg.addDistancedStartCornerVerts(startRadius)
           curved.push(startNeighbor)
           // this.recursiveOutWrapOutsideCorners(startNeighbor)
@@ -1444,7 +1443,7 @@ class Grid extends ProtoLayer {
           // this.recursiveOutWrapOutsideCorners(seg)
         }
       }
-      this.recursiveOutWrapOutsideCorners(curved)                       // outWrap processed corners
+      this.recursiveOutWrapOutsideCorners(curved)                 // outWrap processed corners
     }
 
     //ARROW: sortStairs() : sorting for createStairs()
@@ -1469,35 +1468,12 @@ class Grid extends ProtoLayer {
         const endNeighbor = seg.neighbors.end
       }
     }
-
-
-
     //ARROW: createCorners()
     const createCorners = (subShapes) => {
-      // //ARROW: sortCorners()
-      // const sortCorners = (subShapes) => {
-      //   return subShapes
-      //     .flat()
-      //     .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-      //     .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-      //     .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-      // }
-
-      // let corners = sortCorners(subShapes)
-      // // console.log(`finalCorners: `, corners.map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
-      // while (corners.length > 0) {
-      //   let seg = corners[0]
-      //   seg = seg.hasCubicStartVert ? seg : seg.neighbors.start
-      //   const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
-      //   seg.addDistancedEndCornerVerts(radius)
       const oustideCorners = this.createCubicCorners(subShapes)
       console.log(`outsideCorners`, oustideCorners)
       oustideCorners.forEach(seg => this.recursiveOutWrapOutsideCorners(seg))
-      // if (seg.turns.end.isRight) { this.recursiveOutWrapOutsideCorners(seg) }
-      //   corners = sortCorners(subShapes)
-      // }
     }
-
     //ARROW: finish()
     const finish = () => {
       this.allSimpleSubShapes.flat().forEach(s => {
@@ -1507,15 +1483,12 @@ class Grid extends ProtoLayer {
       })
     }
 
-
     createQuadShapes(0)
+    this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)
     createUTurnOuts()
     // createStairs()
     createCorners(this.allSimpleSubShapes)
     finish()
-
-    // console.log(`currentSimples`, sortedSimples().map(s => s.id))
-    // console.log(`currentSimples turns`, sortedSimples().map(s => [s.minCubicLength, s.part.value, s.parentID, s.cubicVertCount, s.id]))
 
     console.log(`  %%%% end nestleShapes %%%%`)
     console.log(``)
@@ -2534,7 +2507,7 @@ class Island extends ProtoLayer {
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
-      drawSVG: false,
+      // drawSVG: false,
       drawRect: false,
       drawFilter: drawFilter,
       allowsProtoErrors: allowsProtoErrors,
@@ -2910,10 +2883,10 @@ class Island extends ProtoLayer {
     cellIslands?.forEach((isle, i) => {
       isle.createSimpleSubShapes()
       const shape = isle.shape
-      this.grid.inWrapOutsideCorners(shape.simpleSubShapes, parentSimpleSubShapes)       //
-      this.grid.inWrapInsideCorners(shape.simpleSubShapes, parentSimpleSubShapes)//
-
-      this.grid.createCubicCorners(shape.simpleSubShapes)   //finish remaining corners, required for Cardinal inset < 0.75
+      const simpleSubShapes = isle.shape.simpleSubShapes
+      this.grid.inWrapOutsideCorners(simpleSubShapes, parentSimpleSubShapes)  //
+      this.grid.inWrapInsideCorners(simpleSubShapes, parentSimpleSubShapes)   //
+      this.grid.createCubicCorners(simpleSubShapes)   //finish remaining corners, required for Cardinal inset < 0.75
 
       console.log(`shape`, shape)
       shape.assignElement()       // assignElement in order to assign path to Shape.path for use in ShapeGroup
@@ -3082,7 +3055,7 @@ class Shape extends ProtoLayer {
       protoParent: protoParent,
       svgParent: svgParent,
       insetScale: insetScale,
-      drawSVG: false,
+      // drawSVG: false,
       // drawRect: true,
       drawFilter: false,
       // drawFilter: protoParent.drawFilter,
