@@ -305,7 +305,7 @@ class ProtoFilter {
   applyFilterToElement({ element, size, padding = 20, time = 0 } = {}) {
     if (!this.type) { return this }
     console.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
-    console.warn(`applyFilter padding: ${padding}`)
+    console.warn(`applyFilter paddingX: ${padding.x}, paddingY: ${padding.y}`)
     const aspect = size.x / size.y
     //FIXME: I might be able to use absolute values, but they probably need to be relative to the entire canvas?
     //FIXME: This means I need to bring in the anchor as well. Maybe I can even just use my .layout method?
