@@ -763,26 +763,26 @@ function gridTests2() {
   //   insetScale: 1,
   // })
 
-  // group003?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .25,
-  //   insetScale: .75,
-  // })
+  group003?.createSubIslands({
+    direction: Direction.All,
+    filter: shader2,
+    // insetScale: .25,
+    insetScale: .75,
+  })
 
-  // group003?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .25,
-  //   insetScale: .5,
-  // })
+  group003?.createSubIslands({
+    direction: Direction.All,
+    filter: shader2,
+    // insetScale: .25,
+    insetScale: .5,
+  })
 
-  // group003?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader2,
-  //   insetScale: .25,
-  //   // insetScale: .4,
-  // })
+  group003?.createSubIslands({
+    direction: Direction.All,
+    filter: shader2,
+    insetScale: .25,
+    // insetScale: .4,
+  })
 
   // group003?.createSubIslands({
   //   direction: Direction.All,
@@ -830,7 +830,7 @@ function gridTests2() {
 
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
-  grid.showCellsDebug()
+  // grid.showCellsDebug()
 
   // globalAnimation()
 
