@@ -541,7 +541,7 @@ p5.Element.prototype.addToClassList = function (newClass) {
 
 //PROTOTYPE: p5.Element extension layout(x, y, width, height)
 p5.Element.prototype.layout = function (x, y, width, height, padding = 0) {
-  console.log(`layout arguments`, arguments)
+  // console.log(`layout arguments`, arguments)
   const args = OpArray.from(arguments)
   // single object input
   if (args.length === 1) {
