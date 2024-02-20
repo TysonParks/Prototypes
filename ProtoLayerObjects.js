@@ -1281,7 +1281,7 @@ class Grid extends ProtoLayer {
   }
   //FIXME: Current bug is within this method! Probably inside outWrapAdjacentInsideCorners()
   //METH: createUTurns()
-  createUTurns(subShapes = this.allSimpleSubShapes, out = true) {
+  createUTurns({ subShapes = this.allSimpleSubShapes, out = true, outWrap = true } = {}) {
     let curved = new OpArray                               // processed corner/seg storage
     const uTurns = subShapes.flat()
       .filter(s => out ? s.isUTurnOut : s.isUTurnIn)       // only include UTurnOut segments
@@ -1319,7 +1319,7 @@ class Grid extends ProtoLayer {
   }
 
   //METH: createCubicCorners() :
-  createCubicCorners(subShapes = this.allSimpleSubShapes) {
+  createCubicCorners({ subShapes = this.allSimpleSubShapes, outWrap = true } = {}) {
     let corners = subShapes.flat()
       .filter(s => !s.hasBothCubicVerts)                      // remove segments with both cubicVerts assigned
       .sort((a, b) => b.minCubicLength - a.minCubicLength)    // sort large-small availableEndLength
@@ -1350,8 +1350,10 @@ class Grid extends ProtoLayer {
     }
     // console.warn(` outsideCorners`, outsideCorners.map(s => s.id))
     // console.warn(` insideCorners`, insideCorners.map(s => s.id))
-    this.recursiveOutWrapOutsideCorners(outsideCorners)
-    this.recursiveOutWrapAdjInsideCorners(insideCorners)
+    if (outWrap) {
+      this.recursiveOutWrapOutsideCorners(outsideCorners)
+      this.recursiveOutWrapAdjInsideCorners(insideCorners)
+    }
   }
 
   //MARK: CUSTOMIZE SHAPES
@@ -1497,9 +1499,9 @@ class Grid extends ProtoLayer {
     }
 
     createQuadShapes(0)
-    this.createUTurns(this.allSimpleSubShapes, false)
+    this.createUTurns({ out: false })
     this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)
-    this.createUTurns(this.allSimpleSubShapes)
+    this.createUTurns()
     // createStairs()
     this.createCubicCorners()
     finish()
@@ -2827,7 +2829,7 @@ class Island extends ProtoLayer {
           subIslands?.forEach(i => {
             i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
             console.log(i.shape.simpleSubShapes)
-            this.grid.createCubicCorners(i.shape.simpleSubShapes)
+            this.grid.createCubicCorners({ subShapes: i.shape.simpleSubShapes, outWrap: false })
             i.shape.assignElement()
             i.shape.drawElement()
           })
@@ -2903,10 +2905,10 @@ class Island extends ProtoLayer {
       const simpleSubShapes = isle.shape.simpleSubShapes
 
       // this.grid.createUTurns(simpleSubShapes)
-      this.grid.createUTurns(simpleSubShapes, false)
+      this.grid.createUTurns({ subShapes: simpleSubShapes, out: false })
       this.grid.inWrapOutsideCorners(simpleSubShapes, parentSimpleSubShapes)  //
       this.grid.inWrapInsideCorners(simpleSubShapes, parentSimpleSubShapes)   //
-      this.grid.createUTurns(simpleSubShapes)
+      this.grid.createUTurns({ subShapes: simpleSubShapes })
       // this.grid.createUTurns(simpleSubShapes, false)
       this.grid.createCubicCorners(simpleSubShapes)   //finish remaining corners, required for Cardinal inset < 0.75
 
