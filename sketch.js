@@ -366,11 +366,11 @@ function gridTests2() {
 
 
   // grid.squares({ coverage: 32 / grid.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  group000 = grid.squares({ coverage: 0.1, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  group000 = grid.squares({ coverage: 0.1, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
   // grid.randGroup({amount:0.2})
   // grid.squares(16 / grid.cellCount)
   // grid.squares(0.2)
-  // grid.outlineGroup({ groupID: grid.lastGroup.id, directioqn: Direction.Right, newGroup: false, amount: 1 })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, directioqn: Direction.All.random(R.random_int(1, 4)), newGroup: false, amount: 1 })
   // const outlineDir = Direction.Cardinal.random(2)
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
@@ -382,12 +382,12 @@ function gridTests2() {
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
   group001 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All, newGroup: true, amount: R.random_int(1, 1) })
-  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
+  grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 3) })
   // group002 = grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 2) })
 
   // group002 = grid.randGroup({ amount: 0.5 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
-  group003 = grid.randGroup({ amount: .75 })
+  group002 = grid.randGroup({ amount: .75 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // grid.outlineGroup({ groupID: grid.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
@@ -410,7 +410,7 @@ function gridTests2() {
   // grid.outlineTaken(Direction.Horizontal, true)
   // grid.groupNamed('grp001')?.setFilter(shader2)
 
-  group002 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
+  // group002 = grid.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   // const bounds = grid.cellBounds({ selection: grid.cells })
   // const bounds2 = grid.gridCellBounds
@@ -450,330 +450,62 @@ function gridTests2() {
   // console.log(`when does this happen?`)
 
   //MARK: group000
-  group000?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    // insetScale: .25,
-    // insetScale: .75,
-  })
 
   group000?.createSubIslands({
     direction: Direction.All,
     filter: shader2,
-    // insetScale: .25,
     insetScale: .75,
-  })
-
-  group000?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    // insetScale: .25,
-    insetScale: .5,
-  })
-
-  group000?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    insetScale: .25,
     // insetScale: .4,
   })
 
-  // group000?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader4,
-  //   insetScale: .25,
-  //   // insetScale: .4,
-  // })
+  group000?.createSubIslands({
+    direction: Direction.All,
+    filter: shader8,
+    insetScale: .75,
+    // insetScale: .4,
+  })
 
-  // group000?.createSubIslands({
-  //   direction: Direction.Vertical,
-  //   filter: shader6,
-  //   // insetScale: .25,
-  //   insetScale: .05,
-  // })
-
-  // group000?.createSubIslands({
-  //   // direction: Direction.Vertical,
-  //   filter: shader8,
-  //   // insetScale: .25,
-  //   insetScale: .9,
-  // })
-
-  // group000?.createSubIslands({
-  //   direction: Direction.Vertical,
-  //   filter: shader1,
-  //   // insetScale: .25,
-  //   insetScale: .2,
-  // })
+  group000?.createSubIslands({
+    direction: Direction.None,
+    filter: shader6,
+    // insetScale: .25,
+    insetScale: .1,
+  })
 
   //MARK: group001
-  // group001?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader0,
-  //   insetScale: .75,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader7,
-  //   // insetScale: 1.75,
-  //   insetScale: .95,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.PosOrdinal,
-  //   filter: shader0,
-  //   insetScale: .7,
-  //   // insetScale: .95,
-  // })
-
-  // group001?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: 1.75,
-  //   insetScale: 1.6,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.Vertical,
-  //   filter: shader2,
-  //   // insetScale: 2,
-  //   insetScale: .6,
-  // })
-
   group001?.createSubIslands({
-    // direction: Direction.All,
-    filter: shader1,
+    // direction: Direction.None,
+    filter: shader7,
     // insetScale: 1.75,
     insetScale: .75,
   })
 
   group001?.createSubIslands({
     // direction: Direction.None,
-    filter: shader1,
+    filter: shader2,
     // insetScale: 1.75,
-    insetScale: .5,
+    insetScale: .25,
   })
 
   group001?.createSubIslands({
     // direction: Direction.Horizontal,
-    filter: shader1,
+    filter: shader4,
     // insetScale: 1.75,
     insetScale: .25,
   })
 
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader4,
-  //   // insetScale: 1.75,
-  //   insetScale: .25,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: 1.75,
-  //   insetScale: .6,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: 1.75,
-  //   insetScale: .5,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: 1.75,
-  //   insetScale: .4,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: 1.75,
-  //   insetScale: .3,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: 1.75,
-  //   insetScale: .2,
-  // })
-
-
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: 1.75,
-  //   insetScale: .15,
-  // })
-
-
-  // group001?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader1,
-  //   // insetScale: 1.75,
-  //   insetScale: .05,
-  // })
-
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: 1.75,
-  //   insetScale: .5,
-  // })
-
-  // group001?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader7,
-  //   // insetScale: 1.75,
-  //   // insetScale: .5,
-  // })
-
-
-
   //MARK: group002
-
-  // group002?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader6,
-  //   // insetScale: .2,
-  //   insetScale: .7,
-  // })
-
-  // group002?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader7,
-  //   // insetScale: .2,
-  //   insetScale: .7,
-  // })
-
-  // group002?.createSubIslands({
-  //   // direction: Direction.Vertical,
-  //   filter: shader3,
-  //   insetScale: .4,
-  //   // insetScale: .6,
-  // })
-
 
   group002?.createSubIslands({
     // direction: Direction.Vertical,
-    filter: shader1,
+    filter: shader0,
     insetScale: .75,
     // insetScale: .6,
   })
 
-  group002?.createSubIslands({
-    // direction: Direction.Vertical,
-    filter: shader1,
-    insetScale: .5,
-    // insetScale: .6,
-  })
 
-  group002?.createSubIslands({
-    // direction: Direction.Vertical,
-    filter: shader1,
-    insetScale: .25,
-    // insetScale: .6,
-  })
-
-  // group002?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader1,
-  //   insetScale: .1,
-  //   // insetScale: .6,
-  // })
-
-  // group002?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader0,
-  //   insetScale: .4,
-  //   // insetScale: .6,
-  // })
-
-  // group002?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader8,
-  //   insetScale: .6,
-  //   // insetScale: .6,
-  // })
-
-  // group002?.createSubIslands({
-  //   direction: Direction.None,
-  //   filter: shader1,
-  //   // insetScale: .7,
-  //   insetScale: .4,
-  // })
-
-  // group002?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader1,
-  //   // insetScale: .2,
-  //   insetScale: .4,
-  // })
-
-  // group002?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader2,
-  //   // insetScale: .2,
-  //   insetScale: .3,
-  // })
-
-  // group002?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader2,
-  //   // insetScale: .2,
-  //   insetScale: .15,
-  // })
-
-  // group002?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader1,
-  //   // insetScale: .2,
-  //   insetScale: .8,
-  // })
 
   //MARK: group003
-
-  // group003?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .25,
-  //   insetScale: 1.6,
-  // })
-
-  // group003?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   insetScale: 1.4,
-  // })
-
-  // group003?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .25,
-  //   insetScale: 1.2,
-  // })
-
-  // group003?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .25,
-  //   insetScale: 1,
-  // })
-
-  // group003?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .25,
-  //   // insetScale: 1.95,
-  // })
 
   group003?.createSubIslands({
     direction: Direction.All,
@@ -796,46 +528,11 @@ function gridTests2() {
     // insetScale: .4,
   })
 
-  group003?.createSubIslands({
-    direction: Direction.All,
-    filter: shader1,
-    // insetScale: .25,
-    insetScale: 0.15,
-  })
-
-  // group003?.createSubIslands({
-  //   direction: Direction.Horizontal,
-  //   filter: shader4,
-  //   // insetScale: .25,
-  //   insetScale: 0.1,
-  // })
-
-  // group003?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader7,
-  //   // insetScale: .25,
-  //   insetScale: 1.8,
-  // })
-
-  // group003?.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader2,
-  //   // insetScale: .25,
-  //   insetScale: .4,
-  // })
-
   // group003?.createSubIslands({
   //   direction: Direction.Horizontal,
   //   filter: shader1,
   //   // insetScale: .25,
-  //   insetScale: .2,
-  // })
-
-  // group003?.createSubIslands({
-  //   direction: Direction.None,
-  //   filter: shader1,
-  //   // insetScale: .25,
-  //   insetScale: .1,
+  //   insetScale: 0.025,
   // })
 
 
