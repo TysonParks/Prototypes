@@ -61,8 +61,16 @@ const Debuggable = {
       // if (this.isShape) {
 
       // } else {
-      console.warn(`${this.id} showRect called!`)
-      console.log(`showRect layout args`, this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+      // console.warn(`${this.id} showRect called!`)
+      // console.log(`grid`, this.grid)
+      // console.log(`grid insetAnchor`, this.grid.insetAnchor)
+      // console.log(`grid insetScale`, this.grid.insetScale)
+      // console.log(`grid insetSize`, this.grid.insetSize)
+      // if (this.type === `Cell`) {
+      //   console.log(`cell ${this.id} insetAnchor: `, this.insetAnchor)
+      //   console.log(`cell ${this.id} insetSize: `, this.insetSize)
+      // }
+      // console.log(`showRect layout args`, this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
       this.deBugRectElt
         .parent(this.svgElt)
         .layout(this.insetAnchor, this.insetSize)
