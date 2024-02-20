@@ -262,12 +262,16 @@ function gridTests2() {
   let gridX = R.random_int(4, 10)
   // gridX = 20
 
-  grid = new Grid(FRAME, { x: gridX, y: gridX * 2 })
+  grid = new Grid({
+    protoParent: FRAME,
+    gridSize: { x: gridX, y: gridX * 2 },
+    insetScale: 7 / 9
+  })
   // grid = new Grid(FRAME, { x: 10, y: 17 })
   let gridInset = R.random_num(0.75, 0.95)
 
   // FRAME.setInsetScale(.999)
-  grid.setInsetScale(7 / 9)
+  // grid.setInsetScale(7 / 9)
 
   const minCellSWidth = grid.minCellWidth
   const minCellSize = min(grid.cellSize.x, grid.cellSize.y)
@@ -759,26 +763,26 @@ function gridTests2() {
   //   insetScale: 1,
   // })
 
-  group003?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    // insetScale: .25,
-    insetScale: .75,
-  })
+  // group003?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: .75,
+  // })
 
-  group003?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    // insetScale: .25,
-    insetScale: .5,
-  })
+  // group003?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader2,
+  //   // insetScale: .25,
+  //   insetScale: .5,
+  // })
 
-  group003?.createSubIslands({
-    direction: Direction.All,
-    filter: shader2,
-    insetScale: .25,
-    // insetScale: .4,
-  })
+  // group003?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader2,
+  //   insetScale: .25,
+  //   // insetScale: .4,
+  // })
 
   // group003?.createSubIslands({
   //   direction: Direction.All,
@@ -825,6 +829,8 @@ function gridTests2() {
   // })
 
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
+
+  grid.showCellsDebug()
 
   // globalAnimation()
 
