@@ -1497,7 +1497,7 @@ class Grid extends ProtoLayer {
       })
     }
 
-    createQuadShapes(0)
+    createQuadShapes(4)
     this.createUTurns(this.allSimpleSubShapes, false)
     this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)
     // this.createUTurns(this.allSimpleSubShapes)
