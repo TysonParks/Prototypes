@@ -1161,9 +1161,9 @@ class Grid extends ProtoLayer {
 
   //METH: outWrapAdjacentInsideCorner() : ProtoSegment :
   outWrapAdjacentInsideCorner(seg, segCollection) {
-    console.log(`seg`, seg.id)
+    // console.log(`outWrapAdjacentInsideCorner seg`, seg.id)
     if (!seg.turns.start.isLeft) { // must be an inside corner, so end of seg turns Left
-      console.error(`outWrapAdjacentInsideCorner only works on segment corners starting in left turns `)
+      // console.error(`outWrapAdjacentInsideCorner only works on segment corners starting in left turns `)
       return
     }
     const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
@@ -1268,6 +1268,7 @@ class Grid extends ProtoLayer {
   //METH: recursiveOutWrapAdjInsideCorners() : recursive combination of adjacent/colinear wrap functions for inside corners
   recursiveOutWrapAdjInsideCorners(segCollection) {
     segCollection = OpArray.format(segCollection)
+    // console.log(`recursiveOutWrapAdjInsideCorners input`, segCollection)
     const adjacents = this.outWrapAdjacentInsideCorners(segCollection).compacted
     if (!adjacents.isEmpty) {
       console.log(`adjacents`, adjacents)
@@ -1318,35 +1319,39 @@ class Grid extends ProtoLayer {
   }
 
   //METH: createCubicCorners() :
-  createCubicCorners(subShapes) {
-    //ARROW: sortCorners()
-    const sortCorners = (subShapes) => {
-      return subShapes
-        .flat()
-        .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-    }
-
-    let corners = sortCorners(subShapes)
-    console.log(`sorted Corners`, corners)
+  createCubicCorners(subShapes = this.allSimpleSubShapes) {
+    let corners = subShapes.flat()
+      .filter(s => !s.hasBothCubicVerts)                      // remove segments with both cubicVerts assigned
+      .sort((a, b) => b.minCubicLength - a.minCubicLength)    // sort large-small availableEndLength
+      .sort((a, b) => b.cubicVertCount - a.cubicVertCount)    // sort large-small cubicVertCount
+    // console.warn(`createCubicCorners corners`, corners.map(s => s.id))
     let outsideCorners = new OpArray
+    let insideCorners = new OpArray
     while (corners.length > 0) {
-      let seg = corners[0]
-      seg = seg.hasCubicStartVert ? seg : seg.neighbors.start
-      const radius = min(seg.availableEndLength, seg.neighbors.end.availableStartLength)
-      seg.addDistancedEndCornerVerts(radius)
-      if (seg.turns.end.isRight) { outsideCorners.push(seg) }
-      // corners = sortCorners(subShapes)
-      if (seg.hasBothCubicVerts) {
-        // find and remove seg from array
+      let seg = corners.pop()                                 // pop gets segs with smallest minCubicLength first
+      // console.log(`createCubicCorners seg`, seg.id)
+      const assignSeg = seg.hasCubicStartVert ? seg : seg.neighbors.start // assign seg is one with StartVert
+      // console.log(`createCubicCorners assignSeg`, assignSeg.id)
+      const radius = min(assignSeg.availableEndLength, assignSeg.neighbors.end.availableStartLength)
+      assignSeg.addDistancedEndCornerVerts(radius)            // assign new endVert
+
+      if (seg.turns.end.isRight) {
+        outsideCorners.push(seg)                              // push outside corners for further processing
+      } else {
+        insideCorners.push(seg)                               // push inside corners for further processing
+      }
+      if (!seg.hasBothCubicVerts) {
+        corners.push(seg)
       }
       corners = corners
-        .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+        // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+        // .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
         .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
     }
-    return outsideCorners
+    // console.warn(` outsideCorners`, outsideCorners.map(s => s.id))
+    // console.warn(` insideCorners`, insideCorners.map(s => s.id))
+    this.recursiveOutWrapOutsideCorners(outsideCorners)
+    this.recursiveOutWrapAdjInsideCorners(insideCorners)
   }
 
   //MARK: CUSTOMIZE SHAPES
@@ -1483,12 +1488,6 @@ class Grid extends ProtoLayer {
         const endNeighbor = seg.neighbors.end
       }
     }
-    //ARROW: createCorners()
-    const createCorners = (subShapes) => {
-      const oustideCorners = this.createCubicCorners(subShapes)
-      console.log(`outsideCorners`, oustideCorners)
-      oustideCorners.forEach(seg => this.recursiveOutWrapOutsideCorners(seg))
-    }
     //ARROW: finish()
     const finish = () => {
       this.allSimpleSubShapes.flat().forEach(s => {
@@ -1497,14 +1496,12 @@ class Grid extends ProtoLayer {
       })
     }
 
-    createQuadShapes(4)
+    createQuadShapes(0)
     this.createUTurns(this.allSimpleSubShapes, false)
     this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)
-    // this.createUTurns(this.allSimpleSubShapes)
-    // this.createUTurns(this.allSimpleSubShapes, false)
     this.createUTurns(this.allSimpleSubShapes)
     // createStairs()
-    createCorners(this.allSimpleSubShapes)
+    this.createCubicCorners()
     finish()
 
     console.log(`  %%%% end nestleShapes %%%%`)
