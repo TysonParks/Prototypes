@@ -1299,15 +1299,15 @@ class Grid extends ProtoLayer {
       if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
         console.log(`curving ${seg.id} and ${startNeighbor.id}`)
         seg.addBothDistancedCornerVerts(startRadius)
-        curved.push(startNeighbor)
-        curved.push(seg)
+        curved.push(out ? startNeighbor : seg)
+        curved.push(out ? seg : endNeighbor)
       }
       else if (startRadius < endRadius) {                       // curve smallest corner seg: start
         seg.addDistancedStartCornerVerts(startRadius)
-        curved.push(startNeighbor)
+        curved.push(out ? startNeighbor : seg)
       } else {                                                  // curve smallest corner seg: end 
         seg.addDistancedEndCornerVerts(endRadius)
-        curved.push(seg)
+        curved.push(out ? seg : endNeighbor)
       }
     }
     if (out) {
@@ -2385,7 +2385,7 @@ class Cell extends ProtoLayer {
     this._type = 'Cell'
 
     this.drawLabel = true
-    this.drawDeBugRect = true
+    // this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
 
