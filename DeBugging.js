@@ -40,10 +40,10 @@ const Debuggable = {
         font = this.isPerimeterShape ? `bold 3px sans-serif` : `3px sans-serif`
       } else if (this.isShapeGroup) {
         offset = vert(1, 8)
-        font = `3px sans-serif`
+        font = `2px sans-serif`
       } else {
         offset = vert(1, 4)
-        font = `bold 3px sans-serif`
+        font = `bold 2px sans-serif`
       }
 
       this.deBugLabelElt
