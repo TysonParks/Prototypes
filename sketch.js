@@ -410,7 +410,8 @@ function gridTests2() {
   // GRID.outlineTaken(Direction.Horizontal, true)
   // GRID.groupNamed('grp001')?.setFilter(shader2)
 
-  // group002 = GRID.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
+  // group002 = GRID.groupAvail()
+  // group003 = GRID.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   // const bounds = GRID.cellBounds({ selection: GRID.cells })
   // const bounds2 = GRID.gridCellBounds
@@ -546,7 +547,7 @@ function gridTests2() {
 
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
-  // GRID.showCellsDebug()
+  GRID.showCellsDebug()
 
 
   // globalAnimation()
