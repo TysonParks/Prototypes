@@ -208,10 +208,10 @@ class ProtoLayer {
   //METH: 
   assignElement() {
     if (this.drawSVG || this.drawRect) {
-      console.groupCollapsed(`assignElement ${this.id}`)
+      // console.groupCollapsed(`assignElement ${this.id}`)
       // console.warn(this.cellBounds())
       if (this.drawSVG) {
-        console.log(`${this.id} layout SVG: anchor: ${this.anchor.string}, size: ${this.size.string}`)
+        // console.log(`${this.id} layout SVG: anchor: ${this.anchor.string}, size: ${this.size.string}`)
         this.svgElt = createSVGElt()
           .id(this.id)
           .parent(this.svgParent)
@@ -223,7 +223,7 @@ class ProtoLayer {
       }
 
       if (this.drawRect) {
-        console.log(`${this.id} layout rect: insetAnchor: ${this.insetAnchor.string}, insetSize: ${this.insetSize.string}`)
+        // console.log(`${this.id} layout rect: insetAnchor: ${this.insetAnchor.string}, insetSize: ${this.insetSize.string}`)
         this.rect = createSVGElt('rect')
           .id(`${this.id}-frontRect`)
           .parent(this.svgElt)
@@ -232,21 +232,21 @@ class ProtoLayer {
           .layout(this.insetAnchor, this.insetSize)
         // .label('test', 'red', Direction.None)
       }
-      console.groupEnd()
+      // console.groupEnd()
     }
   }
   //METH: 
   drawElement() {
     if (this.drawSVG || this.drawRect) {
-      console.groupCollapsed(`drawElement ${this.id}`)
+      // console.groupCollapsed(`drawElement ${this.id}`)
       if (this.drawSVG) {
-        console.log(`${this.id} layout SVG: anchor: ${this.anchor.string}, size: ${this.size.string}`)
+        // console.log(`${this.id} layout SVG: anchor: ${this.anchor.string}, size: ${this.size.string}`)
         this.svgElt
           .layout(this.anchor, this.size, this.padding)
           .viewBox(this.anchor, this.size, this.padding)
       }
       if (this.drawRect) {
-        console.log(`${this.id} assignElement layout rect: insetAnchor: ${this.insetAnchor.string}, insetSize: ${this.insetSize.string}`)
+        // console.log(`${this.id} assignElement layout rect: insetAnchor: ${this.insetAnchor.string}, insetSize: ${this.insetSize.string}`)
         this.rect
           // .svgLook(this.look)
           .layout(this.insetAnchor, this.insetSize)
@@ -262,7 +262,7 @@ class ProtoLayer {
           }
         }
       }
-      console.groupEnd()
+      // console.groupEnd()
     }
   }
   // #endregion
@@ -631,7 +631,7 @@ class Grid extends ProtoLayer {
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'grid') }
   get testColor() { return protoColor(0, 230, 0, 90) }
-  get cornerRadius() { return this.minCellWidth / 2 }
+  get cornerRadius() { return this.cellRadius }
 
   get gridCellBounds() { return this.cellBounds() }          // migrate to property for better performance?? Probably not!
   get columnCount() { return this.gridCellBounds.columnCount }
@@ -640,6 +640,7 @@ class Grid extends ProtoLayer {
   get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
   get cellAspect() { return this.cellSize.aspect }
   get minCellWidth() { return min(this.cellSize.x, this.cellSize.y) }
+  get cellRadius() { return this.minCellWidth / 2 }
   get cells() { return this.cellRows.flat() }
   get cellColumns() { return this.cellRowsFlipped() }
   get availableCells() { return this.cells.filter(cell => cell.available) }
@@ -1081,8 +1082,16 @@ class Grid extends ProtoLayer {
   // NOTE: in Grid.nestleShapes(): use outWrapOutsideCorner (outWrap = true, outsideCorner = true)
   // NOTE: in Island.copyAllToCardinal(): inWrapInsideCorner & inWrapOutsideCorner (outWrap = true, outsideCorner = both)
   wrapColinearCorner(seg, segCollection, outWrap = true, outsideCorner = true) {
-    // console.log(`wrapColinearCorner seg`, seg)
-    // console.log(`wrapColinearCorner segCollection`, segCollection)
+    let report = false
+    if (seg.id.includes('cell097')
+      || seg.id.includes('cell090')
+      || seg.id.includes('cell096')
+    ) { report = true }
+    if (report) {
+      console.log(`wrapColinearCorner seg`, seg)
+      // console.log(`wrapColinearCorner segCollection`, segCollection)
+    }
+
     const isDir = outsideCorner ? `isRight` : `isLeft`
     if (!seg.turns.end[isDir]) { // must be an outside corner, so end of seg turns Right
       console.error(`wrapColinearCorner only works on segment corners ending in ${isDir} turns `)
@@ -1118,9 +1127,12 @@ class Grid extends ProtoLayer {
     const wrapperStart = colWrapper(seg)          // find start of corner wrapper
     const wrapperEnd = colWrapper(neighbor, true) // find end of corner wrapper
 
-    // console.log(`--> wrapperStart`, wrapperStart)
-    // console.log(`--> wrapperEnd`, wrapperEnd)
-    // console.log(``)
+    if (report) {
+      console.log(`--> wrapperStart`, wrapperStart)
+      console.log(`--> wrapperEnd`, wrapperEnd)
+      console.log(``)
+    }
+
     //ARROW: transferCubicStart() : 
     const transferCubicStart = () => {
       if (outWrap) {
@@ -1161,9 +1173,17 @@ class Grid extends ProtoLayer {
 
   //METH: outWrapAdjacentInsideCorner() : ProtoSegment :
   outWrapAdjacentInsideCorner(seg, segCollection) {
-    // console.log(`outWrapAdjacentInsideCorner seg`, seg.id)
+    let report = false
+    if (seg.id.includes('cell097')
+      || seg.id.includes('cell090')
+      || seg.id.includes('cell096')
+    ) { report = true }
+    if (report) {
+      console.warn(`outWrapAdjacentInsideCorner seg`, seg.id)
+    }
+
     if (!seg.turns.start.isLeft) { // must be an inside corner, so end of seg turns Left
-      // console.error(`outWrapAdjacentInsideCorner only works on segment corners starting in left turns `)
+      console.error(`outWrapAdjacentInsideCorner only works on segment corners starting in left turns `)
       return
     }
     const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
@@ -1203,10 +1223,12 @@ class Grid extends ProtoLayer {
 
     const wrapperStart = adjWrapper(seg)
     const wrapperEnd = adjWrapper(neighbor, true)
+    if (report) {
+      console.log(`--> wrapperStart`, wrapperStart)
+      console.log(`--> wrapperEnd`, wrapperEnd)
+      console.log(``)
+    }
 
-    console.log(`--> wrapperStart`, wrapperStart)
-    console.log(`--> wrapperEnd`, wrapperEnd)
-    // console.log(``)
 
     if (wrapperStart && wrapperEnd) {
       if (wrapperStart[0].neighbors.end.id !== wrapperEnd[0].id) {
@@ -1218,10 +1240,13 @@ class Grid extends ProtoLayer {
         return
       }
 
-      console.log(`!!! ADJACENT WRAPPED CORNER FOUND !!!`)
-      console.log(seg)
-      console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
-      console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+      if (report) {
+        console.log(`!!! ADJACENT WRAPPED CORNER FOUND !!!`)
+        console.log(seg)
+        console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
+        console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+      }
+
       const startGap = segment(seg.finalCubicStartVert, wrapperStart[1])  // gap between corner segs
       const endGap = segment(neighbor.finalCubicEndVert, wrapperEnd[1])   // gap between corner segs
       // console.log(`startGap`, startGap.length, startGap.string)
@@ -1230,7 +1255,7 @@ class Grid extends ProtoLayer {
       const startGapLength = roundToDec(startGap.length, 3)               // gap distance
       const endGapLength = roundToDec(endGap.length, 3)                   // gap distance
       if (startGapLength === endGapLength) {                              // wrap both if equidistant
-        // console.warn(`Wrapped both segments`)
+        console.warn(`Wrapped both segments`)
         wrapperStart[0].addCubicEndVert(wrapperStart[1])
         wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
         // console.log(``)
@@ -1238,11 +1263,15 @@ class Grid extends ProtoLayer {
       }
 
       else if (startGapLength < endGapLength) {                           // wrap seg with shortest distance
-        // console.log(`Wrapped end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
+        console.log(`Wrapping end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
+        console.log(`prev availableEndLength: ${wrapperStart[0].availableEndLength}`)
         wrapperStart[0].addCubicEndVert(wrapperStart[1])
+        console.log(`new availableEndLength: ${wrapperStart[0].availableEndLength}`)
       } else {
-        // console.log(`Wrapped start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
+        console.log(`Wrapping start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
+        console.log(`prev availableEndLength: ${wrapperStart[1].availableStartLength}`)
         wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+        console.log(`new availableEndLength: ${wrapperStart[1].availableStartLength}`)
       }
       // console.log(``)
     }
@@ -1282,13 +1311,14 @@ class Grid extends ProtoLayer {
   //FIXME: Current bug is within this method! Probably inside outWrapAdjacentInsideCorners()
   //METH: createUTurns()
   createUTurns({ subShapes = this.allSimpleSubShapes, out = true, outWrap = true } = {}) {
-    let curved = new OpArray                               // processed corner/seg storage
+    // let curved = new OpArray                               // processed corner/seg storage
     const uTurns = subShapes.flat()
       .filter(s => out ? s.isUTurnOut : s.isUTurnIn)       // only include UTurnOut segments
       // .filter(s => !s.hasSomeCubicVerts)                   // remove segments with any cubicVerts assigned
       .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
     const name = out ? `out` : `in`
-    console.warn(`uTurns ${name}`, uTurns.map(u => u.id))
+    console.warn(`uTurns ${name}`, uTurns.map(u => [u.id, u.availableEndLength]))
+    // console.warn(`uTurns ${name}`, uTurns.map(u => u.availableEndLength))
 
     while (uTurns.length > 0) {
       const seg = uTurns.pop()                             // pop gets segs with smallest minCubicLength first
@@ -1296,26 +1326,60 @@ class Grid extends ProtoLayer {
       const endNeighbor = seg.neighbors.end
       const startRadius = min(startNeighbor.availableEndLength, seg.availableStartLength)
       const endRadius = min(seg.availableEndLength, endNeighbor.availableStartLength)
+      let curved = new OpArray
 
       if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
-        console.log(`curving ${seg.id} and ${startNeighbor.id}`)
+        console.log(`curving ${seg.id} both sides with radius: ${roundToDec(startRadius / this.minCellWidth, 1)}`)
         seg.addBothDistancedCornerVerts(startRadius)
         curved.push(out ? startNeighbor : seg)
         curved.push(out ? seg : endNeighbor)
+        // curved.push(startNeighbor)
+        // curved.push(seg)
+        // curved.push(endNeighbor)
       }
-      else if (startRadius < endRadius) {                       // curve smallest corner seg: start
+      else if (startRadius < endRadius) {                        // curve smallest corner seg: start
+        console.log(``)
+        console.log(`curving ${seg.id} start with radius: ${roundToDec(startRadius / this.minCellWidth, 1)}`)
+        console.log(seg)
+        console.log(`${startNeighbor.availableEndLength}, ${seg.availableStartLength}, ${seg.availableEndLength}, ${endNeighbor.availableStartLength}`)
         seg.addDistancedStartCornerVerts(startRadius)
-        curved.push(out ? startNeighbor : seg)
-      } else {                                                  // curve smallest corner seg: end 
+        // curved.push(out ? startNeighbor : seg)
+        curved.push(startNeighbor)
+        curved.push(seg)
+      } else {                                                   // curve smallest corner seg: end 
+        console.log(`curving ${seg.id} end with radius: ${roundToDec(endRadius / this.minCellWidth, 1)}`)
         seg.addDistancedEndCornerVerts(endRadius)
-        curved.push(out ? seg : endNeighbor)
+        // curved.push(out ? seg : endNeighbor)
+        curved.push(seg)
+        curved.push(endNeighbor)
+      }
+
+      if (outWrap) {
+        console.log(`recursive processing of curved:`, curved.map(s => s.id))
+        curved.forEach(seg => {
+          if (seg.turns.end.isRight) {
+            this.recursiveOutWrapOutsideCorners(curved)
+          } else {
+            this.recursiveOutWrapAdjInsideCorners(curved)
+          }
+        })
+
+        // if (out) {
+        //   console.warn(`recursiveOutWrap Colinears`)
+        //   this.recursiveOutWrapOutsideCorners(curved)   // colinear outWrap processed corners
+        // } else {
+        //   console.warn(`recursiveOutWrap Adjacents`)
+        //   this.recursiveOutWrapAdjInsideCorners(curved) // adj outWrap processed corners
+        // }
       }
     }
-    if (out) {
-      this.recursiveOutWrapOutsideCorners(curved)   // colinear outWrap processed corners
-    } else {
-      this.recursiveOutWrapAdjInsideCorners(curved) // adj outWrap processed corners
-    }
+    // if (outWrap) {
+    //   if (out) {
+    //     this.recursiveOutWrapOutsideCorners(curved)   // colinear outWrap processed corners
+    //   } else {
+    //     this.recursiveOutWrapAdjInsideCorners(curved) // adj outWrap processed corners
+    //   }
+    // }
   }
 
   //METH: createCubicCorners() :
@@ -1325,21 +1389,26 @@ class Grid extends ProtoLayer {
       .sort((a, b) => b.minCubicLength - a.minCubicLength)    // sort large-small availableEndLength
       .sort((a, b) => b.cubicVertCount - a.cubicVertCount)    // sort large-small cubicVertCount
     // console.warn(`createCubicCorners corners`, corners.map(s => s.id))
-    let outsideCorners = new OpArray
-    let insideCorners = new OpArray
+    // let outsideCorners = new OpArray
+    // let insideCorners = new OpArray
     while (corners.length > 0) {
       let seg = corners.pop()                                 // pop gets segs with smallest minCubicLength first
-      // console.log(`createCubicCorners seg`, seg.id)
+      console.log(`createCubicCorners seg`, seg.id)
       const assignSeg = seg.hasCubicStartVert ? seg : seg.neighbors.start // assign seg is one with StartVert
-      // console.log(`createCubicCorners assignSeg`, assignSeg.id)
+      console.log(`createCubicCorners assignSeg`, assignSeg.id)
       const radius = min(assignSeg.availableEndLength, assignSeg.neighbors.end.availableStartLength)
       assignSeg.addDistancedEndCornerVerts(radius)            // assign new endVert
 
-      if (seg.turns.end.isRight) {
-        outsideCorners.push(seg)                              // push outside corners for further processing
-      } else {
-        insideCorners.push(seg)                               // push inside corners for further processing
+      if (outWrap) {
+        if (seg.turns.end.isRight) {
+          this.recursiveOutWrapOutsideCorners(seg)
+          // outsideCorners.push(seg)                              // push outside corners for further processing
+        } else {
+          this.recursiveOutWrapAdjInsideCorners(seg)
+          // insideCorners.push(seg)                               // push inside corners for further processing
+        }
       }
+
       if (!seg.hasBothCubicVerts) {
         corners.push(seg)
       }
@@ -1347,19 +1416,24 @@ class Grid extends ProtoLayer {
         // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
         // .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
         .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+
+      // if (outWrap) {
+      //   this.recursiveOutWrapOutsideCorners(outsideCorners)
+      //   this.recursiveOutWrapAdjInsideCorners(insideCorners)
+      // }
     }
     // console.warn(` outsideCorners`, outsideCorners.map(s => s.id))
     // console.warn(` insideCorners`, insideCorners.map(s => s.id))
-    if (outWrap) {
-      this.recursiveOutWrapOutsideCorners(outsideCorners)
-      this.recursiveOutWrapAdjInsideCorners(insideCorners)
-    }
+    // if (outWrap) {
+    //   this.recursiveOutWrapOutsideCorners(outsideCorners)
+    //   this.recursiveOutWrapAdjInsideCorners(insideCorners)
+    // }
   }
 
   //MARK: CUSTOMIZE SHAPES
   //METH: nestleShapes() :
   nestleShapes(diagonals = false) {
-    const cellRadius = roundToDec(this.minCellWidth / 2)
+    const cellRadius = roundToDec(this.cellRadius)
 
     //TODO: can minCorners be handled elsewhere?
     // handle 'minCorners' perimeter types
@@ -1376,8 +1450,6 @@ class Grid extends ProtoLayer {
       assignMids(minCornerSegs, 'Corner', false) // assign midpoints to these segs + shared segs with inside turns
     }
     // else { console.log(`there is NOT a minCorners Group`) }
-
-    this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
 
     //MARK: QUAD SHAPES
     //ARROW: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
@@ -1498,13 +1570,34 @@ class Grid extends ProtoLayer {
       })
     }
 
+    //MARK: Nestle Main
+    console.groupCollapsed(`createSimpleSubShapes`)
+    this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
+    console.groupEnd()
+
+    console.groupCollapsed(`createQuadShapes`)
     createQuadShapes(0)
+    console.groupEnd()
+
+    console.groupCollapsed(`createUTurnsIN`)
     this.createUTurns({ out: false })
+    console.groupEnd()
+
+    console.groupCollapsed(`outWrapAdjacentInsideCorners`)
     this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)
+    console.groupEnd()
+
+    console.groupCollapsed(`createUTurnsOUT`)
     this.createUTurns()
+    console.groupEnd()
     // createStairs()
+    console.groupCollapsed(`createCubicCorners`)
     this.createCubicCorners()
+    console.groupEnd()
+
+    console.groupCollapsed(`finish`)
     finish()
+    console.groupEnd()
 
     console.log(`  %%%% end nestleShapes %%%%`)
     console.log(``)
@@ -2542,7 +2635,7 @@ class Island extends ProtoLayer {
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
     this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
 
-    // this.drawLabel = true
+    this.drawLabel = true
     // this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
@@ -2657,7 +2750,7 @@ class Island extends ProtoLayer {
       return this.cells
     }
     console.groupCollapsed(`recalcdCells shape`, shape)
-    const cellRadius = this.grid.minCellWidth / 2
+    const cellRadius = this.grid.cellRadius
     // let newCells = this.cells
     let shapeCorners = shape.insetSubShapes.map(sub => {
       console.log(`sub`, sub)
