@@ -1097,7 +1097,7 @@ class Grid extends ProtoLayer {
       console.error(`wrapColinearCorner only works on segment corners ending in ${isDir} turns `)
       return
     }
-    const neighbor = seg.neighbors.end // runs clockwise, seg then rightTurn end neighbor
+    const neighbor = seg.endNeighbor // runs clockwise, seg then rightTurn end neighbor
 
     //ARROW: colWrapper() : ProtoSegment : find colinear wrapper(s) of input segment
     const colWrapper = (seg, isNeighbor = false) => {
@@ -1136,17 +1136,25 @@ class Grid extends ProtoLayer {
     //ARROW: transferCubicStart() : 
     const transferCubicStart = () => {
       if (outWrap) {
-        wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)      // transfer seg.endVert to wrapperStart
+        wrapperStart[0].addMaxStartVert(seg.finalCubicEndVert)      // transfer seg.endVert to wrapperStart
+
+        // wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)      // transfer seg.endVert to wrapperStart
       } else {
-        seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)        // transfer wrapperStart.endVert to seg
+        seg.addMaxEndVert(wrapperStart[0].finalCubicEndVert)        // transfer wrapperStart.endVert to seg
+
+        // seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)        // transfer wrapperStart.endVert to seg
       }
     }
     //ARROW: transferCubicEnd() : 
     const transferCubicEnd = () => {
       if (outWrap) {
-        wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)   // transfer neighbor.startVert to wrapperEnd
+        wrapperEnd[0].addMaxEndVert(neighbor.finalCubicStartVert)   // transfer neighbor.startVert to wrapperEnd
+
+        // wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)   // transfer neighbor.startVert to wrapperEnd
       } else {
-        neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert) // transfer wrapperEnd.startVert to neighbor
+        neighbor.addMaxStartVert(wrapperEnd[0].finalCubicStartVert) // transfer wrapperEnd.startVert to neighbor
+
+        // neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert) // transfer wrapperEnd.startVert to neighbor
       }
     }
 
@@ -1186,7 +1194,7 @@ class Grid extends ProtoLayer {
       console.error(`outWrapAdjacentInsideCorner only works on segment corners starting in left turns `)
       return
     }
-    const neighbor = seg.neighbors.start // use start neighbor to run clockwise like findColinearWrappedCorner()
+    const neighbor = seg.startNeighbor // use start neighbor to run clockwise like findColinearWrappedCorner()
     let shape
     if (!segCollection) {
       shape = this.shapeNamed(seg.parentID)
@@ -1231,7 +1239,7 @@ class Grid extends ProtoLayer {
 
 
     if (wrapperStart && wrapperEnd) {
-      if (wrapperStart[0].neighbors.end.id !== wrapperEnd[0].id) {
+      if (wrapperStart[0].endNeighbor.id !== wrapperEnd[0].id) {
         console.error(`INVALID: Wrapper segs are not a connected corner`)
         return
       }
@@ -1256,8 +1264,12 @@ class Grid extends ProtoLayer {
       const endGapLength = roundToDec(endGap.length, 3)                   // gap distance
       if (startGapLength === endGapLength) {                              // wrap both if equidistant
         console.warn(`Wrapped both segments`)
-        wrapperStart[0].addCubicEndVert(wrapperStart[1])
-        wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+        // wrapperStart[0].addMaxStartVert(wrapperStart[1])
+        // wrapperEnd[0].addMaxEndVert(wrapperEnd[1])
+
+        wrapperStart[0].addCubicStartVert(wrapperStart[1])
+        wrapperEnd[0].addCubicEndVert(wrapperEnd[1])
+
         // console.log(``)
         return wrapperStart[0]                                            // only return corner when both wrapped 
       }
@@ -1265,12 +1277,18 @@ class Grid extends ProtoLayer {
       else if (startGapLength < endGapLength) {                           // wrap seg with shortest distance
         console.log(`Wrapping end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
         console.log(`prev availableEndLength: ${wrapperStart[0].availableEndLength}`)
-        wrapperStart[0].addCubicEndVert(wrapperStart[1])
+        // wrapperStart[0].addMaxStartVert(wrapperStart[1])
+
+        wrapperStart[0].addCubicStartVert(wrapperStart[1])
+
         console.log(`new availableEndLength: ${wrapperStart[0].availableEndLength}`)
       } else {
         console.log(`Wrapping start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
         console.log(`prev availableEndLength: ${wrapperStart[1].availableStartLength}`)
-        wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+        // wrapperEnd[0].addMaxEndVert(wrapperEnd[1])
+
+        wrapperEnd[0].addCubicEndVert(wrapperEnd[1])
+
         console.log(`new availableEndLength: ${wrapperStart[1].availableStartLength}`)
       }
       // console.log(``)
@@ -1322,8 +1340,8 @@ class Grid extends ProtoLayer {
 
     while (uTurns.length > 0) {
       const seg = uTurns.pop()                             // pop gets segs with smallest minCubicLength first
-      const startNeighbor = seg.neighbors.start
-      const endNeighbor = seg.neighbors.end
+      const startNeighbor = seg.startNeighbor
+      const endNeighbor = seg.endNeighbor
       const startRadius = min(startNeighbor.availableEndLength, seg.availableStartLength)
       const endRadius = min(seg.availableEndLength, endNeighbor.availableStartLength)
       let curved = new OpArray
@@ -1331,11 +1349,11 @@ class Grid extends ProtoLayer {
       if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
         console.log(`curving ${seg.id} both sides with radius: ${roundToDec(startRadius / this.minCellWidth, 1)}`)
         seg.addBothDistancedCornerVerts(startRadius)
-        curved.push(out ? startNeighbor : seg)
-        curved.push(out ? seg : endNeighbor)
-        // curved.push(startNeighbor)
-        // curved.push(seg)
-        // curved.push(endNeighbor)
+        // curved.push(out ? startNeighbor : seg)
+        // curved.push(out ? seg : endNeighbor)
+        curved.push(startNeighbor)
+        curved.push(seg)
+        curved.push(endNeighbor)
       }
       else if (startRadius < endRadius) {                        // curve smallest corner seg: start
         console.log(``)
@@ -1358,11 +1376,15 @@ class Grid extends ProtoLayer {
         console.log(`recursive processing of curved:`, curved.map(s => s.id))
         curved.forEach(seg => {
           if (seg.turns.end.isRight) {
-            this.recursiveOutWrapOutsideCorners(curved)
-          } else {
-            this.recursiveOutWrapAdjInsideCorners(curved)
+            this.recursiveOutWrapOutsideCorners(seg)
+          } else if (seg.turns.start.isLeft) {
+            this.recursiveOutWrapAdjInsideCorners(seg)
           }
         })
+
+        // this.recursiveOutWrapOutsideCorners(curved)
+        // this.recursiveOutWrapAdjInsideCorners(curved)
+
 
         // if (out) {
         //   console.warn(`recursiveOutWrap Colinears`)
@@ -1373,6 +1395,18 @@ class Grid extends ProtoLayer {
         // }
       }
     }
+    // if (outWrap) {
+    //   console.log(`recursive processing of curved:`, curved.map(s => s.id))
+    //   curved.forEach(seg => {
+    //     if (seg.turns.end.isRight) {
+    //       this.recursiveOutWrapOutsideCorners(seg)
+    //     } else {
+    //       this.recursiveOutWrapAdjInsideCorners(seg)
+    //     }
+    //   })
+    // }
+
+
     // if (outWrap) {
     //   if (out) {
     //     this.recursiveOutWrapOutsideCorners(curved)   // colinear outWrap processed corners
@@ -1394,9 +1428,9 @@ class Grid extends ProtoLayer {
     while (corners.length > 0) {
       let seg = corners.pop()                                 // pop gets segs with smallest minCubicLength first
       console.log(`createCubicCorners seg`, seg.id)
-      const assignSeg = seg.hasCubicStartVert ? seg : seg.neighbors.start // assign seg is one with StartVert
+      const assignSeg = seg.hasCubicStartVert ? seg : seg.startNeighbor // assign seg is one with StartVert
       console.log(`createCubicCorners assignSeg`, assignSeg.id)
-      const radius = min(assignSeg.availableEndLength, assignSeg.neighbors.end.availableStartLength)
+      const radius = min(assignSeg.availableEndLength, assignSeg.endNeighbor.availableStartLength)
       assignSeg.addDistancedEndCornerVerts(radius)            // assign new endVert
 
       if (outWrap) {
@@ -1558,8 +1592,8 @@ class Grid extends ProtoLayer {
       let stairs = sortStairs(this.allSimpleSubShapes)
       while (stairs.length > 0) {
         const seg = stairs[0]
-        const startNeighbor = seg.neighbors.start
-        const endNeighbor = seg.neighbors.end
+        const startNeighbor = seg.startNeighbor
+        const endNeighbor = seg.endNeighbor
       }
     }
     //ARROW: finish()
@@ -1590,7 +1624,7 @@ class Grid extends ProtoLayer {
     console.groupCollapsed(`createUTurnsOUT`)
     this.createUTurns()
     console.groupEnd()
-    // createStairs()
+
     console.groupCollapsed(`createCubicCorners`)
     this.createCubicCorners()
     console.groupEnd()
@@ -2756,7 +2790,7 @@ class Island extends ProtoLayer {
       console.log(`sub`, sub)
       return sub
         .filter(seg => // filter corners with minimum curvature
-          seg.neighbors.start.availableEndLength > cellRadius || seg.availableStartLength > cellRadius
+          seg.startNeighbor.availableEndLength > cellRadius || seg.availableStartLength > cellRadius
         )
     }).flat(1)
     console.log(`shapeCorners`, shapeCorners)
@@ -2771,7 +2805,7 @@ class Island extends ProtoLayer {
         //FIXME: it appears that arcRadius is not correct
         const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
         const cornerPos = seg.corners.start // position of normalCorner
-        const neighbor = seg.neighbors.start
+        const neighbor = seg.startNeighbor
         //NOTE: arcRadius: only correct if corner is circular arc and cell aspect is square
         //FIXME: try to fix bug when trying to create hierarchy 0/1 subIslands on non-square celled grids 
         //FIXME: issue may be in usage of cell.center as this assumes cells to be square
