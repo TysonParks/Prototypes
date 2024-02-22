@@ -913,8 +913,8 @@ class ProtoSegment extends Segment {
       console.error(`segment ${this.id} without neighbors has no turns`)
       return
     }
-    const start = this.neighbors.start.direction.turnTo(this.direction)
-    const end = this.direction.turnTo(this.neighbors.end.direction)
+    const start = this.startNeighbor.direction.turnTo(this.direction)
+    const end = this.direction.turnTo(this.endNeighbor.direction)
 
     if (!start) { console.error(`segment ${this.id} failed to calculate start turn`) }
     if (!end) { console.error(`segment ${this.id} failed to calculate end turn`) }
@@ -934,7 +934,7 @@ class ProtoSegment extends Segment {
 
     const normals =
     {
-      start: this.neighbors.start.angle - this.turns.start.normalRotAngle,
+      start: this.startNeighbor.angle - this.turns.start.normalRotAngle,
       end: this.angle - this.turns.end.normalRotAngle,
       cubic: this.angle - PI / 2
     }
@@ -954,8 +954,6 @@ class ProtoSegment extends Segment {
   get isFlat() { return this.part?.isFlat }
   get isCorner() { return this.part?.isCorner }
 
-  get hasBothNeighbors() { return this.neighbors.start && this.neighbors.end }
-
   get hasInsideTurn() { return this.turns?.start.name === 'Left' || this.turns?.end.name === 'Left' }
 
   get cornerVerts() {
@@ -974,7 +972,7 @@ class ProtoSegment extends Segment {
   }
 
   get corners() {
-    const startDir = this.neighbors.start.direction
+    const startDir = this.startNeighbor.direction
     const endDir = this.direction
     const startTurn = this.turns?.start
     const endTurn = this.turns?.end
@@ -1007,11 +1005,11 @@ class ProtoSegment extends Segment {
   }
 
   get finalCubicStartVert() {
-    const finalLength = min(this.availableStartLength, this.neighbors.start.availableEndLength)
+    const finalLength = min(this.availableStartLength, this.startNeighbor.availableEndLength)
     return this.distancedStartPoint(finalLength)
   }
   get finalCubicEndVert() {
-    const finalLength = min(this.availableEndLength, this.neighbors.end.availableStartLength)
+    const finalLength = min(this.availableEndLength, this.endNeighbor.availableStartLength)
     return this.distancedEndPoint(finalLength)
   }
 
@@ -1027,7 +1025,7 @@ class ProtoSegment extends Segment {
       let startLength, endLength
       if (this.hasCubicStartVert) {
         startLength = this.start.dist(this.cubicVerts.start)
-        console.log(`availableLength: startLength: ${startLength}, maxStartLength: ${this.maxCubicStartLength} `)
+        // console.log(`availableLength: startLength: ${startLength}, maxStartLength: ${this.maxCubicStartLength} `)
         if (roundToDec(this.maxCubicStartLength, 2) < roundToDec(startLength, 2)) {
           startLength = this.maxCubicStartLength
         }
@@ -1037,7 +1035,7 @@ class ProtoSegment extends Segment {
       }
       if (this.hasCubicEndVert) {
         endLength = this.end.dist(this.cubicVerts.end)
-        console.log(`availableLength: endLength: ${endLength}, maxEndLength: ${this.maxCubicEndLength} `)
+        // console.log(`availableLength: endLength: ${endLength}, maxEndLength: ${this.maxCubicEndLength} `)
         if (roundToDec(this.maxCubicEndLength, 2) < roundToDec(endLength, 2)) {
           endLength = this.maxCubicEndLength
         }
@@ -1127,11 +1125,11 @@ class ProtoSegment extends Segment {
   }
 
   matchStartCorner() {
-    const startMin = min(this.availableStartLength, this.neighbors.start.availableEndLength)
+    const startMin = min(this.availableStartLength, this.startNeighbor.availableEndLength)
     this.addDistancedStartCornerVerts(startMin)
   }
   matchEndCorner() {
-    const endMin = min(this.availableEndLength, this.neighbors.end.availableStartLength)
+    const endMin = min(this.availableEndLength, this.endNeighbor.availableStartLength)
     this.addDistancedEndCornerVerts(endMin)
   }
   matchCorners() {
@@ -1142,10 +1140,11 @@ class ProtoSegment extends Segment {
   #addCubicVert(vert, start, max = false) {
     let report = false
     const mode = start ? 'Start' : `End`
-    if (this.id.includes('cell097')
-      || this.id.includes('cell090')
-      || this.id.includes('cell096')
-    ) { report = true }
+    // if (
+    //   this.id.includes('cell097')
+    //   || this.id.includes('cell090')
+    //   || this.id.includes('cell096')
+    // ) { report = true }
     if (report) {
       console.warn(`addCubic${mode}Vert: ${vert?.string}`, this)
       console.log(`hasCubicStartVert: ${this.hasCubicStartVert}`)
@@ -1167,7 +1166,6 @@ class ProtoSegment extends Segment {
         return
       }
       if (cubicVert) {
-        // const availableLength = start ? this.availableStartLength : this.availableEndLength
         const terminus = start ? this.start : this.end
         if (vert.dist(terminus) >= cubicVert.dist(terminus)) { return }
       }
@@ -1245,6 +1243,10 @@ class ProtoSegment extends Segment {
   // #endregion
   //MARK: Neighbors 
   // #region Neighbors
+  get startNeighbor() { return this.neighbors.start }
+  get endNeighbor() { return this.neighbors.end }
+  get hasBothNeighbors() { return this.startNeighbor && this.endNeighbor }
+
   get segPath() {
     if (!this.hasBothNeighbors) {
       console.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
@@ -1256,7 +1258,7 @@ class ProtoSegment extends Segment {
     while (open) {
       if (!seg) { seg = this }
       path.push(seg)
-      seg = seg.neighbors.end
+      seg = seg.endNeighbor
       if (seg.id === this.id) { open = false }
     }
     const firstSeg = path.gridVertSorted[0]
