@@ -27,6 +27,11 @@ class SVGPath {
     let controlStart, lineStart, lineEnd, controlEnd
 
     segPath.forEach((seg, i) => {
+      // let report = false
+      // if (seg.availableStartLength < GRID.cellRadius) { report = true }
+      // if (report) {
+      //   console.log(seg)
+      // }
       cornerMin = min(cornerMin, seg.length / 2)
 
       startRadius = seg.hasCubicStartVert ? seg.availableStartLength : cornerMin // radius of corner arc
@@ -225,7 +230,7 @@ class SegPath {
   }
   //METH: refine() : remove colinear segments to simplify seg path to single segments connecting corners
   static refine(segPath, parentID, minCorners = false) {
-    let report = false // DEBUG
+    let report = true // DEBUG
 
     let newPath = new OpArray
     let prevSeg = undefined
@@ -237,6 +242,14 @@ class SegPath {
       if (report) {
         console.log(`seg`, seg.id)
         console.log(`prevSeg`, prevSeg?.id)
+        if (seg.id.includes(`cell097`)) {
+          console.error(`seg.hasCubicStartVert`, seg.hasCubicStartVert)
+          console.error(`seg.hasCubicEndVert`, seg.hasCubicEndVert)
+        }
+        if (prevSeg?.id.includes(`cell097`)) {
+          console.error(`prevSeg.hasCubicStartVert`, prevSeg.hasCubicStartVert)
+          console.error(`prevSeg.hasCubicEndVert`, prevSeg.hasCubicEndVert)
+        }
       }
       //FIXME: RECONFIGURE LOOP TO RUN INIT DIRECTION EQUALITY CHECK ON FINAL SEG. 
       //FIXME: Current bug prevents last->first connection of colinear segments
@@ -271,10 +284,14 @@ class SegPath {
           islandIDs: islandIDs
         })
         // add cubicVerts from prevSeg and seg to newSeg
-        newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
-        newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
-        newSeg.addCubicStartVert(seg.cubicVerts.start)
-        newSeg.addCubicEndVert(seg.cubicVerts.end)
+        if (prevSeg.hasSomeCubicVerts) {
+          newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
+          newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
+        }
+        if (seg.hasSomeCubicVerts) {
+          newSeg.addCubicStartVert(seg.cubicVerts.start)
+          newSeg.addCubicEndVert(seg.cubicVerts.end)
+        }
 
         // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
         newPath.pop()
@@ -857,8 +874,8 @@ class Segment {
 
 // CLASS: ProtoSegment
 // SIZE: 356 lines
-function protoSegment({ start, end, parentID, id, islandIDs, cubicVerts, neighbors } = {}) {
-  return new ProtoSegment(start, end, parentID, id, islandIDs, cubicVerts, neighbors)
+function protoSegment({ start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid, maxCubicVerts } = {}) {
+  return new ProtoSegment(start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid, maxCubicVerts)
 }
 
 class ProtoSegment extends Segment {
@@ -866,15 +883,21 @@ class ProtoSegment extends Segment {
   parentID
   islandIDs
   taken = false
+  grid
 
   cubicVerts = { start: undefined, end: undefined }
+  maxCubicVerts = { start: undefined, end: undefined }
   neighbors = { start: undefined, end: undefined }
 
-  constructor(start, end, parentID, id, islandIDs, cubicVerts, neighbors) {
+  constructor(start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid = GRID, maxCubicVerts) {
     super(start, end)
     this.parentID = parentID
     this.islandIDs = islandIDs
     this.id = id
+    this.grid = grid
+    if (maxCubicVerts) {
+      this.maxCubicVerts = maxCubicVerts
+    } else if (grid) { this.#setupMaxCubicVerts() }
     if (cubicVerts) { this.cubicVerts = cubicVerts }
     if (neighbors) { this.neighbors = neighbors }
     if (!this.direction.allAreCardinal) {
@@ -882,6 +905,8 @@ class ProtoSegment extends Segment {
       console.log(this)
     }
   }
+
+  get cellRadius() { return this.grid.cellRadius }
 
   get turns() {
     if (!this.hasBothNeighbors) {
@@ -963,44 +988,10 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get segPath() {
-    if (!this.hasBothNeighbors) {
-      console.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
-      return
-    }
-    let path = new OpArray
-    let open = true
-    let seg
-    while (open) {
-      if (!seg) { seg = this }
-      path.push(seg)
-      seg = seg.neighbors.end
-      if (seg.id === this.id) { open = false }
-    }
-    const firstSeg = path.gridVertSorted[0]
-    const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
-    const sortedPath = path.shifted(shiftIndex)
 
-    return path
-  }
-  //TODO: find and test implementations!
-  get sortedSegPath() {
-    const path = this.segPath
-    const firstSeg = path.gridVertSorted[0]
-    const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
-    return path.shifted(shiftIndex)
-  }
-  //TODO: find and test implementations!
-  get counterSortedSegPath() {
-    const path = this.segPath
-    const firstSeg = path.counterGridVertSorted[0]
-    const reversedPath = path.reversed
-    const shiftIndex = reversedPath.findIndex(s => s.id === firstSeg.id)
-    return reversedPath.shifted(shiftIndex)
-  }
 
   //MARK: Cubic Verts
-
+  // #region Cubic Verts
   get hasCubicStartVert() { return !!this.cubicVerts.start }
   get hasCubicEndVert() { return !!this.cubicVerts.end }
   get hasSomeCubicVerts() { return this.hasCubicStartVert || this.hasCubicEndVert }
@@ -1024,20 +1015,35 @@ class ProtoSegment extends Segment {
     return this.distancedEndPoint(finalLength)
   }
 
-
+  // FIXME: Integrate use of maxCubicVerts!!!
   #availableLength(start = true) {
-    if (!this.cornerVerts.start || !this.cornerVerts.end) {// needs to have cornerVerts to calculate
+    if (!this.cornerVerts?.start || !this.cornerVerts?.end) {// needs to have cornerVerts to calculate
       console.warn(`cannot calculate available length without cornerVerts`)
       return
     }
-    if (this.hasNoCubicVerts) { return this.length / 2 } // assume entire length available
+    if (this.hasNoCubicVerts) { return this.length / 2 } // assume half of entire length available
+    // if (this.hasNoCubicVerts) { return this.length } // assume entire length available
     else {
       let startLength, endLength
       if (this.hasCubicStartVert) {
-        startLength = this.start.dist(this.cubicVerts.start)            //CHANGE closest to exact
+        startLength = this.start.dist(this.cubicVerts.start)
+        console.log(`availableLength: startLength: ${startLength}, maxStartLength: ${this.maxCubicStartLength} `)
+        if (roundToDec(this.maxCubicStartLength, 2) < roundToDec(startLength, 2)) {
+          startLength = this.maxCubicStartLength
+        }
+        // if (roundToDec(startLength, 1) < roundToDec(this.cellRadius, 1)) {
+        //   console.warn(`startLength is less than cellRadius!!!`)
+        // }
       }
       if (this.hasCubicEndVert) {
-        endLength = this.end.dist(this.cubicVerts.end)                     //CHANGE closest to exact
+        endLength = this.end.dist(this.cubicVerts.end)
+        console.log(`availableLength: endLength: ${endLength}, maxEndLength: ${this.maxCubicEndLength} `)
+        if (roundToDec(this.maxCubicEndLength, 2) < roundToDec(endLength, 2)) {
+          endLength = this.maxCubicEndLength
+        }
+        // if (roundToDec(endLength, 1) < roundToDec(this.cellRadius, 1)) {
+        //   console.warn(`endLength is less than cellRadius!!!`)
+        // }
       }
       if (startLength && endLength) { // this.hasBothCubicVerts
         if (approxToDec(startLength, 2, 1) + approxToDec(endLength, 2, 1) > approxToDec(this.length, 2, 2)) {
@@ -1077,7 +1083,16 @@ class ProtoSegment extends Segment {
   get availableStartLength() { return this.#availableLength() }
   get availableEndLength() { return this.#availableLength(false) }
 
+  get maxCubicStartLength() { return this.start.dist(this.maxCubicVerts.start) }
+  get maxCubicEndLength() { return this.end.dist(this.maxCubicVerts.end) }
+
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
+
+  #setupMaxCubicVerts() {
+    const max = this.length - this.cellRadius
+    console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
+    this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
+  }
 
   //TODO: do I actually want/need this?
   assignMid() {
@@ -1087,6 +1102,10 @@ class ProtoSegment extends Segment {
 
   addCubicStartVert(vert) { this.#addCubicVert(vert, true) }
   addCubicEndVert(vert) { this.#addCubicVert(vert, false) }
+
+  addMaxStartVert(vert) { this.#addCubicVert(vert, true, true) }
+  addMaxEndVert(vert) { this.#addCubicVert(vert, false, true) }
+
   addBothCubicVerts(vert) {
     this.addCubicStartVert(vert)
     this.addCubicEndVert(vert)
@@ -1107,28 +1126,6 @@ class ProtoSegment extends Segment {
     this.addDistancedEndCornerVerts(distance)
   }
 
-  #addCubicVert(vert, start) {
-    const cubicVert = start ? this.cubicVerts.start : this.cubicVerts.end
-    if (vert instanceof Vertex) {
-      if (!this.vertIsOnLine(vert)) {
-        console.error(`trying to assign a cubicVert that is not on this segment`)
-        console.log(`off-line vert`, vert)
-        console.log(`this.segment`, info(this))
-        return
-      }
-      if (cubicVert) {
-        // const availableLength = start ? this.availableStartLength : this.availableEndLength
-        const terminus = start ? this.start : this.end
-        if (vert.dist(terminus) >= cubicVert.dist(terminus)) { return }
-      }
-      if (start) {
-        this.cubicVerts.start = vert
-      } else {
-        this.cubicVerts.end = vert
-      }
-    }
-  }
-
   matchStartCorner() {
     const startMin = min(this.availableStartLength, this.neighbors.start.availableEndLength)
     this.addDistancedStartCornerVerts(startMin)
@@ -1142,6 +1139,61 @@ class ProtoSegment extends Segment {
     this.matchEndCorner()
   }
 
+  #addCubicVert(vert, start, max = false) {
+    let report = false
+    const mode = start ? 'Start' : `End`
+    if (this.id.includes('cell097')
+      || this.id.includes('cell090')
+      || this.id.includes('cell096')
+    ) { report = true }
+    if (report) {
+      console.warn(`addCubic${mode}Vert: ${vert?.string}`, this)
+      console.log(`hasCubicStartVert: ${this.hasCubicStartVert}`)
+      if (this.availableStartLength) { console.log(`availableStartLength: ${this.availableStartLength}`) }
+      console.log(`hasCubicEndVert: ${this.hasCubicEndVert}`)
+      if (this.availableEndLength) { console.log(`availableEndLength: ${this.availableEndLength}`) }
+    }
+    let cubicVert
+    if (!max) {
+      cubicVert = start ? this.cubicVerts.start : this.cubicVerts.end
+    } else {
+      cubicVert = start ? this.maxCubicVerts.start : this.maxCubicVerts.end
+    }
+    if (vert instanceof Vertex) {
+      if (!this.vertIsOnLine(vert)) {
+        console.error(`trying to assign a cubicVert that is not on this segment`)
+        console.log(`off-line vert`, vert)
+        console.log(`this.segment`, info(this))
+        return
+      }
+      if (cubicVert) {
+        // const availableLength = start ? this.availableStartLength : this.availableEndLength
+        const terminus = start ? this.start : this.end
+        if (vert.dist(terminus) >= cubicVert.dist(terminus)) { return }
+      }
+      if (!max) {
+        if (start) {
+          this.cubicVerts.start = vert
+        } else {
+          this.cubicVerts.end = vert
+        }
+      } else {
+        if (start) {
+          this.maxCubicVerts.start = vert
+        } else {
+          this.maxCubicVerts.end = vert
+        }
+      }
+      if (report) {
+        console.log(`this.cubicStartVert: ${this.cubicVerts.start?.string}`)
+        console.log(`this.cubicEndVert: ${this.cubicVerts.end?.string}`)
+        console.log(`new available${mode}Length:`, start ? this.availableStartLength : this.availableEndLength)
+      }
+    }
+  }
+  // #endregion
+  //MARK: Copy Methods
+  // #region Copy Methods
   //METH: copy
   get copy() {
     const copyNumber = this.id.includes(`copy`) ? `copy` + String(+this.id.slice(-2) + 1).padStart(1, '0') : `copy0`
@@ -1174,6 +1226,10 @@ class ProtoSegment extends Segment {
     const insetCubicEnd = Vertex.add(this.cubicVerts.end, cubicMove)
     const insetCubicVerts = { start: insetCubicStart, end: insetCubicEnd } // assign new inset cubicVerts
 
+    const insetMaxStart = Vertex.add(this.maxCubicVerts.start, cubicMove)
+    const insetMaxEnd = Vertex.add(this.maxCubicVerts.end, cubicMove)
+    const insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
+
     const insetCopy = protoSegment({ // new inset segment 
       start: insetStart,
       end: insetEnd,
@@ -1181,9 +1237,48 @@ class ProtoSegment extends Segment {
       id: `${this.id}-inset(${roundToDec(insetScale.x, 2)})`,
       islandIDs: this.islandIDs,
       cubicVerts: insetCubicVerts,
+      maxCubicVerts: insetMaxVerts,
     })
 
     return insetCopy
+  }
+  // #endregion
+  //MARK: Neighbors 
+  // #region Neighbors
+  get segPath() {
+    if (!this.hasBothNeighbors) {
+      console.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
+      return
+    }
+    let path = new OpArray
+    let open = true
+    let seg
+    while (open) {
+      if (!seg) { seg = this }
+      path.push(seg)
+      seg = seg.neighbors.end
+      if (seg.id === this.id) { open = false }
+    }
+    const firstSeg = path.gridVertSorted[0]
+    const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
+    const sortedPath = path.shifted(shiftIndex)
+
+    return path
+  }
+  //TODO: find and test implementations!
+  get sortedSegPath() {
+    const path = this.segPath
+    const firstSeg = path.gridVertSorted[0]
+    const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
+    return path.shifted(shiftIndex)
+  }
+  //TODO: find and test implementations!
+  get counterSortedSegPath() {
+    const path = this.segPath
+    const firstSeg = path.counterGridVertSorted[0]
+    const reversedPath = path.reversed
+    const shiftIndex = reversedPath.findIndex(s => s.id === firstSeg.id)
+    return reversedPath.shifted(shiftIndex)
   }
 
   //METH: assignNeighbors()
@@ -1202,8 +1297,7 @@ class ProtoSegment extends Segment {
       this.neighbors.end = end
     }
   }
-
-
+  // #endregion
 }
 
 
