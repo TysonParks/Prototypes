@@ -547,7 +547,7 @@ function gridTests2() {
 
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
-  GRID.showCellsDebug()
+  // GRID.showCellsDebug()
 
 
   // globalAnimation()
