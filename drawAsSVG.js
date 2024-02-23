@@ -1224,10 +1224,12 @@ class ProtoSegment extends Segment {
     const insetCubicEnd = Vertex.add(this.cubicVerts.end, cubicMove)
     const insetCubicVerts = { start: insetCubicStart, end: insetCubicEnd } // assign new inset cubicVerts
 
-    const insetMaxStart = Vertex.add(this.maxCubicVerts.start, cubicMove)
-    const insetMaxEnd = Vertex.add(this.maxCubicVerts.end, cubicMove)
-    const insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
-
+    let insetMaxVerts
+    if (this.maxCubicVerts.start && this.maxCubicVerts.end) {
+      const insetMaxStart = Vertex.add(this.maxCubicVerts.start, cubicMove)
+      const insetMaxEnd = Vertex.add(this.maxCubicVerts.end, cubicMove)
+      insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
+    }
     const insetCopy = protoSegment({ // new inset segment 
       start: insetStart,
       end: insetEnd,
