@@ -1083,9 +1083,10 @@ class Grid extends ProtoLayer {
   // NOTE: in Island.copyAllToCardinal(): inWrapInsideCorner & inWrapOutsideCorner (outWrap = true, outsideCorner = both)
   wrapColinearCorner(seg, segCollection, outWrap = true, outsideCorner = true) {
     let report = false
-    if (seg.id.includes('cell097')
-      || seg.id.includes('cell090')
-      || seg.id.includes('cell096')
+    if (
+      seg.id.includes('cell045')
+      || seg.id.includes('cell040')
+      || seg.id.includes('cell046')
     ) { report = true }
     if (report) {
       console.log(`wrapColinearCorner seg`, seg)
@@ -1182,9 +1183,10 @@ class Grid extends ProtoLayer {
   //METH: outWrapAdjacentInsideCorner() : ProtoSegment :
   outWrapAdjacentInsideCorner(seg, segCollection) {
     let report = false
-    if (seg.id.includes('cell097')
-      || seg.id.includes('cell090')
-      || seg.id.includes('cell096')
+    if (
+      seg.id.includes('cell045')
+      || seg.id.includes('cell040')
+      || seg.id.includes('cell046')
     ) { report = true }
     if (report) {
       console.warn(`outWrapAdjacentInsideCorner seg`, seg.id)
@@ -1267,8 +1269,8 @@ class Grid extends ProtoLayer {
         // wrapperStart[0].addMaxStartVert(wrapperStart[1])
         // wrapperEnd[0].addMaxEndVert(wrapperEnd[1])
 
-        wrapperStart[0].addCubicStartVert(wrapperStart[1])
-        wrapperEnd[0].addCubicEndVert(wrapperEnd[1])
+        wrapperStart[0].addCubicEndVert(wrapperStart[1])
+        wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
 
         // console.log(``)
         return wrapperStart[0]                                            // only return corner when both wrapped 
@@ -1279,7 +1281,7 @@ class Grid extends ProtoLayer {
         console.log(`prev availableEndLength: ${wrapperStart[0].availableEndLength}`)
         // wrapperStart[0].addMaxStartVert(wrapperStart[1])
 
-        wrapperStart[0].addCubicStartVert(wrapperStart[1])
+        wrapperStart[0].addCubicEndVert(wrapperStart[1])
 
         console.log(`new availableEndLength: ${wrapperStart[0].availableEndLength}`)
       } else {
@@ -1287,7 +1289,7 @@ class Grid extends ProtoLayer {
         console.log(`prev availableEndLength: ${wrapperStart[1].availableStartLength}`)
         // wrapperEnd[0].addMaxEndVert(wrapperEnd[1])
 
-        wrapperEnd[0].addCubicEndVert(wrapperEnd[1])
+        wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
 
         console.log(`new availableEndLength: ${wrapperStart[1].availableStartLength}`)
       }
@@ -1332,7 +1334,9 @@ class Grid extends ProtoLayer {
     // let curved = new OpArray                               // processed corner/seg storage
     const uTurns = subShapes.flat()
       .filter(s => out ? s.isUTurnOut : s.isUTurnIn)       // only include UTurnOut segments
+      // .filter(s => s.length < s.startNeighbor.length && s.length < s.endNeighbor.length)
       // .filter(s => !s.hasSomeCubicVerts)                   // remove segments with any cubicVerts assigned
+      // .filter(s => !s.hasBothCubicVerts)                   // remove segments with both cubicVerts assigned
       .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
     const name = out ? `out` : `in`
     console.warn(`uTurns ${name}`, uTurns.map(u => [u.id, u.availableEndLength]))
@@ -1340,36 +1344,47 @@ class Grid extends ProtoLayer {
 
     while (uTurns.length > 0) {
       const seg = uTurns.pop()                             // pop gets segs with smallest minCubicLength first
-      const startNeighbor = seg.startNeighbor
-      const endNeighbor = seg.endNeighbor
-      const startRadius = min(startNeighbor.availableEndLength, seg.availableStartLength)
-      const endRadius = min(seg.availableEndLength, endNeighbor.availableStartLength)
+
+      let report = false
+      if (
+        seg.id.includes('cell045')
+        || seg.id.includes('cell040')
+        || seg.id.includes('cell046')
+      ) { report = true }
+
+      const startRadius = min(seg.startNeighbor.availableEndLength, seg.availableStartLength)
+      const endRadius = min(seg.availableEndLength, seg.endNeighbor.availableStartLength)
       let curved = new OpArray
+
+      if (report) {
+        console.warn(`createUTurns() ${seg.id} found`)
+        console.log(`seg cubicVerts: start: ${seg.cubicVerts.start?.string}, end: ${seg.cubicVerts.end?.string}`)
+      }
 
       if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
         console.log(`curving ${seg.id} both sides with radius: ${roundToDec(startRadius / this.minCellWidth, 1)}`)
         seg.addBothDistancedCornerVerts(startRadius)
         // curved.push(out ? startNeighbor : seg)
         // curved.push(out ? seg : endNeighbor)
-        curved.push(startNeighbor)
+        curved.push(seg.startNeighbor)
         curved.push(seg)
-        curved.push(endNeighbor)
+        curved.push(seg.endNeighbor)
       }
       else if (startRadius < endRadius) {                        // curve smallest corner seg: start
         console.log(``)
         console.log(`curving ${seg.id} start with radius: ${roundToDec(startRadius / this.minCellWidth, 1)}`)
-        console.log(seg)
-        console.log(`${startNeighbor.availableEndLength}, ${seg.availableStartLength}, ${seg.availableEndLength}, ${endNeighbor.availableStartLength}`)
+        // console.log(seg)
+        // console.log(`${startNeighbor.availableEndLength}, ${seg.availableStartLength}, ${seg.availableEndLength}, ${endNeighbor.availableStartLength}`)
         seg.addDistancedStartCornerVerts(startRadius)
         // curved.push(out ? startNeighbor : seg)
-        curved.push(startNeighbor)
+        curved.push(seg.startNeighbor)
         curved.push(seg)
       } else {                                                   // curve smallest corner seg: end 
-        console.log(`curving ${seg.id} end with radius: ${roundToDec(endRadius / this.minCellWidth, 1)}`)
+        console.log(`curving ${seg.id} end with radius: ${roundToDec(endRadius / this.cellRadius, 1)}`)
         seg.addDistancedEndCornerVerts(endRadius)
         // curved.push(out ? seg : endNeighbor)
         curved.push(seg)
-        curved.push(endNeighbor)
+        curved.push(seg.endNeighbor)
       }
 
       if (outWrap) {
@@ -1606,31 +1621,34 @@ class Grid extends ProtoLayer {
 
     //MARK: Nestle Main
     console.groupCollapsed(`createSimpleSubShapes`)
-    this.createSimpleSubShapes() // calls createSimpleSubShapes via groups->islands->shapes
+    this.createSimpleSubShapes()                                        // createSimpleSubShapes 
     console.groupEnd()
 
     console.groupCollapsed(`createQuadShapes`)
-    createQuadShapes(0)
+    createQuadShapes(0)                                                 // createQuadShapes
     console.groupEnd()
 
     console.groupCollapsed(`createUTurnsIN`)
-    this.createUTurns({ out: false })
+    this.createUTurns({ out: false })                                   // createUTurns IN
     console.groupEnd()
 
     console.groupCollapsed(`outWrapAdjacentInsideCorners`)
-    this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)
+    this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)  // outWrapAdjacents of internal subShapes
     console.groupEnd()
+
+    // console.log(this.allSimpleSubShapes)
 
     console.groupCollapsed(`createUTurnsOUT`)
-    this.createUTurns()
+    this.createUTurns()                                                 // createUTurns OUT                    
     console.groupEnd()
+    console.log(this.allSimpleSubShapes)
 
     console.groupCollapsed(`createCubicCorners`)
-    this.createCubicCorners()
+    this.createCubicCorners()                                           // createCubicCorners   
     console.groupEnd()
 
     console.groupCollapsed(`finish`)
-    finish()
+    finish()                                                            // finish 
     console.groupEnd()
 
     console.log(`  %%%% end nestleShapes %%%%`)
@@ -2669,7 +2687,7 @@ class Island extends ProtoLayer {
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
     this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
 
-    this.drawLabel = true
+    // this.drawLabel = true
     // this.drawDeBugRect = true
     // this.drawPerimeter = true
     // this.drawInset = true
