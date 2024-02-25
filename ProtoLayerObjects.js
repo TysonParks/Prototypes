@@ -1081,12 +1081,12 @@ class Grid extends ProtoLayer {
   //METH: wrapColinearCorner() : finds colinear wrapped corners and transfers cubic verts inwards to wrapped
   // NOTE: in Grid.nestleShapes(): use outWrapOutsideCorner (outWrap = true, outsideCorner = true)
   // NOTE: in Island.copyAllToCardinal(): inWrapInsideCorner & inWrapOutsideCorner (outWrap = true, outsideCorner = both)
-  wrapColinearCorner(seg, segCollection, outWrap = true, outsideCorner = true) {
+  wrapColinearCorner(seg, segCollection, outWrap = true, outsideCorner = true, radiant = false) {
     let report = false
     if (
-      seg.id.includes('cell045')
-      || seg.id.includes('cell040')
-      || seg.id.includes('cell046')
+      seg.id.includes('cell037')
+      // || seg.id.includes('cell040')
+      // || seg.id.includes('cell046')
     ) { report = true }
     if (report) {
       console.log(`wrapColinearCorner seg`, seg)
@@ -1095,7 +1095,7 @@ class Grid extends ProtoLayer {
 
     const isDir = outsideCorner ? `isRight` : `isLeft`
     if (!seg.turns.end[isDir]) { // must be an outside corner, so end of seg turns Right
-      console.error(`wrapColinearCorner only works on segment corners ending in ${isDir} turns `)
+      console.error(`INVALID: wrapColinearCorner only works on segment corners ending in ${isDir} turns `)
       return
     }
     const neighbor = seg.endNeighbor // runs clockwise, seg then rightTurn end neighbor
@@ -1136,26 +1136,34 @@ class Grid extends ProtoLayer {
 
     //ARROW: transferCubicStart() : 
     const transferCubicStart = () => {
-      if (outWrap) {
-        wrapperStart[0].addMaxStartVert(seg.finalCubicEndVert)      // transfer seg.endVert to wrapperStart
-
-        // wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)      // transfer seg.endVert to wrapperStart
-      } else {
-        seg.addMaxEndVert(wrapperStart[0].finalCubicEndVert)        // transfer wrapperStart.endVert to seg
-
-        // seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)        // transfer wrapperStart.endVert to seg
+      if (outWrap) {                                   // outWrap
+        if (radiant) {
+          wrapperStart[0].addCubicStartVert(seg.finalCubicEndVert)  // seg.endVert to wrapperStart.cubicStart
+        } else {
+          wrapperStart[0].addMaxStartVert(seg.finalCubicEndVert)    // seg.endVert to wrapperStart.maxStart
+        }
+      } else {                                         // inWrap
+        if (radiant) {
+          seg.addCubicEndVert(wrapperStart[0].finalCubicEndVert)    // wrapperStart.endVert to seg.cubicEnd
+        } else {
+          seg.addMaxEndVert(wrapperStart[0].finalCubicEndVert)      // wrapperStart.endVert to seg.maxEnd
+        }
       }
     }
     //ARROW: transferCubicEnd() : 
     const transferCubicEnd = () => {
       if (outWrap) {
-        wrapperEnd[0].addMaxEndVert(neighbor.finalCubicStartVert)   // transfer neighbor.startVert to wrapperEnd
-
-        // wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)   // transfer neighbor.startVert to wrapperEnd
+        if (radiant) {
+          wrapperEnd[0].addCubicEndVert(neighbor.finalCubicStartVert)   // neighbor.startVert to wrapperEnd.cubicEnd
+        } else {
+          wrapperEnd[0].addMaxEndVert(neighbor.finalCubicStartVert)     // neighbor.startVert to wrapperEnd.maxEnd
+        }
       } else {
-        neighbor.addMaxStartVert(wrapperEnd[0].finalCubicStartVert) // transfer wrapperEnd.startVert to neighbor
-
-        // neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert) // transfer wrapperEnd.startVert to neighbor
+        if (radiant) {
+          neighbor.addCubicStartVert(wrapperEnd[0].finalCubicStartVert) // wrapperEnd.startVert to neighbor.cubicStart
+        } else {
+          neighbor.addMaxStartVert(wrapperEnd[0].finalCubicStartVert)   // wrapperEnd.startVert to neighbor.maxStart
+        }
       }
     }
 
@@ -1170,23 +1178,31 @@ class Grid extends ProtoLayer {
     }
   }
   //METH: wrapCorners() : 
-  wrapCorners(segs, segCollection, outWrap = true, outsideCorners = true) {
-    return segs.flat().map(seg => this.wrapColinearCorner(seg, segCollection, outWrap, outsideCorners))
+  wrapCorners({ segs, segCollection, outWrap = true, outsideCorners = true, radiant = false } = {}) {
+    return segs.flat().map(seg => this.wrapColinearCorner(seg, segCollection, outWrap, outsideCorners, radiant))
   }
   //METH: outWrapOutsideCorners() : 
-  outWrapOutsideCorners(segs, segCollection) { return this.wrapCorners(segs, segCollection) }
+  outWrapOutsideCorners(segs, segCollection, radiant = false) {
+    return this.wrapCorners({ segs: segs, segCollection: segCollection, radiant: radiant })
+  }
   //METH: inWrapOutsideCorners() : 
-  inWrapOutsideCorners(segs, segCollection) { return this.wrapCorners(segs, segCollection, false, true) }
+  inWrapOutsideCorners(segs, segCollection, radiant = true) {
+    return this.wrapCorners({ segs: segs, segCollection: segCollection, outWrap: false, radiant: radiant })
+  }
   //METH: inWrapInsideCorners() : 
-  inWrapInsideCorners(segs, segCollection) { return this.wrapCorners(segs, segCollection, false, false) }
+  inWrapInsideCorners(segs, segCollection, radiant = true) {
+    return this.wrapCorners({
+      segs: segs, segCollection: segCollection, outWrap: false, outsideCorners: false, radiant: radiant
+    })
+  }
 
   //METH: outWrapAdjacentInsideCorner() : ProtoSegment :
-  outWrapAdjacentInsideCorner(seg, segCollection) {
+  outWrapAdjacentInsideCorner(seg, segCollection, radiant = false) {
     let report = false
     if (
-      seg.id.includes('cell045')
-      || seg.id.includes('cell040')
-      || seg.id.includes('cell046')
+      seg.id.includes('cell037')
+      // || seg.id.includes('cell040')
+      // || seg.id.includes('cell046')
     ) { report = true }
     if (report) {
       console.warn(`outWrapAdjacentInsideCorner seg`, seg.id)
@@ -1242,7 +1258,7 @@ class Grid extends ProtoLayer {
 
     if (wrapperStart && wrapperEnd) {
       if (wrapperStart[0].endNeighbor.id !== wrapperEnd[0].id) {
-        console.error(`INVALID: Wrapper segs are not a connected corner`)
+        console.error(`INVALID: Wrapper segs ${wrapperStart[0].id} and ${wrapperEnd[0].id} are not a connected corner`)
         return
       }
       if (wrapperStart[0].isColinearWith(seg) || wrapperEnd[0].isColinearWith(neighbor)) {
@@ -1262,15 +1278,19 @@ class Grid extends ProtoLayer {
       // console.log(`startGap`, startGap.length, startGap.string)
       // console.log(`endGap`, endGap.length, endGap.string)
       // console.log(``)
-      const startGapLength = roundToDec(startGap.length, 3)               // gap distance
-      const endGapLength = roundToDec(endGap.length, 3)                   // gap distance
+      const startGapLength = roundToDec(startGap.length)               // gap distance
+      const endGapLength = roundToDec(endGap.length)                   // gap distance
       if (startGapLength === endGapLength) {                              // wrap both if equidistant
         console.warn(`Wrapped both segments`)
-        // wrapperStart[0].addMaxStartVert(wrapperStart[1])
-        // wrapperEnd[0].addMaxEndVert(wrapperEnd[1])
 
-        wrapperStart[0].addCubicEndVert(wrapperStart[1])
-        wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+        if (radiant) {
+          wrapperStart[0].addCubicStartVert(wrapperStart[1])
+          wrapperEnd[0].addCubicEndVert(wrapperEnd[1])
+        } else {
+          wrapperStart[0].addMaxEndVert(wrapperStart[1])
+          wrapperEnd[0].addMaxStartVert(wrapperEnd[1])
+        }
+
 
         // console.log(``)
         return wrapperStart[0]                                            // only return corner when both wrapped 
@@ -1279,17 +1299,23 @@ class Grid extends ProtoLayer {
       else if (startGapLength < endGapLength) {                           // wrap seg with shortest distance
         console.log(`Wrapping end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
         console.log(`prev availableEndLength: ${wrapperStart[0].availableEndLength}`)
-        // wrapperStart[0].addMaxStartVert(wrapperStart[1])
+        if (radiant) {
+          wrapperStart[0].addCubicEndVert(wrapperStart[1])
+        } else {
+          wrapperStart[0].addMaxEndVert(wrapperStart[1])
+        }
 
-        wrapperStart[0].addCubicEndVert(wrapperStart[1])
 
         console.log(`new availableEndLength: ${wrapperStart[0].availableEndLength}`)
       } else {
         console.log(`Wrapping start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
         console.log(`prev availableEndLength: ${wrapperStart[1].availableStartLength}`)
-        // wrapperEnd[0].addMaxEndVert(wrapperEnd[1])
+        if (radiant) {
+          wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
+        } else {
+          wrapperEnd[0].addMaxStartVert(wrapperEnd[1])
+        }
 
-        wrapperEnd[0].addCubicStartVert(wrapperEnd[1])
 
         console.log(`new availableEndLength: ${wrapperStart[1].availableStartLength}`)
       }
@@ -1298,60 +1324,65 @@ class Grid extends ProtoLayer {
   }
 
   //METH: outWrapAdjacentInsideCorners()
-  outWrapAdjacentInsideCorners(segs, segCollection) {
-    return segs.flat().map(seg => this.outWrapAdjacentInsideCorner(seg, segCollection))
+  outWrapAdjacentInsideCorners({ segs, segCollection, radiant = false } = {}) {
+    return segs.flat().map(seg => this.outWrapAdjacentInsideCorner(seg, segCollection, radiant))
   }
 
   //METH: recursiveOutWrapOutsideCorners() : recursive colinear/adjacent combo wrap functions for outside corners
-  recursiveOutWrapOutsideCorners(segCollection) {
+  recursiveOutWrapOutsideCorners(segCollection, radiant = false) {
+    console.log(`recursiveOutWrapOutsideCorners input`, segCollection.map(s => s.id))
     segCollection = OpArray.format(segCollection)
-    const colinears = this.outWrapOutsideCorners(segCollection, this.allSimpleSubShapes).compacted
+    const colinears = this.outWrapOutsideCorners(segCollection, this.allSimpleSubShapes, radiant).compacted
     if (!colinears.isEmpty) {
-      const adjacents = this.outWrapAdjacentInsideCorners(colinears).compacted
+      console.log(`recursiveOutWrapOutsideCorners colinears`, colinears.map(s => s.id))
+      const adjacents = this.outWrapAdjacentInsideCorners({ segs: colinears, radiant: radiant }).compacted
       if (!adjacents.isEmpty) {
-        this.recursiveOutWrapOutsideCorners(adjacents)
+        console.log(`recursiveOutWrapOutsideCorners adjacents`, adjacents.map(s => s.id))
+        this.recursiveOutWrapOutsideCorners(adjacents, radiant)
       }
     }
   }
 
   //METH: recursiveOutWrapAdjInsideCorners() : recursive combination of adjacent/colinear wrap functions for inside corners
-  recursiveOutWrapAdjInsideCorners(segCollection) {
+  recursiveOutWrapAdjInsideCorners(segCollection, radiant = false) {
     segCollection = OpArray.format(segCollection)
     // console.log(`recursiveOutWrapAdjInsideCorners input`, segCollection)
-    const adjacents = this.outWrapAdjacentInsideCorners(segCollection).compacted
+    const adjacents = this.outWrapAdjacentInsideCorners({ segs: segCollection, radiant: radiant }).compacted
     if (!adjacents.isEmpty) {
       console.log(`adjacents`, adjacents)
-      const colinears = this.outWrapOutsideCorners(adjacents, this.allSimpleSubShapes).compacted
+      const colinears = this.outWrapOutsideCorners(adjacents, this.allSimpleSubShapes, radiant).compacted
       if (!colinears.isEmpty) {
         console.log(`colinears`, colinears)
-        this.recursiveOutWrapAdjInsideCorners(colinears)
+        this.recursiveOutWrapAdjInsideCorners(colinears, radiant)
       }
     }
   }
-  //FIXME: Current bug is within this method! Probably inside outWrapAdjacentInsideCorners()
+
   //METH: createUTurns()
-  createUTurns({ subShapes = this.allSimpleSubShapes, out = true, outWrap = true } = {}) {
+  createUTurns({ subShapes = this.allSimpleSubShapes, out = true, outWrap = true, radiant = false } = {}) {
     // let curved = new OpArray                               // processed corner/seg storage
-    const uTurns = subShapes.flat()
+    let uTurns = subShapes.flat()
       .filter(s => out ? s.isUTurnOut : s.isUTurnIn)       // only include UTurnOut segments
       // .filter(s => s.length < s.startNeighbor.length && s.length < s.endNeighbor.length)
       // .filter(s => !s.hasSomeCubicVerts)                   // remove segments with any cubicVerts assigned
-      // .filter(s => !s.hasBothCubicVerts)                   // remove segments with both cubicVerts assigned
+      .filter(s => !s.hasBothVerts)                   // remove segments with both cubicVerts assigned
       .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
     const name = out ? `out` : `in`
     console.warn(`uTurns ${name}`, uTurns.map(u => [u.id, u.availableEndLength]))
     // console.warn(`uTurns ${name}`, uTurns.map(u => u.availableEndLength))
 
     while (uTurns.length > 0) {
-      const seg = uTurns.pop()                             // pop gets segs with smallest minCubicLength first
+      let seg = uTurns[0]
+      seg = uTurns.pop()                          // pop gets segs with smallest minCubicLength first
 
       let report = false
       if (
-        seg.id.includes('cell045')
-        || seg.id.includes('cell040')
-        || seg.id.includes('cell046')
+        seg.id.includes('cell037')
+        // || seg.id.includes('cell040')
+        // || seg.id.includes('cell046')
       ) { report = true }
 
+      // if (seg.hasNoCubicVerts) {
       const startRadius = min(seg.startNeighbor.availableEndLength, seg.availableStartLength)
       const endRadius = min(seg.availableEndLength, seg.endNeighbor.availableStartLength)
       let curved = new OpArray
@@ -1362,77 +1393,48 @@ class Grid extends ProtoLayer {
       }
 
       if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
-        console.log(`curving ${seg.id} both sides with radius: ${roundToDec(startRadius / this.minCellWidth, 1)}`)
+        console.log(`curving ${seg.id} both sides with radius: ${roundToDec(startRadius / this.minCellWidth)}`)
         seg.addBothDistancedCornerVerts(startRadius)
-        // curved.push(out ? startNeighbor : seg)
-        // curved.push(out ? seg : endNeighbor)
-        curved.push(seg.startNeighbor)
-        curved.push(seg)
-        curved.push(seg.endNeighbor)
-      }
-      else if (startRadius < endRadius) {                        // curve smallest corner seg: start
-        console.log(``)
-        console.log(`curving ${seg.id} start with radius: ${roundToDec(startRadius / this.minCellWidth, 1)}`)
-        // console.log(seg)
-        // console.log(`${startNeighbor.availableEndLength}, ${seg.availableStartLength}, ${seg.availableEndLength}, ${endNeighbor.availableStartLength}`)
+        // curved = OpArray.from(out ? [seg.startNeighbor, seg] : [seg, seg.endNeighbor])
+        // if (outWrap) {
+        //   this.recursiveOutWrapOutsideCorners(outs)
+        //   this.recursiveOutWrapAdjInsideCorners(outs)
+        // }
+
+        curved.push(out ? seg.startNeighbor : seg)
+        curved.push(out ? seg : seg.endNeighbor)
+
+      } else if (approxToDec(startRadius) < approxToDec(endRadius)) { // curve smallest corner seg: start
         seg.addDistancedStartCornerVerts(startRadius)
-        // curved.push(out ? startNeighbor : seg)
-        curved.push(seg.startNeighbor)
-        curved.push(seg)
-      } else {                                                   // curve smallest corner seg: end 
-        console.log(`curving ${seg.id} end with radius: ${roundToDec(endRadius / this.cellRadius, 1)}`)
+        curved.push(out ? seg.startNeighbor : seg)
+      } else {                                                      // curve smallest corner seg: end 
         seg.addDistancedEndCornerVerts(endRadius)
-        // curved.push(out ? seg : endNeighbor)
-        curved.push(seg)
-        curved.push(seg.endNeighbor)
+        curved.push(out ? seg : seg.endNeighbor)
       }
+
+      console.log(`resulting seg.hasBothVerts`, seg.hasBothVerts)
 
       if (outWrap) {
         console.log(`recursive processing of curved:`, curved.map(s => s.id))
-        curved.forEach(seg => {
-          if (seg.turns.end.isRight) {
-            this.recursiveOutWrapOutsideCorners(seg)
-          } else if (seg.turns.start.isLeft) {
-            this.recursiveOutWrapAdjInsideCorners(seg)
-          }
-        })
-
-        // this.recursiveOutWrapOutsideCorners(curved)
-        // this.recursiveOutWrapAdjInsideCorners(curved)
-
-
-        // if (out) {
-        //   console.warn(`recursiveOutWrap Colinears`)
-        //   this.recursiveOutWrapOutsideCorners(curved)   // colinear outWrap processed corners
-        // } else {
-        //   console.warn(`recursiveOutWrap Adjacents`)
-        //   this.recursiveOutWrapAdjInsideCorners(curved) // adj outWrap processed corners
-        // }
+        if (out) {
+          this.recursiveOutWrapOutsideCorners(curved, radiant)
+        } else {
+          this.recursiveOutWrapAdjInsideCorners(curved, radiant)
+        }
       }
+      uTurns = uTurns.sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
+
+      // } else {
+      //   seg = uTurns.pop()
+      //   this.createCubicCorners({ subShapes: [seg], radiant: radiant })
+      // }
     }
-    // if (outWrap) {
-    //   console.log(`recursive processing of curved:`, curved.map(s => s.id))
-    //   curved.forEach(seg => {
-    //     if (seg.turns.end.isRight) {
-    //       this.recursiveOutWrapOutsideCorners(seg)
-    //     } else {
-    //       this.recursiveOutWrapAdjInsideCorners(seg)
-    //     }
-    //   })
-    // }
-
-
-    // if (outWrap) {
-    //   if (out) {
-    //     this.recursiveOutWrapOutsideCorners(curved)   // colinear outWrap processed corners
-    //   } else {
-    //     this.recursiveOutWrapAdjInsideCorners(curved) // adj outWrap processed corners
-    //   }
-    // }
   }
 
+
+
   //METH: createCubicCorners() :
-  createCubicCorners({ subShapes = this.allSimpleSubShapes, outWrap = true } = {}) {
+  createCubicCorners({ subShapes = this.allSimpleSubShapes, outWrap = true, radiant = false } = {}) {
     let corners = subShapes.flat()
       .filter(s => !s.hasBothCubicVerts)                      // remove segments with both cubicVerts assigned
       .sort((a, b) => b.minCubicLength - a.minCubicLength)    // sort large-small availableEndLength
@@ -1441,25 +1443,64 @@ class Grid extends ProtoLayer {
     // let outsideCorners = new OpArray
     // let insideCorners = new OpArray
     while (corners.length > 0) {
-      let seg = corners.pop()                                 // pop gets segs with smallest minCubicLength first
-      console.log(`createCubicCorners seg`, seg.id)
-      const assignSeg = seg.hasCubicStartVert ? seg : seg.startNeighbor // assign seg is one with StartVert
-      console.log(`createCubicCorners assignSeg`, assignSeg.id)
-      const radius = min(assignSeg.availableEndLength, assignSeg.endNeighbor.availableStartLength)
-      assignSeg.addDistancedEndCornerVerts(radius)            // assign new endVert
+      let seg = corners.pop()
+
+      let report = false
+      if (
+        seg.id.includes('cell037')
+        // || seg.id.includes('cell040')
+        // || seg.id.includes('cell046')
+      ) { report = true }// pop gets segs with smallest minCubicLength first
+
+      let cornerStart, cornerEnd
+      if (seg.hasNoCubicVerts) {
+        if (seg.startNeighbor.availableEndLength <= seg.endNeighbor.availableStartLength) {
+          cornerStart = seg.startNeighbor
+          cornerEnd = seg
+        } else {
+          cornerStart = seg
+          cornerEnd = seg.endNeighbor
+        }
+      } else {
+        if (seg.hasCubicStartVert) {
+          cornerStart = seg.startNeighbor
+          cornerEnd = seg
+        } else {
+          cornerStart = seg
+          cornerEnd = seg.endNeighbor
+        }
+        // cornerStart = seg.startNeighbor
+        // cornerEnd = seg
+      }
+
+
+
+      // const cornerStart = seg.hasCubicStartVert ? seg : seg.startNeighbor // assign seg is one with StartVert
+
+      if (report) {
+        console.log(`createCubicCorners seg`, seg.id)
+        console.log(`seg.hasCubicStartVert: ${seg.hasCubicStartVert}`)
+        console.log(`seg.hasCubicEndVert: ${seg.hasCubicEndVert}`)
+        console.log(`createCubicCorners cornerStart`, cornerStart.id)
+        console.log(`cornerStart availLength: ${cornerStart.availableEndLength}, cornerEnd availLength: ${cornerEnd.availableStartLength}`)
+      }
+
+      const radius = min(cornerStart.availableEndLength, cornerEnd.availableStartLength)
+      cornerStart.addDistancedEndCornerVerts(radius)            // assign new endVert
 
       if (outWrap) {
-        if (seg.turns.end.isRight) {
-          this.recursiveOutWrapOutsideCorners(seg)
+        if (cornerStart.turns.end.isRight) {
+          this.recursiveOutWrapOutsideCorners(cornerStart, radiant)
           // outsideCorners.push(seg)                              // push outside corners for further processing
         } else {
-          this.recursiveOutWrapAdjInsideCorners(seg)
+          this.recursiveOutWrapAdjInsideCorners(cornerStart, radiant)
           // insideCorners.push(seg)                               // push inside corners for further processing
         }
       }
 
+      //FIXME: with new cornerStart/cornerEnd, adding a corner back creates a recursion loop
       if (!seg.hasBothCubicVerts) {
-        corners.push(seg)
+        // corners.push(seg)
       }
       corners = corners
         // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
@@ -1583,10 +1624,33 @@ class Grid extends ProtoLayer {
         const cornerMap = processor(quad)
         // console.log(`cornerMap`, cornerMap)
         assignQuad(quad, cornerMap)
+        // let rad = new OpArray
+        // let notRad = new OpArray
+        quad.forEach(seg => {
+          // console.log()
+          //   if (roundToDec(seg.minCubicLength) <= roundToDec(this.cellRadius)) {
+          //     // this.recursiveOutWrapOutsideCorners(OpArray.from[seg])
+          //     notRad.push(seg)
+          //   } else {
+          //     // this.recursiveOutWrapOutsideCorners(OpArray.from[seg], true)
+          //     rad.push(seg)
+          //   }
+        })
+
+        if (quad.every(seg =>
+          roundToDec(seg.availableStartLength) <= roundToDec(this.cellRadius)
+          && roundToDec(seg.availableEndLength) <= roundToDec(this.cellRadius)
+        )) {
+          console.log(`NOT using radiant outWrap`)
+          this.recursiveOutWrapOutsideCorners(quad)
+        } else {
+          console.log(`using radiant outWrap!!`)
+          this.recursiveOutWrapOutsideCorners(quad, true)
+        }
         console.log(``)
         console.log(`    QUAD`, i, quad[0].parentID)
       })
-      this.recursiveOutWrapOutsideCorners(quads.flat())
+      // this.recursiveOutWrapOutsideCorners(quads.flat(), true)
     }
 
     //ARROW: sortStairs() : sorting for createStairs()
@@ -1615,7 +1679,12 @@ class Grid extends ProtoLayer {
     const finish = () => {
       this.allSimpleSubShapes.flat().forEach(s => {
         s.matchStartCorner()
-        if (s.turns.end.isRight) { this.recursiveOutWrapOutsideCorners(s) }
+        if (s.turns.end.isRight) {
+          this.recursiveOutWrapOutsideCorners(s, false)
+        }
+        if (s.turns.start.isLeft) {
+          this.recursiveOutWrapAdjInsideCorners(s, false)
+        }
       })
     }
 
@@ -1625,27 +1694,33 @@ class Grid extends ProtoLayer {
     console.groupEnd()
 
     console.groupCollapsed(`createQuadShapes`)
-    createQuadShapes(0)                                                 // createQuadShapes
+    createQuadShapes(4)                                                 // createQuadShapes
     console.groupEnd()
 
-    console.groupCollapsed(`createUTurnsIN`)
-    this.createUTurns({ out: false })                                   // createUTurns IN
-    console.groupEnd()
+    let maxCurve = true
+    if (maxCurve) {
+      console.groupCollapsed(`createUTurnsIN`)
+      this.createUTurns({ out: false, radiant: false })                 // createUTurns IN
+      console.groupEnd()
+    }
 
     console.groupCollapsed(`outWrapAdjacentInsideCorners`)
-    this.outWrapAdjacentInsideCorners(this.allInternalSimpleSubShapes)  // outWrapAdjacents of internal subShapes
+    this.outWrapAdjacentInsideCorners({ segs: this.allInternalSimpleSubShapes })  // outWrapAdjacents of internal subShapes
     console.groupEnd()
 
     // console.log(this.allSimpleSubShapes)
 
-    console.groupCollapsed(`createUTurnsOUT`)
-    this.createUTurns()                                                 // createUTurns OUT                    
-    console.groupEnd()
-    console.log(this.allSimpleSubShapes)
+    if (maxCurve) {
+      console.groupCollapsed(`createUTurnsOUT`)
+      this.createUTurns({ radiant: false })                             // createUTurns OUT                    
+      console.groupEnd()
 
-    console.groupCollapsed(`createCubicCorners`)
-    this.createCubicCorners()                                           // createCubicCorners   
-    console.groupEnd()
+      console.log(this.allSimpleSubShapes)
+
+      console.groupCollapsed(`createCubicCorners`)
+      this.createCubicCorners({ radiant: false })                                         // createCubicCorners   
+      console.groupEnd()
+    }
 
     console.groupCollapsed(`finish`)
     finish()                                                            // finish 
@@ -3049,13 +3124,11 @@ class Island extends ProtoLayer {
       const shape = isle.shape
       const simpleSubShapes = isle.shape.simpleSubShapes
 
-      // this.grid.createUTurns(simpleSubShapes)
-      this.grid.createUTurns({ subShapes: simpleSubShapes, out: false })
+      this.grid.createUTurns({ subShapes: simpleSubShapes, out: false, radiant: false })
       this.grid.inWrapOutsideCorners(simpleSubShapes, parentSimpleSubShapes)  //
       this.grid.inWrapInsideCorners(simpleSubShapes, parentSimpleSubShapes)   //
-      this.grid.createUTurns({ subShapes: simpleSubShapes })
-      // this.grid.createUTurns(simpleSubShapes, false)
-      this.grid.createCubicCorners(simpleSubShapes)   //finish remaining corners, required for Cardinal inset < 0.75
+      this.grid.createUTurns({ subShapes: simpleSubShapes, radiant: false })
+      this.grid.createCubicCorners({ subShapes: simpleSubShapes, radiant: false })   //finish remaining corners, required for Cardinal inset < 0.75
 
       console.log(`shape`, shape)
       shape.assignElement()       // assignElement in order to assign path to Shape.path for use in ShapeGroup
