@@ -563,13 +563,12 @@ function isPrime(number) {
 }
 
 // FUNC: roundToDec() round to number of decimal places
-function roundToDec(number, decimalPlaces = 3) {
-  const factor = 10 ** decimalPlaces
-  return round(number * factor) / factor
+function roundToDec(number, decimalPlaces) {
+  return approxToDec(number, decimalPlaces)
 }
 
 // FUNC: approxToDec() round/floor/ceil to number of decimal places
-function approxToDec(number, decimalPlaces = 3, mode = 0) {
+function approxToDec(number, decimalPlaces = 2, mode = 0) {
   const factor = 10 ** decimalPlaces
   const mult = number * factor
   switch (mode) {
