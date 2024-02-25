@@ -766,11 +766,11 @@ class Segment {
       // console.log(`same direction?`, this.direction.andOpposites.equals(seg.direction.andOpposites))
       if (this.direction.andOpposites.isVertical) {               // if vertical
         // console.log(`comparing verticals: ${roundToDec(this.end.x, 1)} to ${roundToDec(seg.end.x, 1)}`)
-        bool = roundToDec(this.end.x, 1) === roundToDec(seg.end.x, 1)
+        bool = roundToDec(this.end.x) === roundToDec(seg.end.x)
         // console.log(`bool = ${bool}`)
       } else if (this.direction.andOpposites.isHorizontal) {       // if horizontal
         // console.log(`comparing horizontals: ${roundToDec(this.end.y, 1)} to ${roundToDec(seg.end.y, 1)}`)
-        bool = roundToDec(this.end.y, 1) === roundToDec(seg.end.y, 1)
+        bool = roundToDec(this.end.y) === roundToDec(seg.end.y)
         // console.log(`bool = ${bool}`)
       }
     } else { bool = false }
@@ -897,7 +897,8 @@ class ProtoSegment extends Segment {
     this.grid = grid
     if (maxCubicVerts) {
       this.maxCubicVerts = maxCubicVerts
-    } else if (grid) { this.#setupMaxCubicVerts() }
+    }
+    // else if (grid) { this.#setupMaxCubicVerts() }
     if (cubicVerts) { this.cubicVerts = cubicVerts }
     if (neighbors) { this.neighbors = neighbors }
     if (!this.direction.allAreCardinal) {
@@ -1026,7 +1027,7 @@ class ProtoSegment extends Segment {
       if (this.hasCubicStartVert) {
         startLength = this.start.dist(this.cubicVerts.start)
         // console.log(`availableLength: startLength: ${startLength}, maxStartLength: ${this.maxCubicStartLength} `)
-        if (roundToDec(this.maxCubicStartLength, 2) < roundToDec(startLength, 2)) {
+        if (roundToDec(this.maxCubicStartLength) < roundToDec(startLength)) {
           startLength = this.maxCubicStartLength
         }
         // if (roundToDec(startLength, 1) < roundToDec(this.cellRadius, 1)) {
@@ -1036,7 +1037,7 @@ class ProtoSegment extends Segment {
       if (this.hasCubicEndVert) {
         endLength = this.end.dist(this.cubicVerts.end)
         // console.log(`availableLength: endLength: ${endLength}, maxEndLength: ${this.maxCubicEndLength} `)
-        if (roundToDec(this.maxCubicEndLength, 2) < roundToDec(endLength, 2)) {
+        if (roundToDec(this.maxCubicEndLength) < roundToDec(endLength)) {
           endLength = this.maxCubicEndLength
         }
         // if (roundToDec(endLength, 1) < roundToDec(this.cellRadius, 1)) {
@@ -1080,11 +1081,41 @@ class ProtoSegment extends Segment {
 
   get availableStartLength() { return this.#availableLength() }
   get availableEndLength() { return this.#availableLength(false) }
-
-  get maxCubicStartLength() { return this.start.dist(this.maxCubicVerts.start) }
-  get maxCubicEndLength() { return this.end.dist(this.maxCubicVerts.end) }
-
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
+
+  get hasMaxStartVert() { return !!this.maxCubicVerts.start }
+  get hasMaxEndVert() { return !!this.maxCubicVerts.end }
+  get hasSomeMaxVerts() { return this.hasMaxStartVert || this.hasMaxEndVert }
+  get hasNoMaxVerts() { return !this.hasSomeMaxVerts }
+  get hasOnlyOneMaxVert() {
+    return (this.hasMaxStartVert || this.hasMaxEndVert) && !(this.hasBothMaxVerts)
+  }
+  get hasBothMaxVerts() { return this.hasMaxStartVert && this.hasMaxEndVert }
+
+  get hasAStartVert() { return this.hasMaxStartVert || this.hasCubicStartVert }
+  get hasAnEndVert() { return this.hasMaxEndVert || this.hasCubicEndVert }
+  get hasBothVerts() { return this.hasAStartVert && this.hasAnEndVert }
+
+  get maxCubicStartLength() {
+    const length = this.hasMaxStartVert ? this.start.dist(this.maxCubicVerts.start) : this.maxCubicLength
+    return length
+  }
+  get maxCubicEndLength() {
+    const length = this.hasMaxEndVert ? this.end.dist(this.maxCubicVerts.end) : this.maxCubicLength
+    return length
+  }
+
+  get maxCubicLength() { return this.length - this.cellRadius }
+
+  get finalMaxStartVert() {
+    const length = min(this.maxCubicStartLength, this.startNeighbor.maxCubicEndLength)
+    return this.distancedStartPoint(length)
+  }
+  get finalMaxEndVert() {
+    const length = min(this.maxCubicEndLength, this.endNeighbor.maxCubicStartLength)
+    return this.distancedEndPoint(length)
+  }
+
 
   #setupMaxCubicVerts() {
     const max = this.length - this.cellRadius
@@ -1220,16 +1251,18 @@ class ProtoSegment extends Segment {
     if (insetEnd.x < 0 || insetEnd.y < 0) { console.warn(`created insetEnd with negative values`) }
 
     const cubicMove = Vertex.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
-    const insetCubicStart = Vertex.add(this.cubicVerts.start, cubicMove)
-    const insetCubicEnd = Vertex.add(this.cubicVerts.end, cubicMove)
+    const insetCubicStart = Vertex.add(this.finalCubicStartVert, cubicMove)
+    const insetCubicEnd = Vertex.add(this.finalCubicEndVert, cubicMove)
     const insetCubicVerts = { start: insetCubicStart, end: insetCubicEnd } // assign new inset cubicVerts
 
     let insetMaxVerts
-    if (this.maxCubicVerts.start && this.maxCubicVerts.end) {
-      const insetMaxStart = Vertex.add(this.maxCubicVerts.start, cubicMove)
-      const insetMaxEnd = Vertex.add(this.maxCubicVerts.end, cubicMove)
-      insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
-    }
+    // if (this.maxCubicVerts.start && this.maxCubicVerts.end) {
+    const insetMaxStart = Vertex.add(this.finalMaxStartVert, cubicMove)
+    const insetMaxEnd = Vertex.add(this.finalMaxEndVert, cubicMove)
+    insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
+    // }
+
+
     const insetCopy = protoSegment({ // new inset segment 
       start: insetStart,
       end: insetEnd,
