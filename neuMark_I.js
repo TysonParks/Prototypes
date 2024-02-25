@@ -343,6 +343,16 @@ class ProtoCut {
   createShadeStack() {
     this.shadeStack = Shade.neuShadeSVGFactory({ mag: loft })
   }
+
+  createJStack() {
+    const jStack = Shade.neuShadeSVGFactory({ mag: depth })
+  }
+
+  createRStack() {
+    const rStack = Shade.neuShadeSVGFactory({ mag: depth })
+  }
+
+
 }
 Object.assign(ProtoCut.prototype, IdentifiableStored)
 
@@ -389,39 +399,54 @@ class Shade {
   }
   //METH:
   static neuShadeSVGFactory({
-    baseCol = frameColor,
-    vector = this.shadVect(),
-    mag,
-    start = 1,
-    colSpread = 26,
-    count = 3,
-    pixToUserUnits = FRAME.pixToUserUnits,
-    sort = false,
-    blur = true,
-    curve = 'r',
-    type = 'multiShade' } = {}
-  ) {
+    curve = 'r',                            // type of cut/curve : [i, j, r, f, v]
+    mag,                                    // magnitude of shade offset, corresponds to depth/loft of shade effect
+    vector = this.shadVect(),               // direction of light
+    pixToUserUnits = FRAME.pixToUserUnits,  // CONSTANT used to convert mag (given in userUnits) to pixel units
+    baseCol = frameColor,                   // highlights and shadows spread out from baseColor, always frameColor
+    colSpread = 26,                         // distance(8-bit) to spread shades from baseColor, always 26
+    start = 0,                              // determine start of layers kept, always 0
+    blur = true,                            // apply blur to shades, always true
+    type = 'multiShade',                    // always use 'multishade' : ['multiShade', 'multiAlpha', 'flat']
+    count = 3,                              // used to calculate 'multiAlpha' type layer density/alpha, always 3
+    sort = false,                           // end sorts all highlights over shadows (or opposite), always false
+  } = {}) {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true
     mag = abs(mag)
     // Optimization: reduce neushades stack size based upon mag using Shadow Layer Decay chart
     const keep = () => {
       const root = sqrt(mag)
-      if (root >= 88) { return 14 } // mag >= 7744
-      if (root >= 62) { return 13 } // mag >= 3844
-      if (root >= 44) { return 12 } // mag >= 1936
-      if (root >= 31) { return 11 } // mag >= 961
-      if (root >= 22) { return 10 } // mag >= 484
-      if (root >= 16) { return 9 } // mag >= 256
-      if (root >= 11) { return 8 } // mag >= 121
-      if (root >= 8) { return 7 } // mag >= 64
-      if (root >= 6) { return 6 } // mag >= 36
+      if (root >= 88) { return 14 }         // mag >= 7744
+      if (root >= 62) { return 13 }         // mag >= 3844
+      if (root >= 44) { return 12 }         // mag >= 1936
+      if (root >= 31) { return 11 }         // mag >= 961
+      if (root >= 22) { return 10 }         // mag >= 484
+      if (root >= 16) { return 9 }          // mag >= 256
+      if (root >= 11) { return 8 }          // mag >= 121
+      if (root >= 8) { return 7 }           // mag >= 64
+      if (root >= 6) { return 6 }           // mag >= 36
       if (root >= 3) { return floor(root) } // mag >= 9
       return 3
     }
     // console.log('KEEP', keep())
-    let neuShades = OpArray.from([1, mag, mag * .5, 2, mag * .75, 4, mag * .25, mag / 8, mag / 16, mag / 32, mag / 64, mag / 128])
-      .slice(0, keep())
+    let neuShades = OpArray.from([
+      1,
+      mag,
+      mag * .5,
+      2,
+      mag * .75,
+      4,
+      mag / 4,
+      mag / 8,
+      mag / 16,
+      mag / 32,
+      mag / 64,
+      mag / 128,
+      mag / 256,
+      mag / 512,
+    ])
+      .slice(start, keep())
       .map(e => floor(e))
       .filter(e => e > 0)
       .numSorted
@@ -436,17 +461,11 @@ class Shade {
           const mag = e / pixToUserUnits
           const blurRadius = mag / sqrt(2)
           const colorSpread = colSpread - round(pow(colRange.normalize(e), 2) * colSpread / 3)
-          // console.log('colorSpread', colorSpread)
           const colors = baseCol.highShadComplementSpread(colorSpread)
-          // console.log('colors', colors)
-          // console.log('light color', colors[0].levels)
-          // console.log('dark color', colors[1].levels)
           const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur, curve)
-          // console.log('shades', shades)
           return shades
         })
         .flat()
-
     } else {
       let color1, color2
       //NOTE: AVOID - 'multiAlpha' causes extreme banding artifacts in my implementation
@@ -476,7 +495,6 @@ class Shade {
       neuShades = OpArray.from([...lighten, ...darken])
       // neuShades = OpArray.from([...darken, ...lighten])
     }
-    // console.log('neuShades', neuShades)
     return neuShades
   }
   // MARK: OG CSS Methods
