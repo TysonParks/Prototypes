@@ -1694,7 +1694,7 @@ class Grid extends ProtoLayer {
     console.groupEnd()
 
     console.groupCollapsed(`createQuadShapes`)
-    createQuadShapes(4)                                                 // createQuadShapes
+    createQuadShapes(0)                                                 // createQuadShapes
     console.groupEnd()
 
     let maxCurve = true
