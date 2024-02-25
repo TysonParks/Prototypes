@@ -412,10 +412,10 @@ class Shade {
     sort = false,                           // end sorts all highlights over shadows (or opposite), always false
   } = {}) {
     if (!mag) { mag = vector.mag() }
-    const inset = mag > 0 ? false : true
-    mag = abs(mag)
-    // Optimization: reduce neushades stack size based upon mag using Shadow Layer Decay chart
-    const keep = () => {
+    const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
+    mag = abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
+
+    const keep = () => { // Optimization: reduce neuShades stack size based upon mag using Shadow Layer Decay chart
       const root = sqrt(mag)
       if (root >= 88) { return 14 }         // mag >= 7744
       if (root >= 62) { return 13 }         // mag >= 3844
@@ -431,30 +431,36 @@ class Shade {
     }
     // console.log('KEEP', keep())
     let neuShades = OpArray.from([
-      1,
-      mag,
-      mag * .5,
-      2,
-      mag * .75,
-      4,
-      mag / 4,
-      mag / 8,
-      mag / 16,
-      mag / 32,
-      mag / 64,
-      mag / 128,
-      mag / 256,
-      mag / 512,
+      1,            // these fixed magnitudes insure edge remains crisp and poppy at higher resolutions
+      mag,          // these first 3
+      mag / 2,      // these first 3
+      2,            // these fixed magnitudes insure edge remains crisp and poppy at higher resolutions
+      mag * 3 / 4,  //  
+      4,            // these fixed magnitudes insure edge remains crisp and poppy at higher resolutions
+      mag / 4,      //
+      mag / 8,      //
+      mag / 16,     //
+      mag / 32,     //
+      mag / 64,     //
+      mag / 128,    //
+      mag / 256,    //
+      mag / 512,    //
     ])
-      .slice(start, keep())
-      .map(e => floor(e))
-      .filter(e => e > 0)
-      .numSorted
-      .unique()
+      .slice(start, keep())     // reduce layers based upon start and keep()
+      .map(e => {
+        if (e < 4) {
+          return roundToDec(e)  // roundToDec values below 4, to preserve precision for small shade depths
+        } else {
+          return floor(e)       // floor values at 4 and above to reduce duplicate shades for larger depths
+        }
+      })
+      .filter(e => e > 0)       // remove negatives (shouldn't be necessary!)
+      .numSorted                // sort small-large
+      .unique()                 // remove duplicates
 
     // console.log('slices', neuShades)
 
-    if (type === 'multiShade') {
+    if (type === 'multiShade') {    //
       const colRange = range(neuShades[0], neuShades.last())
       neuShades = neuShades
         .map(e => {
