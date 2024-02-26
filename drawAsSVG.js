@@ -987,8 +987,6 @@ class ProtoSegment extends Segment {
     }
   }
 
-
-
   //MARK: Cubic Verts
   // #region Cubic Verts
   get hasCubicStartVert() { return !!this.cubicVerts.start }
@@ -1014,7 +1012,6 @@ class ProtoSegment extends Segment {
     return this.distancedEndPoint(finalLength)
   }
 
-  // FIXME: Integrate use of maxCubicVerts!!!
   #availableLength(start = true) {
     if (!this.cornerVerts?.start || !this.cornerVerts?.end) {// needs to have cornerVerts to calculate
       console.warn(`cannot calculate available length without cornerVerts`)
@@ -1083,47 +1080,6 @@ class ProtoSegment extends Segment {
   get availableEndLength() { return this.#availableLength(false) }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
-  get hasMaxStartVert() { return !!this.maxCubicVerts.start }
-  get hasMaxEndVert() { return !!this.maxCubicVerts.end }
-  get hasSomeMaxVerts() { return this.hasMaxStartVert || this.hasMaxEndVert }
-  get hasNoMaxVerts() { return !this.hasSomeMaxVerts }
-  get hasOnlyOneMaxVert() {
-    return (this.hasMaxStartVert || this.hasMaxEndVert) && !(this.hasBothMaxVerts)
-  }
-  get hasBothMaxVerts() { return this.hasMaxStartVert && this.hasMaxEndVert }
-
-  get hasAStartVert() { return this.hasMaxStartVert || this.hasCubicStartVert }
-  get hasAnEndVert() { return this.hasMaxEndVert || this.hasCubicEndVert }
-  get hasBothVerts() { return this.hasAStartVert && this.hasAnEndVert }
-
-  get maxCubicStartLength() {
-    const length = this.hasMaxStartVert ? this.start.dist(this.maxCubicVerts.start) : this.maxCubicLength
-    return length
-  }
-  get maxCubicEndLength() {
-    const length = this.hasMaxEndVert ? this.end.dist(this.maxCubicVerts.end) : this.maxCubicLength
-    return length
-  }
-
-  get maxCubicLength() { return this.length - this.cellRadius }
-
-  get finalMaxStartVert() {
-    const length = min(this.maxCubicStartLength, this.startNeighbor.maxCubicEndLength)
-    return this.distancedStartPoint(length)
-  }
-  get finalMaxEndVert() {
-    const length = min(this.maxCubicEndLength, this.endNeighbor.maxCubicStartLength)
-    return this.distancedEndPoint(length)
-  }
-
-
-  #setupMaxCubicVerts() {
-    const max = this.length - this.cellRadius
-    console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
-    this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
-  }
-
-  //TODO: do I actually want/need this?
   assignMid() {
     this.addCubicStartVert(this.mid)
     this.addCubicEndVert(this.mid)
@@ -1131,9 +1087,6 @@ class ProtoSegment extends Segment {
 
   addCubicStartVert(vert) { this.#addCubicVert(vert, true) }
   addCubicEndVert(vert) { this.#addCubicVert(vert, false) }
-
-  addMaxStartVert(vert) { this.#addCubicVert(vert, true, true) }
-  addMaxEndVert(vert) { this.#addCubicVert(vert, false, true) }
 
   addBothCubicVerts(vert) {
     this.addCubicStartVert(vert)
@@ -1220,6 +1173,49 @@ class ProtoSegment extends Segment {
       }
     }
   }
+  // #endregion
+  //MARK: Max Verts
+  // #region Max Verts
+  get hasMaxStartVert() { return !!this.maxCubicVerts.start }
+  get hasMaxEndVert() { return !!this.maxCubicVerts.end }
+  get hasSomeMaxVerts() { return this.hasMaxStartVert || this.hasMaxEndVert }
+  get hasNoMaxVerts() { return !this.hasSomeMaxVerts }
+  get hasOnlyOneMaxVert() {
+    return (this.hasMaxStartVert || this.hasMaxEndVert) && !(this.hasBothMaxVerts)
+  }
+  get hasBothMaxVerts() { return this.hasMaxStartVert && this.hasMaxEndVert }
+
+  get hasAStartVert() { return this.hasMaxStartVert || this.hasCubicStartVert }
+  get hasAnEndVert() { return this.hasMaxEndVert || this.hasCubicEndVert }
+  get hasBothVerts() { return this.hasAStartVert && this.hasAnEndVert }
+
+  get maxCubicStartLength() {
+    const length = this.hasMaxStartVert ? this.start.dist(this.maxCubicVerts.start) : this.maxCubicLength
+    return length
+  }
+  get maxCubicEndLength() {
+    const length = this.hasMaxEndVert ? this.end.dist(this.maxCubicVerts.end) : this.maxCubicLength
+    return length
+  }
+
+  get maxCubicLength() { return this.length - this.cellRadius }
+
+  get finalMaxStartVert() {
+    const length = min(this.maxCubicStartLength, this.startNeighbor.maxCubicEndLength)
+    return this.distancedStartPoint(length)
+  }
+  get finalMaxEndVert() {
+    const length = min(this.maxCubicEndLength, this.endNeighbor.maxCubicStartLength)
+    return this.distancedEndPoint(length)
+  }
+
+  #setupMaxCubicVerts() {
+    const max = this.length - this.cellRadius
+    console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
+    this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
+  }
+  addMaxStartVert(vert) { this.#addCubicVert(vert, true, true) }
+  addMaxEndVert(vert) { this.#addCubicVert(vert, false, true) }
   // #endregion
   //MARK: Copy Methods
   // #region Copy Methods
