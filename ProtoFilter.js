@@ -131,24 +131,31 @@ class ProtoFilter {
           return lighten ? 'lighten' : 'darken'
         }
 
-        //1 feGaussianBlur: blur the alpha channel of the input shape
-        createSVGElt('feGaussianBlur')
-          .attribute('in', 'SourceAlpha')
-          .attribute('stdDeviation', blur)
-          .attribute('result', 'blur')
-          .parent(filter)
+        let useBlur = blur > 0
+
+        if (useBlur) {
+          //1 feGaussianBlur: blur the alpha channel of the input shape
+          createSVGElt('feGaussianBlur')
+            .attribute('in', `SourceAlpha`)
+            .attribute('stdDeviation', blur)
+            .attribute('result', 'current')
+            .parent(filter)
+        }
+
         //2 feOffset: offset the blurred result
         createSVGElt('feOffset')
-          .attribute('in', 'blur')
+          .attribute('in', useBlur ? 'current' : 'SourceAlpha')
           .attribute('dx', dx)
           .attribute('dy', dy)
-          .attribute('result', 'offset-blur')
+          .attribute('result', 'offset-blurred')
           .parent(filter)
+
         //3 feFlood: flood the offset result with the input color
         createSVGElt('feFlood')
+          .attribute(`in`, 'offset-blurred')
           .attribute('flood-color', color)
           .attribute('flood-opacity', 1)
-          .attribute('result', 'color')
+          .attribute('result', 'colored')
           .parent(filter)
 
         if (inset) {
@@ -158,7 +165,7 @@ class ProtoFilter {
             .attribute('in', clearInset ? 'SourceAlpha' : insetResult) // might need to option insetResult here
             // .attribute('in2', insetResult)
             // .attribute('in', insetResult)
-            .attribute('in2', 'offset-blur')
+            .attribute('in2', 'offset-blurred')
             .attribute('result', 'mask')
             .parent(filter)
         }
@@ -166,8 +173,8 @@ class ProtoFilter {
         //4 feComposite - 'composite'
         createSVGElt('feComposite')
           .attribute('operator', 'in')
-          .attribute('in', `color`)
-          .attribute('in2', inset ? 'mask' : `offset-blur`)
+          .attribute('in', `colored`)
+          .attribute('in2', inset ? 'mask' : `offset-blurred`)
           .attribute('result', `composite`)
           .parent(filter)
         //5 feMerge - 'resultId'
@@ -302,62 +309,45 @@ class ProtoFilter {
   }
 
   //MARK: Utility methods
-  applyFilterToElement({ element, size, padding = 20, time = 0 } = {}) {
+  applyFilterToElement({ element, size, padding = 40, time = 0 } = {}) {
     if (!this.type) { return this }
-    console.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
-    console.warn(`applyFilter paddingX: ${padding.x}, paddingY: ${padding.y}`)
-    const aspect = size.x / size.y
-    //FIXME: I might be able to use absolute values, but they probably need to be relative to the entire canvas?
-    //FIXME: This means I need to bring in the anchor as well. Maybe I can even just use my .layout method?
-    // let scaleWidth, scaleHeight
-    // if (aspect >= 1) {
-    //   scaleHeight = aspect
-    //   scaleWidth = 1
-    // } else {
-    //   scaleHeight = 1
-    //   scaleWidth = 1 / aspect
-    // }
+    // console.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
+    // console.warn(`applyFilter paddingX: ${padding.x}, paddingY: ${padding.y}`)
 
+    // console.log(`applyFilter size: x:${size.x}, y:${size.y}`)
+    // console.log(`applyFilter GRID.cellSize: x:${GRID.cellSize.x}, y:${GRID.cellSize.y}`)
+    // console.log(`applyFilter padding: x:${padding.x}, y:${padding.y}`)
+
+
+    // console.log(`final padding: x:${padding.x}, y:${padding.y} `)
     const x = ceil(-padding.x / size.x * 100) || 0
     const y = ceil(-padding.y / size.y * 100) || 0
 
     const width = ceil(200 * padding.x / size.x + 100) || 100
     const height = ceil(200 * padding.y / size.y + 100) || 100
 
-    // console.warn(`element`, element)
-    // console.warn(`applyFilter x: ${x}, y: ${y}`)
-    // console.warn(`applyFilter width: ${width}, height: ${height}`)
-
-    // const anchor = (scale - 1) * -50 - padding
-    // const size = scale * 100
     this.filter
-      // .attribute("x", `-48%`)
-      // .attribute("y", `-5%`)
-      // .attribute("width", `200%`)
-      // .attribute("height", `200%`)
-      .attribute("x", `${x}%`)
-      .attribute("y", `${y}%`)
-      .attribute("width", `${width}%`)
-      .attribute("height", `${height}%`)
-    // .attribute("x", `${-size.x}`)
-    // .attribute("y", `${-size.y}`)
-    // .attribute("width", `${size.x + 2 * padding}%`)
-    // .attribute("height", `${size.y + 2 * padding}%`)
-    console.warn(`this.filter x`, this.filter.attribute("x"))
-    console.warn(`this.filter y`, this.filter.attribute("y"))
-    console.warn(`this.filter width`, this.filter.attribute("width"))
-    console.warn(`this.filter height`, this.filter.attribute("height"))
+
+      .attribute("x", `${x}% `)
+      .attribute("y", `${y}% `)
+      .attribute("width", `${width}% `)
+      .attribute("height", `${height}% `)
+
+    // console.warn(`this.filter x`, this.filter.attribute("x"))
+    // console.warn(`this.filter y`, this.filter.attribute("y"))
+    // console.warn(`this.filter width`, this.filter.attribute("width"))
+    // console.warn(`this.filter height`, this.filter.attribute("height"))
 
     const parentSVG = element.elt.ownerSVGElement
     const filterUrl = `url(#${this.id})`
 
-    let newGroup = parentSVG.querySelector(`g[filter="${filterUrl}"][id^="${this.id}-"]`)
+    let newGroup = parentSVG.querySelector(`g[filter = "${filterUrl}"][id ^= "${this.id}-"]`)
     if (!newGroup) {
       newGroup = createSVGElt("g")
-        .id(`${this.id}-${element.id()}`)
+        .id(`${this.id} -${element.id()} `)
         .attribute("filter", filterUrl)
         .parent(parentSVG)
-      newGroup.child(this.defs)
+        .child(this.defs)
     }
 
     if (time > 0) {
@@ -663,7 +653,7 @@ p5.Element.prototype.blur = function (radius) {
 }
 
 //PROTOTYPE: p5.Element extension applyFilter(filter, scale = 1)
-p5.Element.prototype.applyFilter = function ({ filter, size, padding = 0, time = 0 } = {}) {
+p5.Element.prototype.applyFilter = function ({ filter, size, padding, time = 0 } = {}) {
   if (filter) { filter.applyFilterToElement({ element: this, size: size, padding: padding, time: time }) }
   return this
 }
