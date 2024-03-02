@@ -375,7 +375,7 @@ class Shade {
     return { lighten: lighten, dx: x, dy: y, blur: blurRad, color: col, inset: inset }
   }
   //METH:
-  static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = .75) {
+  static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
     // console.log('components', vector.x, vector.y, blurRad)
     const highlight = this.dropShadSVG({
       x: -1 * highOffsetRatio * vector.x,
@@ -396,11 +396,9 @@ class Shade {
     if (curve === 'j') {
       return [shadow, highlight]
       return [highlight, shadow]
-      // return [shadow]
-      // return [highlight]
+
     }
     if (curve === 'r') {
-      const outerShadow = this.dropShadSVG({ lighten: false, x: 1 * vector.x, y: 1 * vector.y, blurRad: (blur ? 1 : 0) * blurRad, col: shadCol, inset: !inset })
       return [
         shadow,
         highlight,
@@ -417,7 +415,7 @@ class Shade {
     vector = this.shadVect(),               // direction of light
     pixToUserUnits = FRAME.pixToUserUnits,  // CONSTANT used to convert mag (given in userUnits) to pixel units
     baseCol = frameColor,                   // highlights and shadows spread out from baseColor, always frameColor
-    colSpread = 26,                         // distance(8-bit) to spread shades from baseColor, always 26
+    colSpread = 25,                         // distance(8-bit) to spread shades from baseColor, always 26 (256-30 = 26)
     start = 0,                              // determine start of layers kept, always 0
     blur = true,                            // apply blur to shades, always true
     type = 'multiShade',                    // always use 'multishade' : ['multiShade', 'multiAlpha', 'flat']
@@ -471,14 +469,15 @@ class Shade {
       .numSorted                // sort small-large
       .unique()                 // remove duplicates
 
-    // console.log('slices', neuShades)
+    console.log('slices', neuShades)
 
     if (type === 'multiShade') {    //
       const colRange = range(neuShades[0], neuShades.last())
       neuShades = neuShades
         .map(e => {
-          const mag = e / pixToUserUnits
-          const blurRadius = mag / sqrt(2)
+          const mag = e / pixToUserUnits    // convert pixelUnit to userUnit magnitude
+          // const blurRadius = mag / sqrt(2)  // DEPRECATE : whatever logic this once went by is actually flawed
+          const blurRadius = mag
           const colorSpread = colSpread - round(pow(colRange.normalize(e), 2) * colSpread / 3)
           const colors = baseCol.highShadComplementSpread(colorSpread)
           const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur, curve)
@@ -514,6 +513,10 @@ class Shade {
       neuShades = OpArray.from([...lighten, ...darken])
       // neuShades = OpArray.from([...darken, ...lighten])
     }
+    console.error(`neuShades`, neuShades)
+    console.error(`vect`, neuShades.map(ns => [ns.dx, ns.dy]))
+    console.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
+    console.error(`color`, neuShades.map(ns => ns.color.levels[0]))
     return neuShades
   }
   // MARK: OG CSS Methods
@@ -569,6 +572,8 @@ function protoColor() {
   const args = arguments[0] instanceof Array ? arguments[0] : arguments
   return new ProtoColor(this, args)
 }
+
+function achromic(l) { return ProtoColor.achromic(l) }
 class ProtoColor extends p5.Color {
   constructor(pInt, args) {
     super(pInt, args)
@@ -637,6 +642,13 @@ class ProtoColor extends p5.Color {
     return protoColor(`hsb(${hue}, 100%, 50%)`)
   }
 
+  static okLCH(l, c, h) {
+    const rgbColor = oklch2rgb([l, c, h])
+    console.log(`okLCH 2 RGB:`, rgbColor)
+    return protoColor(rgbColor)
+  }
+
+  static achromic(l) { return protoColor(l * 255) }
 }
 
 //TODO: DEPRECATE
