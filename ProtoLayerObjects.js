@@ -2561,11 +2561,18 @@ class ShapeGroup extends ProtoLayer {
       // .attribute('stroke-dasharray', `4 4`)
     }
 
+    const luma = 50
+    const chroma = 20
+    const hue = 120
+
+    const lchcol02 = ProtoColor.okLCH(luma, chroma, hue)
+    const lchCol01 = color(`oklch(0.9 0.2 66deg)`)
 
     this.svgGroup
       .layout(this.anchor, this.size)
-      .attribute('fill', protoColor(230))
-      // .attribute('fill', protoColor(255, 0, 0))
+      // .attribute('fill', protoColor(230))
+      // .attribute('fill', lchcol02)
+      .attribute('fill', frameColor)
       .attribute('fill-opacity', 1)
       .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
   }
