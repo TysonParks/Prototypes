@@ -95,8 +95,9 @@ function setupFeatures() {
 
 // FUNC: setupColors()
 function setupColors() {
-  backgroundColor = color(0)
-  frameColor = protoColor(230)
+  backgroundColor = achromic(0)
+  frameColor = achromic(0.9)
+  // frameColor = color(`oklch(70% 0.1 49)`)
   accentColor = color("hsb(190, 100%, 90%)")
 
   acHiCol = color("hsb(190, 20%, 100%)").toString('#rrggbb')
@@ -260,7 +261,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(2, 10)
-  gridX = 3
+  gridX = 4
 
   GRID = new Grid({
     protoParent: FRAME,
@@ -314,10 +315,16 @@ function gridTests2() {
   const shader6 = createFilter().dropShadow(shadeStack6)
 
   const shadeStack7 = Shade.neuShadeSVGFactory({
-    mag: minCellSize * 0.125 * 8,
+    mag: minCellSize * 0.125 * 4,
     vector: Shade.shadVect().rotate(180)
   })
   const shader7 = createFilter().dropShadow(shadeStack7)
+
+  const shadeStack7_2 = Shade.neuShadeSVGFactory({
+    mag: minCellSize * 0.125 * 4,
+    vector: Shade.shadVect().rotate(180)
+  })
+  const shader7_2 = createFilter().dropShadow(shadeStack7_2)
 
   const shadeStack8 = Shade.neuShadeSVGFactory({
     mag: minCellSize * -1.8 * 1,
@@ -487,16 +494,16 @@ function gridTests2() {
   // })
 
   //MARK: group001
-  // group001?.createSubIslands({
-  //   direction: Direction.All,
-  //   filter: shader0,
-  //   // insetScale: 1.75,
-  //   insetScale: 3 / 2 - .25,
-  // })
+  group001?.createSubIslands({
+    direction: Direction.All,
+    filter: shader0,
+    // insetScale: 1.75,
+    insetScale: 3 / 2 - .25,
+  })
 
   group001?.createSubIslands({
     direction: Direction.All,
-    filter: shader7,
+    filter: shader7_2,
     // insetScale: 1.75,
     insetScale: 3 / 2 - .25,
   })
