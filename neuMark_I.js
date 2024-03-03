@@ -441,7 +441,7 @@ class Shade {
       return 3
     }
     // console.log('KEEP', keep())
-    let neuShades = OpArray.from([
+    let offsets = OpArray.from([    // offsets for shade layers
       1,            // these fixed magnitudes insure edge remains crisp and poppy at higher resolutions
       mag,          // these first 3
       mag / 2,      // these first 3
@@ -469,18 +469,34 @@ class Shade {
       .numSorted                // sort small-large
       .unique()                 // remove duplicates
 
-    console.log('slices', neuShades)
-
-    if (type === 'multiShade') {    //
-      const colRange = range(neuShades[0], neuShades.last())
-      neuShades = neuShades
+    console.log('slices', offsets)
+    let neuShades
+    //NOTE: "multiShade" is the only/final choice for j-cuts 
+    if (type === 'multiShade') {
+      const offsetRange = range(offsets[0], offsets.last())   // range from offsets
+      //ARROW: easeInCircNormalized : number : normalizes and shifts value using circular easing
+      const easeInCircNormalized = a => {
+        return 1 - sqrt(1 - pow(offsetRange.normalize(a), 2))
+      }
+      const highColSpread = 0.1                             // spread up from base (0.9) to max highlight luma (1!)
+      const shadColSpread = 0.25                            // spread down from base (0.9) to min shadow luma (0.65)
+      const maxHighlight = 1                                // 0.9 + 0.1 = 1!
+      const minShadow = (1 - highColSpread - shadColSpread) // 0.9 - 0.25 = .65
+      const perceptualDivisor = 32                          // 
+      neuShades = offsets
         .map(e => {
           const mag = e / pixToUserUnits    // convert pixelUnit to userUnit magnitude
           // const blurRadius = mag / sqrt(2)  // DEPRECATE : whatever logic this once went by is actually flawed
           const blurRadius = mag
-          const colorSpread = colSpread - round(pow(colRange.normalize(e), 2) * colSpread / 3)
-          const colors = baseCol.highShadComplementSpread(colorSpread)
-          const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur, curve)
+          const highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(e) / perceptualDivisor)
+          const highCol = achromic(highColLuma)
+          const shadColLuma = minShadow + (shadColSpread * easeInCircNormalized(e) / perceptualDivisor)
+          const shadCol = achromic(shadColLuma)
+          let shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, highCol, shadCol, inset, blur, curve)
+
+          // const colorSpread = colSpread - round(pow(offsetRange.normalize(e), 2) * colSpread / 3)
+          // const colors = baseCol.highShadComplementSpread(colorSpread)
+          // shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur, curve)
           return shades
         })
         .flat()
@@ -497,7 +513,7 @@ class Shade {
         color1 = cols[0]
         color2 = cols[1]
       }
-      neuShades = neuShades
+      neuShades = offsets
         .map(e => {
           const mag = e / pixToUserUnits
           const blurRadius = mag / sqrt(2)
