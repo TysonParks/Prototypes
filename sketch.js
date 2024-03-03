@@ -467,12 +467,12 @@ function gridTests2() {
   //   // insetScale: .4,
   // })
 
-  group000?.createSubIslands({
-    direction: Direction.All,
-    filter: shader7,
-    insetScale: 1 / 2 - .25,
-    // insetScale: .4,
-  })
+  // group000?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader7,
+  //   insetScale: 1 / 2 - .25,
+  //   // insetScale: .4,
+  // })
 
   // group000?.createSubIslands({
   //   direction: Direction.Vertical,
@@ -501,12 +501,12 @@ function gridTests2() {
     insetScale: 3 / 2 - .25,
   })
 
-  group001?.createSubIslands({
-    direction: Direction.All,
-    filter: shader7_2,
-    // insetScale: 1.75,
-    insetScale: 3 / 2 - .25,
-  })
+  // group001?.createSubIslands({
+  //   direction: Direction.All,
+  //   filter: shader7_2,
+  //   // insetScale: 1.75,
+  //   insetScale: 3 / 2 - .25,
+  // })
 
   // group001?.createSubIslands({
   //   // direction: Direction.None,
@@ -538,12 +538,12 @@ function gridTests2() {
   //   // insetScale: .6,
   // })
 
-  group002?.createSubIslands({
-    direction: Direction.None,
-    filter: shader1,
-    insetScale: 1 / 3 - 0.25,
-    // insetScale: .6,
-  })
+  // group002?.createSubIslands({
+  //   direction: Direction.None,
+  //   filter: shader1,
+  //   insetScale: 1 / 3 - 0.25,
+  //   // insetScale: .6,
+  // })
 
   //MARK: group003
 
