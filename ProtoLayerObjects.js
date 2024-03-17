@@ -394,7 +394,7 @@ class Frame extends ProtoLayer {
       .attribute(`fill`, frameColor)
       // .attribute(`fill`, 'black')
       .attribute('fill-opacity', '1')
-    // .applyFilter({ filter: this.filter, size: 2 })
+    // .applyFilter({ filter: this.filter, size: this.size, padding: 20 })
 
     // this.testElementsDraw()
   }
@@ -1084,7 +1084,7 @@ class Grid extends ProtoLayer {
   wrapColinearCorner(seg, segCollection, outWrap = true, outsideCorner = true, radiant = false) {
     let report = false
     if (
-      seg.id.includes('cell037')
+      seg.id.includes('cell030')
       // || seg.id.includes('cell040')
       // || seg.id.includes('cell046')
     ) { report = true }
@@ -1200,7 +1200,7 @@ class Grid extends ProtoLayer {
   outWrapAdjacentInsideCorner(seg, segCollection, radiant = false) {
     let report = false
     if (
-      seg.id.includes('cell037')
+      seg.id.includes('cell030')
       // || seg.id.includes('cell040')
       // || seg.id.includes('cell046')
     ) { report = true }
@@ -1377,7 +1377,7 @@ class Grid extends ProtoLayer {
 
       let report = false
       if (
-        seg.id.includes('cell037')
+        seg.id.includes('cell030')
         // || seg.id.includes('cell040')
         // || seg.id.includes('cell046')
       ) { report = true }
@@ -1447,7 +1447,7 @@ class Grid extends ProtoLayer {
 
       let report = false
       if (
-        seg.id.includes('cell037')
+        seg.id.includes('cell030')
         // || seg.id.includes('cell040')
         // || seg.id.includes('cell046')
       ) { report = true }// pop gets segs with smallest minCubicLength first
@@ -1522,7 +1522,7 @@ class Grid extends ProtoLayer {
 
   //MARK: CUSTOMIZE SHAPES
   //METH: nestleShapes() :
-  nestleShapes(diagonals = false) {
+  nestleShapes(quadMode = 0, diagonals = false) {
     const cellRadius = roundToDec(this.cellRadius)
 
     //TODO: can minCorners be handled elsewhere?
@@ -1694,7 +1694,7 @@ class Grid extends ProtoLayer {
     console.groupEnd()
 
     console.groupCollapsed(`createQuadShapes`)
-    createQuadShapes(0)                                                 // createQuadShapes
+    createQuadShapes(quadMode)                                                 // createQuadShapes
     console.groupEnd()
 
     let maxCurve = true
@@ -2572,9 +2572,9 @@ class ShapeGroup extends ProtoLayer {
       .layout(this.anchor, this.size)
       // .attribute('fill', protoColor(230))
       // .attribute('fill', lchcol02)
-      .attribute('fill', frameColor)
+      .attribute('fill', achromic(0.7))
       .attribute('fill-opacity', 1)
-      .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
+      .applyFilter({ filter: this.filter, size: this.insetSize, padding: Vertex.mult(this.grid.cellSize, 2) })
   }
 }
 
@@ -2984,7 +2984,7 @@ class Island extends ProtoLayer {
   // MARK: Island Creation Methods
   // #region Island Creation Methods
   //METH: createSubIslands() :
-  createSubIslands({ filter, islandLevel, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
+  createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
     console.groupCollapsed(`${this.id} Island.createSubIslands`)
     if (this.subIslands) {
       // recursive dive to create subIslands on the bottom-most (visually top-most) subIslands
@@ -3501,6 +3501,7 @@ class Shape extends ProtoLayer {
       .addToClassList(this.id)
       // .addToClassList(this.svgParent.elt.classList.value)
       .layout(this.anchor, this.size)
+      .attribute(`shape-rendering`, `geometricPrecision`)
   }
 
   //METH:
@@ -3524,10 +3525,10 @@ class Shape extends ProtoLayer {
           .layout(this.anchor, this.size)
 
         this.path
-          .attribute('fill', protoColor(230))
-          // .attribute('fill', protoColor(0, 0))
-          .attribute('fill-opacity', 1)
-          .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
+        // .attribute('fill', protoColor(230))
+        // .attribute('fill', protoColor(0, 0))
+        // .attribute('fill-opacity', 1)
+        // .applyFilter({ filter: this.filter, size: this.insetSize, padding: this.grid.cellSize })
       }
 
       // .svgLook(SVGLook.trendyCactus(path))
