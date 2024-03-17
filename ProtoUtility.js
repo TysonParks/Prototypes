@@ -579,7 +579,6 @@ function approxToDec(number, decimalPlaces = 2, mode = 0) {
     case 2: // ceiling
       return ceil(mult) / factor
   }
-
 }
 
 // FUNC: equalsRoundedDec() round to number of decimal places
