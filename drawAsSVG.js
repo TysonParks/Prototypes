@@ -731,7 +731,7 @@ class Segment {
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
   vertIsOnLine(vert, includeEnds = true) {
     if (!includeEnds) {
-      if (vert.equals(this.start, 2) || vert.equals(this.end, 2)) {
+      if (vert.equals(this.start, 1) || vert.equals(this.end, 1)) {
         return false
       }
     }
