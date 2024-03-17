@@ -317,42 +317,114 @@ p5.Element.prototype.boxShadow = function (value) {
 
 // CLASS: ProtoCut
 class ProtoCut {
-  type
-  depth
-  // angle // Computed!
-  angleOffset = 0
-  shadeStack
-  filter
-  constructor(type, depth) {
+  type              // cut type: [i,j,r,f,v]
+  depth             // (end) depth
+  depth2            // additional depth for: [f,v] vut types
+  startDepth        // starting depth for stairs
+  amount            // step amount for stairs
+  perimeter         // BOOL : create a wall/channel/outline
+  angleOffset = 0   // offset angle from global vector
+  shadeStacks = new OpArray
+
+  constructor({
+    type,
+    depth,
+    depth2,
+    startDepth,
+    angleOffset = 0,
+    amount = 1,
+    perimeter = false
+  }) {
     this.type = type
     this.depth = depth
-
-
+    this.depth2 = depth2 || depth
+    this.startDepth = startDepth
+    this.angleOffset = angleOffset
+    this.amount = amount
+    this.perimeter = perimeter
     this.storeObject(S.Cuts)
   }
 
-  static i(depth) { return new ProtoCut(`i`, depth) }
-  static stairs(depth, amount) { return new ProtoCut(`stairs`, depth, amount) }
-
-  static j(depth) { return new ProtoCut(`j`, depth) }
-  static r(depth) { return new ProtoCut(`r`, depth) }
-  static f(depthIn, depthOut) { return new ProtoCut(`f`, depthIn, depthOut) }
-
-  static v(depth) { return new ProtoCut(`v`, depth, angleOffset) }
-
-  createShadeStack() {
-    this.shadeStack = Shade.neuShadeSVGFactory({ mag: loft })
+  //MARK: Static Mehtods
+  static i(depth, startDepth, amount = 1) {
+    return new ProtoCut({ type: `i`, depth: depth, startDepth: startDepth, amount: amount })
+  }
+  static j(depth, startDepth, amount = 1) {
+    return new ProtoCut({ type: `j`, depth: depth, startDepth: startDepth, amount: amount })
+  }
+  static r(depth, startDepth, amount = 1) {
+    return new ProtoCut({ type: `r`, depth: depth, startDepth: startDepth, amount: amount, angleOffset: 180 })
+  }
+  static f(depth, startDepth, amount = 1, depth2) {
+    return new ProtoCut({ type: `f`, depth: depth, depth2: depth2, startDepth: startDepth, amount: amount })
+  }
+  //TODO: implement v shader
+  static v(depth, startDepth, amount = 1, depth2) {
+    return new ProtoCut({ type: `v`, depth: depth, depth2: depth2, startDepth: startDepth, amount: amount })
   }
 
-  createJStack() {
-    const jStack = Shade.neuShadeSVGFactory({ mag: depth })
+  //MARK: Computed
+  get isSingleDepth() { return this.type === `i` || this.type === `j` }
+  get spread() { return this.isSingleDepth ? this.depth : this.depth + this.depth2 }
+
+  //MARK: Public Methods
+  //METH: createShadeStacks()
+  createShadeStacks() {
+    if (this.amount === 1) { this.#createSingleShader() }
+    else if (this.amount > 1) { this.#createStairShader() }
+    else { console.error(`unsupported value`) }
   }
 
-  createRStack() {
-    const rStack = Shade.neuShadeSVGFactory({ mag: depth })
+  //MARK: Private Methods
+  //METH: createStairShader()
+  #createStairShader() {
+    if (!this.startDepth) { this.startDepth = this.spread / this.amount }
+    const stepDepth = (this.spread - this.startDepth) / this.amount
+    if (this.isSingleDepth) {
+      for (let i = 1; i <= this.amount; i++) {
+        this.#createShader(this.type, i * stepDepth)
+      }
+    }
+    if (this.type === `r`) {
+      for (let i = 1; i <= this.amount; i++) {
+        this.#createShader(`r`, i * stepDepth)
+        this.#createShader(`r2`, i * stepDepth)
+      }
+    }
+    if (this.type === `f`) {
+      for (let i = 0; i < this.amount; i++) {
+        this.#createShader(`j`, stepDepth * i + this.depth)
+        this.#createShader(`r`, stepDepth * i + this.stepDepth)
+      }
+    }
+    //TODO: implement v shader
+    if (this.type === `v`) { console.error(`ProtoCut "v" type not yet implemented`) }
   }
-
-
+  //METH: createSingleShader()
+  #createSingleShader() {
+    if (this.isSingleDepth) { this.#createShader() }
+    if (this.type === `r`) {
+      this.#createShader(`r`, this.depth)
+      this.#createShader(`r2`, this.depth)
+    }
+    if (this.type === `f`) {
+      this.#createShader(`j`, this.depth)
+      this.#createShader(`r`, this.depth2)
+    }
+    //TODO: implement v shader
+    if (this.type === `v`) { console.error(`ProtoCut "v" type not yet implemented`) }
+  }
+  //METH: createShader()
+  #createShader(curve = this.type, mag = this.depth) {
+    const stack = Shade.neuShadeSVGFactory({ curve: curve, mag: mag, rotOffset: this.angleOffset })
+    const filter = createFilter().dropShadow(stack)
+    this.shadeStacks.push(filter)
+  }
+  //TODO: implement createPerimeter()
+  //METH: createPerimeter()
+  #createPerimeterShader() {
+    // to be implemented utilizing an SVG stroke mask, similar to 'v' cut eventual implementation
+  }
 }
 Object.assign(ProtoCut.prototype, IdentifiableStored)
 
@@ -364,11 +436,7 @@ Object.assign(ProtoCut.prototype, IdentifiableStored)
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = globalControls.shadAngle, offset = 64) { return createVector(1, 0).rotate(angle).mult(offset) }
-  static maxComponent(vector = this.shadVect()) {
-    return vector.y
-    // return max(this.x, this.y)
-  }
+  static shadVect(angle = globalControls.shadAngle) { return createVector(1, 0).rotate(angle) }
   //METH:
   //Drop-Shadow 
   static dropShadSVG({ lighten = true, x, y, blurRad = 0, spreadRad = 0, col = frameColor, inset = false } = {}) {
@@ -377,42 +445,51 @@ class Shade {
   //METH:
   static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
     // console.log('components', vector.x, vector.y, blurRad)
+    const iCutHighMagMult = curve === `i` ? -.75 : -1
+    const jCutMagMult = curve === `j` ? .75 : 1
+    const highMag = iCutHighMagMult * jCutMagMult * highOffsetRatio
     const highlight = this.dropShadSVG({
-      x: -1 * highOffsetRatio * vector.x,
-      y: -1 * highOffsetRatio * vector.y,
-      blurRad: (blur ? 1 : 0) * blurRad * blurRatio,
+      x: highMag * vector.x,
+      y: highMag * vector.y,
+      blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * jCutMagMult * blurRad * blurRatio,
       col: highCol,
       inset: inset
     })
+
     const shadow = this.dropShadSVG({
       lighten: false,
-      x: 1 * vector.x,
-      y: 1 * vector.y,
-      blurRad: (blur ? 1 : 0) * blurRad * blurRatio,
+      x: jCutMagMult * vector.x,
+      y: jCutMagMult * vector.y,
+      blurRad: (blur ? 1 : 0) * jCutMagMult * blurRad * blurRatio,
       col: shadCol,
       inset: inset
     })
     // console.log('nsSVG shadow', shadow)
     if (curve === 'j') {
       return [shadow, highlight]
-      return [highlight, shadow]
+      // return [highlight, shadow]
 
     }
     if (curve === 'r') {
-      return [
-        shadow,
-        highlight,
-        // outerShadow,
-      ]
+      return [shadow, highlight]
+      // return [highlight, shadow]
     }
-
+    if (curve === 'r2') {
+      return [shadow, highlight]
+      // return [highlight, shadow]
+    }
+    if (curve === 'i') {
+      return [shadow, highlight]
+      // return [highlight, shadow]
+    }
 
   }
   //METH:
   static neuShadeSVGFactory({
-    curve = 'r',                            // type of cut/curve : [i, j, r, f, v]
+    curve = 'j',                            // type of cut/curve : [i, j, r, r2, f, v]
     mag,                                    // magnitude of shade offset, corresponds to depth/loft of shade effect
     vector = this.shadVect(),               // direction of light
+    rotOffset = 0,                          // deg rotation offset, used for dif shade types and CHAOS
     pixToUserUnits = FRAME.pixToUserUnits,  // CONSTANT used to convert mag (given in userUnits) to pixel units
     baseCol = frameColor,                   // highlights and shadows spread out from baseColor, always frameColor
     colSpread = 25,                         // distance(8-bit) to spread shades from baseColor, always 26 (256-30 = 26)
@@ -424,9 +501,39 @@ class Shade {
   } = {}) {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
-    mag = abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
+    mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
 
-    const keep = () => { // Optimization: reduce neuShades stack size based upon mag using Shadow Layer Decay chart
+
+    // //MARK: "I" Cut
+    // if (curve === 'i') {
+    //   mag = mag / pixToUserUnits * 0.85           // convert pixelUnit to userUnit magnitude
+    //   const blurRadius = mag * .25 // subtract 1pix so thin layers full value at ~0 blur
+    //   // const offsetRange
+    //   const highColSpread = 0.06                           // spread up from base (0.9) to max highlight luma (1!)
+    //   const shadColSpread = 0.75                           // spread down from base (0.9) to min shadow luma (0.7)
+    //   const maxHighlight = 0.9 + highColSpread                 // 0.9 + 0.04 = 0.94
+    //   const minShadow = (0.9 - shadColSpread)    // 0.9 - 0.25 = 0.65
+    //   const perceptualDivisor = 8                         // compensates for blur, etc to get visually correct result
+    //   const highColLuma = maxHighlight - (highColSpread * mag / perceptualDivisor)
+    //   const shadColLuma1 = minShadow + (shadColSpread * mag / perceptualDivisor)
+    //   const shadColLuma2 = minShadow + (2 * shadColSpread * mag / perceptualDivisor)
+
+    //   const highCol = achromic(highColLuma)
+    //   const shadCol1 = achromic(shadColLuma1)
+    //   const shadCol2 = achromic(shadColLuma2)
+    //   console.log(`i inset`, inset)
+    //   let shades = new OpArray
+    //   const shades1 = this.neuShadeSVG(vector.setMag(mag).rotate(rotOffset), blurRadius, highCol, shadCol1, inset, blur, curve)
+    //   shades.push(shades1)
+    //   const shades2 = this.neuShadeSVG(vector.setMag(mag * 1.5).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
+    //   shades.push(shades2)
+    //   // console.log(`i shades`, shades)
+    //   return shades.flat()
+    // }
+
+    //MARK: "J" and "R" Cuts
+    //ARROW: keep() : [number] : Optimization to reduce neuShades stack size based upon mag using Shadow Layer Decay chart
+    const keep = () => {
       const root = sqrt(mag)
       if (root >= 88) { return 14 }         // mag >= 7744
       if (root >= 62) { return 13 }         // mag >= 3844
@@ -440,7 +547,15 @@ class Shade {
       if (root >= 3) { return floor(root) } // mag >= 9
       return 3
     }
-    // console.log('KEEP', keep())
+    //ARROW: rounding(): [number] : preserve precision of lower offsets, reduce duplicates for larger offsets
+    const rounding = (e) => {
+      if (e < 4) {
+        return roundToDec(e)  // roundToDec values below 4, to preserve precision for small shade depths
+      } else {
+        return floor(e)       // floor values at 4 and above to reduce duplicate shades for larger depths
+      }
+    }
+
     let offsets = OpArray.from([    // offsets for shade layers
       1,            // these fixed magnitudes insure edge remains crisp and poppy at higher resolutions
       mag,          // these first 3
@@ -457,49 +572,126 @@ class Shade {
       mag / 256,    //
       mag / 512,    //
     ])
-      .slice(start, keep())     // reduce layers based upon start and keep()
-      .map(e => {
-        if (e < 4) {
-          return roundToDec(e)  // roundToDec values below 4, to preserve precision for small shade depths
-        } else {
-          return floor(e)       // floor values at 4 and above to reduce duplicate shades for larger depths
-        }
-      })
-      .filter(e => e > 0)       // remove negatives (shouldn't be necessary!)
-      .numSorted                // sort small-large
-      .unique()                 // remove duplicates
+      .slice(start, keep())       // reduce layers based upon start and keep()
+      .map(e => { return rounding(e) }) // round offsets
+      .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
+      .numSorted                  // sort small-large
+      .unique()                   // remove duplicates
 
-    console.log('slices', offsets)
+    console.log('offsets', offsets)
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
       const offsetRange = range(offsets[0], offsets.last())   // range from offsets
-      //ARROW: easeInCircNormalized : number : normalizes and shifts value using circular easing
-      const easeInCircNormalized = a => {
-        return 1 - sqrt(1 - pow(offsetRange.normalize(a), 2))
-      }
-      const highColSpread = 0.1                             // spread up from base (0.9) to max highlight luma (1!)
-      const shadColSpread = 0.25                            // spread down from base (0.9) to min shadow luma (0.65)
-      const maxHighlight = 1                                // 0.9 + 0.1 = 1!
-      const minShadow = (1 - highColSpread - shadColSpread) // 0.9 - 0.25 = .65
-      const perceptualDivisor = 32                          // 
-      neuShades = offsets
-        .map(e => {
-          const mag = e / pixToUserUnits    // convert pixelUnit to userUnit magnitude
-          // const blurRadius = mag / sqrt(2)  // DEPRECATE : whatever logic this once went by is actually flawed
-          const blurRadius = mag
-          const highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(e) / perceptualDivisor)
-          const highCol = achromic(highColLuma)
-          const shadColLuma = minShadow + (shadColSpread * easeInCircNormalized(e) / perceptualDivisor)
-          const shadCol = achromic(shadColLuma)
-          let shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, highCol, shadCol, inset, blur, curve)
 
-          // const colorSpread = colSpread - round(pow(offsetRange.normalize(e), 2) * colSpread / 3)
-          // const colors = baseCol.highShadComplementSpread(colorSpread)
-          // shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, colors[0], colors[1], inset, blur, curve)
-          return shades
-        })
-        .flat()
+
+      //ARROW: easeInCircNormalized : number : normalizes and shifts value using circular easing
+      const easeInCircNormalized = (x, exp = 2) => { return 1 - sqrt(1 - pow(offsetRange.normalize(x), exp)) }
+      const easeOutCircNormalized = (x, exp = 2) => { return sqrt(1 - pow(offsetRange.normalize(x), exp)) }
+      const easeInExpoNormalized = (x, exp = 2) => { return x === 0 ? 0 : pow(2, 10 * offsetRange.normalize(x) - 10) }
+      const easeInOutCircNormalized = (x, exp = 2) => {
+        x = offsetRange.normalize(x)
+        return x < 0.5 ? (1 - sqrt(1 - pow(2 * x, exp))) / 2
+          : (sqrt(1 - pow(-2 * x + 2, exp)) + 1) / 2
+      }
+      //MARK: "I" Cut
+      if (curve === 'i' || curve === 'r2') {
+        const highColSpread = 0.06                           // spread up from base (0.9) to max highlight luma (1!)
+        const shadColSpread = 0.275                       // spread down from base (0.9) to min shadow luma (0.7)
+        const maxHighlight = 0.9 + highColSpread             // 0.9 + 0.04 = 0.94
+        const minShadow = (0.9 - shadColSpread)              // 0.9 - 0.25 = 0.65
+        const perceptualDivisor = 16                     // compensates for blur, etc to get visually correct result
+
+        blur = true
+        neuShades = offsets
+          .map((offset, i) => {
+            mag = offset / pixToUserUnits * 1         // convert pixelUnit to userUnit magnitude
+            const blurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 4  //
+            const highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset, 2) / perceptualDivisor)
+            const shadColLuma1 = minShadow + (shadColSpread * easeInOutCircNormalized(offset, 3) / perceptualDivisor)
+            const shadColLuma2 = minShadow + (4 * shadColSpread * easeOutCircNormalized(offset, 2) / perceptualDivisor)
+
+            const highCol = achromic(highColLuma)
+            const shadCol1 = achromic(shadColLuma1)
+            // const shadCol2 = achromic(shadColLuma2)
+            const shadCol2 = achromic(shadColLuma1).setAlpha(.25)
+
+            let shades = new OpArray
+            const shades1 = this.neuShadeSVG(
+              vector.setMag(mag).rotate(rotOffset), blurRadius, highCol, shadCol1, inset, blur, curve
+            )
+            shades.push(shades1)
+
+            if (i === offsets.length - 1) {
+              // const shades2 = this.neuShadeSVG(vector.setMag(mag * 1).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
+              // shades.push(shades2)
+            }
+            return shades.flat()
+          }).flat()
+      }
+
+      if (curve === 'j' || curve === 'r') {
+        let reflLightRange
+        if (curve === 'r') {                            // "R" cut
+          const rangeSize = mag                         // shadow range
+          reflLightRange = rangeSize / 2.2                // visual observation shows relfLight to be about 1/5 the shadow
+          console.log(`reflLightRange`, reflLightRange)
+          if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
+            offsets.push(reflLightRange)
+            offsets = offsets.numSorted
+          }
+        }
+        console.log('bonus offsets', offsets)
+
+        const highColSpread = 0.1                           // spread up from base (0.9) to max highlight luma (1!)
+        const shadColSpread = 0.275                         // spread down from base (0.9) to min shadow luma (0.7)
+        const reflHighMult = 0.65                            // 
+        const reflShadMult = 1.3                            //
+        const reflHighSpread = reflHighMult * shadColSpread // spread down from base (0.9) to min shadow luma (0.65)
+        const maxHighlight = 1                                            // 0.9 + 0.1 = 1!
+        const minShadow = (1 - highColSpread - shadColSpread)             // 0.9 -0.1 - 0.25 = .65
+        const reflHighlight = (1 - highColSpread - reflHighSpread)        // 0.9 -0.1 - 0.2  = .7
+        const perceptualDivisor = 8                        // compensates for blur, etc to get visually correct result
+        neuShades = offsets
+          .map(offset => {
+            const mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
+            let blurRadius = mag
+            blurRadius = mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
+            let highColLuma, shadColLuma
+            // "r" curve
+            if (curve === 'r') {
+              if (offset <= reflLightRange) {               // add relfective highlight to shadow
+                highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                shadColLuma = reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+              } else {
+                highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                shadColLuma = minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+              }
+              // "j" curve
+            } else if (curve === 'j') {
+              // blur = false
+              if (offset <= reflLightRange * 1) {
+                highColLuma = maxHighlight - (highColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+                shadColLuma = minShadow + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+                // shadColLuma = reflHighlight + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+              } else {
+                highColLuma = maxHighlight - (highColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+                shadColLuma = minShadow + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+                // shadColLuma = minShadow * reflHighMult * reflShadMult + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+              }
+            }
+
+            const highCol = achromic(highColLuma)
+            const shadCol = achromic(shadColLuma)
+
+            let shades = this.neuShadeSVG(
+              vector.setMag(mag).rotate(rotOffset), blurRadius, highCol, shadCol, inset, blur, curve
+            )
+            return shades
+          })
+          .flat()
+      }
+      //NOTE: These other options unused except for FAIL/Error outputs
     } else {
       let color1, color2
       //NOTE: AVOID - 'multiAlpha' causes extreme banding artifacts in my implementation
@@ -513,11 +705,14 @@ class Shade {
         color1 = cols[0]
         color2 = cols[1]
       }
+
       neuShades = offsets
-        .map(e => {
-          const mag = e / pixToUserUnits
+        .map(o => {
+          const mag = o / pixToUserUnits
           const blurRadius = mag / sqrt(2)
-          const shades = this.neuShadeSVG(vector.setMag(mag), blurRadius, color1, color2, inset, blur, curve)
+          const shades = this.neuShadeSVG(
+            vector.setMag(mag).rotate(rotOffset), blurRadius, color1, color2, inset, blur, curve
+          )
           return shades
         })
         .flat()
@@ -531,10 +726,11 @@ class Shade {
     }
     console.error(`neuShades`, neuShades)
     console.error(`vect`, neuShades.map(ns => [ns.dx, ns.dy]))
-    console.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
-    console.error(`color`, neuShades.map(ns => ns.color.levels[0]))
+    // console.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
+    console.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
     return neuShades
   }
+
   // MARK: OG CSS Methods
   // #region OG CSS Methods
   //METH: Box-Shadow CSS
@@ -620,6 +816,7 @@ class ProtoColor extends p5.Color {
 
   get complementHue() { return (this.hue + 180 % 360) }
 
+  setAlpha(alpha) { return protoColor(`hsba(${this.hue}, ${this.saturationsat}%, ${this.brightness}%, ${alpha})`) }
   setSaturation(sat) { return protoColor(`hsba(${this.hue}, ${sat}%, ${this.brightness}%, ${this.alpha})`) }
 
   highShadComplementSpread(spread = 16) {
