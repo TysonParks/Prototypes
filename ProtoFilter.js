@@ -76,8 +76,8 @@ class ProtoFilter {
   dropShadow(shadows, clearInset = true) {
     shadows = OpArray.format(shadows)
 
-    const batchlayering = false
-    const normalBlending = true
+    const batchlayering = false             // always use false
+    const normalBlending = true             // always use true
     const insetShadows = shadows.filter(shadow => shadow.inset)
     const outsetShadows = shadows.filter(shadow => !shadow.inset)
     // const insetLightShads = shadows.filter(shad => shad.inset && shad.lighten)
@@ -101,9 +101,16 @@ class ProtoFilter {
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
 
-    createSVGElt('feGaussianBlur')
+    createSVGElt('feMorphology')
       .attribute('in', 'SourceAlpha')
-      .attribute('stdDeviation', 0)
+      .attribute(`operator`, `erode`)
+      .attribute('radius', 0.1 / FRAME.pixToUserUnits)
+      .attribute('result', 'erodedAlpha')
+      .parent(this.filter)
+
+    createSVGElt('feGaussianBlur')
+      .attribute('in', 'SourceGraphic')
+      .attribute('stdDeviation', 0 / FRAME.pixToUserUnits)
       .attribute('result', 'blurredAlpha')
       .parent(this.filter)
 
@@ -211,7 +218,7 @@ class ProtoFilter {
       }
     }
 
-    //METH:
+    //ARROW: processBatches() : 
     const processBatches = (shadows, inset = true) => {
       const batches = shadows.reduce((result, shadow) => {
         // console.log('result', result)
@@ -254,10 +261,7 @@ class ProtoFilter {
 
     }
 
-
-
     if (insetShadows.length > 0) {
-
       if (batchlayering) {
         const insetBatches = processBatches(insetShadows, true)
         console.log('insetBatches', insetBatches)
@@ -270,7 +274,6 @@ class ProtoFilter {
     }
 
     if (outsetShadows.length > 0) {
-
       if (batchlayering) {
         const outsetBatches = processBatches(outsetShadows, false)
         console.log('outsetBatches', outsetBatches)
@@ -344,7 +347,7 @@ class ProtoFilter {
     let newGroup = parentSVG.querySelector(`g[filter = "${filterUrl}"][id ^= "${this.id}-"]`)
     if (!newGroup) {
       newGroup = createSVGElt("g")
-        .id(`${this.id} -${element.id()} `)
+        .id(`${this.id} -${element.id()}`)
         .attribute("filter", filterUrl)
         .parent(parentSVG)
         .child(this.defs)
