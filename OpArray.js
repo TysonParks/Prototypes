@@ -279,9 +279,6 @@ class OpArray extends Array {
     for (let i = 0; i < thisArray.lastIndex; i++) {
       let keep = R.random_int(keepRange.start, keepRange.end)
       let remove = R.random_int(removeRange.start, removeRange.end)
-      // print(`i: ${i}`)
-      // print(`keep: ${keep}`)
-      // print(`remove: ${remove}`)
       let removeIndex
       for (let j = 0; j < remove; j++) {
         removeIndex = i + keep + j
@@ -290,16 +287,12 @@ class OpArray extends Array {
         } else {
           j = remove
         }
-        // print(`j: ${j}`)
-        // print(`removeIndex: ${removeIndex}`)
-        // print(`remove: ${remove}`)
       }
       i = removeIndex
     }
-    // print(thisArray)
+
     let filtered = thisArray.filter(e => e !== null)
     thisArray.splice(0, thisArray.length, ...filtered)
-    // print(filtered)
     return thisArray
   }
 }
