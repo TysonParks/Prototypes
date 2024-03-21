@@ -57,14 +57,17 @@ function functionTestPrint() {
 
   // console.log(`subtest01`, vert0.sub(vert1).mag())
   // console.log(`subtest02`, vert1.sub(vert0).mag())
-  console.log(`vert2 is on line? (true)`, seg1.vertIsOnLine(vert2))
-  console.log(`vert3 is on line? (true)`, seg1.vertIsOnLine(vert3))
-  console.log(`vert4 is on line? (false)`, seg1.vertIsOnLine(vert4))
+  // console.log(`vert2 is on line? (true)`, seg1.vertIsOnLine(vert2))
+  // console.log(`vert3 is on line? (true)`, seg1.vertIsOnLine(vert3))
+  // console.log(`vert4 is on line? (false)`, seg1.vertIsOnLine(vert4))
 
-  console.log(`seg2 is colinear with seg3? (true)`, seg2.isColinearWith(seg3))
+  // console.log(`seg2 is colinear with seg3? (true)`, seg2.isColinearWith(seg3))
 
-  console.log(`distance between vert0 and vert1 (1)`, vert0.dist(vert1))
-  console.log(`distance between vert1 and vert2 (0.75)`, vert1.dist(vert2))
+  // console.log(`distance between vert0 and vert1 (1)`, vert0.dist(vert1))
+  // console.log(`distance between vert1 and vert2 (0.75)`, vert1.dist(vert2))
+  console.log(`current angleMode`, _angleMode)
+  angleMode(DEGREES)
+  console.log(`current angleMode`, _angleMode)
 
   // NOTE: hash display
   // print(printInputToGridRows(values32x8bit, 4, 8))
