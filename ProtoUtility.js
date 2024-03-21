@@ -581,6 +581,13 @@ function approxToDec(number, decimalPlaces = 2, mode = 0) {
   }
 }
 
+// FUNC: swapLets() swap values of `let` variables
+function swapVals(a, b) {
+  const temp = a
+  a = b
+  b = temp
+}
+
 // FUNC: equalsRoundedDec() round to number of decimal places
 function equalsRoundedDec(num1, num2, decimalPlaces) {
   num1 = roundToDec(num1, decimalPlaces)
@@ -593,6 +600,9 @@ function equalsRoundedDec(num1, num2, decimalPlaces) {
 // SIZE: 27 lines
 function range(start = 0, end = 1) { return new Range(start, end) }
 class Range {
+  start
+  end
+
   constructor(start = 0, end = 1) {
     if (arguments.length === 1) {
       if (start instanceof Array) {
@@ -604,13 +614,20 @@ class Range {
       this.end = end, this.start = start
     }
   }
-  get size() { return abs(this.end - this.start) + 1 }
+  //MARK: Computed
+  get usesIntegers() { return Number.isInteger(this.start) && Number.isInteger(this.end) }
+  get size() { return abs(this.end - this.start) }
+  get cycleSize() { return this.size + 1 }
 
+  //MARK: Methods
+  //METH: array() : OpArray : creates an array of numbers within range given the step size
   array(step = 1) {
+    if (!this.usesIntegers) { return }
     return OpArray.from({ length: (this.end - this.start) / step + 1 }, (_, i) => this.start + (i * step))
   }
-  forEach(callbackFn) { return this.array().forEach(callbackFn) }
-  between(x) { return x >= this.start && x <= this.end }
+  //METH: forEach() : 
+  forEach(callbackFn) { return this.array().forEach(callbackFn) }             //UNUSED?
+  between(x) { return x >= this.start && x <= this.end }                      //UNUSED? -only used in ABFeaturesScript
   convertRange(x, range2) {
     return (x - this.start) * (range2.end - range2.start) / (this.end - this.start) + range2.start
   }
@@ -618,7 +635,7 @@ class Range {
   normalizeSubRange(subrange) {
     return range(normalize(subrange.start, this), normalize(subrange.end, this))
   }
-  cycle(x) { return ((x - this.start) % this.size + this.size) % this.size + this.start }
+  cycle(x) { return ((x - this.start) % this.cycleSize + this.cycleSize) % this.cycleSize + this.start }
 }
 
 // Sequence generator function (commonly referred to as "range", e.g. Clojure, PHP etc)
