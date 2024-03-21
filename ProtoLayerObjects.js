@@ -2443,6 +2443,64 @@ class CellGroup extends ProtoLayer {
     console.groupEnd()
     console.log(``)
   }
+  //METH: cutIslands()
+  cutIslands({
+    profile,
+    layerStart,           // layerStart should be greater than layerEnd, swapped if not!
+    layerEnd,           // if unassigned, layerEnd = cutEnd
+    loftScale = 1,
+    outsetCut = true,
+    angleOffset,
+    amount = 1,
+    perimeter = false,
+    direction = Direction.Cardinal,
+    spanOp = 1 / 1,       // ratio of widths, start to end
+    loftOp = 1 / 1,       // ratio of lofts, start to end
+    selOps = []
+  } = {}) {
+    if (loftScale === 0) {                                            // loftScale cant be less than 0
+      console.error(`cutIslands error: zero loft`)
+      return                                                          // exit
+    }
+    if (loftScale > 1) {                                              // loftScale cant be greater than 1
+      console.error(`cutIslands error: loft is greater than span, reducing to span`)
+      loftScale = 1                                                   // change to 1
+    }
+    if (layerStart < layerEnd) { swapVals(layerStart, layerEnd) }     // swap if needed
+
+    const layerRange = range(layerStart, layerEnd)                    // create range
+    const loft = layerRange.size * loftScale                          // calc loft
+    let cutRange
+    if (loftScale === 1) {
+      cutRange = layerRange
+    } else {
+      if (outsetCut) {
+        console.log(`using outsetCut`)
+        cutRange = range(layerStart, layerStart - loft)
+      } else {
+        console.log(`using insetCut`)
+        cutRange = range(layerEnd + loft, layerEnd)
+      }
+    }
+    console.log(`layerRange`, layerRange)
+    console.log(`cutRange`, cutRange)
+    console.log(`loft`, loft)
+
+    if (amount === 1) {
+      const insetScale = profile.isInset ? cutRange.start : cutRange.end
+      const cut = new ProtoCut({
+        profile: profile,
+        depth: loft * this.grid.minCellWidth,
+        angleOffset: angleOffset
+      })
+
+      console.log(`cut filters`, cut.filters)
+      cut.filters.forEach(filter => {
+        console.log({ filter: filter, direction: direction, insetScale: insetScale })
+        this.createSubIslands({ filter: filter, direction: direction, insetScale: insetScale })
+      })
+    }
+  }
   //METH: createShapeGroup() :
   createShapeGroup({ islands, filter, islandLevel, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     const shapeGroup = new ShapeGroup({
