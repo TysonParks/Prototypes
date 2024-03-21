@@ -278,57 +278,6 @@ function gridTests2() {
   const minCellSize = min(GRID.cellSize.x, GRID.cellSize.y)
   console.log('minCellSize', minCellSize)
   console.log('minCellSWidth', minCellSWidth)
-  //inset: maxShadow <= min(cellSize.x, cellsize.y)
-  //outset: maxShadow <= 1-inset * min(cellSize.x, cellsize.y)
-
-  const shadeStack0 = Shade.neuShadeSVGFactory({
-    curve: 'j',
-    mag: minCellSize * -1
-  })
-  const shader0 = createFilter().dropShadow(shadeStack0)
-
-  const shadeStack1 = Shade.neuShadeSVGFactory({
-    curve: 'i',
-    mag: minCellSize * .5
-  })
-  const shader1 = createFilter().dropShadow(shadeStack1)
-
-  const shadeStack4 = Shade.neuShadeSVGFactory({
-    curve: 'r',
-    mag: minCellSize * -0.25,
-    vector: Shade.shadVect().rotate(180)
-  })
-  const shader4 = createFilter().dropShadow(shadeStack4)
-
-  const shadeStack5 = Shade.neuShadeSVGFactory({
-    curve: 'i',
-    mag: minCellSize * .25,
-  })
-  const shader5 = createFilter().dropShadow(shadeStack5)
-
-  const shadeStack8 = Shade.neuShadeSVGFactory({
-    curve: 'r',
-    mag: minCellSize * .5,
-    vector: Shade.shadVect().rotate(180)
-  })
-  const shader8 = createFilter().dropShadow(shadeStack8)
-
-  const shadeStack9 = Shade.neuShadeSVGFactory({
-    curve: 'r2',
-    mag: minCellSize * -.5,
-  })
-  const shader9 = createFilter().dropShadow(shadeStack9)
-
-
-
-
-
-  // const frameInset = R.random_num(0.02, 0.18)
-
-  // FRAME.setFilter(shader4)
-  // GRID.setFilter(shader2)
-  // console.log('FRAME Filter', FRAME.filter.id)
-  // console.log('gridFilter', GRID.filter.id)
 
 
   let group000, group001, group002, group003
