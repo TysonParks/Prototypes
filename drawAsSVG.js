@@ -550,6 +550,8 @@ class ProtoSVG {
 }
 
 // MARK: Proto Geometry Classes
+
+
 // CLASS: Vertex
 // SIZE: 109 lines
 function vert(x = 0, y = 0) {
@@ -638,6 +640,15 @@ class Vertex extends p5.Vector {
   // sub(vert) { return Vertex.sub(this, vert) }
   // mult(vert) { return Vertex.mult(this, vert) }
   // div(vert) { return Vertex.div(this, vert) }
+
+  static rotate(v, deg) { return v.copy().rotate(deg) }
+  static cleanRotate(v, deg, decimal = 5) {
+    const initial = Vertex.rotate(v, deg)
+    const x = roundToDec(initial.x, decimal)
+    const y = roundToDec(initial.y, decimal)
+    const z = roundToDec(initial.z, decimal)
+    return initial instanceof Vertex ? vert(x, y) : new p5.Vector(x, y, z)
+  }
 
   static add(a, b) { return vert(p5.Vector.add(a, b)) }
   static sub(a, b) { return vert(p5.Vector.sub(a, b)) }
