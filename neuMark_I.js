@@ -25,20 +25,23 @@ class Profile {
   static FlatTypes = [`i`, `v`]
 
   //MARK: Computed
-  get isICut() { return this.type === `i` }                    // is `i` type
-  get isJCut() { return this.type === `j` }                    // is `j` type
-  get isRCut() { return this.type === `r` }                    // is `r` type
-  get isFCut() { return this.type === `f` }                    // is `f` type
-  get isVCut() { return this.type === `v` }                    // is `v` type
+  get isI() { return this.type === `i` }                    // is `i` type
+  get isJ() { return this.type === `j` }                    // is `j` type
+  get isR() { return this.type === `r` }                    // is `r` type
+  get isF() { return this.type === `f` }                    // is `f` type
+  get isV() { return this.type === `v` }                    // is `v` type
+
+  get isIn() { return this.cutIn }
+  get isOut() { return !this.cutIn }
 
   get isCurve() { return this.CurveTypes.includes(this.type) } // is in CurveTypes
   get isFlat() { return this.FlatTypes.includes(this.type) }   // is in FlatTypes
-  get isSingleDepth() { return this.isICut || this.isJCut }    // only requires single filter / offsets in single direction
+  get isSingleDepth() { return this.isI || this.isJ }    // only requires single filter / offsets in single direction
 
   get isInset() { return this.isRType ? !this.cutIn : this.cutIn }       // filter insets from shape border (use cutRange.start)
 
   get insetDepth() {
-    if (this.isRCut) { return this.cutIn ? 0.35 : 0.45 }
+    if (this.isR) { return this.cutIn ? 0.35 : 0.45 }
     else { return 1 }
   }
   get outsetDepth() {
@@ -49,7 +52,7 @@ class Profile {
 
 // CLASS: ProtoCut
 class ProtoCut {
-  profile           // cut profile: [i,j,r,f,v] combined with [in, out]
+  profile           // Profile: cut profile: [i,j,r,f,v] combined with [in, out]
   depth             // (end) depth
   angleOffset = 0   // offset angle from global vector
   filters = new OpArray
@@ -70,33 +73,28 @@ class ProtoCut {
   get spread() { return this.profile.isSingleDepth ? this.depth : this.depth + this.depth2 }
 
   //MARK: Public Methods
-  //METH: createShadeStacks()
-  // createShadeStacks() {
-  //   if (this.amount === 1) { this.#createSingleShader() }
-  //   else if (this.amount > 1) { this.#createStairShader() }
-  //   else { console.error(`unsupported value`) }
-  // }
+
 
   //MARK: Private Methods
 
   //METH: createSingleShader()
   #createFilters() {
+    if (abs(this.depth) < 1 / FRAME.pixToUserUnits) { return }
     if (this.profile.isSingleDepth) { this.#createShader() }
-    if (this.profile.isRCut) {
+    if (this.profile.isR) {
       this.#createShader(`r`, this.depth)
       this.#createShader(`r2`, -this.depth)
       // this.#createShader(`r`, this.depth)
     }
-    if (this.profile === `f`) {
+    if (this.profile.isF) {
       this.#createShader(`j`, this.depth)
       this.#createShader(`r`, this.depth2)
     }
     //TODO: implement v shader
-    if (this.profile === `v`) { console.error(`ProtoCut "v" profile not yet implemented`) }
+    if (this.profile.isV) { console.error(`ProtoCut "v" profile not yet implemented`) }
   }
   //METH: createShader()
   #createShader(curve = this.profile.type, mag = this.depth) {
-
     const cutIn = this.profile.cutIn ? 1 : -1
     const r = curve === `r` ? -1 : 1
     const r2 = curve === `r2` ? 1 : -1
@@ -107,30 +105,7 @@ class ProtoCut {
     const filter = createFilter().dropShadow(stack)
     this.filters.push(filter)
   }
-  //METH: createStairShader()
-  // #createStairShader() {
-  //   if (!this.startDepth) { this.startDepth = this.spread / this.amount }
-  //   const stepDepth = (this.spread - this.startDepth) / this.amount
-  //   if (this.isSingleDepth) {
-  //     for (let i = 1; i <= this.amount; i++) {
-  //       this.#createShader(this.profile, i * stepDepth)
-  //     }
-  //   }
-  //   if (this.profile === `r`) {
-  //     for (let i = 1; i <= this.amount; i++) {
-  //       this.#createShader(`r`, i * stepDepth)
-  //       this.#createShader(`r2`, i * stepDepth)
-  //     }
-  //   }
-  //   if (this.profile === `f`) {
-  //     for (let i = 0; i < this.amount; i++) {
-  //       this.#createShader(`j`, stepDepth * i + this.depth)
-  //       this.#createShader(`r`, stepDepth * i + this.stepDepth)
-  //     }
-  //   }
-  //   //TODO: implement v shader
-  //   if (this.profile === `v`) { console.error(`ProtoCut "v" profile not yet implemented`) }
-  // }
+
   //TODO: implement createPerimeter()
   //METH: createPerimeter()
   #createPerimeterShader() {
@@ -163,7 +138,7 @@ class Shade {
     const highlight = this.dropShadSVG({
       x: highMag * vector.x,
       y: highMag * vector.y,
-      blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
+      blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 4 : 1) * jCutMagMult * blurRad * blurRatio,
       col: highCol,
       inset: inset
     })
