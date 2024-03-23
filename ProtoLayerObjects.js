@@ -595,12 +595,15 @@ class SelectionBounds {
 // NOTE: drawRect = false
 class Grid extends ProtoLayer {
   gridSize
+  startCoord
+  offset
   cellRows
   cellRowsPref
+  interGrid
   // gridCellBounds
   groups = new OpArray
 
-  constructor({ protoParent, gridSize, insetScale, transform } = {}) {
+  constructor({ protoParent, gridSize, insetScale = 1, transform, startCoord = vert(), interGrid = false } = {}) {
     super({
       protoParent: protoParent,
       insetScale: insetScale,
@@ -608,8 +611,9 @@ class Grid extends ProtoLayer {
       // drawRect: true,
       // drawFilter: true,
     })
-    if (!(gridSize instanceof Vertex)) { gridSize = vert(gridSize) }
     this.gridSize = gridSize
+    this.startCoord = startCoord
+    this.offset = interGrid ? 0.5 : 0
     this._type = 'Grid'
 
     // this.drawLabel = true
@@ -617,14 +621,10 @@ class Grid extends ProtoLayer {
     // this.drawPerimeter = true
     // this.drawInset = true
 
-
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
     this.cellRowsPref = this.transformedCellRows(transform)
-    // this.gridCellBounds = this.cellBounds()
     this.setFrameRadii()
-
-    // this.finishSetup(S.Grids)
   }
 
   // MARK: Grid Computed Properties
@@ -676,9 +676,9 @@ class Grid extends ProtoLayer {
   //METH: 
   cellAnchor(x, y) { return Vertex.mult(this.cellSize, vert(x, y)).add(this.insetAnchor) }
   //METH: 
-  index(x, y) { return gridPointIndex(x, y, this.gridSize.x) }
+  index(x, y) { return gridPointIndex(x, y, this.gridSize.x, this.offset) }
   //METH: 
-  coords(index) { return gridCoords(index, this.gridSize.x) }
+  coords(index) { return gridCoords(index, this.gridSize.x, this.offset) }
   //METH: 
   coordsAreInBounds(x, y, bounds = this.gridCellBounds) {
     return bounds.xCellMin <= x && x <= bounds.xCellMax && bounds.yCellMin <= y && y <= bounds.yCellMax
@@ -840,8 +840,9 @@ class Grid extends ProtoLayer {
   }
   //METH: 
   shrunkSelection(selection = this.cells, amount = 1, direction = Direction.Cartesian) {
-    const excludeEdges = this.grid.inline(selection, amount, direction)
-    return this.boundsCells.exclude(excludeEdges, 'id')
+    const excludeEdges = this.inline(selection, amount, direction)
+    // return excludeEdges
+    return selection.exclude(excludeEdges, 'id')
   }
   //METH: converts 1D selection array to a 2D CellRows array
   toCellRows(selection) {
@@ -889,7 +890,7 @@ class Grid extends ProtoLayer {
     }
     return selection
   }
-  //METH: 
+  //METH: validNeighbors() : [cell]
   validNeighbors({ selection = this.cells, bounds = this.gridCellBounds, direction = Direction.All } = {}) {
     let cells = OpArray.from(new Set(selection.flatMap(e => e.validNeighborsCoords(direction, bounds))))
     // console.log(`validNeighbors selection`, selection.map(c => c.id))
@@ -1736,20 +1737,20 @@ class Grid extends ProtoLayer {
   cellRowsRotated(degree = 90, selection = this.cellRows) { return selection.rotated2D(normalizeDegree(degree)) }
   //METH:
   cellRowsFlipped(direction = "negOrdinal", selection = this.cellRows) { return selection.flipped2D(direction) }
-  //METH:
+  //METH: createRowsArray()
   #createRowsArray() {
     let size = this.gridSize
     let rows = new OpArray(size.y)
-    for (let j = 0; j < size.y; j++) {
+    for (let j = this.startCoord.y; j < size.y; j++) {
       let row = new OpArray(size.x)
-      for (let i = 0; i < size.x; i++) {
+      for (let i = this.startCoord.x; i < size.x; i++) {
         let index = this.index(i, j)
         row[i] = new Cell({
           protoParent: this,
           svgParent: this.svgElt,
           grid: this,
-          index: index,
-          coords: vert(i, j),
+          index: index + this.offset,
+          coords: Vertex.add(vert(i, j), vert(this.offset)),
           available: true,
         })
       }
@@ -1757,6 +1758,7 @@ class Grid extends ProtoLayer {
     }
     return OpArray.from(rows)
   }
+
   //METH:
   setFrameRadii() { FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize) }
   //METH:
@@ -2414,14 +2416,15 @@ class CellGroup extends ProtoLayer {
     console.groupEnd()
   }
   //METH: createSubIslands() :
-  createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1 } = {}) {
+  createSubIslands({ filter, cut, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     console.warn(`${this.id}.createSubIslands, this.islands =`, this.islands.map(i => i.id))
     console.groupCollapsed(`Island.createSubIslands`)
     const newIslands = this.perimeterIslands.map(pIsle =>
       pIsle.createSubIslands({
         islandLevel: this.islandLevel + 1,
         direction: direction,
-        filter: filter,
+        // filter: filter,
+        cut: cut,
         insetScale: insetScale,
         // drawFilter: drawFilter,
       }))
@@ -2467,33 +2470,40 @@ class CellGroup extends ProtoLayer {
       loftScale = 1                                                   // change to 1
     }
     if (layerStart < layerEnd) { swapVals(layerStart, layerEnd) }     // swap if needed
-
     const layerRange = range(layerStart, layerEnd)                    // create range
-    const loft = layerRange.size * loftScale                          // calc loft
-    let cutRange
-    if (loftScale === 1) {
-      cutRange = layerRange
-    } else {
-      if (outsetCut) {
-        console.log(`using outsetCut`)
-        cutRange = range(layerStart, layerStart - loft)
-      } else {
-        console.log(`using insetCut`)
-        cutRange = range(layerEnd + loft, layerEnd)
-      }
-    }
-    console.log(`layerRange`, layerRange)
-    console.log(`cutRange`, cutRange)
-    console.log(`loft`, loft)
+    const stepWidth = layerRange.size / amount                          // equal step division     
 
-    if (amount === 1) {
-      const insetScale = profile.isInset ? cutRange.start : cutRange.end
+
+    let cutStart, cutEnd
+    for (let i = 0; i < amount; i++) {
+      let loft = layerRange.size * loftScale / amount                 // calc loft
+
+      cutStart = layerStart - i * stepWidth
+      cutEnd = cutStart - stepWidth
+      if (loftScale < 1) {
+        if (outsetCut) {
+          console.log(`using outsetCut`)
+          cutEnd = cutStart - loft
+        } else {
+          console.log(`using insetCut`)
+          cutStart = cutEnd + loft
+        }
+      }
+      const cutRange = range(cutStart, cutEnd)
+      const insetScale = profile.isInset ? cutStart : cutEnd
+      // console.log(`layerRange`, layerRange)
+      // console.log(`cutRange`, cutRange)
+
+
+      if (loft > insetScale) { loft = insetScale }
+
       const cut = new ProtoCut({
         profile: profile,
         depth: loft * this.grid.minCellWidth,
         angleOffset: angleOffset
       })
 
+      console.log(`loft`, loft)
       console.log(`cut filters`, cut.filters)
       cut.filters.forEach(filter => {
         console.log({ filter: filter, direction: direction, insetScale: insetScale })
@@ -2651,6 +2661,7 @@ class Cell extends ProtoLayer {
   islandChecked = false
   // color
   segments
+  interCell
 
   constructor({ protoParent, svgParent, grid, index, coords, available = true, color = '888' } = {}) {
     super({
@@ -2759,6 +2770,29 @@ class Cell extends ProtoLayer {
     return cell.segments.filter(seg => seg.equals(side))
   }
   // #endregion
+  // MARK: InterCell  Methods
+  //METH: interCopy()
+  createInterCopy(grid = this.grid.interGrid) {
+    if (this.interCell) {
+      console.error(`interCell already existed!`)
+      return
+    }
+    if (this.grid.validNeighbors({ selection: [this], direction: Direction.DownRight }).isEmpty) {
+      // console.error(`No possible interCell: out of bounds.`)
+      return
+    }
+    const interIndex = this.index + .5
+    const interCoords = Vertex.add(this.coords, vert(0.5))
+    const interCell = new Cell({
+      protoParent: grid,
+      svgParent: grid.svgElt,
+      grid: grid,
+      index: interIndex,
+      coords: interCoords,
+    })
+    this.interCell = interCell
+  }
+
   // MARK: Cell Setup Methods
   //METH:
   drawElement() {
@@ -2793,12 +2827,11 @@ class Island extends ProtoLayer {
 
   constructor({
     cells,
-    filter,
+    cut,
     protoParent,
     svgParent,
     grid,
     groupID,
-    islandLevel,
     parentIslandID,
     direction = Direction.Cardinal,
     perimeterType = `maxCorners`,
@@ -2818,7 +2851,7 @@ class Island extends ProtoLayer {
     })
     console.log(`New Island! with arguments:`, arguments[0])
     this.cells = cells
-    this._filter = filter
+    this.cut = cut
     this.grid = grid
     this.groupID = groupID
     this.direction = direction
@@ -2931,10 +2964,9 @@ class Island extends ProtoLayer {
   //FIXME: fix arcRadius calculation to make this work with non-square grid cells
   recalcdCells({
     newInsetScale,
-    loft,
+    loft = 0,
     shape = this.shape,
     absolute = false,
-    padding = 0.2
   } = {}) {
     if (this.perimeterType === 'minCorners' || this.directionHierarchy < 2) { return this.cells }
     if (shape.simpleSubShapes.isEmpty) {
@@ -2947,7 +2979,7 @@ class Island extends ProtoLayer {
     let shapeCorners = shape.insetSubShapes.map(sub => {
       console.log(`sub`, sub)
       return sub
-        .filter(seg => // filter corners with minimum curvature
+        .filter(seg =>                                  // filter corners with minimum curvature
           seg.startNeighbor.availableEndLength > cellRadius || seg.availableStartLength > cellRadius
         )
     }).flat(1)
@@ -2957,41 +2989,41 @@ class Island extends ProtoLayer {
       console.groupEnd()
       return this.cells
     } else {
-      let removeCells = new OpArray // cells to remove
-      let addCells = new OpArray // cells to add
+      let removeCells = new OpArray                     // cells to remove
+      let addCells = new OpArray                        // cells to add
       shapeCorners.forEach(seg => {
         //FIXME: it appears that arcRadius is not correct
         const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
-        const cornerPos = seg.corners.start // position of normalCorner
+        const cornerPos = seg.corners.start             // position of normalCorner
         const neighbor = seg.startNeighbor
         //NOTE: arcRadius: only correct if corner is circular arc and cell aspect is square
         //FIXME: try to fix bug when trying to create hierarchy 0/1 subIslands on non-square celled grids 
         //FIXME: issue may be in usage of cell.center as this assumes cells to be square
         const arcRadius = min(seg.availableStartLength, neighbor.availableEndLength)
-        const startCorner = neighbor.finalCubicEndVert// startCorner of arc
-        const normalCorner = seg.start // normal pointer of arc
-        const endCorner = seg.finalCubicStartVert // endCorner of arc
+        const startCorner = neighbor.finalCubicEndVert  // startCorner of arc
+        const normalCorner = seg.start                  // normal pointer of arc
+        const endCorner = seg.finalCubicStartVert       // endCorner of arc
         const origin = Vertex.add(startCorner, segment(normalCorner, endCorner).lineVector)// origin of arc
         const squareVerts = OpArray.from([startCorner, normalCorner, endCorner, origin]).gridVertSorted
         console.log(`squareVerts`, squareVerts)
 
         const cellOrigin = (cell, remove = true) => {
           // console.warn(`arcOrigins`, cell.arcOrigins)
-          if (cell.aspect.isPortrait) {   // isPortrait
+          if (cell.aspect.isPortrait) {                 // isPortrait
             if (remove) {
               return cornerPos.isUp ? cell.arcOrigins.start : cell.arcOrigins.end
             } else {
               return cornerPos.isDown ? cell.arcOrigins.start : cell.arcOrigins.end
             }
           }
-          if (cell.aspect.isLandscape) {  // isLandscape
+          if (cell.aspect.isLandscape) {                // isLandscape
             if (remove) {
               return cornerPos.isLeft ? cell.arcOrigins.start : cell.arcOrigins.end
             } else {
               return cornerPos.isRight ? cell.arcOrigins.start : cell.arcOrigins.end
             }
           }
-          return cell.center              // isSquare
+          return cell.center                            // isSquare
         }
 
 
@@ -3010,13 +3042,13 @@ class Island extends ProtoLayer {
 
         if (isOutsideCorner) {
           cornerCells.forEach(cell => {
-            const length = segment(origin, cellOrigin(cell)).length + cellRadius * (newInsetScale + padding)
+            const length = segment(origin, cellOrigin(cell)).length + cellRadius * (newInsetScale + loft)
             console.log(`rem ${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
             if (length > arcRadius) { removeCells.push(cell) }
           })
         } else {
           cornerCells.forEach(cell => {
-            const length = segment(origin, cellOrigin(cell, false)).length - cellRadius * (newInsetScale + padding)
+            const length = segment(origin, cellOrigin(cell, false)).length - cellRadius * (newInsetScale + loft)
             console.log(`add ${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
             if (length > arcRadius) { addCells.push(cell) }
           })
@@ -3042,7 +3074,7 @@ class Island extends ProtoLayer {
   // MARK: Island Creation Methods
   // #region Island Creation Methods
   //METH: createSubIslands() :
-  createSubIslands({ filter, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
+  createSubIslands({ cut, direction = Direction.Cardinal, insetScale = 1, drawFilter = true } = {}) {
     console.groupCollapsed(`${this.id} Island.createSubIslands`)
     if (this.subIslands) {
       // recursive dive to create subIslands on the bottom-most (visually top-most) subIslands
@@ -3051,7 +3083,7 @@ class Island extends ProtoLayer {
       return this.subIslands.map(isle =>
         isle.createSubIslands({
           direction: direction,
-          filter: filter,
+          cut: cut,
           insetScale: insetScale,
           drawFilter: drawFilter
         })
@@ -3059,17 +3091,33 @@ class Island extends ProtoLayer {
     }
 
     let subIslands
-    //FIXME: This appears to not be working at all!
-    // create unprotected Island stacks with potential visual errors!!!
+
     if (this.allowsProtoErrors) {
+      //FIXME: This appears to not be working at all!
+      // create unprotected Island stacks with potential visual errors!!!
       subIslands = this.grid.createIslands({
         islandID: this.id,
         direction: direction,
-        filter: filter,
         insetScale: insetScale,
         drawFilter: drawFilter,
       })
     } else {
+      //NOTE: Create InterGrid
+      if (insetScale <= 0) {
+        const bounds = this.grid.cellBounds({ selection: this.cells, islandID: this.id })
+        const gridSize = bounds.cellBoundsSize
+        const startCoord = bounds.cornerCellVerts.upLeft
+
+        let interGrid = new Grid({
+          protoParent: this,
+          gridSize: gridSize,
+          startCoord: startCoord,
+          interGrid: true,
+        })
+
+
+      }
+
       //NOTE: Change new direction
       // protect Island stacking from visual overlapping errors
       if (this.hierarchyFrom(direction) > this.directionHierarchy) { // new direction cannot be greater than current
@@ -3087,7 +3135,7 @@ class Island extends ProtoLayer {
       if (direction.equals(this.direction)) {
         console.log(`copying island ${this.id}`)
         // copy this island but change inset, set filter, set drawFilter
-        const subIsland = this.copy({ insetScale: insetScale, filter: filter, drawFilter: drawFilter })
+        const subIsland = this.copy({ insetScale: insetScale, cut: cut, drawFilter: drawFilter })
         // console.log(`created subIsland: `, subIsland)
         subIslands = OpArray.from([subIsland])
       }
@@ -3097,7 +3145,7 @@ class Island extends ProtoLayer {
         // parent direction is All and new direction is Cardinal: careful reconstruction of current SimpleSubShapes
         if (this.direction.isAll && direction.isCardinal) { //
           console.log(`using copyAllToCardinal()`)
-          subIslands = this.copyAllToCardinal(filter, insetScale, drawFilter)
+          subIslands = this.copyAllToCardinal(insetScale, drawFilter, cut)
         }
         // parent direction is All/Cardinal: recalculate island cells based on parent shape, then create new islands
         else if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {
@@ -3107,7 +3155,7 @@ class Island extends ProtoLayer {
             selection: newCells,
             islandID: this.id,
             direction: direction,
-            filter: filter,
+            cut: cut,
             insetScale: insetScale,
             drawFilter: drawFilter,
           })
@@ -3131,7 +3179,7 @@ class Island extends ProtoLayer {
   //METH: copy() : create a copy of this Island
   copy({
     insetScale,
-    filter = this.filter,
+    cut = this.cut,
     drawFilter = this.drawFilter,
     protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
     cells = this.cells,
@@ -3141,7 +3189,6 @@ class Island extends ProtoLayer {
     // console.log(`copying island`, this.id)
     const newIsland = new Island({
       cells: cells,
-      filter: filter,
       protoParent: protoParent,
       svgParent: protoParent.svgElt, // Test this!!!
       insetScale: insetScale,
@@ -3170,9 +3217,9 @@ class Island extends ProtoLayer {
     return newIsland
   }
   //METH: copyAllToCardinal() :
-  copyAllToCardinal(filter, insetScale, drawFilter = true) {
+  copyAllToCardinal(insetScale, drawFilter = true, cut) {
     const cellIslands = this.grid.createIslands({
-      filter: filter,
+      cut: cut,
       insetScale: insetScale,
       drawFilter: drawFilter,
       selection: this.cells,
@@ -3311,6 +3358,8 @@ class Island extends ProtoLayer {
 
   // MARK: Island TODO Methods
   // #region TODO Methods
+  get interCells() { return this.grid.shrunkSelection(this.cells) }
+
   //TODO: Finish Intergrids after submission
   interGridClosure = (cell) => { this.grid.validNeighbors({ selection: [cell], bounds: this.cellBounds, direction: Direction.Cartesian }).length === 3 }
   get canHaveInterGrid() {
@@ -3418,6 +3467,10 @@ class Shape extends ProtoLayer {
 
   get insetSubShapes() {
     const subs = this.simpleSubShapes
+    if (this.insetScale <= 0) {
+
+    }
+
     console.log(`subs`, subs)
     let insetSubShapes = subs?.map(sub => {
       let insetSubShape = new OpArray
