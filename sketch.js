@@ -265,7 +265,7 @@ function gridTests2() {
 
   GRID = new Grid({
     protoParent: FRAME,
-    gridSize: { x: gridX, y: gridX * 2 },
+    gridSize: vert(gridX, gridX * 2),
     insetScale: 8 / 9
   })
   // GRID = new Grid(FRAME, { x: 10, y: 17 })
@@ -385,51 +385,76 @@ function gridTests2() {
 
   //MARK: group000
   group000?.cutIslands({
-    profile: Profile.rIn,
-    layerStart: .75,
-    layerEnd: .0001,
+    profile: Profile.iIn,
+    layerStart: 1,
+    layerEnd: .00001,
+    amount: 3,
+    loftScale: 1 / 1,
   })
+
+  // group000?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: 1 / 16,
+  //   layerEnd: .00001,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  // })
 
   //MARK: group001
   group001?.cutIslands({
-    profile: Profile.rOut,
-    layerStart: .5,
-    layerEnd: .25,
+    profile: Profile.iOut,
+    layerStart: 1,
+    layerEnd: 1 / 3,
+    amount: 2,
+    loftScale: 1 / 1,
+  })
+
+  group001?.cutIslands({
+    profile: Profile.jIn,
+    layerStart: 1 / 8,
+    layerEnd: .00001,
+    amount: 1,
+    loftScale: 1 / 1,
+    direction: Direction.None,
   })
 
   //MARK: group002
 
   group002?.cutIslands({
-    profile: Profile.jIn,
+    profile: Profile.iIn,
     layerStart: 1,
-    layerEnd: .001,
+    layerEnd: .00001,
+    amount: 3,
+    loftScale: 1 / 1,
   })
 
 
   //MARK: group003
-  group003?.cutIslands({
-    profile: Profile.iOut,
-    layerStart: 1,
-    layerEnd: 3 / 4,
-    loftScale: 1 / 1,
-    // outsetCut: false,
-  })
+  // group003?.cutIslands({
+  //   profile: Profile.iOut,
+  //   layerStart: 3 / 4,
+  //   layerEnd: 2 / 4,
+  //   loftScale: 1 / 1,
+  //   // outsetCut: false,
+  // })
 
-  group003?.cutIslands({
-    profile: Profile.jOut,
-    layerStart: 3 / 4,
-    layerEnd: 1 / 4,
-    loftScale: 1 / 1,
-    // outsetCut: false,
-  })
+
 
   group003?.cutIslands({
     profile: Profile.jIn,
-    layerStart: 1 / 16,
-    layerEnd: .001,
+    layerStart: 2 / 3,
+    layerEnd: .0001,
     loftScale: 1 / 1,
-    direction: Direction.None
+    // direction: Direction.Horizontal
   })
+
+  // group003?.cutIslands({
+  //   profile: Profile.rOut,
+  //   layerStart: 1 / 16,
+  //   layerEnd: .00001,
+  //   loftScale: 1 / 1,
+  //   direction: Direction.None,
+  // })
 
   //MARK: group004
   // group004.createSubIslands({
@@ -443,7 +468,8 @@ function gridTests2() {
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
   // GRID.showCellsDebug()
-
+  let interCells01 = GRID.perimeterIslands[3].interCells
+  console.log(`interCells01`, interCells01.map(c => c.id))
 
   // globalAnimation()
 
