@@ -468,10 +468,11 @@ class EdgePart {
 
 // MARK: Utility
 // FUNC: gridPointIndex() calculates 2D array index given coords(x,y) and array width
-function gridPointIndex(x, y, width) { return x + y * (width) }
+function gridPointIndex(x, y, width, offset = 0) { return (x + y * width) + offset }
 
 // FUNC: gridCoords() calculates coords(x,y) given and index and array width
-function gridCoords(index, width) {
+function gridCoords(index, width, offset = 0) {
+  index = index - offset
   const x = index % width
   const y = floor(index / width)
   return vert(x, y)
@@ -622,7 +623,7 @@ class Range {
   //MARK: Methods
   //METH: array() : OpArray : creates an array of numbers within range given the step size
   array(step = 1) {
-    if (!this.usesIntegers) { return }
+    // if (!this.usesIntegers) { return }4
     return OpArray.from({ length: (this.end - this.start) / step + 1 }, (_, i) => this.start + (i * step))
   }
   //METH: forEach() : 
