@@ -998,6 +998,16 @@ class ProtoSegment extends Segment {
     }
   }
 
+  get cornerRadii() {
+    let radii = { start: undefined, end: undefined }
+    if (this.hasNoCubicVerts && this.hasNoMaxVerts) { return radii }
+    if (this.hasCubicStartCorner) { radii.start = this.availableStartLength }
+    if (this.hasCubicEndCorner) { radii.start = this.availableEndLength }
+    return radii
+  }
+  get startCornerRadius() { return this.cornerRadii.start }
+  get endCornerRadius() { return this.cornerRadii.end }
+
   //MARK: Cubic Verts
   // #region Cubic Verts
   get hasCubicStartVert() { return !!this.cubicVerts.start }
@@ -1013,6 +1023,16 @@ class ProtoSegment extends Segment {
     if (this.hasOnlyOneCubicVert) { return 1 }
     if (!this.hasSomeCubicVerts) { return 0 }
   }
+
+  get hasCubicStartCorner() {
+    return this.startNeighbor.hasCubicEndVert && this.hasCubicStartVert
+      && roundToDec(this.startNeighbor.availableEndLength) === roundToDec(this.availableStartLength)
+  }
+  get hasCubicEndCorner() {
+    return this.hasCubicEndVert && this.endNeighbor.hasCubicStartVert
+      && roundToDec(this.availableEndLength) === roundToDec(this.endNeighbor.availableStartLength)
+  }
+  get hasBothCubicCorners() { return this.hasCubicStartCorner && this.hasCubicEndCorner }
 
   get finalCubicStartVert() {
     const finalLength = min(this.availableStartLength, this.startNeighbor.availableEndLength)
@@ -1289,6 +1309,8 @@ class ProtoSegment extends Segment {
   get endNeighbor() { return this.neighbors.end }
   get hasBothNeighbors() { return this.startNeighbor && this.endNeighbor }
 
+  get hasCompletePath() { return !!this.segPath }
+
   get segPath() {
     if (!this.hasBothNeighbors) {
       console.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
@@ -1303,9 +1325,9 @@ class ProtoSegment extends Segment {
       seg = seg.endNeighbor
       if (seg.id === this.id) { open = false }
     }
-    const firstSeg = path.gridVertSorted[0]
-    const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
-    const sortedPath = path.shifted(shiftIndex)
+    // const firstSeg = path.gridVertSorted[0]
+    // const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
+    // const sortedPath = path.shifted(shiftIndex)
 
     return path
   }
