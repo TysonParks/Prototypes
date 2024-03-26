@@ -307,7 +307,7 @@ function gridTests2() {
 
 
   // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  group000 = GRID.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never' })
+  group000 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
   // group000 = GRID.randGroup({ amount: 0.4 })
   // GRID.squares(16 / GRID.cellCount)
   // GRID.squares(0.2)
@@ -377,7 +377,7 @@ function gridTests2() {
 
   console.error(`  ######################   `)
   console.groupCollapsed(`nestleShapes`)
-  GRID.nestleShapes(0)
+  GRID.nestleShapes(4)
   console.groupEnd()
 
   console.error(`  ######################   `)
@@ -385,11 +385,12 @@ function gridTests2() {
 
   //MARK: group000
   group000?.cutIslands({
-    profile: Profile.iIn,
-    layerStart: 1,
-    layerEnd: .00001,
-    amount: 3,
+    profile: Profile.rOut,
+    layerStart: 2,
+    layerEnd: .75,
+    amount: 1,
     loftScale: 1 / 1,
+    // direction: Direction.All
   })
 
   // group000?.cutIslands({
@@ -402,29 +403,29 @@ function gridTests2() {
 
   //MARK: group001
   group001?.cutIslands({
-    profile: Profile.iOut,
-    layerStart: 1,
-    layerEnd: 1 / 3,
-    amount: 2,
-    loftScale: 1 / 1,
+    profile: Profile.rOut,
+    layerStart: 1.25,
+    layerEnd: .75,
+    amount: 1,
+    loftScale: 4 / 4,
   })
 
   group001?.cutIslands({
     profile: Profile.jIn,
-    layerStart: 1 / 8,
+    layerStart: 1 / 4,
     layerEnd: .00001,
     amount: 1,
     loftScale: 1 / 1,
-    direction: Direction.None,
+    // direction: Direction.Horizontal,
   })
 
   //MARK: group002
 
   group002?.cutIslands({
-    profile: Profile.iIn,
-    layerStart: 1,
-    layerEnd: .00001,
-    amount: 3,
+    profile: Profile.rIn,
+    layerStart: .5,
+    layerEnd: .0001,
+    amount: 1,
     loftScale: 1 / 1,
   })
 
@@ -442,9 +443,10 @@ function gridTests2() {
 
   group003?.cutIslands({
     profile: Profile.jIn,
-    layerStart: 2 / 3,
-    layerEnd: .0001,
+    layerStart: 3 / 4,
+    layerEnd: .001,
     loftScale: 1 / 1,
+    amount: 1,
     // direction: Direction.Horizontal
   })
 
@@ -467,9 +469,17 @@ function gridTests2() {
 
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
-  // GRID.showCellsDebug()
+  GRID.showCellsDebug()
   let interCells01 = GRID.perimeterIslands[3].interCells
   console.log(`interCells01`, interCells01.map(c => c.id))
+  console.log(`GRID.islands`, GRID.islands)
+  console.log(`are squares?`, GRID.islands.map(i => i.isSquare))
+  console.log(`are roundedSquares?`, GRID.islands.map(i => i.shape.isRoundedSquare))
+  console.log(`are circles?`, GRID.islands.map(i => i.shape.isCircle))
+  console.log(`are leaves?`, GRID.islands.map(i => i.shape.isLeaf))
+  console.log(`are square leaves?`, GRID.islands.map(i => i.shape.isSquareLeaf))
+  console.log(`maxSquareLeafLoftRadius?`, GRID.islands.map(i => i.shape.maxSquareLeafLoftRadius))
+  console.log(`start cell?`, GRID.islands.map(i => i.cells[0].id))
 
   // globalAnimation()
 
