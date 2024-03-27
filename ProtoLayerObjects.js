@@ -656,8 +656,9 @@ class Grid extends ProtoLayer {
   }
   //NOTE: perimeters must be created for every group!
   get perimeterIslands() { return this.groups.map(g => g.perimeterIslands).flat() }
-  get islands() { return this.groups.map(g => g.islands.union(g.perimeterIslands, [`id`])).flat() }
-  get shapes() { return this.islands.map(i => i.shape).flat() }
+  get islands() { return this.groups.map(g => g.islands).flat() }
+  get allIslands() { return this.islands.union(this.perimeterIslands, [`id`]).flat() }
+  get shapes() { return this.allIslands.map(i => i.shape).flat() }
   get allSimpleSubShapes() {
     return this.perimeterIslands
       // .compacted // should not have to compact because perimeters must be created for every group!
@@ -690,7 +691,7 @@ class Grid extends ProtoLayer {
   //METH: 
   groupNamed(name) { return this.groups.find(e => e.id === name) || null }
   //METH: 
-  islandNamed(name) { return this.islands.find(e => e.id === name) || null }
+  islandNamed(name) { return this.allIslands.find(e => e.id === name) || null }
   //METH: 
   shapeNamed(name) {
     // console.log(this.shapes)
@@ -711,7 +712,7 @@ class Grid extends ProtoLayer {
   columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }  // UNUSED
   //METH:
   cellIsInAnIsland(cellIndex) {                                                               // UNUSED (caller)
-    return this.islands.some(isle => isle.cells.some(cell => cell.index === cellIndex))
+    return this.allIslands.some(isle => isle.cells.some(cell => cell.index === cellIndex))
   }
   //METH: 
   cellSegmentBetween(indexA, indexB) {
@@ -927,6 +928,7 @@ class Grid extends ProtoLayer {
     groupID,
     islandID,
     filter,
+    cut,
     direction = Direction.Cardinal,
     perimeterType = `maxCorners`,
     protoParent = this,
@@ -1021,6 +1023,7 @@ class Grid extends ProtoLayer {
       console.log(`islandID`, islandID)
 
       let newIsland = new Island({
+        cut: cut,
         cells: islanders,
         protoParent: protoParent,
         svgParent: this.protoParent.svgElt,
@@ -2252,7 +2255,7 @@ class Grid extends ProtoLayer {
       // console.log(`all islands: `, this.islands)
       console.log(`updateCells: islands found: `, islands)
     }
-    else { islands = this.islands }
+    else { islands = this.allIslands }
     islands.forEach(island => this.updateIsland(island))
     // console.log(`islands`, islands)
   }
@@ -2386,6 +2389,7 @@ class CellGroup extends ProtoLayer {
   createPerimiters(perimeterType = `maxCorners`, direction = Direction.Cardinal) {
     // console.log(`createPerimiters this.id`, this.id)
     this.perimeterType = perimeterType
+    this.direction = direction
     switch (perimeterType) {
       case 'maxCorners':
         break
@@ -2415,48 +2419,17 @@ class CellGroup extends ProtoLayer {
     this.perimeterIslands.forEach(pIsles => pIsles.createSimpleSubShapes())
     console.groupEnd()
   }
-  //METH: createSubIslands() :
-  createSubIslands({ filter, cut, direction = Direction.Cardinal, insetScale = 1 } = {}) {
-    console.warn(`${this.id}.createSubIslands, this.islands =`, this.islands.map(i => i.id))
-    console.groupCollapsed(`Island.createSubIslands`)
-    const newIslands = this.perimeterIslands.map(pIsle =>
-      pIsle.createSubIslands({
-        islandLevel: this.islandLevel + 1,
-        direction: direction,
-        // filter: filter,
-        cut: cut,
-        insetScale: insetScale,
-        // drawFilter: drawFilter,
-      }))
-
-    if (!newIslands.isEmpty) {
-      console.warn(`newIslands created!!!!`, newIslands.map(i => i.id))
-      this.islandLevel += 1
-      this.createShapeGroup({
-        islands: newIslands.flat(this.islandLevel).compacted,
-        filter: filter,
-        islandLevel: this.islandLevel,
-        direction: direction,
-        // insetScale: insetScale,
-      })
-    } else {
-      console.error(`no newIslands created!`)
-    }
-
-    console.groupEnd()
-    console.log(``)
-  }
   //METH: cutIslands()
   cutIslands({
     profile,
     layerStart,           // layerStart should be greater than layerEnd, swapped if not!
-    layerEnd,           // if unassigned, layerEnd = cutEnd
+    layerEnd,             // if unassigned, layerEnd = cutEnd
     loftScale = 1,
     outsetCut = true,
     angleOffset,
     amount = 1,
-    perimeter = false,
-    direction = Direction.Cardinal,
+    perimeter = false,    // setting for making channels/walls
+    direction = this.direction,
     spanOp = 1 / 1,       // ratio of widths, start to end
     loftOp = 1 / 1,       // ratio of lofts, start to end
     selOps = []
@@ -2491,11 +2464,11 @@ class CellGroup extends ProtoLayer {
       }
       const cutRange = range(cutStart, cutEnd)
       const insetScale = profile.isInset ? cutStart : cutEnd
-      // console.log(`layerRange`, layerRange)
-      // console.log(`cutRange`, cutRange)
+      console.log(`layerRange`, layerRange)
+      console.log(`cutRange`, cutRange)
+      console.log(`insetScale`, insetScale)
 
-
-      if (loft > insetScale) { loft = insetScale }
+      if (loft > 2 * insetScale) { loft = 2 * insetScale }
 
       const cut = new ProtoCut({
         profile: profile,
@@ -2504,21 +2477,95 @@ class CellGroup extends ProtoLayer {
       })
 
       console.log(`loft`, loft)
+      console.log(`cut`, cut)
       console.log(`cut filters`, cut.filters)
+      //TODO: in order to get MAX loft, createSubIslands should be called first so that we can check for minRadius
+      // FIXME: currently createSubIslands requires cut input? Need to remove this and assign cut after!
+      const newIslands = this.createSubIslands({ cut: cut, direction: direction, insetScale: insetScale })
+
+      if (!newIslands.flat().isEmpty) {
+
+
+        this.islandsToShapeGroups(newIslands, cut, direction)
+      }
+
+
       cut.filters.forEach(filter => {
-        console.log({ filter: filter, direction: direction, insetScale: insetScale })
-        this.createSubIslands({ filter: filter, direction: direction, insetScale: insetScale })
+        // console.log({ cut:cut, filter: filter, direction: direction, insetScale: insetScale })
+        // this.createSubIslands({ cut:cut,filter: filter, direction: direction, insetScale: insetScale })
       })
     }
   }
+  //METH: createSubIslands() :
+  createSubIslands({ cut, direction = this.direction, insetScale = 1 } = {}) {
+    console.warn(`${this.id}.createSubIslands, this.islands =`, this.islands.map(i => i.id))
+    console.groupCollapsed(`Island.createSubIslands`)
+    const newIslands = this.perimeterIslands.map(pIsle =>
+      pIsle.createSubIslands({
+        islandLevel: this.islandLevel + 1,
+        direction: direction,
+        // filter: filter, 
+        cut: cut,
+        insetScale: insetScale,
+        // drawFilter: drawFilter,
+      }))
+
+    console.groupEnd()
+
+    return newIslands
+
+    if (!newIslands.flat().isEmpty) {
+      console.warn(`newIslands created!!!!`, newIslands)
+      console.warn(`newIslands created!!!!`, newIslands.flat().compacted.map(i => i.id))
+      console.log(`newIslands cut`, cut)
+
+      this.islandsToShapeGroups(newIslands, cut, direction)
+
+      // cut.filters.forEach((filter, i) => {
+      //   this.islandLevel += 1
+      //   const shapeGroup = this.createShapeGroup({
+      //     islands: newIslands.flat(this.islandLevel).compacted,
+      //     filter: filter,
+      //     curve: cut.curve(i),
+      //     islandLevel: this.islandLevel,
+      //     direction: direction,
+      //     // insetScale: insetScale,
+      //   })
+      //   console.log(`new shapeGroup`, shapeGroup)
+      // })
+
+    } else {
+      console.error(`no newIslands created!`)
+    }
+
+    console.groupEnd()
+    console.log(``)
+  }
+  //METH: assignToShapeGroups()
+  islandsToShapeGroups(islands, cut, direction) {
+    cut.filters.forEach((filter, i) => {
+      this.islandLevel += 1
+      const shapeGroup = this.createShapeGroup({
+        islands: islands.flat(this.islandLevel).compacted,
+        filter: filter,
+        curve: cut.curve(i),
+        islandLevel: this.islandLevel,
+        direction: direction,
+        // insetScale: insetScale,
+      })
+      console.log(`new shapeGroup`, shapeGroup)
+    })
+  }
+
   //METH: createShapeGroup() :
-  createShapeGroup({ islands, filter, islandLevel, direction = Direction.Cardinal, insetScale = 1 } = {}) {
+  createShapeGroup({ islands, curve, filter, islandLevel, direction = Direction.Cardinal, insetScale = 1 } = {}) {
     const shapeGroup = new ShapeGroup({
       cellGroup: this,
       islands: islands,
       protoParent: this,
       svgParent: this.svgElt,
       grid: this.grid,
+      curve: curve,
       filter: filter,
       insetScale: insetScale,
       direction: direction,
@@ -2527,6 +2574,7 @@ class CellGroup extends ProtoLayer {
       // drawRect: true,
     })
     this.shapesGroups.push(shapeGroup)
+    return shapeGroup
   }
   // #endregion
 }
@@ -2549,6 +2597,7 @@ class ShapeGroup extends ProtoLayer {
     svgParent,
     grid,
     filter,
+    curve,
     insetScale,
     direction
   }) {
@@ -2561,6 +2610,7 @@ class ShapeGroup extends ProtoLayer {
       // drawRect: true,
       drawFilter: false,
     })
+    this.curve = curve
     this.cellGroup = cellGroup
     this.islands = islands
     this.grid = grid
@@ -2599,6 +2649,7 @@ class ShapeGroup extends ProtoLayer {
   assignShapes() {
     this.shapes.forEach(s => {
       const pathCopy = s.path
+      pathCopy.elt = pathCopy.elt.cloneNode()
       pathCopy
         .id(`${s.id}-copy`)
         .parent(this.svgGroup)
@@ -2643,6 +2694,10 @@ class ShapeGroup extends ProtoLayer {
       .attribute('fill', achromic(0.7))
       .attribute('fill-opacity', 1)
       .applyFilter({ filter: this.filter, size: this.insetSize, padding: Vertex.mult(this.grid.cellSize, 2) })
+    // this.cut.filters.forEach(filter => {
+    //   this.svgGroup
+    //     .applyFilter({ filter: filter, size: this.insetSize, padding: Vertex.mult(this.grid.cellSize, 2) })
+    // })
   }
 }
 
@@ -2899,6 +2954,7 @@ class Island extends ProtoLayer {
   get boundsRect() { return this.cellBounds.boundsRect }
 
   get cellCount() { return this.cells.length }
+  get minCornerRadius() { return this.shape.minCornerRadius }
 
   get isSingle() {
     return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index, Direction.All))
@@ -3044,13 +3100,13 @@ class Island extends ProtoLayer {
           cornerCells.forEach(cell => {
             const length = segment(origin, cellOrigin(cell)).length + cellRadius * (newInsetScale + loft)
             console.log(`rem ${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
-            if (length > arcRadius) { removeCells.push(cell) }
+            if (length >= arcRadius) { removeCells.push(cell) }
           })
         } else {
           cornerCells.forEach(cell => {
             const length = segment(origin, cellOrigin(cell, false)).length - cellRadius * (newInsetScale + loft)
             console.log(`add ${cell.id}: length: ${length}, arcRadius: ${arcRadius}`)
-            if (length > arcRadius) { addCells.push(cell) }
+            if (length >= arcRadius) { addCells.push(cell) }
           })
         }
 
@@ -3096,6 +3152,7 @@ class Island extends ProtoLayer {
       //FIXME: This appears to not be working at all!
       // create unprotected Island stacks with potential visual errors!!!
       subIslands = this.grid.createIslands({
+        cut: cut,
         islandID: this.id,
         direction: direction,
         insetScale: insetScale,
@@ -3150,7 +3207,7 @@ class Island extends ProtoLayer {
         // parent direction is All/Cardinal: recalculate island cells based on parent shape, then create new islands
         else if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {
           console.log(`  triggering a recalcdCells on ${this.id}`)
-          const newCells = this.recalcdCells({ newInsetScale: insetScale })
+          const newCells = this.recalcdCells({ newInsetScale: insetScale, loft: cut.depth })
           subIslands = this.grid.createIslands({ // create new Islands with new direction
             selection: newCells,
             islandID: this.id,
@@ -3442,15 +3499,51 @@ class Shape extends ProtoLayer {
   get group() { return this.island.group }
   get grid() { return this.island.grid }
   get cells() { return this.island.cells }
+  get cellRadius() { return this.grid.cellRadius }
+
+  get isPerimeterShape() { return this.type === `PerimeterShape` }
 
   get isLine() { return this.island.isLine }
+  get isRoundedSquare() {
+    if (this.isPerimeterShape || !this.island.isSquare) { return false }
+    return this.allCornerRadii.every(min => roundToDec(min, 1) === roundToDec(this.allCornerRadii[0], 1))
+  }
+  get isCircle() {
+    return this.isRoundedSquare && roundToDec(this.minCornerRadius, 1) === roundToDec(this.insetSize.x / 2, 1)
+  }
+  get isLeaf() {
+    return this.island.isRectangle
+      && !this.isCircle
+      && roundToDec(this.allCornerRadii[0], 1) === roundToDec(this.allCornerRadii[2], 1)
+      && roundToDec(this.allCornerRadii[1], 1) === roundToDec(this.allCornerRadii[3], 1)
+  }
+  get isSquareLeaf() { return this.isLeaf && this.island.isSquare }
+
   get hasSubShapes() { return this.subShapes.length > 1 }
   get hasUTurns() { return this.parts.flat().some(p => p.isUTurn) }
   get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
   get allSegments() { return this.subShapes.flat() }
+  get allCornerRadii() { return this.simpleSubShapes.flat().map(seg => seg.startCornerRadius) }
   get assignedVerts() {
     return this.subShapes.map(sub => sub.map(seg => seg.assignedVerts).flat().unique(['x', 'y']))
     // .flat()
+  }
+
+  get minCornerRadius() { return min(this.simpleSubShapes.flat().map(seg => seg.startCornerRadius)) }
+  get maxCornerRadius() { return max(this.simpleSubShapes.flat().map(seg => seg.startCornerRadius)) }
+  get minInsetCornerRadius() { return this.minCornerRadius + (this.insetScale.x - 1) * this.cellRadius }
+  get maxInsetCornerRadius() { return this.maxCornerRadius + (this.insetScale.x - 1) * this.cellRadius }
+
+  get minSquareCornerRadius() {
+    if (!this.island.isSquare) { return }
+    if (this.isCircle) { return this.minCornerRadius }
+    if (this.isSquareLeaf) { return }
+  }
+  get maxSquareLeafLoftRadius() {                   // max loft radius to create easily producible 3d leaf shape
+    if (!this.isSquareLeaf) { return }              // only valid for square leaf shapes
+    const min = sqrt(2 * this.minInsetCornerRadius ** 2) / 2       // length from sym center to small corner endpoint
+    const max = this.maxInsetCornerRadius - sqrt(2 * this.maxInsetCornerRadius ** 2) / 2 // length from small end to large midPoint
+    return min + max
   }
 
   //MARK: SubShape Transforms
@@ -3519,29 +3612,6 @@ class Shape extends ProtoLayer {
     return result
   }
   get perimeterPath() { return `path('${this.perimeter}')` }
-
-  //TODO: DEPRECATE usage
-  // get insetSVG() {
-  //   let result = this.insetSubShapes.map(e =>
-  //     SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
-  //   )
-  //   if (result instanceof Array) {
-  //     result = result.join(' ')
-  //   }
-  //   return result
-  // }
-  // get insetSVGPath() { return `path('${this.insetSVG}')` }
-
-  //TODO: DEPRECATE usage
-  // get finalSVG() {
-  //   let result = this.simpleSubShapes.map(e =>
-  //     SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 0 })
-  //   )
-  //   if (result instanceof Array) {
-  //     result = result.join(' ')
-  //   }
-  //   return result
-  // }
 
   get extractedVerts() { return extractVerts(this.svg) }
 
