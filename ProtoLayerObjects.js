@@ -567,25 +567,25 @@ class SelectionBounds {
   // MARK: SelectionBounds Island Methods
   // #region Island Methods
   //METH: 
-  innerCellIslands({ taken = true, stored = false, direction = Direction.Horizontal } = {}) {
-    console.log('innerCellIslands called')
-    return this.grid.createIslands({
-      selection: taken ? this.selection : this.availableCells,
-      bounds: this,
-      groupID: this.groupID,
-      islandID: this.islandID,
-      direction: direction,
-      taken: taken,
-      stored: stored,
-    })
-  }
+  // innerCellIslands({ taken = true, stored = false, direction = Direction.Horizontal } = {}) {
+  //   console.log('innerCellIslands called')
+  //   return this.grid.createIslands({
+  //     selection: taken ? this.selection : this.availableCells,
+  //     bounds: this,
+  //     groupID: this.groupID,
+  //     islandID: this.islandID,
+  //     direction: direction,
+  //     taken: taken,
+  //     stored: stored,
+  //   })
+  // }
 
-  get horCellIslands() {
-    return this.innerCellIslands({ taken: this.isMostlyAvailable, stored: false, direction: Direction.Horizontal })
-  }
-  get vertCellIslands() {
-    return this.innerCellIslands({ taken: this.isMostlyAvailable, stored: false, direction: Direction.Vertical })
-  }
+  // get horCellIslands() {
+  //   return this.innerCellIslands({ taken: this.isMostlyAvailable, stored: false, direction: Direction.Horizontal })
+  // }
+  // get vertCellIslands() {
+  //   return this.innerCellIslands({ taken: this.isMostlyAvailable, stored: false, direction: Direction.Vertical })
+  // }
   // #endregion
 }
 
@@ -928,7 +928,7 @@ class Grid extends ProtoLayer {
     groupID,
     islandID,
     filter,
-    cut,
+    // cut,
     direction = Direction.Cardinal,
     perimeterType = `maxCorners`,
     protoParent = this,
@@ -1023,7 +1023,6 @@ class Grid extends ProtoLayer {
       console.log(`islandID`, islandID)
 
       let newIsland = new Island({
-        cut: cut,
         cells: islanders,
         protoParent: protoParent,
         svgParent: this.protoParent.svgElt,
@@ -2434,66 +2433,65 @@ class CellGroup extends ProtoLayer {
     loftOp = 1 / 1,       // ratio of lofts, start to end
     selOps = []
   } = {}) {
-    if (loftScale === 0) {                                            // loftScale cant be less than 0
+    if (loftScale < 1 / FRAME.pixToUserUnits) {                                            // loftScale cant be less than 0
       console.error(`cutIslands error: zero loft`)
       return                                                          // exit
     }
-    if (loftScale > 1) {                                              // loftScale cant be greater than 1
-      console.error(`cutIslands error: loft is greater than span, reducing to span`)
-      loftScale = 1                                                   // change to 1
-    }
-    if (layerStart < layerEnd) { swapVals(layerStart, layerEnd) }     // swap if needed
-    const layerRange = range(layerStart, layerEnd)                    // create range
-    const stepWidth = layerRange.size / amount                          // equal step division     
+    if (loftScale > 1) { loftScale = 1 }                              // loftScale cant be greater than 1
 
+    let cut, insetScale
+    if (typeof layerEnd === 'number') {
+      if (layerStart < layerEnd) { swapVals(layerStart, layerEnd) }     // swap if needed
+      const layerRange = range(layerStart, layerEnd)                    // create range
+      const stepWidth = layerRange.size / amount                        // equal step division     
 
-    let cutStart, cutEnd
-    for (let i = 0; i < amount; i++) {
-      let loft = layerRange.size * loftScale / amount                 // calc loft
+      let cutStart, cutEnd
+      for (let i = 0; i < amount; i++) {
+        let loft = layerRange.size * loftScale / amount                 // calc loft
 
-      cutStart = layerStart - i * stepWidth
-      cutEnd = cutStart - stepWidth
-      if (loftScale < 1) {
-        if (outsetCut) {
-          console.log(`using outsetCut`)
-          cutEnd = cutStart - loft
-        } else {
-          console.log(`using insetCut`)
-          cutStart = cutEnd + loft
+        cutStart = layerStart - i * stepWidth
+        cutEnd = cutStart - stepWidth
+        if (loftScale < 1) {
+          if (outsetCut) {
+            console.log(`using outsetCut`)
+            cutEnd = cutStart - loft
+          } else {
+            console.log(`using insetCut`)
+            cutStart = cutEnd + loft
+          }
         }
+        const cutRange = range(cutStart, cutEnd)
+        insetScale = profile.isInset ? cutStart : cutEnd
+        console.log(`layerRange`, layerRange)
+        console.log(`cutRange`, cutRange)
+        console.log(`insetScale`, insetScale)
+
+        if (loft > 2 * insetScale) { loft = 2 * insetScale }
+
+        cut = new ProtoCut({
+          profile: profile,
+          depth: loft * this.grid.minCellWidth,
+          angleOffset: angleOffset
+        })
+
+        console.log(`loft`, loft)
+        console.log(`cut`, cut)
+        console.log(`cut filters`, cut.filters)
       }
-      const cutRange = range(cutStart, cutEnd)
-      const insetScale = profile.isInset ? cutStart : cutEnd
-      console.log(`layerRange`, layerRange)
-      console.log(`cutRange`, cutRange)
-      console.log(`insetScale`, insetScale)
 
-      if (loft > 2 * insetScale) { loft = 2 * insetScale }
-
-      const cut = new ProtoCut({
-        profile: profile,
-        depth: loft * this.grid.minCellWidth,
-        angleOffset: angleOffset
-      })
-
-      console.log(`loft`, loft)
-      console.log(`cut`, cut)
-      console.log(`cut filters`, cut.filters)
       //TODO: in order to get MAX loft, createSubIslands should be called first so that we can check for minRadius
       // FIXME: currently createSubIslands requires cut input? Need to remove this and assign cut after!
-      const newIslands = this.createSubIslands({ cut: cut, direction: direction, insetScale: insetScale })
+      let newIslands = this.createSubIslands({ cut: cut, direction: direction, insetScale: insetScale })
 
       if (!newIslands.flat().isEmpty) {
+        if (layerEnd === `max`) {
+          const squareIslands = newIslands.filter(i => i.isSquare)
+        }
+
 
 
         this.islandsToShapeGroups(newIslands, cut, direction)
       }
-
-
-      cut.filters.forEach(filter => {
-        // console.log({ cut:cut, filter: filter, direction: direction, insetScale: insetScale })
-        // this.createSubIslands({ cut:cut,filter: filter, direction: direction, insetScale: insetScale })
-      })
     }
   }
   //METH: createSubIslands() :
@@ -2513,33 +2511,6 @@ class CellGroup extends ProtoLayer {
     console.groupEnd()
 
     return newIslands
-
-    if (!newIslands.flat().isEmpty) {
-      console.warn(`newIslands created!!!!`, newIslands)
-      console.warn(`newIslands created!!!!`, newIslands.flat().compacted.map(i => i.id))
-      console.log(`newIslands cut`, cut)
-
-      this.islandsToShapeGroups(newIslands, cut, direction)
-
-      // cut.filters.forEach((filter, i) => {
-      //   this.islandLevel += 1
-      //   const shapeGroup = this.createShapeGroup({
-      //     islands: newIslands.flat(this.islandLevel).compacted,
-      //     filter: filter,
-      //     curve: cut.curve(i),
-      //     islandLevel: this.islandLevel,
-      //     direction: direction,
-      //     // insetScale: insetScale,
-      //   })
-      //   console.log(`new shapeGroup`, shapeGroup)
-      // })
-
-    } else {
-      console.error(`no newIslands created!`)
-    }
-
-    console.groupEnd()
-    console.log(``)
   }
   //METH: assignToShapeGroups()
   islandsToShapeGroups(islands, cut, direction) {
@@ -2882,7 +2853,7 @@ class Island extends ProtoLayer {
 
   constructor({
     cells,
-    cut,
+    // cut,
     protoParent,
     svgParent,
     grid,
@@ -2906,7 +2877,7 @@ class Island extends ProtoLayer {
     })
     console.log(`New Island! with arguments:`, arguments[0])
     this.cells = cells
-    this.cut = cut
+    // this.cut = cut
     this.grid = grid
     this.groupID = groupID
     this.direction = direction
@@ -3152,7 +3123,6 @@ class Island extends ProtoLayer {
       //FIXME: This appears to not be working at all!
       // create unprotected Island stacks with potential visual errors!!!
       subIslands = this.grid.createIslands({
-        cut: cut,
         islandID: this.id,
         direction: direction,
         insetScale: insetScale,
@@ -3192,7 +3162,7 @@ class Island extends ProtoLayer {
       if (direction.equals(this.direction)) {
         console.log(`copying island ${this.id}`)
         // copy this island but change inset, set filter, set drawFilter
-        const subIsland = this.copy({ insetScale: insetScale, cut: cut, drawFilter: drawFilter })
+        const subIsland = this.copy({ insetScale: insetScale, drawFilter: drawFilter })
         // console.log(`created subIsland: `, subIsland)
         subIslands = OpArray.from([subIsland])
       }
@@ -3202,7 +3172,7 @@ class Island extends ProtoLayer {
         // parent direction is All and new direction is Cardinal: careful reconstruction of current SimpleSubShapes
         if (this.direction.isAll && direction.isCardinal) { //
           console.log(`using copyAllToCardinal()`)
-          subIslands = this.copyAllToCardinal(insetScale, drawFilter, cut)
+          subIslands = this.copyAllToCardinal(insetScale, drawFilter)
         }
         // parent direction is All/Cardinal: recalculate island cells based on parent shape, then create new islands
         else if (this.directionHierarchy >= 2 && this.hierarchyFrom(direction) < 2) {
@@ -3212,7 +3182,6 @@ class Island extends ProtoLayer {
             selection: newCells,
             islandID: this.id,
             direction: direction,
-            cut: cut,
             insetScale: insetScale,
             drawFilter: drawFilter,
           })
@@ -3236,7 +3205,6 @@ class Island extends ProtoLayer {
   //METH: copy() : create a copy of this Island
   copy({
     insetScale,
-    cut = this.cut,
     drawFilter = this.drawFilter,
     protoParent = this, // do I need this or will all 'copies' produced by this island be children of this island?
     cells = this.cells,
@@ -3274,9 +3242,8 @@ class Island extends ProtoLayer {
     return newIsland
   }
   //METH: copyAllToCardinal() :
-  copyAllToCardinal(insetScale, drawFilter = true, cut) {
+  copyAllToCardinal(insetScale, drawFilter = true) {
     const cellIslands = this.grid.createIslands({
-      cut: cut,
       insetScale: insetScale,
       drawFilter: drawFilter,
       selection: this.cells,
@@ -3537,7 +3504,7 @@ class Shape extends ProtoLayer {
   get minSquareCornerRadius() {
     if (!this.island.isSquare) { return }
     if (this.isCircle) { return this.minCornerRadius }
-    if (this.isSquareLeaf) { return }
+    if (this.isSquareLeaf) { return this.maxSquareLeafLoftRadius }
   }
   get maxSquareLeafLoftRadius() {                   // max loft radius to create easily producible 3d leaf shape
     if (!this.isSquareLeaf) { return }              // only valid for square leaf shapes
