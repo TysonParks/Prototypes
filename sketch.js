@@ -265,7 +265,7 @@ function gridTests2() {
 
   GRID = new Grid({
     protoParent: FRAME,
-    gridSize: vert(gridX, gridX * 2),
+    gridSize: vert(gridX, round(gridX * 2)),
     insetScale: 8 / 9
   })
   // GRID = new Grid(FRAME, { x: 10, y: 17 })
@@ -385,9 +385,9 @@ function gridTests2() {
 
   //MARK: group000
   group000?.cutIslands({
-    profile: Profile.rOut,
-    layerStart: 2,
-    layerEnd: .75,
+    profile: Profile.jIn,
+    layerStart: .95,
+    layerEnd: .0001,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
@@ -469,7 +469,7 @@ function gridTests2() {
 
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
-  GRID.showCellsDebug()
+  // GRID.showCellsDebug()
   let interCells01 = GRID.perimeterIslands[3].interCells
   console.log(`interCells01`, interCells01.map(c => c.id))
   console.log(`GRID.islands`, GRID.islands)
