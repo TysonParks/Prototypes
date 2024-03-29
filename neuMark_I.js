@@ -104,7 +104,7 @@ class ProtoCut {
     const r2 = curve === `r2` ? 1 : -1
     const angle = curve === `r` ? this.angleOffset + 180 : this.angleOffset
     mag = mag * cutIn * r * r2
-    console.log({ curve: curve, mag: mag, rotOffset: angle })
+    // console.log({ curve: curve, mag: mag, rotOffset: angle })
     const stack = Shade.neuShadeSVGFactory({ curve: curve, cutIn: this.profile.cutIn, mag: mag, rotOffset: angle })
     const filter = createFilter().dropShadow(stack)
     this.filters.push(filter)
@@ -270,7 +270,7 @@ class Shade {
       .numSorted                  // sort small-large
       .unique()                   // remove duplicates
 
-    console.log('offsets', offsets)
+    // console.log('offsets', offsets)
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
@@ -331,13 +331,13 @@ class Shade {
           // rotOffset = rotOffset + 180
           const rangeSize = mag                         // shadow range
           reflLightRange = rangeSize / 2.2                // visual observation shows relfLight to be about 1/5 the shadow
-          console.log(`reflLightRange`, reflLightRange)
+          // console.log(`reflLightRange`, reflLightRange)
           if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
             offsets.push(reflLightRange)
             offsets = offsets.numSorted
           }
         }
-        console.log('bonus offsets', offsets)
+        // console.log('bonus offsets', offsets)
 
         const highColSpread = 0.1                           // spread up from base (0.9) to max highlight luma (1!)
         const shadColSpread = 0.25                          // spread down from base (0.9) to min shadow luma (0.7)
@@ -429,10 +429,10 @@ class Shade {
       neuShades = OpArray.from([...lighten, ...darken])
       // neuShades = OpArray.from([...darken, ...lighten])
     }
-    console.error(`neuShades`, neuShades)
-    console.error(`vect`, neuShades.map(ns => [ns.dx, ns.dy]))
+    // console.error(`neuShades`, neuShades)
+    // console.error(`vect`, neuShades.map(ns => [ns.dx, ns.dy]))
     // console.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
-    console.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
+    // console.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
     return neuShades
   }
 
