@@ -385,9 +385,9 @@ function gridTests2() {
 
   //MARK: group000
   group000?.cutIslands({
-    profile: Profile.jIn,
-    layerStart: .95,
-    layerEnd: .0001,
+    profile: Profile.rOut,
+    layerStart: 4,
+    layerEnd: .5,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
@@ -405,18 +405,18 @@ function gridTests2() {
   group001?.cutIslands({
     profile: Profile.rOut,
     layerStart: 1.25,
-    layerEnd: .75,
+    layerEnd: 1,
     amount: 1,
     loftScale: 4 / 4,
   })
 
   group001?.cutIslands({
     profile: Profile.jIn,
-    layerStart: 1 / 4,
+    layerStart: 1 / 16,
     layerEnd: .00001,
     amount: 1,
     loftScale: 1 / 1,
-    // direction: Direction.Horizontal,
+    direction: Direction.None,
   })
 
   //MARK: group002
@@ -472,14 +472,14 @@ function gridTests2() {
   // GRID.showCellsDebug()
   let interCells01 = GRID.perimeterIslands[3].interCells
   console.log(`interCells01`, interCells01.map(c => c.id))
-  console.log(`GRID.islands`, GRID.islands)
-  console.log(`are squares?`, GRID.islands.map(i => i.isSquare))
-  console.log(`are roundedSquares?`, GRID.islands.map(i => i.shape.isRoundedSquare))
-  console.log(`are circles?`, GRID.islands.map(i => i.shape.isCircle))
-  console.log(`are leaves?`, GRID.islands.map(i => i.shape.isLeaf))
-  console.log(`are square leaves?`, GRID.islands.map(i => i.shape.isSquareLeaf))
-  console.log(`maxSquareLeafLoftRadius?`, GRID.islands.map(i => i.shape.maxSquareLeafLoftRadius))
-  console.log(`start cell?`, GRID.islands.map(i => i.cells[0].id))
+  // console.log(`GRID.islands`, GRID.islands)
+  // console.log(`are squares?`, GRID.islands.map(i => i.isSquare))
+  // console.log(`are roundedSquares?`, GRID.islands.map(i => i.shape.isRoundedSquare))
+  // console.log(`are circles?`, GRID.islands.map(i => i.shape.isCircle))
+  // console.log(`are leaves?`, GRID.islands.map(i => i.shape.isLeaf))
+  // console.log(`are square leaves?`, GRID.islands.map(i => i.shape.isSquareLeaf))
+  // console.log(`maxSquareLeafLoftRadius?`, GRID.islands.map(i => i.shape.maxSquareLeafLoftRadius))
+  // console.log(`start cell?`, GRID.islands.map(i => i.cells[0].id))
 
   // globalAnimation()
 
