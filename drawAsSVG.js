@@ -966,7 +966,8 @@ class ProtoSegment extends Segment {
   get isFlat() { return this.part?.isFlat }
   get isCorner() { return this.part?.isCorner }
 
-  get hasInsideTurn() { return this.turns?.start.name === 'Left' || this.turns?.end.name === 'Left' }
+  // get hasInsideTurn() { return this.turns?.start.name === 'Left' || this.turns?.end.name === 'Left' }
+  get isOutsideCorner() { return this.turns?.end.isRight }
 
   get cornerVerts() {
     if (!this.hasBothNeighbors) {
@@ -1001,8 +1002,9 @@ class ProtoSegment extends Segment {
   get cornerRadii() {
     let radii = { start: undefined, end: undefined }
     if (this.hasNoCubicVerts && this.hasNoMaxVerts) { return radii }
-    if (this.hasCubicStartCorner) { radii.start = this.availableStartLength }
-    if (this.hasCubicEndCorner) { radii.start = this.availableEndLength }
+    if (this.hasCompleteStartCorner) { radii.start = this.availableStartLength }
+    if (this.hasCompleteEndCorner
+    ) { radii.start = this.availableEndLength }
     return radii
   }
   get startCornerRadius() { return this.cornerRadii.start }
@@ -1216,10 +1218,6 @@ class ProtoSegment extends Segment {
   }
   get hasBothMaxVerts() { return this.hasMaxStartVert && this.hasMaxEndVert }
 
-  get hasAStartVert() { return this.hasMaxStartVert || this.hasCubicStartVert }
-  get hasAnEndVert() { return this.hasMaxEndVert || this.hasCubicEndVert }
-  get hasBothVerts() { return this.hasAStartVert && this.hasAnEndVert }
-
   get maxCubicStartLength() {
     const length = this.hasMaxStartVert ? this.start.dist(this.maxCubicVerts.start) : this.maxCubicLength
     return length
@@ -1247,6 +1245,41 @@ class ProtoSegment extends Segment {
   }
   addMaxStartVert(vert) { this.#addCubicVert(vert, true, true) }
   addMaxEndVert(vert) { this.#addCubicVert(vert, false, true) }
+  // #endregion
+  //MARK: Generalized Cubic + Max Verts
+  // #region Combined Cubic Verts
+  get hasAStartVert() { return this.hasMaxStartVert || this.hasCubicStartVert }
+  get hasAnEndVert() { return this.hasMaxEndVert || this.hasCubicEndVert }
+  get hasBothVerts() { return this.hasAStartVert && this.hasAnEndVert }
+  get startVert() { return this.cubicVerts.start || this.maxCubicVerts.start }
+  get endVert() { return this.cubicVerts.end || this.maxCubicVerts.end }
+
+  get hasCompleteStartCorner() {
+    return this.startNeighbor.hasAnEndVert && this.hasAStartVert
+      && roundToDec(this.startNeighbor.availableEndLength) === roundToDec(this.availableStartLength)
+  }
+  get hasCompleteEndCorner() {
+    return this.hasAnEndVert && this.endNeighbor.hasAStartVert
+      && roundToDec(this.availableEndLength) === roundToDec(this.endNeighbor.availableStartLength)
+  }
+  get hasBothCompleteCorners() { return this.hasCompleteStartCorner && this.hasCompleteEndCorner }
+
+  // #endregion
+  //MARK: Flatness
+  // #region Flatness
+  get flatAmount() { if (this.hasBothCompleteCorners) { return this.startVert.dist(this.endVert) } }
+  get hasNoFlatness() { return roundToDec(this.flatAmount, 1) === 0 }
+  get hasFlatness() { if (this.hasBothCompleteCorners) { return !this.hasNoFlatness } }
+
+  // get hasNotFlatNeighbor() { return this.startNeighbor.hasNoFlatness || this.endNeighbor.hasNoFlatness }
+  get hasFlatStartNeighbor() { return this.startNeighbor.hasFlatness }
+  get hasFlatEndNeighbor() { return this.endNeighbor.hasFlatness }
+  get hasFlatNeighbor() { return this.hasFlatStartNeighbor || this.hasFlatEndNeighbor }
+
+  get canCurveMore() { return this.hasFlatness && this.hasFlatNeighbor }
+  get canCurveMoreAtEnd() { return this.hasFlatness && this.hasFlatEndNeighbor }
+
+
   // #endregion
   //MARK: Copy Methods
   // #region Copy Methods
@@ -1307,7 +1340,7 @@ class ProtoSegment extends Segment {
   // #region Neighbors
   get startNeighbor() { return this.neighbors.start }
   get endNeighbor() { return this.neighbors.end }
-  get hasBothNeighbors() { return this.startNeighbor && this.endNeighbor }
+  get hasBothNeighbors() { return !!this.startNeighbor && !!this.endNeighbor }
 
   get hasCompletePath() { return !!this.segPath }
 
