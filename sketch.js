@@ -280,7 +280,7 @@ function gridTests2() {
   console.log('minCellSWidth', minCellSWidth)
 
 
-  let group000, group001, group002, group003
+  let group000, group001, group002, group003, group004
   // GRID.randGroup({amount:1 / GRID.cellCount})
   // group000 = GRID.randomComb({
   //   selection: (GRID.cellRows
@@ -307,11 +307,11 @@ function gridTests2() {
 
 
   // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  group000 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  group000 = GRID.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
   // group000 = GRID.randGroup({ amount: 0.4 })
   // GRID.squares(16 / GRID.cellCount)
   // GRID.squares(0.2)
-  GRID.outlineGroup({ groupID: GRID.lastGroup.id, directioqn: Direction.All.random(R.random_int(1, 4)), newGroup: false, amount: R.random_int(0, 1) })
+  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, directioqn: Direction.All.random(R.random_int(1, 4)), newGroup: false, amount: R.random_int(0, 1) })
   // const outlineDir = Direction.Cardinal.random(2)
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
@@ -324,15 +324,31 @@ function gridTests2() {
   // console.log('randDirection', randDir)
   // group001 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 2) })
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
-  group001 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), newGroup: true, amount: R.random_int(1, 2) })
+  group001 = GRID.outlineGroup({
+    groupID: GRID.lastGroup.id,
+    direction: Direction.All.random(R.random_int(1, 4)),
+    newGroup: true,
+    amount: R.random_int(1, 2)
+  })
 
   // group002 = GRID.randGroup({ amount: 0.5 })
-  group002 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 4)), newGroup: true, amount: R.random_int(1, 3) })
+  group002 = GRID.outlineGroup({
+    groupID: GRID.lastGroup.id,
+    //  direction: Direction.All.random(R.random_int(1, 4)), 
+    newGroup: true,
+    amount: R.random_int(1, 1)
+  })
   // group002 = GRID.randGroup({ amount: .25 })
   // group002 = GRID.squares({ coverage: 0.1, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
+  group003 = GRID.outlineGroup({
+    groupID: GRID.lastGroup.id,
+    // direction: Direction.All.random(R.random_int(1, 4)), 
+    newGroup: true,
+    amount: R.random_int(1, 2)
+  })
   // console.log('right adj', Direction.Right.adjacents)
   // console.log('right and adj', Direction.Right.andAdjacents)
   // console.log('right opposite', Direction.Right.opposites)
@@ -352,7 +368,7 @@ function gridTests2() {
   // GRID.outlineTaken(Direction.Horizontal, true)
   // GRID.groupNamed('grp001')?.setFilter(shader2)
 
-  group003 = GRID.groupAvail()
+  group004 = GRID.groupAvail()
   // group001 = GRID.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   //MARK: SYMMETRY
@@ -372,7 +388,9 @@ function gridTests2() {
   group000?.createPerimiters('maxCorners', Direction.All)
   group001?.createPerimiters('maxCorners', Direction.Cardinal)
   group002?.createPerimiters('maxCorners', Direction.Cardinal)
-  group003?.createPerimiters('maxCorners', Direction.Cardinal) // will need to create check to make sure all groups used
+  group003?.createPerimiters('maxCorners', Direction.Cardinal)
+  group004?.createPerimiters('maxCorners', Direction.Cardinal)
+  // will need to create check to make sure all groups used
   // console.log(`groups`, GRID.groups)
 
   console.error(`  ######################   `)
@@ -386,11 +404,11 @@ function gridTests2() {
   //MARK: group000
   group000?.cutIslands({
     profile: Profile.rOut,
-    layerStart: 4,
+    layerStart: 1.95,
     layerEnd: .5,
-    amount: 1,
+    amount: 2,
     loftScale: 1 / 1,
-    // direction: Direction.All
+    // direction: Direction.Horizontal
   })
 
   // group000?.cutIslands({
@@ -403,52 +421,67 @@ function gridTests2() {
 
   //MARK: group001
   group001?.cutIslands({
-    profile: Profile.rOut,
-    layerStart: 1.25,
-    layerEnd: 1,
-    amount: 1,
-    loftScale: 4 / 4,
-  })
-
-  group001?.cutIslands({
     profile: Profile.jIn,
-    layerStart: 1 / 16,
-    layerEnd: .00001,
+    layerStart: .95,
+    layerEnd: .65,
     amount: 1,
     loftScale: 1 / 1,
-    direction: Direction.None,
+    // direction: Direction.All
   })
 
-  //MARK: group002
-
-  group002?.cutIslands({
-    profile: Profile.rIn,
-    layerStart: .5,
-    layerEnd: .0001,
-    amount: 1,
-    loftScale: 1 / 1,
-  })
-
-
-  //MARK: group003
-  // group003?.cutIslands({
-  //   profile: Profile.iOut,
-  //   layerStart: 3 / 4,
-  //   layerEnd: 2 / 4,
-  //   loftScale: 1 / 1,
-  //   // outsetCut: false,
+  // group001?.cutIslands({
+  //   profile: Profile.rOut,
+  //   layerStart: 1.25,
+  //   layerEnd: 1,
+  //   amount: 1,
+  //   loftScale: 4 / 4,
   // })
 
+  // group001?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: 1 / 16,
+  //   layerEnd: .00001,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   direction: Direction.None,
+  // })
 
+  //MARK: group002
+  group002?.cutIslands({
+    profile: Profile.jIn,
+    layerStart: .95,
+    layerEnd: .65,
+    amount: 1,
+    loftScale: 1 / 1,
+    // direction: Direction.All
+  })
 
+  // group002?.cutIslands({
+  //   profile: Profile.rOut,
+  //   layerStart: .5,
+  //   layerEnd: .0001,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  // })
+
+  //MARK: group003
   group003?.cutIslands({
     profile: Profile.jIn,
-    layerStart: 3 / 4,
-    layerEnd: .001,
-    loftScale: 1 / 1,
+    layerStart: .95,
+    layerEnd: .65,
     amount: 1,
-    // direction: Direction.Horizontal
+    loftScale: 1 / 1,
+    // direction: Direction.All
   })
+
+  // group003?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: 13/ 4,
+  //   layerEnd: .85,
+  //   loftScale: 1 / 1,
+  //   amount: 1,
+  //   // direction: Direction.Horizontal
+  // })
 
   // group003?.cutIslands({
   //   profile: Profile.rOut,
@@ -459,6 +492,14 @@ function gridTests2() {
   // })
 
   //MARK: group004
+  group004?.cutIslands({
+    profile: Profile.jIn,
+    layerStart: .9,
+    layerEnd: 1 / 16,
+    amount: 1,
+    loftScale: 1 / 1,
+    // direction: Direction.All
+  })
   // group004.createSubIslands({
   //   // direction: Direction.All,
   //   filter: shader5,
@@ -481,7 +522,16 @@ function gridTests2() {
   // console.log(`maxSquareLeafLoftRadius?`, GRID.islands.map(i => i.shape.maxSquareLeafLoftRadius))
   // console.log(`start cell?`, GRID.islands.map(i => i.cells[0].id))
 
+  // let testShape = GRID.shapeNamed('shp057')
+  // console.log(`testShape.simpleSubShapes`, testShape.simpleSubShapes)
+  // let subs = testShape.simpleSubShapes.flat()
+  // console.log(`subs does not hasBothCubicVerts`, subs.filter(s => !s.hasBothCubicVerts))
+  // console.log(`subs does not hasBothCompleteCorners`, subs.filter(s => !s.hasBothCompleteCorners))
+  // console.log(`subs hasFlatness`, subs.filter(s => s.hasFlatness).map(s => s.id))
+  // console.log(`subs canCurveMoreAtEnd`, subs.filter(s => s.canCurveMoreAtEnd).map(s => s.id))
   // globalAnimation()
+
+  GRID.maxCuddle()
 
   console.log(`  ######################   `)
 
