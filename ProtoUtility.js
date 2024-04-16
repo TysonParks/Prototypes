@@ -55,6 +55,9 @@ class Corner {
   get isDown() { return !this.isUp }
   get isLeft() { return !this.isRight }
 
+  //METH: equals()
+  equals(corner) { return this.value === corner.value }
+
   #descriptions = [
     'upLeft',  // 0
     'upRight', // 1
@@ -467,6 +470,36 @@ class EdgePart {
 }
 
 // MARK: Utility
+//FUNC: safeWhile()
+function safeWhile(conditionFunc, actionFunc, maxIterations = 10) {
+  let iterations = 0
+  while (conditionFunc() && iterations < maxIterations) {
+    actionFunc()
+    iterations++
+  }
+  if (iterations >= maxIterations) {
+    console.error('Reached the maximum iteration limit of ' + maxIterations)
+  }
+}
+
+function safeArrayWhile(conditionArrayFunc, actionFunc, arrayMin = 0, maxRepeats = 5) {
+  let repeats = 0
+  let currentCount
+  while (conditionArrayFunc().length > arrayMin && repeats < maxRepeats) {
+    currentCount = conditionArrayFunc().length
+    console.log(`currentCount`, currentCount)
+    actionFunc()
+    if (conditionArrayFunc().length === currentCount) {
+      repeats++
+    } else {
+      repeats = 0
+    }
+  }
+  if (repeats >= maxRepeats) {
+    console.error('Reached the maximum iteration limit of ' + maxRepeats)
+  }
+}
+
 // FUNC: gridPointIndex() calculates 2D array index given coords(x,y) and array width
 function gridPointIndex(x, y, width, offset = 0) { return (x + y * width) + offset }
 
