@@ -39,6 +39,40 @@ function functionTestPrint() {
   // similarGridNeighbors(16)
   console.groupCollapsed(`TestMess`)
 
+  //NOTE: OpArray Tests
+  console.log(`OpArray Tests`)
+
+  let array = [`a`, `b`, `c`, `d`]
+  let opArray01 = OpArray.format(array)
+  console.log(`array`, array)
+  console.log(`opArray01`, opArray01)
+
+  let word = 'cell40'
+
+  let opArray02 = OpArray.format(word)
+  console.log(`word`, word)
+  console.log(`opArray02`, opArray02)
+
+  let union = opArray01.union(opArray02)
+  console.log(`union`, union)
+  let idBoy1 = { name: `bro`, id: `b01` }
+  let idBoy2 = { name: `dude`, id: `b02` }
+  let idBoy3 = { name: `bruh`, id: `b03` }
+  let idBoy4 = { name: `boieee`, id: `b04` }
+
+  let boyToy1 = { start: idBoy1, end: idBoy2 }
+  let boyToy2 = { start: idBoy1, end: idBoy2 }
+  let boyToy3 = { start: idBoy3, end: idBoy4 }
+
+  let boyColxn1 = OpArray.format(boyToy1)
+  let boyColxn2 = OpArray.format(boyToy2)
+  let boyColxn3 = OpArray.format(boyToy3)
+
+  let boyColxn4 = boyColxn1.union(boyColxn2, `start`)
+  console.log(`boyColxn4`, boyColxn4)
+  let boyColxn5 = boyColxn1.union(boyColxn3, `start`)
+  console.log(`boyColxn5`, boyColxn5)
+
   // NOTE: ProtoSegment Tests
   console.log(`ProtoSegment Tests`)
 
