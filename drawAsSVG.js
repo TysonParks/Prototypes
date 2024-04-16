@@ -769,12 +769,14 @@ class Segment {
     const threshold = 0.01 // Adjust this threshold based on your precision needs
     return p5.Vector.dist(vert, projectedPoint) < threshold
   }
-
+  //METH: isParallelTo()
+  isParallelTo(seg) { return this.direction.andOpposites.equals(seg.direction.andOpposites) }
+  //METH: isColinearWith()
   //TODO: Finish Implementation
   isColinearWith(seg) {
     // console.warn(`USING: isColinearWith`)
     let bool
-    if (this.direction.andOpposites.equals(seg.direction.andOpposites)) { //both horizontal or both vertical
+    if (this.isParallelTo(seg)) { //both horizontal or both vertical
       // console.log(`same direction?`, this.direction.andOpposites.equals(seg.direction.andOpposites))
       if (this.direction.andOpposites.isVertical) {               // if vertical
         // console.log(`comparing verticals: ${roundToDec(this.end.x, 1)} to ${roundToDec(seg.end.x, 1)}`)
@@ -796,10 +798,18 @@ class Segment {
   }
 
   isOverlappingWith(seg, includeEnds = true, decimal = 0, mode = 2) {
+    if (!this.isParallelTo(seg)) { return false }
+    const sameDir = this.direction.equals(seg.direction)
+    const isEndToEnd = sameDir ?
+      this.start.equals(seg.end) || this.end.equals(seg.start)
+      : this.start.equals(seg.start) || this.end.equals(seg.end)
+    if (isEndToEnd) { return false }
+
     const segInsideThis = this.vertIsOnLine(seg.start, includeEnds, decimal)
       || this.vertIsOnLine(seg.end, includeEnds, decimal)
     const thisInsideSeg = seg.vertIsOnLine(this.start, includeEnds, decimal)
       || seg.vertIsOnLine(this.end, includeEnds, decimal)
+
     switch (mode) {
       case 0:
         return segInsideThis
@@ -1501,6 +1511,15 @@ class ProtoSegment extends Segment {
   get endNeighbor() { return this.neighbors.end }
   get andNeighborsArray() { return OpArray.from([this.startNeighbor, this, this.endNeighbor]) }
   get hasBothNeighbors() { return !!this.startNeighbor && !!this.endNeighbor }
+
+  get overlapSegs() {
+    if (!this._overlapSegs) {
+      this._overlapSegs = this.shape.andNeighborSimples
+        .filter(s => s.isOverlappingWith(this, false, 0, 0))
+        .exclude(this, `id`)
+    }
+    return this._overlapSegs
+  }
 
   get hasCompletePath() { return !!this.segPath }
   get isSmallBean() {
