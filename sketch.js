@@ -261,7 +261,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  // gridX = 3
+  // gridX = 4
 
   GRID = new Grid({
     protoParent: FRAME,
@@ -307,7 +307,7 @@ function gridTests2() {
 
 
   // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  group000 = GRID.squares({ coverage: 0.2, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
+  group000 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
   // group000 = GRID.randGroup({ amount: 0.4 })
   // GRID.squares(16 / GRID.cellCount)
   // GRID.squares(0.2)
@@ -352,7 +352,7 @@ function gridTests2() {
   // console.log('right adj', Direction.Right.adjacents)
   // console.log('right and adj', Direction.Right.andAdjacents)
   // console.log('right opposite', Direction.Right.opposites)
-  // group003 = GRID.randGroup({ amount: 0.5 })
+  group004 = GRID.randGroup({ amount: 0.5 })
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
 
   // GRID.randGroup({amount:1 / GRID.cellCount})
@@ -368,14 +368,14 @@ function gridTests2() {
   // GRID.outlineTaken(Direction.Horizontal, true)
   // GRID.groupNamed('grp001')?.setFilter(shader2)
 
-  group004 = GRID.groupAvail()
+  // group004 = GRID.groupAvail()
   // group001 = GRID.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   //MARK: SYMMETRY
   // console.log('pre-symmetrized cellRows', GRID.cellRows)
   // GRID.symmetrize({
   //   direction: Direction.Cardinal,
-  //   reflection: false,
+  //   reflection: true,
   //   // useEmptyuseAssign, 
   //   // useEmpty, 
   //   // groupIDs, 
@@ -385,7 +385,7 @@ function gridTests2() {
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
-  group000?.createPerimiters('maxCorners', Direction.All)
+  group000?.createPerimiters('maxCorners', Direction.Cardinal)
   group001?.createPerimiters('maxCorners', Direction.Cardinal)
   group002?.createPerimiters('maxCorners', Direction.Cardinal)
   group003?.createPerimiters('maxCorners', Direction.Cardinal)
@@ -394,7 +394,8 @@ function gridTests2() {
   // console.log(`groups`, GRID.groups)
 
   console.error(`  ######################   `)
-  console.groupCollapsed(`nestleShapes`)
+  // console.groupCollapsed(`nestleShapes`)
+  console.group(`nestleShapes`)
   GRID.nestleShapes(4)
   console.groupEnd()
 
@@ -468,7 +469,7 @@ function gridTests2() {
   group003?.cutIslands({
     profile: Profile.jIn,
     layerStart: .95,
-    layerEnd: .65,
+    layerEnd: 1 / 32,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
@@ -511,6 +512,8 @@ function gridTests2() {
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
   // GRID.showCellsDebug()
+
+  // console.log(`multi-island simpleSubshapes`, GRID.allSimpleSubShapes.flat().map(s => s.parentID))
   let interCells01 = GRID.perimeterIslands[3].interCells
   console.log(`interCells01`, interCells01.map(c => c.id))
   // console.log(`GRID.islands`, GRID.islands)
@@ -531,7 +534,7 @@ function gridTests2() {
   // console.log(`subs canCurveMoreAtEnd`, subs.filter(s => s.canCurveMoreAtEnd).map(s => s.id))
   // globalAnimation()
 
-  GRID.maxCuddle()
+  // GRID.maxCuddle()
 
   console.log(`  ######################   `)
 
