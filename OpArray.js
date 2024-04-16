@@ -169,6 +169,7 @@ class OpArray extends Array {
   //METH: A ⋃ B: return union or all unique values in both sets
   // [a,b,c] union [b,c,d] = [a,b,c,d]
   union(vals, props) {
+    if (!vals || vals.isEmpty) { return this }
     return this.boolOp(vals, props,
       (a, b) => [...new Set([...a, ...b])]
     )
