@@ -229,8 +229,8 @@ class SegPath {
     return segmentPath
   }
   //METH: refine() : remove colinear segments to simplify seg path to single segments connecting corners
-  static refine(segPath, parentID, minCorners = false) {
-    let report = true // DEBUG
+  static refine(segPath, parentID, minCorners = false, grid) {
+    let report = false // DEBUG
 
     let newPath = new OpArray
     let prevSeg = undefined
@@ -281,7 +281,8 @@ class SegPath {
           end: seg.end,
           parentID: parentID,
           id: id,
-          islandIDs: islandIDs
+          islandIDs: islandIDs,
+          grid: grid
         })
         // add cubicVerts from prevSeg and seg to newSeg
         if (prevSeg.hasSomeCubicVerts) {
@@ -740,9 +741,9 @@ class Segment {
   }
 
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
-  vertIsOnLine(vert, includeEnds = true) {
+  vertIsOnLine(vert, includeEnds = true, decimal = 0) {
     if (!includeEnds) {
-      if (vert.equals(this.start, 0) || vert.equals(this.end, 0)) {
+      if (vert.equals(this.start, decimal) || vert.equals(this.end, decimal)) {
         return false
       }
     }
@@ -794,7 +795,25 @@ class Segment {
     return bool
   }
 
-  isOverlappingWith(seg) { return this.vertIsOnLine(seg.start) || this.vertIsOnLine(seg.end) }
+  isOverlappingWith(seg, includeEnds = true, decimal = 0, mode = 2) {
+    const segInsideThis = this.vertIsOnLine(seg.start, includeEnds, decimal)
+      || this.vertIsOnLine(seg.end, includeEnds, decimal)
+    const thisInsideSeg = seg.vertIsOnLine(this.start, includeEnds, decimal)
+      || seg.vertIsOnLine(this.end, includeEnds, decimal)
+    switch (mode) {
+      case 0:
+        return segInsideThis
+      case 1:
+        return thisInsideSeg
+      case 2:
+        return segInsideThis || thisInsideSeg
+    }
+
+    // return this.vertIsOnLine(seg.start, includeEnds, decimal)
+    //   || this.vertIsOnLine(seg.end, includeEnds, decimal)
+    //   || seg.vertIsOnLine(this.start, includeEnds, decimal)
+    //   || seg.vertIsOnLine(this.end, includeEnds, decimal)
+  }
 
   //NOTE: made with ChatGPT4.0 on Jan12, 2024
   intersectionWith(seg) {
@@ -919,6 +938,7 @@ class ProtoSegment extends Segment {
   }
 
   get cellRadius() { return this.grid.cellRadius }
+  get shape() { return this.grid.shapeNamed(this.parentID) }
 
   get turns() {
     if (!this.hasBothNeighbors) {
@@ -1037,10 +1057,20 @@ class ProtoSegment extends Segment {
   get hasBothCubicCorners() { return this.hasCubicStartCorner && this.hasCubicEndCorner }
 
   get finalCubicStartVert() {
+    // if (!this._finalCubicStartVert) {
+    //   const finalLength = min(this.availableStartLength, this.startNeighbor.availableEndLength)
+    //   this._finalCubicStartVert = this.distancedStartPoint(finalLength)
+    // }
+    // return this._finalCubicStartVert
     const finalLength = min(this.availableStartLength, this.startNeighbor.availableEndLength)
     return this.distancedStartPoint(finalLength)
   }
   get finalCubicEndVert() {
+    // if (!this._finalCubicEndVert) {
+    //   const finalLength = min(this.availableEndLength, this.endNeighbor.availableStartLength)
+    //   this._finalCubicEndVert = this.distancedStartPoint(finalLength)
+    // }
+    // return this._finalCubicEndVert
     const finalLength = min(this.availableEndLength, this.endNeighbor.availableStartLength)
     return this.distancedEndPoint(finalLength)
   }
@@ -1109,8 +1139,20 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get availableStartLength() { return this.#availableLength() }
-  get availableEndLength() { return this.#availableLength(false) }
+  get availableStartLength() {
+    // if (this._availableStartLength === undefined) {
+    //   this._availableStartLength = this.#availableLength()
+    // }
+    // return this._availableStartLength
+    return this.#availableLength()
+  }
+  get availableEndLength() {
+    // if (this._availableEndLength === undefined) {
+    //   this._availableEndLength = this.#availableLength(false)
+    // }
+    // return this._availableEndLength
+    return this.#availableLength(false)
+  }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
   assignMid() {
@@ -1118,8 +1160,8 @@ class ProtoSegment extends Segment {
     this.addCubicEndVert(this.mid)
   }
 
-  addCubicStartVert(vert) { this.#addCubicVert(vert, true) }
-  addCubicEndVert(vert) { this.#addCubicVert(vert, false) }
+  addCubicStartVert(vert, replace = false) { this.#addCubicVert(vert, true, false, replace) }
+  addCubicEndVert(vert, replace = false) { this.#addCubicVert(vert, false, false, replace) }
 
   addBothCubicVerts(vert) {
     this.addCubicStartVert(vert)
@@ -1141,6 +1183,27 @@ class ProtoSegment extends Segment {
     this.addDistancedEndCornerVerts(distance)
   }
 
+  removeCubicStartVert() { this.#removeCubicVert() }
+  removeCubicEndVert() { this.#removeCubicVert(false) }
+
+  removeStartCornerVerts() {
+    this.removeCubicStartVert()
+    this.neighbors.start.removeCubicEndVert()
+  }
+  removeEndCornerVerts() {
+    this.removeCubicEndVert()
+    this.neighbors.end.removeCubicStartVert()
+  }
+
+  replaceCubicStartVert(vert) { this.#replaceCubicVert(vert) }
+  replaceCubicEndVert(vert) { this.#replaceCubicVert(vert, false) }
+
+  replaceDistancedEndCornerVerts(distance) {
+    this.removeStartCornerVerts()
+    this.replaceCubicEndVert(this.distancedEndPoint(distance))
+    this.neighbors.end.replaceCubicStartVert(this.neighbors.end.distancedStartPoint(distance))
+  }
+
   matchStartCorner() {
     const startMin = min(this.availableStartLength, this.startNeighbor.availableEndLength)
     this.addDistancedStartCornerVerts(startMin)
@@ -1154,21 +1217,21 @@ class ProtoSegment extends Segment {
     this.matchEndCorner()
   }
 
-  #addCubicVert(vert, start, max = false) {
-    let report = false
+  #addCubicVert(vert, start, max = false, replace = false) {
+    // let report = false
     const mode = start ? 'Start' : `End`
     // if (
     //   this.id.includes('cell097')
     //   || this.id.includes('cell090')
     //   || this.id.includes('cell096')
     // ) { report = true }
-    if (report) {
-      console.warn(`addCubic${mode}Vert: ${vert?.string}`, this)
-      console.log(`hasCubicStartVert: ${this.hasCubicStartVert}`)
-      if (this.availableStartLength) { console.log(`availableStartLength: ${this.availableStartLength}`) }
-      console.log(`hasCubicEndVert: ${this.hasCubicEndVert}`)
-      if (this.availableEndLength) { console.log(`availableEndLength: ${this.availableEndLength}`) }
-    }
+    // if (report) {
+    //   console.warn(`addCubic${mode}Vert: ${vert?.string}`, this)
+    //   console.log(`hasCubicStartVert: ${this.hasCubicStartVert}`)
+    //   if (this.availableStartLength) { console.log(`availableStartLength: ${this.availableStartLength}`) }
+    //   console.log(`hasCubicEndVert: ${this.hasCubicEndVert}`)
+    //   if (this.availableEndLength) { console.log(`availableEndLength: ${this.availableEndLength}`) }
+    // }
     let cubicVert
     if (!max) {
       cubicVert = start ? this.cubicVerts.start : this.cubicVerts.end
@@ -1182,7 +1245,7 @@ class ProtoSegment extends Segment {
         console.log(`this.segment`, info(this))
         return
       }
-      if (cubicVert) {
+      if (cubicVert && !replace) {
         const terminus = start ? this.start : this.end
         if (vert.dist(terminus) >= cubicVert.dist(terminus)) { return }
       }
@@ -1199,12 +1262,45 @@ class ProtoSegment extends Segment {
           this.maxCubicVerts.end = vert
         }
       }
-      if (report) {
-        console.log(`this.cubicStartVert: ${this.cubicVerts.start?.string}`)
-        console.log(`this.cubicEndVert: ${this.cubicVerts.end?.string}`)
-        console.log(`new available${mode}Length:`, start ? this.availableStartLength : this.availableEndLength)
-      }
+      this.#resetHybridProps()
+      // if (report) {
+      //   console.log(`this.cubicStartVert: ${this.cubicVerts.start?.string}`)
+      //   console.log(`this.cubicEndVert: ${this.cubicVerts.end?.string}`)
+      //   console.log(`new available${mode}Length:`, start ? this.availableStartLength : this.availableEndLength)
+      // }
     }
+  }
+
+  #removeCubicVert(start = true, max = false) {
+    if (max === false) {
+      if (start) { this.cubicVerts.start = undefined } else { this.cubicVerts.end = undefined }
+    } else {
+      if (start) { this.maxCubicVerts.start = undefined } else { this.maxCubicVerts.end = undefined }
+    }
+    this.#resetHybridProps()
+  }
+
+  #replaceCubicVert(vert, start = true, max = false) {
+    this.#addCubicVert(vert, start, max, true)
+  }
+
+  #resetHybridProps(andNeighbors = true) {
+    const segs = andNeighbors ? this.andNeighborsArray : [this]
+    segs.forEach(s => {
+      s._hasCompleteStartCorner = undefined
+      s._hasCompleteEndCorner = undefined
+      s._availableStartLength = undefined
+      s._availableStartLength = undefined
+      s._cornerArcOrigin = undefined
+      s._flatAmount = undefined
+      s._arcOriginToStart = undefined
+      s._arcOriginToNormal = undefined
+      s._arcOriginToEnd = undefined
+      s._cornerArcRadius = undefined
+      // s._finalCubicStartVert = undefined
+      // s._finalCubicEndVert = undefined
+    })
+
   }
   // #endregion
   //MARK: Max Verts
@@ -1238,15 +1334,15 @@ class ProtoSegment extends Segment {
     return this.distancedEndPoint(length)
   }
 
-  #setupMaxCubicVerts() {
-    const max = this.length - this.cellRadius
-    console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
-    this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
-  }
-  addMaxStartVert(vert) { this.#addCubicVert(vert, true, true) }
-  addMaxEndVert(vert) { this.#addCubicVert(vert, false, true) }
+  // #setupMaxCubicVerts() {
+  //   const max = this.length - this.cellRadius
+  //   console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
+  //   this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
+  // }
+  addMaxStartVert(vert, replace = false) { this.#addCubicVert(vert, true, true, replace) }
+  addMaxEndVert(vert, replace = false) { this.#addCubicVert(vert, false, true, replace) }
   // #endregion
-  //MARK: Generalized Cubic + Max Verts
+  //MARK: Combined Cubic Verts
   // #region Combined Cubic Verts
   get hasAStartVert() { return this.hasMaxStartVert || this.hasCubicStartVert }
   get hasAnEndVert() { return this.hasMaxEndVert || this.hasCubicEndVert }
@@ -1255,19 +1351,34 @@ class ProtoSegment extends Segment {
   get endVert() { return this.cubicVerts.end || this.maxCubicVerts.end }
 
   get hasCompleteStartCorner() {
-    return this.startNeighbor.hasAnEndVert && this.hasAStartVert
-      && roundToDec(this.startNeighbor.availableEndLength) === roundToDec(this.availableStartLength)
+    if (this._hasCompleteStartCorner === undefined) {
+      this._hasCompleteStartCorner = this.startNeighbor.hasAnEndVert && this.hasAStartVert
+        && roundToDec(this.startNeighbor.availableEndLength) === roundToDec(this.availableStartLength)
+    }
+    return this._hasCompleteStartCorner
   }
   get hasCompleteEndCorner() {
-    return this.hasAnEndVert && this.endNeighbor.hasAStartVert
-      && roundToDec(this.availableEndLength) === roundToDec(this.endNeighbor.availableStartLength)
+    if (this._hasCompleteEndCorner === undefined) {
+      this._hasCompleteEndCorner = this.hasAnEndVert && this.endNeighbor.hasAStartVert
+        && roundToDec(this.availableEndLength) === roundToDec(this.endNeighbor.availableStartLength)
+    }
+    return this._hasCompleteEndCorner
   }
   get hasBothCompleteCorners() { return this.hasCompleteStartCorner && this.hasCompleteEndCorner }
 
   // #endregion
   //MARK: Flatness
   // #region Flatness
-  get flatAmount() { if (this.hasBothCompleteCorners) { return this.startVert.dist(this.endVert) } }
+  get flatAmount() {
+    if (this._flatAmount === undefined) {
+      if (this.hasBothCompleteCorners) { this._flatAmount = this.startVert.dist(this.endVert) }
+      else { this._flatAmount = null }
+    }
+    return this._flatAmount
+
+    // if (this.hasBothCompleteCorners) { return this.startVert.dist(this.endVert) } 
+  }
+
   get hasNoFlatness() { return roundToDec(this.flatAmount, 1) === 0 }
   get hasFlatness() { if (this.hasBothCompleteCorners) { return !this.hasNoFlatness } }
 
@@ -1278,8 +1389,56 @@ class ProtoSegment extends Segment {
 
   get canCurveMore() { return this.hasFlatness && this.hasFlatNeighbor }
   get canCurveMoreAtEnd() { return this.hasFlatness && this.hasFlatEndNeighbor }
+  get canCurveLessAtEnd() { return roundToDec(this.availableEndLength, 1) > roundToDec(GRID.cellRadius, 1) }
+  get isLooseCorner() { return this.isOutsideCorner && this.canCurveMoreAtEnd }
+  // #endregion
+  //MARK: Corner Arc
+  // #region Corner Arc
+  get hasArc() { return this.hasBothVerts }
+  get arcStartCorner() { return this.finalCubicEndVert || vert() }
+  get arcNormalCorner() { return this.end }
+  get arcEndCorner() { return this.endNeighbor.finalCubicStartVert || vert() }
+  get cornerArcRadius() {
+    if (!this._cornerArcRadius) {
+      this._cornerArcRadius = min(this.availableEndLength, this.endNeighbor.availableStartLength)
+    }
+    return this._cornerArcRadius
+    // return min(this.availableEndLength, this.endNeighbor.availableStartLength) 
+  }
 
+  get cornerArcOrigin() {
+    if (!this._cornerArcOrigin) {
+      let origin
+      if (!this.hasBothVerts) { origin = vert() }
+      else { origin = Vertex.add(this.arcStartCorner, segment(this.arcNormalCorner, this.arcEndCorner).lineVector) }
+      this._cornerArcOrigin = origin
+    }
+    return this._cornerArcOrigin
+    // if (!this.hasBothVerts) { return vert() }
+    // return Vertex.add(this.arcStartCorner, segment(this.arcNormalCorner, this.arcEndCorner).lineVector)
+  }
 
+  get arcOriginToStart() {
+    if (!this._arcOriginToStart) {
+      this._arcOriginToStart = segment(this.cornerArcOrigin, this.arcStartCorner)
+    }
+    return this._arcOriginToStart
+    // return segment(this.cornerArcOrigin, this.arcStartCorner)
+  }
+  get arcOriginToNormal() {
+    if (!this._arcOriginToNormal) {
+      this._arcOriginToNormal = segment(this.cornerArcOrigin, this.arcStartCorner)
+    }
+    return this._arcOriginToNormal
+    // return segment(this.cornerArcOrigin, this.arcStartCorner)
+  }
+  get arcOriginToEnd() {
+    if (!this._arcOriginToEnd) {
+      this._arcOriginToEnd = segment(this.cornerArcOrigin, this.arcEndCorner)
+    }
+    return this._arcOriginToEnd
+    // return segment(this.cornerArcOrigin, this.arcEndCorner)
+  }
   // #endregion
   //MARK: Copy Methods
   // #region Copy Methods
@@ -1340,9 +1499,16 @@ class ProtoSegment extends Segment {
   // #region Neighbors
   get startNeighbor() { return this.neighbors.start }
   get endNeighbor() { return this.neighbors.end }
+  get andNeighborsArray() { return OpArray.from([this.startNeighbor, this, this.endNeighbor]) }
   get hasBothNeighbors() { return !!this.startNeighbor && !!this.endNeighbor }
 
   get hasCompletePath() { return !!this.segPath }
+  get isSmallBean() {
+    const min = 5 * GRID.cellRadius
+    const path = this.segPath
+    if (path.length === 6) { return path.every(s => s.length < min) }
+    return false
+  }
 
   get segPath() {
     if (!this.hasBothNeighbors) {
