@@ -1109,8 +1109,8 @@ class Grid extends ProtoLayer {
     skipVertOnLine = false,   // 
     includeEnds = true,       // 
   } = {}) {
-    //FIXME: incorporate seg.thisAndNeighborSimples into search reduction for massive performance gain!
-    // const localSegs = seg.thisAndNeighborSimples
+    //FIXME: incorporate seg.andNeighborSimples into search reduction for massive performance gain!
+    // const localSegs = seg.andNeighborSimples
     // if (localSegs) { segCollection = localSegs }
     const segDir = seg.direction
     const wrapDir = outWrap ? segDir.opposites : segDir              // expected direction of wrapper 
@@ -1157,7 +1157,7 @@ class Grid extends ProtoLayer {
     skipVertOnLine = false,
     includeEnds = true,
   } = {}) {
-    // const localSegs = seg.thisAndNeighborSimples
+    // const localSegs = seg.andNeighborSimples
     // if (localSegs) { segCollection = localSegs }
     const neighbor = seg.endNeighbor // runs clockwise, seg then rightTurn end neighbor
     const start = this.findColinearWrapper({  // find start of corner wrapper
@@ -1682,7 +1682,7 @@ class Grid extends ProtoLayer {
   //METH: cornerIsLoose()
   cornerIsLoose(seg, segCollection = this.allSimpleSubShapes) {
     if (seg.canCurveMoreAtEnd) {                                // seg corner might be loose
-      const localSegs = seg.thisAndNeighborSimples
+      const localSegs = seg.andNeighborSimples
       if (localSegs) { segCollection = localSegs }
       let radiants = segCollection.flat()                       // unless inwrapped by a radiant
         .filter(s =>
@@ -1730,7 +1730,7 @@ class Grid extends ProtoLayer {
     looseWrap = true,
     invertLineCheck = false,
   } = {}) {
-    const localSegs = seg.thisAndNeighborSimples
+    const localSegs = seg.andNeighborSimples
     if (localSegs) { segCollection = localSegs }
     const wrappers = this.findColinearWrappers({
       seg: seg,
@@ -3526,6 +3526,7 @@ class Island extends ProtoLayer {
   get neighborIslands() {
     let neighbors = this.grid.tempOutlineSelection(this.cells)
       .map(c => c.islandIDs.values().next().value)
+      .compacted
       .unique()
       .map(id => this.grid.islandNamed(id))
     // console.log(neighbors)
@@ -4042,7 +4043,7 @@ class Shape extends ProtoLayer {
 
   get neighborShapes() { return this.island.neighborIslands.map(i => i.shape) }
   get neighborSimples() { return this.neighborShapes.map(s => s.simpleSubShapes).flat() }
-  get thisAndNeighborSimples() { return this.simpleSubShapes.flat().union(this.neighborSimples.flat(), ['id']) }
+  get andNeighborSimples() { return this.simpleSubShapes.flat().union(this.neighborSimples.flat(), ['id']) }
 
   get isPerimeterShape() { return this.type === `PerimeterShape` }
 
