@@ -672,6 +672,33 @@ class Range {
   cycle(x) { return ((x - this.start) % this.cycleSize + this.cycleSize) % this.cycleSize + this.start }
 }
 
+//MARK: Memoization
+//NOTE: Create with ChatGPT4 on April 17, 2024
+
+const memoCache = new WeakMap()           // WeakMap to hold private cache data across instances
+// FUNC: memoize() : helper that defines memoized getters with integrated reset
+function memoize(getter, key) {
+  return function () {
+    let cache = memoCache.get(this)
+    if (!cache) {
+      cache = {}
+      memoCache.set(this, cache)
+    }
+    if (!(key in cache)) { cache[key] = getter.call(this) }
+    return cache[key]
+  }
+}
+// FUNC: resetMemoized() : resets memoized property values on instances using keys
+function resetMemoized(instance, ...keys) {
+  const cache = memoCache.get(instance)
+  if (cache) {
+    keys.forEach(key => {
+      if (key in cache) { delete cache[key] }
+    })
+  }
+}
+
+
 // Sequence generator function (commonly referred to as "range", e.g. Clojure, PHP etc)
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
 function rangeArray(start, stop, step = 1) { return OpArray.from({ length: (stop - start) / step + 1 }, (_, i) => start + (i * step)) }
