@@ -226,8 +226,12 @@ class Direction {
   static atAngle(angle) {
     angle = constrainAngle(angle)
     let direction = Direction.Up
-    let name = direction.angleKeys.find(key => direction.#angles[key] === angle)
+    let name = direction.angleKeys.find(key => roundToDec(direction.#angles[key]) === roundToDec(angle))
     let index = direction.#descriptions.findIndex(e => e === name)
+    // console.log(`angle`, angle)
+    // console.log(`direction`, direction)
+    // console.log(`name`, name)
+    // console.log(`index`, index)
     return new Direction(index / 2)
   }
 
@@ -469,7 +473,78 @@ class EdgePart {
   }
 }
 
-// MARK: Utility
+//MARK: Bounds
+// #region Bounds
+//TODO: Make this into a class and incorporate SelectionBounds, possibly making it a subclass of Bounds?
+// FUNC: isBoundsObj()
+function isBoundsObj(obj) { return hasProperties(obj, [`xMin`, `xMax`, `yMin`, `yMax`]) }
+// FUNC: isCoordsObj()
+function isCoordsObj(obj) { return hasProperties(obj, [`x`, `y`]) }
+// FUNC: findBounds() : {BoundsObject} : get bounds for combos of [segments, verts] or objects that contain bounds props
+function findBounds(...geo) {
+  // console.log(`geo`, geo)
+  let boundsVerts, xMin, xMax, yMin, yMax
+  //ARROW: bounds() : assemble bounds obj from mins & maxes
+  const bounds = () => { return { xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax, } }
+
+  if (geo.length === 1 && isBoundsObj(geo[0])) {                        // geo is obj with mins & maxes
+    xMin = geo[0].xMin
+    xMax = geo[0].xMax
+    yMin = geo[0].yMin
+    yMax = geo[0].yMax
+    return bounds()
+  } else {                                                              // geo is rest param array
+    boundsVerts = geo
+  }
+  console.log(`boundsVerts`, boundsVerts)
+  boundsVerts = OpArray.format(boundsVerts).flat(Infinity).compacted
+    .map(e => {                                                         // map segs to verts
+      if (e instanceof Segment) { return [e.start, e.end] }
+      if (e instanceof Vertex) { return e }
+      //TODO: I could also check for bounds objects and arrays here to unpack all combos of madness
+      console.error(`findBounds failed: geo contains item  of unrecognized type`, e)
+    }).flat()
+  const xVals = boundsVerts.map(v => v.x)
+  const yVals = boundsVerts.map(v => v.y)
+  xMin = min(xVals)                                  // calculate mins and maxes
+  xMax = max(xVals)
+  yMin = min(yVals)
+  yMax = max(yVals)
+  return bounds()
+}
+// FUNC: vertIsInsideBounds() : BOOL : finds if vert is within bounds of boundsVerts
+//NOTE: boundsVerts can be any number of verts above zero, the bounds of those points is calculated with min/max
+function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3) {
+  const x = roundToDec(vert.x, accuracy)
+  const y = roundToDec(vert.y, accuracy)
+  bounds = findBounds(bounds)
+  const { xMin, xMax, yMin, yMax } = bounds
+  if (includeBorder) {
+    return x >= roundToDec(xMin, accuracy)
+      && x <= roundToDec(xMax, accuracy)
+      && y >= roundToDec(yMin, accuracy)
+      && y <= roundToDec(yMax, accuracy)
+  } else {
+    return x > roundToDec(xMin, accuracy)
+      && x < roundToDec(xMax, accuracy)
+      && y > roundToDec(yMin, accuracy)
+      && y < roundToDec(yMax, accuracy)
+  }
+}
+// FUNC: boundsIsInsideBoundsVerts() : BOOL : finds if vert is within bounds of testBounds
+function boundsIsInsideTestBounds(bounds, testBounds, includeBorder = true, justOverlaps = false, accuracy = 3) {
+  bounds = findBounds(bounds)
+  const boundsVerts = [vert(bounds.xMin, bounds.yMin), vert(bounds.xMax, bounds.yMax)]
+  testBounds = findBounds(testBounds)
+  if (justOverlaps) {
+    return boundsVerts.some(v => vertIsInsideBounds(v, testBounds, includeBorder, accuracy))
+  } else {
+    return boundsVerts.every(v => vertIsInsideBounds(v, testBounds, includeBorder, accuracy))
+  }
+}
+// #endregion
+
+// MARK: Loop Utilities
 //FUNC: safeWhile()
 function safeWhile(conditionFunc, actionFunc, maxIterations = 10) {
   let iterations = 0
@@ -481,7 +556,7 @@ function safeWhile(conditionFunc, actionFunc, maxIterations = 10) {
     console.error('Reached the maximum iteration limit of ' + maxIterations)
   }
 }
-
+//FUNC: safeArrayWhile()
 function safeArrayWhile(conditionArrayFunc, actionFunc, arrayMin = 0, maxRepeats = 5) {
   let repeats = 0
   let currentCount
@@ -500,9 +575,10 @@ function safeArrayWhile(conditionArrayFunc, actionFunc, arrayMin = 0, maxRepeats
   }
 }
 
+
+//MARK: Geometry, Angles and Rotation
 // FUNC: gridPointIndex() calculates 2D array index given coords(x,y) and array width
 function gridPointIndex(x, y, width, offset = 0) { return (x + y * width) + offset }
-
 // FUNC: gridCoords() calculates coords(x,y) given and index and array width
 function gridCoords(index, width, offset = 0) {
   index = index - offset
@@ -510,7 +586,6 @@ function gridCoords(index, width, offset = 0) {
   const y = floor(index / width)
   return vert(x, y)
 }
-
 // FUNC: rotateCoords() calculates rotated coords(x,y) given coords(x,y) and degree of rotation
 function rotateCoords(x, y, degree) {
   switch (degree) {
@@ -524,24 +599,29 @@ function rotateCoords(x, y, degree) {
       throw new Error("Invalid degree. Must be 90, 180, or 270.")
   }
 }
-
+// FUNC: constrainAngle(angle) : keep angle between -PI and PI
+function constrainAngle(angle) {
+  angle = angle % (2 * PI)
+  if (angle > PI) { angle -= 2 * PI }
+  if (angle <= -PI) { angle += 2 * PI }
+  return angle
+}
 // FUNC: radiansToDegrees() convert radians to degrees
 function radianToDegree(radians) {
   return (radians * 180) / PI
 }
-
 // FUNC: normalizeDegree() normalize any positive or negative degree to 0-360 range
 function normalizeDegree(degree) {
   // return range(0, 359).normalize(degree)
   return ((degree % 360) + 360) % 360
 }
-
 // FUNC: normRadToDeg() convert rad to normalized degrees
 function normRadToDeg(radians) {
   const radPipe = pipe(radianToDegree, normalizeDegree)
   return radPipe(radians)
 }
 
+//MARK: Function Composition
 // NOTE: https://itnext.io/write-better-javascript-function-composition-with-pipe-and-compose-93cc39ab16ee
 // FUNC: compose() compose multiple functions that executes from right to left
 const compose = (...fns) => x => fns.reduceRight((res, fn) => fn(res), x)
@@ -555,20 +635,18 @@ function reduce(initial, reducer) {
   else { return initial - reducer }
 }
 
+//MARK: Object Utilities
 // FUNC: getKeyByValue() get key by value in any object
 function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
 }
-
-//MARK: Number Utilities
-// FUNC: constrainAngle(angle) : keep angle between -PI and PI
-function constrainAngle(angle) {
-  angle = angle % (2 * PI)
-  if (angle > PI) { angle -= 2 * PI }
-  if (angle <= -PI) { angle += 2 * PI }
-  return angle
+//FUNC: hasProperties() : checks to see if obj is really an object and has certain named properties
+function hasProperties(obj, props) {
+  if (typeof obj !== 'object' || obj === null) return false
+  return props.every(prop => prop in obj)
 }
 
+//MARK: Math Utilities
 //NOTE: made with ChatGPT 4.0 June30.2023
 // FUNC: getDivisors() get array of prime divisors
 function getDivisors(number, prime = false) {
@@ -595,12 +673,10 @@ function isPrime(number) {
   }
   return true
 }
-
 // FUNC: roundToDec() round to number of decimal places
 function roundToDec(number, decimalPlaces) {
   return approxToDec(number, decimalPlaces)
 }
-
 // FUNC: approxToDec() round/floor/ceil to number of decimal places
 function approxToDec(number, decimalPlaces = 2, mode = 0) {
   const factor = 10 ** decimalPlaces
@@ -614,14 +690,12 @@ function approxToDec(number, decimalPlaces = 2, mode = 0) {
       return ceil(mult) / factor
   }
 }
-
 // FUNC: swapLets() swap values of `let` variables
 function swapVals(a, b) {
   const temp = a
   a = b
   b = temp
 }
-
 // FUNC: equalsRoundedDec() round to number of decimal places
 function equalsRoundedDec(num1, num2, decimalPlaces) {
   num1 = roundToDec(num1, decimalPlaces)
@@ -673,19 +747,19 @@ class Range {
 }
 
 //MARK: Memoization
-//NOTE: Create with ChatGPT4 on April 17, 2024
-
+//NOTE: Created with ChatGPT4 on April 17, 2024
 const memoCache = new WeakMap()           // WeakMap to hold private cache data across instances
 // FUNC: memoize() : helper that defines memoized getters with integrated reset
 function memoize(getter, key) {
+  const symbolKey = Symbol.for(key)
   return function () {
     let cache = memoCache.get(this)
     if (!cache) {
       cache = {}
       memoCache.set(this, cache)
     }
-    if (!(key in cache)) { cache[key] = getter.call(this) }
-    return cache[key]
+    if (!(symbolKey in cache)) { cache[symbolKey] = getter.call(this) }
+    return cache[symbolKey]
   }
 }
 // FUNC: resetMemoized() : resets memoized property values on instances using keys
@@ -693,7 +767,8 @@ function resetMemoized(instance, ...keys) {
   const cache = memoCache.get(instance)
   if (cache) {
     keys.forEach(key => {
-      if (key in cache) { delete cache[key] }
+      const symbolKey = Symbol.for(key)
+      if (symbolKey in cache) { delete cache[symbolKey] }
     })
   }
 }
