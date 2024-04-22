@@ -709,11 +709,25 @@ class Segment {
 
   get mid() { return this.pointOnsegment(0.5) }
 
-
-  get angle() { return this.lineVector.heading() }
-  get direction() { return Direction.atAngle(this.angle) }
+  //MEMO: angle
+  get angle() {
+    return memoize(() => {
+      return this.lineVector.heading()
+    }, `angle`).call(this)
+  }
+  //MEMO: direction
+  get direction() {
+    return memoize(() => {
+      return Direction.atAngle(this.angle)
+    }, `direction`).call(this)
+  }
   get slope() { return this.start.slopeTo(this.end) }
-  get length() { return this.lineVector.mag() }
+  //MEMO: length
+  get length() {
+    return memoize(() => {
+      return this.lineVector.mag()
+    }, `length`).call(this)
+  }
   get width() { return this.start.widthTo(this.end) }
   get height() { return this.start.heightTo(this.end) }
 
@@ -735,9 +749,9 @@ class Segment {
     const x = roundToDec(vert.x, accuracy)
     const y = roundToDec(vert.y, accuracy)
     return x >= roundToDec(this.xMin, accuracy)
-      || x <= roundToDec(this.xMax, accuracy)
-      || y >= roundToDec(this.yMin, accuracy)
-      || y <= roundToDec(this.yMax, accuracy)
+      && x <= roundToDec(this.xMax, accuracy)
+      && y >= roundToDec(this.yMin, accuracy)
+      && y <= roundToDec(this.yMax, accuracy)
   }
 
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
@@ -750,7 +764,9 @@ class Segment {
 
     // Check if vert is within the bounding box of the segment
     if (!this.vertIsInBounds(vert)) {
-      console.log(`vertIsOnLine vert is not in bounds`)
+      // console.log(`vertIsOnLine vert is not in bounds`)
+      // console.log(`seg`, this)
+      // console.log(`vert`, vert)
       return false // The point is outside the segment's bounding box
     }
 
@@ -798,13 +814,14 @@ class Segment {
   }
 
   isOverlappingWith(seg, includeEnds = true, decimal = 0, mode = 2) {
-    if (!this.isParallelTo(seg)) { return false }
+    if (!this.isParallelTo(seg)) { return false }                             // false if not parallel
     const sameDir = this.direction.equals(seg.direction)
-    const isEndToEnd = sameDir ?
-      this.start.equals(seg.end) || this.end.equals(seg.start)
+    const isExactOverlap = sameDir ? this.start.equals(seg.start, 0) && this.end.equals(seg.end, 0)
+      : this.start.equals(seg.end, 0) && this.end.equals(seg.start, 0)
+    if (isExactOverlap) { return true }                                       // true if exact overlap, either direction
+    const isEndToEnd = sameDir ? this.start.equals(seg.end) || this.end.equals(seg.start)
       : this.start.equals(seg.start) || this.end.equals(seg.end)
-    if (isEndToEnd) { return false }
-
+    if (isEndToEnd) { return false }                                          // false if end 
     const segInsideThis = this.vertIsOnLine(seg.start, includeEnds, decimal)
       || this.vertIsOnLine(seg.end, includeEnds, decimal)
     const thisInsideSeg = seg.vertIsOnLine(this.start, includeEnds, decimal)
@@ -949,41 +966,49 @@ class ProtoSegment extends Segment {
 
   get cellRadius() { return this.grid.cellRadius }
   get shape() { return this.grid.shapeNamed(this.parentID) }
-
+  //MEMO: turns
   get turns() {
-    if (!this.hasBothNeighbors) {
-      console.error(`segment ${this.id} without neighbors has no turns`)
-      return
-    }
-    const start = this.startNeighbor.direction.turnTo(this.direction)
-    const end = this.direction.turnTo(this.endNeighbor.direction)
+    return memoize(() => {
+      if (!this.hasBothNeighbors) {
+        console.error(`segment ${this.id} without neighbors has no turns`)
+        return
+      }
+      const start = this.startNeighbor.direction.turnTo(this.direction)
+      const end = this.direction.turnTo(this.endNeighbor.direction)
 
-    if (!start) { console.error(`segment ${this.id} failed to calculate start turn`) }
-    if (!end) { console.error(`segment ${this.id} failed to calculate end turn`) }
+      if (!start) { console.error(`segment ${this.id} failed to calculate start turn`) }
+      if (!end) { console.error(`segment ${this.id} failed to calculate end turn`) }
 
-    return {
-      start: start,
-      end: end
-    }
+      return {
+        start: start,
+        end: end
+      }
+    }, `turns`).call(this)
   }
-
+  //MEMO: normals
   get normals() {
-    if (!this.hasBothNeighbors) {
-      console.error(`segment ${this.id} without neighbors has no normals`)
-      return
-    }
-    if (!this.angle) { console.error(`segment ${this.id} has no angle!`, this) }
+    return memoize(() => {
+      if (!this.hasBothNeighbors) {
+        console.error(`segment ${this.id} without neighbors has no normals`)
+        return
+      }
+      if (!this.angle) { console.error(`segment ${this.id} has no angle!`, this) }
 
-    const normals =
-    {
-      start: this.startNeighbor.angle - this.turns.start.normalRotAngle,
-      end: this.angle - this.turns.end.normalRotAngle,
-      cubic: this.angle - PI / 2
-    }
-    return normals.map(a => Direction.atAngle(a))
+      const normals =
+      {
+        start: this.startNeighbor.angle - this.turns.start.normalRotAngle,
+        end: this.angle - this.turns.end.normalRotAngle,
+        cubic: this.angle - PI / 2
+      }
+      return normals.map(a => Direction.atAngle(a))
+    }, `normals`).call(this)
   }
-
-  get part() { return EdgePart.from([this.turns.start, this.turns.end]) }
+  //MEMO: part
+  get part() {
+    return memoize(() => {
+      return EdgePart.from([this.turns.start, this.turns.end])
+    }, `part`).call(this)
+  }
 
   get isUTurn() { return this.part?.isUTurn }
   get isUTurnIn() { return this.part?.isUTurnIn }   // LL
@@ -998,36 +1023,42 @@ class ProtoSegment extends Segment {
 
   // get hasInsideTurn() { return this.turns?.start.name === 'Left' || this.turns?.end.name === 'Left' }
   get isOutsideCorner() { return this.turns?.end.isRight }
-
+  //MEMO: cornerVerts
   get cornerVerts() {
-    if (!this.hasBothNeighbors) {
-      console.error(`segment ${this.id} without neighbors has no cornerVerts`)
-      return
-    }
-    if (!this.turns.start || !this.turns.end) {
-      console.error(`segment ${this.id} without turns has no cornerVerts`)
-      return
-    }
-    return {
-      start: (this.turns?.start.value !== 0) ? this.start : undefined,
-      end: (this.turns?.end.value !== 0) ? this.end : undefined,
-    }
+    return memoize(() => {
+      if (!this.hasBothNeighbors) {
+        console.error(`segment ${this.id} without neighbors has no cornerVerts`)
+        return
+      }
+      if (!this.turns.start || !this.turns.end) {
+        console.error(`segment ${this.id} without turns has no cornerVerts`)
+        return
+      }
+      return {
+        start: (this.turns?.start.value !== 0) ? this.start : undefined,
+        end: (this.turns?.end.value !== 0) ? this.end : undefined,
+      }
+    }, `cornerVerts`).call(this)
   }
-
+  //MEMO: corners
   get corners() {
-    const startDir = this.startNeighbor.direction
-    const endDir = this.direction
-    const startTurn = this.turns?.start
-    const endTurn = this.turns?.end
-    const corner = (dir, turn) => {
-      const turnAdd = turn.value === 1 ? 0 : 1
-      return new Corner((dir.value + turnAdd) % 4)
-    }
-    return {
-      start: (startTurn !== 0) ? corner(startDir, startTurn) : undefined,
-      end: (endTurn !== 0) ? corner(endDir, endTurn) : undefined,
-    }
+    return memoize(() => {
+      const startDir = this.startNeighbor.direction
+      const endDir = this.direction
+      const startTurn = this.turns?.start
+      const endTurn = this.turns?.end
+      const corner = (dir, turn) => {
+        const turnAdd = turn.value === 1 ? 0 : 1
+        return new Corner((dir.value + turnAdd) % 4)
+      }
+      return {
+        start: (startTurn !== 0) ? corner(startDir, startTurn) : undefined,
+        end: (endTurn !== 0) ? corner(endDir, endTurn) : undefined,
+      }
+    }, `corners`).call(this)
   }
+  get startCorner() { return this.corners.start }
+  get endCorner() { return this.corners.end }
 
   get cornerRadii() {
     let radii = { start: undefined, end: undefined }
@@ -1226,7 +1257,7 @@ class ProtoSegment extends Segment {
     this.matchStartCorner()
     this.matchEndCorner()
   }
-
+  //METH: #addCubicVert()
   #addCubicVert(vert, start, max = false, replace = false) {
     // let report = false
     const mode = start ? 'Start' : `End`
@@ -1272,7 +1303,7 @@ class ProtoSegment extends Segment {
           this.maxCubicVerts.end = vert
         }
       }
-      this.#resetHybridProps()
+      this.#resetMemoProps()
       // if (report) {
       //   console.log(`this.cubicStartVert: ${this.cubicVerts.start?.string}`)
       //   console.log(`this.cubicEndVert: ${this.cubicVerts.end?.string}`)
@@ -1280,37 +1311,38 @@ class ProtoSegment extends Segment {
       // }
     }
   }
-
+  //METH: #removeCubicVert()
   #removeCubicVert(start = true, max = false) {
     if (max === false) {
       if (start) { this.cubicVerts.start = undefined } else { this.cubicVerts.end = undefined }
     } else {
       if (start) { this.maxCubicVerts.start = undefined } else { this.maxCubicVerts.end = undefined }
     }
-    this.#resetHybridProps()
+    this.#resetMemoProps()
   }
-
+  //METH: #replaceCubicVert()
   #replaceCubicVert(vert, start = true, max = false) {
     this.#addCubicVert(vert, start, max, true)
   }
-
-  #resetHybridProps(andNeighbors = true) {
+  //METH: #resetMemoProps()
+  #resetMemoProps(andNeighbors = true) {
     const segs = andNeighbors ? this.andNeighborsArray : [this]
     segs.forEach(s => {
-      s._hasCompleteStartCorner = undefined
-      s._hasCompleteEndCorner = undefined
-      s._availableStartLength = undefined
-      s._availableStartLength = undefined
-      s._cornerArcOrigin = undefined
-      s._flatAmount = undefined
-      s._arcOriginToStart = undefined
-      s._arcOriginToNormal = undefined
-      s._arcOriginToEnd = undefined
-      s._cornerArcRadius = undefined
-      // s._finalCubicStartVert = undefined
-      // s._finalCubicEndVert = undefined
+      resetMemoized(s,
+        `arcOriginCorner`,
+        `arcOriginToStart`,
+        `arcOriginToNormal`,
+        `arcOriginToEnd`,
+        `cornerArcRadius`,
+        `flatAmount`,
+        `hasNoFlatness`,
+        `hasCompleteStartCorner`,
+        `hasCompleteEndCorner`,
+        `overlapSegs`,
+        `outWraps`,
+        `outWrapsOfThisShapeAndNeighbors`,
+      )
     })
-
   }
   // #endregion
   //MARK: Max Verts
@@ -1359,38 +1391,41 @@ class ProtoSegment extends Segment {
   get hasBothVerts() { return this.hasAStartVert && this.hasAnEndVert }
   get startVert() { return this.cubicVerts.start || this.maxCubicVerts.start }
   get endVert() { return this.cubicVerts.end || this.maxCubicVerts.end }
-
+  //MEMO: hasCompleteStartCorner
   get hasCompleteStartCorner() {
-    if (this._hasCompleteStartCorner === undefined) {
-      this._hasCompleteStartCorner = this.startNeighbor.hasAnEndVert && this.hasAStartVert
+    return memoize(() => {
+      return this.startNeighbor.hasAnEndVert && this.hasAStartVert
         && roundToDec(this.startNeighbor.availableEndLength) === roundToDec(this.availableStartLength)
-    }
-    return this._hasCompleteStartCorner
+    }, `hasCompleteStartCorner`).call(this)
   }
+  //MEMO: hasCompleteEndCorner
   get hasCompleteEndCorner() {
-    if (this._hasCompleteEndCorner === undefined) {
-      this._hasCompleteEndCorner = this.hasAnEndVert && this.endNeighbor.hasAStartVert
+    return memoize(() => {
+      return this.hasAnEndVert && this.endNeighbor.hasAStartVert
         && roundToDec(this.availableEndLength) === roundToDec(this.endNeighbor.availableStartLength)
-    }
-    return this._hasCompleteEndCorner
+    }, `hasCompleteEndCorner`).call(this)
   }
   get hasBothCompleteCorners() { return this.hasCompleteStartCorner && this.hasCompleteEndCorner }
 
   // #endregion
   //MARK: Flatness
   // #region Flatness
+  //MEMO: flatAmount
   get flatAmount() {
-    if (this._flatAmount === undefined) {
-      if (this.hasBothCompleteCorners) { this._flatAmount = this.startVert.dist(this.endVert) }
-      else { this._flatAmount = null }
-    }
-    return this._flatAmount
-
-    // if (this.hasBothCompleteCorners) { return this.startVert.dist(this.endVert) } 
+    return memoize(() => {
+      if (this.hasBothCompleteCorners) { return this.startVert.dist(this.endVert) }
+    }, `flatAmount`).call(this)
   }
+  //MEMO: hasNoFlatness
+  get hasNoFlatness() {
+    return memoize(() => {
+      return roundToDec(this.flatAmount, 1) === 0
+    }, `hasNoFlatness`).call(this)
 
-  get hasNoFlatness() { return roundToDec(this.flatAmount, 1) === 0 }
-  get hasFlatness() { if (this.hasBothCompleteCorners) { return !this.hasNoFlatness } }
+  }
+  get hasFlatness() {
+    if (this.hasBothCompleteCorners) { return !this.hasNoFlatness }
+  }
 
   // get hasNotFlatNeighbor() { return this.startNeighbor.hasNoFlatness || this.endNeighbor.hasNoFlatness }
   get hasFlatStartNeighbor() { return this.startNeighbor.hasFlatness }
@@ -1399,67 +1434,188 @@ class ProtoSegment extends Segment {
 
   get canCurveMore() { return this.hasFlatness && this.hasFlatNeighbor }
   get canCurveMoreAtEnd() { return this.hasFlatness && this.hasFlatEndNeighbor }
-  get canCurveLessAtEnd() { return roundToDec(this.availableEndLength, 1) > roundToDec(GRID.cellRadius, 1) }
+  get canCurveLessAtEnd() { return roundToDec(this.availableEndLength, 1) > roundToDec(this.cellRadius, 1) }
   get isLooseCorner() { return this.isOutsideCorner && this.canCurveMoreAtEnd }
   // #endregion
   //MARK: Corner Arc
   // #region Corner Arc
   get hasArc() { return this.hasBothVerts }
-  get arcStartCorner() { return this.finalCubicEndVert || vert() }
+  get arcStartCorner() { return this.finalCubicEndVert }
   get arcNormalCorner() { return this.end }
-  get arcEndCorner() { return this.endNeighbor.finalCubicStartVert || vert() }
+  get arcEndCorner() { return this.endNeighbor.finalCubicStartVert }
+  //MEMO: arcOriginCorner
+  get arcOriginCorner() {
+    return memoize(() => {
+      if (!this.hasBothVerts) { return vert() }
+      return Vertex.add(this.arcStartCorner, segment(this.arcNormalCorner, this.arcEndCorner).lineVector)
+    }, `arcOriginCorner`).call(this)
+  }
+  get arcBounds() {
+    return OpArray.from([this.arcStartCorner, this.arcNormalCorner, this.arcEndCorner, this.arcOriginCorner])
+  }
+  //MEMO: arcOriginCorner
+  get arcBoundsUpright() {
+    return memoize(() => {
+      return this.arcBounds.gridVertSorted
+    }, `arcBoundsUpright`).call(this)
+  }
+  //MEMO: cornerArcRadius
   get cornerArcRadius() {
-    if (!this._cornerArcRadius) {
-      this._cornerArcRadius = min(this.availableEndLength, this.endNeighbor.availableStartLength)
-    }
-    return this._cornerArcRadius
-    // return min(this.availableEndLength, this.endNeighbor.availableStartLength) 
+    return memoize(() => {
+      return min(this.availableEndLength, this.endNeighbor.availableStartLength)
+    }, `cornerArcRadius`).call(this)
   }
-
-  get cornerArcOrigin() {
-    if (!this._cornerArcOrigin) {
-      let origin
-      if (!this.hasBothVerts) { origin = vert() }
-      else { origin = Vertex.add(this.arcStartCorner, segment(this.arcNormalCorner, this.arcEndCorner).lineVector) }
-      this._cornerArcOrigin = origin
-    }
-    return this._cornerArcOrigin
-    // if (!this.hasBothVerts) { return vert() }
-    // return Vertex.add(this.arcStartCorner, segment(this.arcNormalCorner, this.arcEndCorner).lineVector)
-  }
-
+  //MEMO: arcOriginToStart
   get arcOriginToStart() {
-    if (!this._arcOriginToStart) {
-      this._arcOriginToStart = segment(this.cornerArcOrigin, this.arcStartCorner)
-    }
-    return this._arcOriginToStart
-    // return segment(this.cornerArcOrigin, this.arcStartCorner)
+    return memoize(() => {
+      return segment(this.arcOriginCorner, this.arcStartCorner)
+    }, `arcOriginToStart`).call(this)
   }
+  //MEMO: arcOriginToNormal
   get arcOriginToNormal() {
-    if (!this._arcOriginToNormal) {
-      this._arcOriginToNormal = segment(this.cornerArcOrigin, this.arcStartCorner)
-    }
-    return this._arcOriginToNormal
-    // return segment(this.cornerArcOrigin, this.arcStartCorner)
+    return memoize(() => {
+      return segment(this.arcOriginCorner, this.arcNormalCorner)
+    }, `arcOriginToNormal`).call(this)
   }
+  //MEMO: arcOriginToEnd
   get arcOriginToEnd() {
-    if (!this._arcOriginToEnd) {
-      this._arcOriginToEnd = segment(this.cornerArcOrigin, this.arcEndCorner)
-    }
-    return this._arcOriginToEnd
-    // return segment(this.cornerArcOrigin, this.arcEndCorner)
+    return memoize(() => {
+      return segment(this.arcOriginCorner, this.arcEndCorner)
+    }, `arcOriginToEnd`).call(this)
   }
+  get arcNormalDirection() { return this.arcOriginToNormal.direction }
+  //METH: arcIsWithinThisArc()
+  arcIsWithinArc(arcSeg) {
+    const thisArc = this.arcBoundsUpright
+    const thatArc = arcSeg.arcBoundsUpright
+    // console.log(`thisArc`, thisArc)
+    // console.log(`thatArc`, thatArc)
+    return roundToDec(thatArc[0].x, 0) <= roundToDec(thisArc[0].x, 0)
+      && roundToDec(thatArc[0].y, 0) <= roundToDec(thisArc[0].y, 0)
+      && roundToDec(thatArc[1].x, 0) >= roundToDec(thisArc[1].x, 0)
+      && roundToDec(thatArc[1].y, 0) <= roundToDec(thisArc[1].y, 0)
+      && roundToDec(thatArc[2].x, 0) <= roundToDec(thisArc[2].x, 0)
+      && roundToDec(thatArc[2].y, 0) >= roundToDec(thisArc[2].y, 0)
+      && roundToDec(thatArc[3].x, 0) >= roundToDec(thisArc[3].x, 0)
+      && roundToDec(thatArc[3].y, 0) >= roundToDec(thisArc[3].y, 0)
+  }
+  hasSameCornerDirection(seg) { return this.endCorner.equals(seg.endCorner) }
+  //METH: arcWrappedWithinThisArc()
+  arcShouldWrapOutToArc(arcSeg) {
+    return this.arcIsWithinArc(arcSeg) && this.hasSameCornerDirection(arcSeg)
+  }
+  arcIsRadiantToArc(arcSeg) {
+    return this.arcShouldWrapOutToArc(arcSeg) && !this.arcOriginCorner.equals(arcSeg.arcOriginCorner, 1)
+  }
+
+  //MEMO: overlapWrap
+  get overlapWrap() {
+    return memoize(() => {
+      const turnDir = this.isOutsideCorner ? `isLeft` : `isRight`
+      const startWraps = this.overlapSegs
+        .filter(s =>
+          s.start.equals(this.end, 0)
+          && s.turns.start[turnDir]
+          && this.endNeighbor.isOverlappingWith(s.startNeighbor)
+        )
+      if (startWraps.length === 1) { return startWraps[0].startNeighbor }
+    }, `overlapWrap`).call(this)
+  }
+  get closestAdjacentWrap() {
+    return memoize(() => {
+
+    }, `closestAdjacentWrap`).call(this)
+  }
+  get hasOverlapWrap() { return !!this.overlapWrap }
+  //MEMO: adjacentWraps
+  get adjacentWraps() {
+    return memoize(() => {
+      return this.shapeSharedNormalDirections
+        .sort((a, b) => this.arcNormalCorner.dist(a.arcNormalCorner) - this.arcNormalCorner.dist(b.arcNormalCorner))
+      // .filter()
+    }, `adjacentWraps`).call(this)
+  }
+  //MEMO: adjacentInWraps
+  get adjacentInWraps() {
+    return memoize(() => {
+      if (!this.isOutsideCorner) { return }          // only outside corners can have inwraps
+      return this.shapeSharedNormalDirections
+        // .filter(s => s.isOutsideCorner && )
+        .sort((a, b) => this.arcNormalCorner.dist(a.arcNormalCorner) - this.arcNormalCorner.dist(b.arcNormalCorner))
+
+    }, `adjacentInWraps`).call(this)
+  }
+
+  //MEMO: sharedOrigins
+  get sharedOrigins() {
+    return memoize(() => {
+      return this.grid.allSimpleSubShapes.flat().exclude(this, 'id')
+        .filter(s => this.arcOriginCorner.equals(s.arcOriginCorner, 2))
+        .sort((a, b) => a.cornerArcRadius - b.cornerArcRadius)    // sorted small to large
+    }, `sharedOrigins`).call(this)
+  }
+  //MEMO: shapeSharedNormalDirections
+  get shapeSharedNormalDirections() {
+    return memoize(() => {
+      return this.shape.simpleSubShapes.flat().exclude(this, 'id')
+        .filter(s => this.hasSameCornerDirection(s))
+    }, `shapeSharedNormalDirections`).call(this)
+  }
+  //MEMO: outWraps
+  get outWraps() {
+    return memoize(() => {
+      return this.grid.allSimpleSubShapes.flat().exclude(this, 'id')
+        // return this.shape.andNeighborSimples.exclude(this, 'id')
+        .filter(s => this.arcShouldWrapOutToArc(s))
+        .union([this.overlapWrap], `id`)
+        .sort((a, b) => a.cornerArcRadius - b.cornerArcRadius)    // sorted small to large
+    }, `outWraps`).call(this)
+  }
+  //MEMO: outWrapCount
+  get outWrapCount() {
+    // return memoize(() => {
+    return this.outWraps.length
+    // }, `outWraps`).call(this)
+  }
+  get hasOutWraps() { return this.outWrapCount > 0 }
+  //MEMO: outWrapsOfThisShapeAndNeighbors
+  get outWrapsOfThisShapeAndNeighbors() {
+    return memoize(() => {
+      return this.shape.andNeighborSimples.exclude(this, 'id')
+        .filter(s => this.arcShouldWrapOutToArc(s))
+        .sort((a, b) => a.cornerArcRadius - b.cornerArcRadius)    // sorted small to large
+    }, `outWrapsOfThisShapeAndNeighbors`).call(this)
+  }
+  //MEMO: inWraps
+  get inWraps() {
+    return memoize(() => {
+      const overlapWrap = this.isOutsideCorner ? undefined : [this.overlapWrap]
+      let inWraps = this.grid.allSimpleSubShapes.flat().exclude(this, 'id')
+        .filter(s => s.arcShouldWrapOutToArc(this))
+      if (this.isOutsideCorner) {
+        inWraps = inWraps.exclude([this.overlapWrap], `id`)
+      } else {
+        inWraps = inWraps.union([this.overlapWrap], `id`)
+      }
+      return inWraps
+        .sort((a, b) => b.isOutsideCorner - a.isOutsideCorner)    // sorted large to small
+        .sort((a, b) => roundToDec(b.cornerArcRadius) - roundToDec(a.cornerArcRadius))    // sorted large to small
+    }, `inWraps`).call(this)
+  }
+
+
   // #endregion
   //MARK: Copy Methods
   // #region Copy Methods
   //METH: copy
   get copy() {
-    const copyNumber = this.id.includes(`copy`) ? `copy` + String(+this.id.slice(-2) + 1).padStart(1, '0') : `copy0`
+    // const copyNumber = this.id.includes(`copy`) ? `copy` + String(+this.id.slice(-2) + 1).padStart(1, '0') : `copy0`
     return protoSegment({
       start: this.start,
       end: this.end,
       parentID: this.parentID,
-      id: `${this.id}-${copyNumber}`,
+      // id: `${this.id}-${copyNumber}`,
+      id: `${this.id}`,
       islandIDs: this.islandIDs,
       cubicVerts: this.cubicVerts,
       neighbors: this.neighbors,
@@ -1511,24 +1667,32 @@ class ProtoSegment extends Segment {
   get endNeighbor() { return this.neighbors.end }
   get andNeighborsArray() { return OpArray.from([this.startNeighbor, this, this.endNeighbor]) }
   get hasBothNeighbors() { return !!this.startNeighbor && !!this.endNeighbor }
-
+  //MEMO: overlapSegs
   get overlapSegs() {
-    if (!this._overlapSegs) {
-      this._overlapSegs = this.shape.andNeighborSimples
-        .filter(s => s.isOverlappingWith(this, false, 0, 0))
+    // console.log(`this.shape.andNeighborSimples`, this.shape.andNeighborSimples)
+    return memoize(() => {
+      return this.shape.andNeighborSimples
         .exclude(this, `id`)
-    }
-    return this._overlapSegs
+        .filter(s => this.isOverlappingWith(s))
+    }, `overlapSegs`).call(this)
   }
-
+  get overlapInsideSegs() {
+    return memoize(() => {
+      return this.shape.andNeighborSimples
+        .exclude(this, `id`)
+        .filter(s => this.isOverlappingWith(s, false, 0, 0))
+    }, `overlapInsideSegs`).call(this)
+  }
   get hasCompletePath() { return !!this.segPath }
+  //MEMO: isSmallBean
   get isSmallBean() {
-    const min = 5 * GRID.cellRadius
-    const path = this.segPath
-    if (path.length === 6) { return path.every(s => s.length < min) }
-    return false
+    return memoize(() => {
+      const min = 5 * this.cellRadius
+      const path = this.segPath
+      if (path.length === 6) { return path.every(s => s.length < min) }
+      return false
+    }, `isSmallBean`).call(this)
   }
-
   get segPath() {
     if (!this.hasBothNeighbors) {
       console.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
@@ -1543,27 +1707,23 @@ class ProtoSegment extends Segment {
       seg = seg.endNeighbor
       if (seg.id === this.id) { open = false }
     }
-    // const firstSeg = path.gridVertSorted[0]
-    // const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
-    // const sortedPath = path.shifted(shiftIndex)
-
     return path
   }
   //TODO: find and test implementations!
-  get sortedSegPath() {
-    const path = this.segPath
-    const firstSeg = path.gridVertSorted[0]
-    const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
-    return path.shifted(shiftIndex)
-  }
+  // get sortedSegPath() {
+  //   const path = this.segPath
+  //   const firstSeg = path.gridVertSorted[0]
+  //   const shiftIndex = path.findIndex(s => s.id === firstSeg.id)
+  //   return path.shifted(shiftIndex)
+  // }
   //TODO: find and test implementations!
-  get counterSortedSegPath() {
-    const path = this.segPath
-    const firstSeg = path.counterGridVertSorted[0]
-    const reversedPath = path.reversed
-    const shiftIndex = reversedPath.findIndex(s => s.id === firstSeg.id)
-    return reversedPath.shifted(shiftIndex)
-  }
+  // get counterSortedSegPath() {
+  //   const path = this.segPath
+  //   const firstSeg = path.counterGridVertSorted[0]
+  //   const reversedPath = path.reversed
+  //   const shiftIndex = reversedPath.findIndex(s => s.id === firstSeg.id)
+  //   return reversedPath.shifted(shiftIndex)
+  // }
 
   //METH: assignNeighbors()
   //NOTE: be sure to assign neighbors by reference instead of value to avoid infinite tree
