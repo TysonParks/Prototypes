@@ -38,52 +38,87 @@ function functionTestPrint() {
   // similarSlicedNeighborsIndices(16)
   // similarGridNeighbors(16)
   console.groupCollapsed(`TestMess`)
+  //NOTE: Bounds Tests
+  console.log(`Bounds Tests`)
+  const vert0 = vert(0, 0)
+  const vert1 = vert(1, 1)
+  const vert2 = vert(2, 2)
+
+  const seg01 = segment(vert0, vert1)
+  console.log(`seg01`, seg01)
+  const seg02 = segment(vert0, vert2)
+  console.log(`seg02`, seg02)
+  const seg12 = segment(vert1, vert2)
+  console.log(`seg12`, seg12)
+
+  const bounds0 = findBounds(vert0)
+  console.log(`bounds0`, bounds0)
+  const boundsNested = findBounds(bounds0)
+  console.log(`boundsNested`, boundsNested)
+  const bounds01 = findBounds(seg01)
+  console.log(`bounds01`, bounds01)
+  const bounds02 = findBounds(seg02)
+  console.log(`bounds02`, bounds02)
+  const bounds12 = findBounds(seg12)
+  console.log(`bounds12`, bounds12)
+
+  const vert0InBounds01 = vertIsInsideBounds(vert0, bounds01)
+  console.log(`vert0InBounds01`, vert0InBounds01)
+  const vert0InBounds01NotBorder = vertIsInsideBounds(vert0, bounds01, false)
+  console.log(`vert0InBounds01NotBorder`, vert0InBounds01NotBorder)
+
+  const bounds01InBounds02 = boundsIsInsideTestBounds(bounds01, bounds02)
+  console.log(`bounds01InBounds02`, bounds01InBounds02)
+  const bounds01InBounds12 = boundsIsInsideTestBounds(bounds01, bounds12)
+  console.log(`bounds01InBounds12`, bounds01InBounds12)
+  const bounds01OverlapsBounds12 = boundsIsInsideTestBounds(bounds01, bounds12, true, true)
+  console.log(`bounds01OverlapsBounds12`, bounds01OverlapsBounds12)
 
   //NOTE: OpArray Tests
-  console.log(`OpArray Tests`)
+  // console.log(`OpArray Tests`)
 
-  let array = [`a`, `b`, `c`, `d`]
-  let opArray01 = OpArray.format(array)
-  console.log(`array`, array)
-  console.log(`opArray01`, opArray01)
+  // let array = [`a`, `b`, `c`, `d`]
+  // let opArray01 = OpArray.format(array)
+  // console.log(`array`, array)
+  // console.log(`opArray01`, opArray01)
 
-  let word = 'cell40'
+  // let word = 'cell40'
 
-  let opArray02 = OpArray.format(word)
-  console.log(`word`, word)
-  console.log(`opArray02`, opArray02)
+  // let opArray02 = OpArray.format(word)
+  // console.log(`word`, word)
+  // console.log(`opArray02`, opArray02)
 
-  let union = opArray01.union(opArray02)
-  console.log(`union`, union)
-  let idBoy1 = { name: `bro`, id: `b01` }
-  let idBoy2 = { name: `dude`, id: `b02` }
-  let idBoy3 = { name: `bruh`, id: `b03` }
-  let idBoy4 = { name: `boieee`, id: `b04` }
+  // let union = opArray01.union(opArray02)
+  // console.log(`union`, union)
+  // let idBoy1 = { name: `bro`, id: `b01` }
+  // let idBoy2 = { name: `dude`, id: `b02` }
+  // let idBoy3 = { name: `bruh`, id: `b03` }
+  // let idBoy4 = { name: `boieee`, id: `b04` }
 
-  let boyToy1 = { start: idBoy1, end: idBoy2 }
-  let boyToy2 = { start: idBoy1, end: idBoy2 }
-  let boyToy3 = { start: idBoy3, end: idBoy4 }
+  // let boyToy1 = { start: idBoy1, end: idBoy2 }
+  // let boyToy2 = { start: idBoy1, end: idBoy2 }
+  // let boyToy3 = { start: idBoy3, end: idBoy4 }
 
-  let boyColxn1 = OpArray.format(boyToy1)
-  let boyColxn2 = OpArray.format(boyToy2)
-  let boyColxn3 = OpArray.format(boyToy3)
+  // let boyColxn1 = OpArray.format(boyToy1)
+  // let boyColxn2 = OpArray.format(boyToy2)
+  // let boyColxn3 = OpArray.format(boyToy3)
 
-  let boyColxn4 = boyColxn1.union(boyColxn2, `start`)
-  console.log(`boyColxn4`, boyColxn4)
-  let boyColxn5 = boyColxn1.union(boyColxn3, `start`)
-  console.log(`boyColxn5`, boyColxn5)
+  // let boyColxn4 = boyColxn1.union(boyColxn2, `start`)
+  // console.log(`boyColxn4`, boyColxn4)
+  // let boyColxn5 = boyColxn1.union(boyColxn3, `start`)
+  // console.log(`boyColxn5`, boyColxn5)
 
   // NOTE: ProtoSegment Tests
-  console.log(`ProtoSegment Tests`)
+  // console.log(`ProtoSegment Tests`)
 
-  const vert0 = vert(0, 0)
-  const vert1 = vert(1, 0)
-  const vert2 = vert(.25, 0)
-  const vert3 = vert(.75, 0)
-  const vert4 = vert(.75, 1)
-  const seg1 = protoSegment({ start: vert0, end: vert1, id: `seg1` })
-  const seg2 = protoSegment({ start: vert0, end: vert2, id: `seg2` })
-  const seg3 = protoSegment({ start: vert3, end: vert1, id: `seg3` })
+  // const vert0 = vert(0, 0)
+  // const vert1 = vert(1, 0)
+  // const vert2 = vert(.25, 0)
+  // const vert3 = vert(.75, 0)
+  // const vert4 = vert(.75, 1)
+  // const seg1 = protoSegment({ start: vert0, end: vert1, id: `seg1` })
+  // const seg2 = protoSegment({ start: vert0, end: vert2, id: `seg2` })
+  // const seg3 = protoSegment({ start: vert3, end: vert1, id: `seg3` })
   // seg1.assignCubicVert(vert2)
   // seg1.assignCubicVert(vert3)
   // console.log(`seg1`, seg1)
@@ -99,9 +134,9 @@ function functionTestPrint() {
 
   // console.log(`distance between vert0 and vert1 (1)`, vert0.dist(vert1))
   // console.log(`distance between vert1 and vert2 (0.75)`, vert1.dist(vert2))
-  console.log(`current angleMode`, _angleMode)
-  angleMode(DEGREES)
-  console.log(`current angleMode`, _angleMode)
+  // console.log(`current angleMode`, _angleMode)
+  // angleMode(DEGREES)
+  // console.log(`current angleMode`, _angleMode)
 
   // NOTE: hash display
   // print(printInputToGridRows(values32x8bit, 4, 8))
