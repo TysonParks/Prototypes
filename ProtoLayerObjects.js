@@ -5,8 +5,7 @@
 
 // NOTE: https://stackoverflow.com/questions/38205867/resize-child-div-element-to-fit-in-parent-div-on-window-resize
 // NOTE: https://developer.mozilla.org/en-US/docs/Web/CSS/calc
-// MARK: ProtoLayer SuperClass
-
+// MARK: PROTOLAYER CLASS
 // CLASS: ProtoLayer
 // SIZE: 237 lines
 // NOTE: drawSVG = true
@@ -275,7 +274,7 @@ class ProtoLayer {
 Object.assign(ProtoLayer.prototype, IdentifiableStored)
 Object.defineProperties(ProtoLayer.prototype, Object.getOwnPropertyDescriptors(Debuggable))
 
-
+//MARK: FRAME CLASS
 // CLASS: Frame 
 // SIZE: 112 lines
 // NOTE: drawSVG = true
@@ -405,6 +404,7 @@ class Frame extends ProtoLayer {
   // #endregion
 }
 
+//MARK: SELECTION BOUNDS CLASS
 // CLASS: SelectionBounds
 // SIZE: 320 lines
 // NOTE: drawSVG = false    // SelectionBounds is not a ProtoLayer subClass 
@@ -592,7 +592,7 @@ class SelectionBounds {
   // }
   // #endregion
 }
-
+//MARK: GRID CLASS
 // CLASS: Grid
 // SIZE: 1514 lines
 // NOTE: drawSVG = true
@@ -1120,14 +1120,16 @@ class Grid extends ProtoLayer {
   }
   // #endregion
   // MARK: Grid Shape Methods
-  // #region Shape Methods
+  // #region Grid Shape Methods
   //METH:
   createSimpleSubShapes() {
     console.group(`GRID.createSimpleSubShapes called!!!`)
     this.groups.forEach(g => g.createSimpleSubShapes())
     console.groupEnd()
   }
-
+  // #region end
+  //MARK: Wrap Methods
+  // #region Wrap Methods
   //METH: findColinearWrapper() : ProtoSegment : find colinear wrapper(s) of input segment in segCollection
   findColinearWrapper({
     seg,
@@ -1566,7 +1568,11 @@ class Grid extends ProtoLayer {
     }
     return { outside: outsideCorners, inside: insideCorners }
   }
+  // #endregion
 
+  //MARK: Nestle Methods
+  // #region Nestle Methods
+  //MARK: createUTurns()
   //METH: createUTurns()
   createUTurns({ subShapes = this.allSimpleSubShapes, out = true, outWrap = true, radiant = false } = {}) {
     // let curved = new OpArray                               // processed corner/seg storage
@@ -1654,7 +1660,7 @@ class Grid extends ProtoLayer {
     console.warn(`createUTurns insideCorners`, insideCorners)
     return { outside: outsideCorners, inside: insideCorners }
   }
-
+  //MARK: createCubicCorners()
   //METH: createCubicCorners() :
   createCubicCorners({ subShapes = this.allSimpleSubShapes, outWrap = true, radiant = true, replace = false } = {}) {
     let corners = subShapes.flat()
@@ -1723,6 +1729,7 @@ class Grid extends ProtoLayer {
     console.warn(`createCubicCorners insideCorners`, insideCorners)
     return { outside: outsideCorners.compacted.unique([`id`]), inside: insideCorners.compacted.unique([`id`]) }
   }
+  //MARK: cornerIsLoose()
   //METH: cornerIsLoose()
   cornerIsLoose(seg, segCollection = this.allSimpleSubShapes) {
     if (seg.canCurveMoreAtEnd) {                                // seg corner might be loose
@@ -1764,7 +1771,7 @@ class Grid extends ProtoLayer {
     }
     return false
   }
-
+  //MARK: wrapIsLoose()
   //METH: looselyWrappedCorner() 
   wrapIsLoose({
     seg,
@@ -1817,6 +1824,7 @@ class Grid extends ProtoLayer {
     }
 
   }
+  //MARK: Wrap State Collections
   //METH: allCanCurveCorners() 
   get allCanCurveCorners() { return this.allSimpleSubShapes.flat().filter(s => s.canCurveMoreAtEnd) }
   get allIncompleteCorners() { return this.allSimpleSubShapes.flat().filter(s => !s.hasBothCompleteCorners) }
@@ -1855,6 +1863,7 @@ class Grid extends ProtoLayer {
   intersectingWraps(segments = this.allSimpleOutsideCorners, segCollection = this.allSimpleSubShapes) {
     //FIXME: complete implementation using PrSeg.outWraps
     return segments.flat()
+      // .filter(s => s.outWrapCount > 1 && !s.hasInWraps)
       .filter(s => s.outWrapCount > 1)
       .sort((a, b) => b.cornerArcRadius - a.cornerArcRadius)
       .sort((a, b) => b.outWrapCount - a.outWrapCount)
@@ -1909,6 +1918,7 @@ class Grid extends ProtoLayer {
   //     .compacted
   // }
 
+  //MARK: maximizeCuddle() : DEPRECATE
   //METH: maximizeCuddle() : maximize cuddle by finding wrapped corners that aren't fully cuddled
   maximizeCuddle(loosie, radiant = false, mode = 0) {
     console.log(``)
@@ -1945,6 +1955,7 @@ class Grid extends ProtoLayer {
 
     cuddle(loosie, mode)
   }
+  //MARK: maximizeCuddles()
   //METH: maximizeCuddles()
   maximizeCuddles(radiant = true) {
 
@@ -2959,10 +2970,11 @@ class Grid extends ProtoLayer {
     })
   }
   // #endregion
-  //MARK: debug methods
+  //MARK: debug Methods
   showCellsDebug() { this.cells.forEach(c => c.showDeBug()) }
 }
 
+//MARK: CELLGROUP CLASS
 // CLASS: CellGroup
 // SIZE: 120 lines
 // NOTE: drawSVG = true
@@ -3202,6 +3214,7 @@ class CellGroup extends ProtoLayer {
   // #endregion
 }
 
+//MARK: SHAPEGROUP CLASS
 // CLASS: ShapeGroup
 // SIZE: 45 lines
 // NOTE: drawSVG = true
@@ -3324,6 +3337,7 @@ class ShapeGroup extends ProtoLayer {
   }
 }
 
+//MARK: CELL CLASS
 // CLASS: Cell
 // SIZE: 145 lines
 // NOTE: drawSVG = false
@@ -3488,6 +3502,7 @@ class Cell extends ProtoLayer {
   }
 }
 
+//MARK: ISLAND CLASS
 // CLASS: Island
 // SIZE: 523 lines
 // NOTE: drawSVG = false
@@ -4073,6 +4088,7 @@ class Island extends ProtoLayer {
   // #endregion
 }
 
+//MARK: SHAPE CLASS
 // CLASS: Shape
 // SIZE: 315 lines
 // NOTE: drawSVG = false    // the SVG path gets passed back up to ShapeGroup for rendering
