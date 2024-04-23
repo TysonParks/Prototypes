@@ -636,16 +636,41 @@ class Grid extends ProtoLayer {
   get testLook() { return Look.test(this.size, 'grid') }
   get testColor() { return protoColor(0, 230, 0, 90) }
   get cornerRadius() { return this.cellRadius }
-
-  get gridCellBounds() { return this.cellBounds() }          // migrate to property for better performance?? Probably not!
+  //MEMO: gridCellBounds
+  get gridCellBounds() {
+    return memoize(() => {
+      return this.cellBounds()
+    }, `gridCellBounds`).call(this)
+  }
   get columnCount() { return this.gridCellBounds.columnCount }
   get rowCount() { return this.gridCellBounds.rowCount }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
-  get cellSize() { return Vertex.div(this.insetSize, this.gridSize) }
+  //MEMO: cellSize
+  get cellSize() {
+    return memoize(() => {
+      return Vertex.div(this.insetSize, this.gridSize)
+    }, `cellSize`).call(this)
+  }
   get cellAspect() { return this.cellSize.aspect }
-  get minCellWidth() { return min(this.cellSize.x, this.cellSize.y) }
-  get cellRadius() { return this.minCellWidth / 2 }
-  get cells() { return this.cellRows.flat() }
+  //MEMO: minCellWidth
+  get minCellWidth() {
+    return memoize(() => {
+      return min(this.cellSize.x, this.cellSize.y)
+    }, `minCellWidth`).call(this)
+  }
+  //MEMO: cellRadius
+  get cellRadius() {
+    return memoize(() => {
+      return this.minCellWidth / 2
+    }, `cellRadius`).call(this)
+  }
+  //MEMO: cells
+  get cells() {
+    return memoize(() => {
+      return this.cellRows.flat()
+    }, `cells`).call(this)
+  }
+
   get cellColumns() { return this.cellRowsFlipped() }
   get availableCells() { return this.cells.filter(cell => cell.available) }
   get takenCells() { return this.cells.filter(cell => cell.taken) }
@@ -659,31 +684,36 @@ class Grid extends ProtoLayer {
     })
   }
   //NOTE: perimeters must be created for every group!
-  get perimeterIslands() { return this.groups.map(g => g.perimeterIslands).flat() }
+  get perimeterIslands() {                                        // currently tests faster without memoization
+    // return memoize(() => {
+    return this.groups.map(g => g.perimeterIslands).flat()
+    // }, `perimeterIslands`).call(this)
+  }
   get islands() { return this.groups.map(g => g.islands).flat() }
   get allIslands() { return this.islands.union(this.perimeterIslands, [`id`]).flat() }
   get shapes() { return this.allIslands.map(i => i.shape).flat() }
-  get allSimpleSubShapes() {
+  get allSimpleSubShapes() {                                      // currently tests faster without memoization
+    // return memoize(() => {
     return this.perimeterIslands
-      // .compacted // should not have to compact because perimeters must be created for every group!
       .map(i => i.shape.simpleSubShapes).flat()
+    // }, `allSimpleSubShapes`).call(this)
   }
   get allInternalSimpleSubShapes() {
     return this.perimeterIslands
       .filter(i => i.shape.simpleSubShapes.length > 1)    // only shapes with more than 1 simpleSubShape are internal
       .map(i => i.shape.simpleSubShapes.slice(1)).flat()  // remove external subShapes
   }
+  //MEMO: allSimpleOutsideCorners
   get allSimpleOutsideCorners() {
-    if (!this._allOutsideCorners) {
-      this._allOutsideCorners = this.allSimpleSubShapes.flat().filter(s => s.isOutsideCorner)
-    }
-    return this._allOutsideCorners
+    return memoize(() => {
+      return this.allSimpleSubShapes.flat().filter(s => s.isOutsideCorner)
+    }, `allSimpleOutsideCorners`).call(this)
   }
+  //MEMO: allSimpleInsideCorners
   get allSimpleInsideCorners() {
-    if (!this._allInsideCorners) {
-      this._allInsideCorners = this.allSimpleSubShapes.flat().filter(s => !s.isOutsideCorner)
-    }
-    return this._allInsideCorners
+    return memoize(() => {
+      return this.allSimpleSubShapes.flat().filter(s => !s.isOutsideCorner)
+    }, `allSimpleInsideCorners`).call(this)
   }
 
   // #endregion
@@ -1134,10 +1164,13 @@ class Grid extends ProtoLayer {
     // console.log(` ** findColinear seg`, info(seg))
     // console.log(`cubicVert`, cubicVert)
     // console.log(`segCollection`, segCollection)
-    let wrapper = segCollection.flat()
+    // let wrapper = segCollection.flat()
+    // console.log(`findColinearWrapper overlapSegs`, seg.overlapSegs)
+    let wrapper = seg.overlapSegs
       .filter(s =>
-        s.isOverlappingWith(seg, includeEnds)        // colinear wraps overlap seg
-        && s.direction.equals(wrapDir)  // colinear subIsland wraps point in same direction as seg
+        // s.isOverlappingWith(seg, includeEnds)        // colinear wraps overlap seg
+        // &&
+        s.direction.equals(wrapDir)  // colinear subIsland wraps point in same direction as seg
         && s.turns[turn][turnDir]       // colinear wraps turn left
         && vertOnLineCheck(s)           // colinear wraps will contain the transferrable cubicVert
         // && !seg[oppTurn].equals(s[oppTurn], 0)
@@ -1185,16 +1218,21 @@ class Grid extends ProtoLayer {
   // NOTE: in Grid.nestleShapes(): use outWrapOutsideCorner (outWrap = true, outsideCorner = true)
   // NOTE: in Island.copyAllToCardinal(): inWrapInsideCorner & inWrapOutsideCorner (outWrap = true, outsideCorner = both)
   wrapColinearCorner(seg, segCollection, outWrap = true, outsideCorner = true, radiant = false, replace = false) {
-    // let report = false
-    // if (
-    //   seg.id.includes('cell030')
-    //   // || seg.id.includes('cell040')
-    //   // || seg.id.includes('cell046')
-    // ) { report = true }
-    // if (report) {
-    //   console.log(`wrapColinearCorner seg`, seg)
-    //   // console.log(`wrapColinearCorner segCollection`, segCollection)
-    // }
+    let report = false
+    if (
+      seg.id.includes('cell026')
+      // || seg.id.includes('cell040')
+      // || seg.id.includes('cell046')
+    ) {
+      console.error(``)
+      console.warn(`FOUND cell026!`)
+      console.error(``)
+      report = true
+    }
+    if (report) {
+      console.log(`wrapColinearCorner seg`, seg)
+      console.log(`wrapColinearCorner segCollection`, segCollection)
+    }
     // let outsideCorners = new OpArray
     // let insideCorners = new OpArray
     const isDir = outsideCorner ? `isRight` : `isLeft`
@@ -1204,6 +1242,7 @@ class Grid extends ProtoLayer {
     }
     if (!segCollection) {                                                 // assign appropriate segCollection
       segCollection = outsideCorner ? this.allSimpleOutsideCorners : this.allSimpleInsideCorners
+      // segCollection = outsideCorner ? this.allSimpleInsideCorners : this.allSimpleOutsideCorners
     }
     const wrappers = this.findColinearWrappers({  // find start of corner wrapper
       seg: seg,
@@ -1290,7 +1329,7 @@ class Grid extends ProtoLayer {
   //FIXME: give replace more power within this function!
   //METH: outWrapAdjacentInsideCorner() : ProtoSegment :
   outWrapAdjacentInsideCorner(seg, segCollection, radiant = false, replace = false) {
-    let report = false
+    let report = true
     if (
       seg.id.includes('cell121')
       || seg.id.includes('cell112')
@@ -1307,6 +1346,7 @@ class Grid extends ProtoLayer {
     const neighbor = seg.startNeighbor // use start neighbor to run clockwise like findColinearWrappedCorner()
     let shape
     if (!segCollection) {
+      console.log(`outWrapAdjacentInsideCorner: using shapes segs`)
       segCollection = seg.shape.simpleSubShapes
     }
     //ARROW: adjWrapper() : ProtoSegment : find adjacent wrapper(s) of input segment
@@ -1321,21 +1361,25 @@ class Grid extends ProtoLayer {
         Vertex.add(cubicVert, Vertex.mult(normCoord, shape?.cellBounds.size || this.gridCellBounds.size))
       )
       const name = isNeighbor ? `end` : `start`
-      // console.log(` ** findAdjacent seg`, info(seg))
-      // console.log(`normal`, normal.string)
+      console.log(` ** findAdjacent seg`, info(seg))
+      console.log(`normal`, normal.string)
 
       let closestAdjacentWrapper = segCollection.flat()
         .filter(s =>
           s.direction.equals(adjDir)  // adjacent wraps point in opposite direction as seg
           && s.turns[turn].isRight    // adjacent wraps turn right
+          // && seg.arcShouldWrapOutToArc(s)
         )
         .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null) // adjWraps intersect normal
         .compacted
         .filter(s => !s[0].start.equals(s[1], 1) && !s[0].end.equals(s[1], 1)) // adjWraps cant have ends on normal
         .sort((a, b) => segment(seg[name], a[1]).length - segment(seg[name], b[1]).length) // sorted shortest first
+      console.log(`closestAdjacentWrapper`, closestAdjacentWrapper)
+      // closestAdjacentWrapper = closestAdjacentWrapper
       if (replace) {
-        closestAdjacentWrapper = closestAdjacentWrapper.filter(s => this.cornerIsLoose(s))  // safe replacement edge case
+        // closestAdjacentWrapper = closestAdjacentWrapper.filter(s => this.cornerIsLoose(s))  // safe replacement edge case
       }
+      console.log(`closestAdjacentWrapper`, closestAdjacentWrapper)
       closestAdjacentWrapper = closestAdjacentWrapper[0] // take shortest/closest
 
 
@@ -1625,10 +1669,10 @@ class Grid extends ProtoLayer {
 
       let useStartCorner, cornerStart, cornerEnd
       if (seg.hasNoCubicVerts) {
-        // console.log(`seg hasNoCubicVerts`)
+        console.log(`createCubicCorners seg hasNoCubicVerts`)
         useStartCorner = seg.startNeighbor.availableEndLength <= seg.endNeighbor.availableStartLength ? true : false
       } else if (seg.hasSomeCubicVerts) {
-        // console.log(`seg hasSomeCubicVerts`)
+        console.log(`createCubicCorners seg hasSomeCubicVerts`)
         useStartCorner = seg.hasCubicStartVert ? false : true
       }
       if (useStartCorner) {
@@ -1657,13 +1701,13 @@ class Grid extends ProtoLayer {
         }
         if (wrapOuts) {
           console.log(`createCubicCorners wrapOuts`, wrapOuts)
-          // outsideCorners = outsideCorners.union(wrapOuts.outside,[`id`])
-          // insideCorners = insideCorners.union(wrapOuts,[`id`])
+          outsideCorners = outsideCorners.union(wrapOuts.outside, [`id`])
+          insideCorners = insideCorners.union(wrapOuts.inside, [`id`])
         }
         if (wrapIns) {
           console.log(`createCubicCorners wrapIns`, wrapIns)
-          // outsideCorners = outsideCorners.union(wrapIns.outside,[`id`])
-          // insideCorners = insideCorners.union(wrapIns,[`id`])
+          outsideCorners = outsideCorners.union(wrapIns.outside, [`id`])
+          insideCorners = insideCorners.union(wrapIns.inside, [`id`])
         }
       }
 
@@ -1675,9 +1719,9 @@ class Grid extends ProtoLayer {
         .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
         .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
     }
-    // console.warn(`createCubicCorners outsideCorners`, outsideCorners)
-    // console.warn(`createCubicCorners insideCorners`, insideCorners)
-    return { outside: outsideCorners.unique([`id`]), inside: insideCorners.unique([`id`]) }
+    console.warn(`createCubicCorners outsideCorners`, outsideCorners)
+    console.warn(`createCubicCorners insideCorners`, insideCorners)
+    return { outside: outsideCorners.compacted.unique([`id`]), inside: insideCorners.compacted.unique([`id`]) }
   }
   //METH: cornerIsLoose()
   cornerIsLoose(seg, segCollection = this.allSimpleSubShapes) {
@@ -1686,23 +1730,23 @@ class Grid extends ProtoLayer {
       if (localSegs) { segCollection = localSegs }
       let radiants = segCollection.flat()                       // unless inwrapped by a radiant
         .filter(s =>
-          s.cornerArcOrigin.equals(seg.cornerArcOrigin, 0)      // shared arcOrigins
+          s.arcOriginCorner.equals(seg.arcOriginCorner, 0)      // shared arcOrigins
           && s.corners.end.equals(seg.corners.end)              // shared arc orientation
           && (                                                  // radiant is smaller than or equal to seg 
             roundToDec(s.cornerArcRadius, 0) <= roundToDec(seg.cornerArcRadius, 0)
             && !s.canCurveMoreAtEnd)                            // radiant is tight
 
         )
-      let adjRadiants = seg.segPath
+      let adjRadiants = seg.shape.simpleSubShapes.flat()
         .exclude([seg], 'id')
         .filter(s =>
-          seg.arcOriginToStart.vertIsOnLine(s.cornerArcOrigin, false, 0)  // radiant that could have wrapped one cubicVert
-          || seg.arcOriginToEnd.vertIsOnLine(s.cornerArcOrigin, false, 0) // radiant that could have wrapped one cubicVert
+          seg.arcOriginToStart.vertIsOnLine(s.arcOriginCorner, false, 0)  // radiant that could have wrapped one cubicVert
+          || seg.arcOriginToEnd.vertIsOnLine(s.arcOriginCorner, false, 0) // radiant that could have wrapped one cubicVert
         )
-      // radiants = radiants.union(adjRadiants, ['id'])
+      radiants = radiants.union(adjRadiants, ['id'])
       // console.log(`Seg`, seg)
-      // console.log(`arcOriginToStart`, seg.arcOriginToStart)
-      // console.log(`arcOriginToEnd`, seg.arcOriginToEnd)
+      // console.log(`arcOriginToStart`, seg.arcOriginToStart.string)
+      // console.log(`arcOriginToEnd`, seg.arcOriginToEnd.string)
       if (!adjRadiants.isEmpty) {
         // console.error(`adjRadiants`, adjRadiants)
         return false
@@ -1779,7 +1823,9 @@ class Grid extends ProtoLayer {
 
   //METH: allLallIncompleteEndCornersooseCorners() 
   allIncompleteEndCorners(segments = this.allSimpleSubShapes) {
-    return segments.flat().filter(s => !s.hasCompleteEndCorner)
+    return segments.flat()
+      .filter(s => !s.hasCompleteEndCorner)
+      .sort((a, b) => a.cornerArcRadius - b.cornerArcRadius)
   }
   //METH: allLooseCorners() 
   allLooseCorners(segments = this.allSimpleOutsideCorners, segCollection = this.allSimpleSubShapes) {
@@ -1804,6 +1850,14 @@ class Grid extends ProtoLayer {
       .map(s => this.wrapIsLoose({ seg: s, segCollection: segCollection, invertLineCheck: true }))
       .compacted
       .filter(l => this.allLooseWraps().every(m => m.start.id !== l.start.id))
+  }
+  //METH: intersectingWraps() 
+  intersectingWraps(segments = this.allSimpleOutsideCorners, segCollection = this.allSimpleSubShapes) {
+    //FIXME: complete implementation using PrSeg.outWraps
+    return segments.flat()
+      .filter(s => s.outWrapCount > 1)
+      .sort((a, b) => b.cornerArcRadius - a.cornerArcRadius)
+      .sort((a, b) => b.outWrapCount - a.outWrapCount)
   }
 
   // //METH: largeOuterLooseWraps() 
@@ -1841,11 +1895,11 @@ class Grid extends ProtoLayer {
   // notWrappedLooseCorners(segments = this.allSimpleSubShapes, segCollection = this.allSimpleSubShapes) {
   //   return segments.flat()
   //     .filter(s => s.canCurveMoreAtEnd)
-  //     // .filter(s => segCollection.flat().every(seg => !s.cornerArcOrigin.equals(seg.cornerArcOrigin, 0)))
+  //     // .filter(s => segCollection.flat().every(seg => !s.arcOriginCorner.equals(seg.arcOriginCorner, 0)))
   //     .map(s => this.wrapIsLoose(
   //       { seg: s, segCollection: segCollection, wrapped: false, looseCorner: true, looseWrap: false }))
   //     .compacted
-  //   // .filter(s => segCollection.flat().every(seg => !seg.cornerArcOrigin.equals(s.start.cornerArcOrigin, 0)))
+  //   // .filter(s => segCollection.flat().every(seg => !seg.arcOriginCorner.equals(s.start.arcOriginCorner, 0)))
   // }
   //METH: tightelyWrappedTightCorners() 
   // tightelyWrappedTightCorners(segments = this.allSimpleSubShapes, segCollection = this.allSimpleSubShapes) {
@@ -1891,12 +1945,21 @@ class Grid extends ProtoLayer {
 
     cuddle(loosie, mode)
   }
-  //METH: maximizeOutsideCuddles()
-  maximizeOutsideCuddles(radiant = true) {
+  //METH: maximizeCuddles()
+  maximizeCuddles(radiant = true) {
 
     //ARROW: completeEnds()
     const completeEnds = (testPool = this.allIncompleteEndCorners()) => {
-      testPool.forEach(s => s.matchEndCorner())
+      console.warn(`incompleteEnds`, testPool)
+      testPool.forEach(s => {
+        s.matchEndCorner()
+        if (s.turns.end.isRight) {
+          this.recursiveOutWrapOutsideCorners(s, true)
+        }
+        if (s.turns.start.isLeft) {
+          this.recursiveOutWrapAdjInsideCorners(s, true)
+        }
+      })
 
       // const conditionFunc = () => { return this.allIncompleteEndCorners }
       // const action = () => {
@@ -1912,7 +1975,7 @@ class Grid extends ProtoLayer {
     }
     //ARROW: fixLooseCorners()
     const fixLooseCorners = (testPool = this.allLooseCorners()) => {
-      console.warn(`allLooseCorners`, testPool)
+      console.warn(`allLooseCorners`, testPool.map(s => s.id))
       while (testPool.length > 0) {
         console.log(``)
         console.log(`loosie count`, testPool.length)
@@ -1920,6 +1983,7 @@ class Grid extends ProtoLayer {
         console.log(`loosie in loop`, loosie)
         loosie.removeEndCornerVerts()
         const changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
+        console.log(`changed loosies`, changed)
         completeEnds()
         testPool = testPool
           .union(changed.outside, [`id`])
@@ -1928,20 +1992,22 @@ class Grid extends ProtoLayer {
         testPool = this.allLooseCorners(testPool)
       }
 
-      // const conditionFunc = () => { return this.allLooseCorners() }
-      // const action = () => {
-      //   let loosies = this.allLooseCorners()
-      //   console.error(`allLooseCorners`, loosies)
-      //   console.log(`loosie count`, loosies.length)
-      //   let loosie = loosies[0]
-      //   console.log(`loosie in loop`, loosie)
-      //   loosie.removeEndCornerVerts()
-      //   const changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
-      //   console.log(`CHANGED!!!`, changed)
-      //   console.log(`new incompleteCorners`, this.allIncompleteEndCorners())
-      //   completeEnds()
-      //   console.error(`new LooseCorners`, loosies)
-      // }
+      const conditionFunc = () => { return testPool }
+      const action = () => {
+        console.log(``)
+        console.log(`loosie count`, testPool.length)
+        let loosie = testPool.pop()
+        console.log(`loosie in loop`, loosie)
+        loosie.removeEndCornerVerts()
+        const changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
+        console.log(`changed loosies`, changed)
+        completeEnds()
+        testPool = testPool
+          .union(changed.outside, [`id`])
+          .union(changed.inside, [`id`])
+          .unique([`id`])
+        testPool = this.allLooseCorners(testPool)
+      }
       // safeArrayWhile(conditionFunc, action)
     }
     //ARROW: fixLooseWraps()
@@ -2006,6 +2072,7 @@ class Grid extends ProtoLayer {
     //ARROW: fixLooseWraps()
     const fixTrickyLooseWraps = (testPool = this.largerInnerLooseWraps()) => {
       console.warn(`largerInnerLooseWraps`, testPool.map(s => s.start.id))
+      let changedPool
       while (testPool.length > 0) {
         console.log(``)
         console.log(`trickyWraps`, testPool.map(s => s.start.id))
@@ -2024,7 +2091,7 @@ class Grid extends ProtoLayer {
         trickyWrap.end.replaceCubicStartVert(trickyWrap.endWrap.finalCubicEndVert)
         completeEnds()
 
-        let changedPool = []                                                                 // final changed pool
+        changedPool = []                                                                 // final changed pool
         if (changed) { changedPool = changed.outside }                                    // only use outsideCorners
 
         testPool = testPool.map(w => w.start)                                             // reduce testPool to starts
@@ -2032,6 +2099,8 @@ class Grid extends ProtoLayer {
         testPool = this.largerInnerLooseWraps(testPool)                                   // recalc loose wraps
         console.log(`largerInnerLooseWraps after union`, testPool.map(s => s.start.id))
       }
+      // console.log(`changedPool`, changedPool)
+      // return changedPool
 
       // const conditionFunc = () => { return this.largerInnerLooseWraps() }
       // const action = () => {
@@ -2051,6 +2120,20 @@ class Grid extends ProtoLayer {
       // }
       // safeArrayWhile(conditionFunc, action)
     }
+    //ARROW: fixLooseWraps()
+    const fixIntersectingWraps = (testPool = this.intersectingWraps()) => {
+      console.warn(`intersectingWraps`, testPool.map(s => s.start.id))
+      while (testPool.length > 0) {
+        console.log(``)
+        console.log(`intersectingWraps`, testPool.map(s => s.start.id))
+        console.log(`intersectingWraps count`, testPool.length)
+        let intersect = testPool.pop()
+        console.log(`intersect in loop`, intersect.start.id)
+        console.log(`intersect in loop`, intersect)
+        let changed
+      }
+    }
+
     //ARROW: fixIssuess()
     const fixIssues = () => {
       console.warn(`completeEnds`)
@@ -2065,7 +2148,10 @@ class Grid extends ProtoLayer {
       console.warn(`fixLooseCorners`)
       fixLooseCorners()
     }
-
+    console.error(`FIX Issues 1`)
+    fixIssues()
+    console.error(``)
+    console.error(`FIX Issues 2`)
     fixIssues()
 
     // if (!this.allLooseCorners().isEmpty) {
@@ -2076,8 +2162,9 @@ class Grid extends ProtoLayer {
 
     // console.warn(`still incomplete`, this.allIncompleteCorners)
     // console.warn(`canCurve`, this.allCanCurveCorners)
-    // console.warn(`allLooseWraps`, this.allLooseWraps())
-    // console.warn(`largerInnerLooseWraps`, this.largerInnerLooseWraps())
+    console.warn(`allLooseWraps`, this.allLooseWraps())
+    console.warn(`largerInnerLooseWraps`, this.largerInnerLooseWraps())
+    console.warn(`intersectingWraps`, this.intersectingWraps())
     // console.warn(`again incomplete`, this.allIncompleteCorners)
     // console.warn(`still canCurve`, this.allCanCurveCorners)
   }
@@ -2289,9 +2376,9 @@ class Grid extends ProtoLayer {
     // finish()                                                              // finish 
     console.groupEnd()
 
-    console.group(`maximizeOutsideCuddles`)
-    // console.groupCollapsed(`maximizeOutsideCuddles`)
-    this.maximizeOutsideCuddles(true)
+    console.group(`maximizeCuddles`)
+    // console.groupCollapsed(`maximizeCuddles`)
+    this.maximizeCuddles(true)
     console.groupEnd()
 
     console.log(`  %%%% end nestleShapes %%%%`)
@@ -2357,12 +2444,13 @@ class Grid extends ProtoLayer {
   // MARK: Grid Grammar Generators
   // #region Grammar Generators
   //METH:
-  randGroup({ selection = this.availableCells, amount } = {}) { return this.assignCells(selection.randReduce(amount)) }
+  randGroup({ selection = this.availableCells, amount } = {}) {
+    return this.assignCells(selection.randReduce(amount))
+  }
   //METH:
   randomSelection(amount, selection = this.availableCells) { return selection.copy.randReduce(amount) }
   //METH:
   groupAvail() { return this.assignCells(this.availableCells) }
-
   //METH:
   randomComb({
     selection = this.availableCells,
@@ -2521,6 +2609,7 @@ class Grid extends ProtoLayer {
       if (selection.length > 0) {
         const outline = this.validNeighbors({ selection: selection, direction: direction })
           .filter(cell => cell.available)
+        if (outline.isEmpty) { return }
         if (newGroup === true) { group = undefined } //allow assign to create new group
         if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
         else { this.assignCells(outline, group?.id) } //assign to group
@@ -3464,20 +3553,21 @@ class Island extends ProtoLayer {
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'island') }
   get testColor() { return protoColor(255, 230, 0, 1) }
-
+  //MEMO: allSubIslands
   get allSubIslands() {
-    let allSubs = new OpArray
-
-    const collectSubIslands = (island) => {
-      if (island.subIslands) {
-        island.subIslands.forEach(sub => {
-          allSubs.push(sub)
-          collectSubIslands(sub)
-        })
+    return memoize(() => {
+      let allSubs = new OpArray
+      const collectSubIslands = (island) => {
+        if (island.subIslands) {
+          island.subIslands.forEach(sub => {
+            allSubs.push(sub)
+            collectSubIslands(sub)
+          })
+        }
       }
-    }
-    collectSubIslands(this)
-    return allSubs
+      collectSubIslands(this)
+      return allSubs
+    }, `allSubIslands`).call(this)
   }
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.groupID, islandID: this.id }) }
@@ -3516,21 +3606,27 @@ class Island extends ProtoLayer {
   get isSquare() { return this.isRectangle && this.cellBounds.aspect.isSquare }
 
   get directionHierarchy() { return this.hierarchyFrom(this.direction) }
-
+  //MEMO: exposedSegments
   get exposedSegments() {
-    return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
+    return memoize(() => {
+      return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
+    }, `exposedSegments`).call(this)
   }
   get exposedCorners() {
     return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
   }
+  //MEMO: neighborIslands
   get neighborIslands() {
-    let neighbors = this.grid.tempOutlineSelection(this.cells)
-      .map(c => c.islandIDs.values().next().value)
-      .compacted
-      .unique()
-      .map(id => this.grid.islandNamed(id))
-    // console.log(neighbors)
-    return neighbors
+    return memoize(() => {
+      let neighbors = this.grid.tempOutlineSelection(this.cells)
+        .map(c => c.islandIDs.values().next().value)
+        .compacted
+        .unique()
+        .map(id => this.grid.islandNamed(id))
+        .compacted
+      // console.log(neighbors)
+      return neighbors
+    }, `neighborIslands`).call(this)
   }
   //TODO: DEPRECATED
   // get ordinalConnectedCells() {
@@ -3626,7 +3722,6 @@ class Island extends ProtoLayer {
           return cell.center                            // isSquare
         }
 
-
         let cornerCells = this.grid.cells.filter(cell => {// find cells within arc square
           const origin = cell.center
           // const origin = cellOrigin(cell)
@@ -3637,8 +3732,6 @@ class Island extends ProtoLayer {
             && origin.y < squareVerts[3].y
         })
         console.log(`cornerCells`, cornerCells.map(c => c.id))
-
-
 
         if (isOutsideCorner) {
           cornerCells.forEach(cell => {
@@ -3924,12 +4017,8 @@ class Island extends ProtoLayer {
         segments = segments.exclude(subShape, ['id'])
         subShapes.push(subShape)
         if (subShapes.length === 1) { // re-sort inner subshapes for counter-clockwise processing
-          segments = segments
-            //TODO: test .counterGridVertSorted now that Segments have x and y, then remove custom sort below
-            .counterGridVertSorted
-          // .sort((a, b) => a.start.y - b.start.y || b.start.x - a.start.x) // sort by y, -x 
+          segments = segments.counterGridVertSorted
         }
-
       }
     }
 
@@ -4040,10 +4129,25 @@ class Shape extends ProtoLayer {
   get grid() { return this.island.grid }
   get cells() { return this.island.cells }
   get cellRadius() { return this.grid.cellRadius }
-
-  get neighborShapes() { return this.island.neighborIslands.map(i => i.shape) }
-  get neighborSimples() { return this.neighborShapes.map(s => s.simpleSubShapes).flat() }
-  get andNeighborSimples() { return this.simpleSubShapes.flat().union(this.neighborSimples.flat(), ['id']) }
+  //MEMO: neighborShapes
+  get neighborShapes() {
+    return memoize(() => {
+      console.error(`ISSUE neighborShapes HERE!!!`, this.island.neighborIslands)
+      return this.island.neighborIslands.map(i => i.shape)
+    }, `neighborShapes`).call(this)
+  }
+  //MEMO: neighborSimples
+  get neighborSimples() {
+    return memoize(() => {
+      return this.neighborShapes.map(s => s.simpleSubShapes).flat()
+    }, `neighborSimples`).call(this)
+  }
+  //MEMO: andNeighborSimples
+  get andNeighborSimples() {
+    return memoize(() => {
+      return this.simpleSubShapes.flat().union(this.neighborSimples.flat(), ['id'])
+    }, `andNeighborSimples`).call(this)
+  }
 
   get isPerimeterShape() { return this.type === `PerimeterShape` }
 
@@ -4074,9 +4178,9 @@ class Shape extends ProtoLayer {
     // .flat()
   }
 
-  get hasFlatness() { return this.allSimpleSegs.some(s => s.hasFlatness) }
-  get canCurveMore() { return this.allSimpleSegs.some(s => s.canCurveMore) }
-  get segsThatCanCurveMore() { return this.allSimpleSegs.filter(s => s.canCurveMore) }
+  get hasFlatness() { return this.allSimpleSegs.some(s => s.hasFlatness) }              // UNUSED
+  get canCurveMore() { return this.allSimpleSegs.some(s => s.canCurveMore) }            // UNUSED
+  get segsThatCanCurveMore() { return this.allSimpleSegs.filter(s => s.canCurveMore) }  // UNUSED
 
   get minCornerRadius() { return min(this.allSimpleSegs.map(s => s.startCornerRadius)) }
   get maxCornerRadius() { return max(this.allSimpleSegs.map(s => seg.startCornerRadius)) }
@@ -4101,46 +4205,52 @@ class Shape extends ProtoLayer {
   //NOTE: inset first: 1. possibility of knowing that opposite-walled cells will disappear at insetScale === 0
   //NOTE: inset first: 2. might be some hierarchical or derivative scaling advantage to successive inset knowledge
   //NOTE: ultimately both have advantages. could make inset transform a method with two inset compProps: sub & simpleSub
+  //MEMO: insetSubShapes
   get insetSubShapes() {
-    const subs = this.simpleSubShapes
-    if (this.insetScale <= 0) {
+    return memoize(() => {
+      const subs = this.simpleSubShapes
+      if (this.insetScale <= 0) {
+        // TODO: future use with interGrids
+      }
 
-    }
+      console.log(`subs`, subs)
+      let insetSubShapes = subs?.map(sub => {
+        let insetSubShape = new OpArray
+        let prevInsetSeg
 
-    console.log(`subs`, subs)
-    let insetSubShapes = subs?.map(sub => {
-      let insetSubShape = new OpArray
-      let prevInsetSeg
+        sub.forEach((seg, i) => {
+          let newInsetSeg = seg.insetCopy(this.insetScale, this.grid.minCellWidth) //create inset segment
 
-      sub.forEach((seg, i) => {
-        let newInsetSeg = seg.insetCopy(this.insetScale, this.grid.minCellWidth) //create inset segment
-
-        if (prevInsetSeg) { // only assignNeighbors once there are two inset segments
-          prevInsetSeg.assignNeighbors({ end: newInsetSeg })
-          newInsetSeg.assignNeighbors({ start: prevInsetSeg })
-        }
-        if (i === sub.lastIndex) { // last inset segment is neghbors with first inset segment
-          newInsetSeg.assignNeighbors({ end: insetSubShape[0] })
-          insetSubShape[0].assignNeighbors({ start: newInsetSeg })
-        }
-        insetSubShape.push(newInsetSeg)
-        prevInsetSeg = newInsetSeg
+          if (prevInsetSeg) { // only assignNeighbors once there are two inset segments
+            prevInsetSeg.assignNeighbors({ end: newInsetSeg })
+            newInsetSeg.assignNeighbors({ start: prevInsetSeg })
+          }
+          if (i === sub.lastIndex) { // last inset segment is neghbors with first inset segment
+            newInsetSeg.assignNeighbors({ end: insetSubShape[0] })
+            insetSubShape[0].assignNeighbors({ start: newInsetSeg })
+          }
+          insetSubShape.push(newInsetSeg)
+          prevInsetSeg = newInsetSeg
+        })
+        return insetSubShape
       })
-      return insetSubShape
-    })
-    return insetSubShapes
+      return insetSubShapes
+    }, `insetSubShapes`).call(this)
   }
 
   //MARK: SVG Paths
+  //MEMO: insetSubShapes
   get svg() {
-    let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
-      segPath: e,
-      cornerMin: min(this.insetSize.x / 2, this.insetSize.y / 2)
-    }))
-    if (result instanceof Array) {
-      result = result.join(' ')
-    }
-    return result
+    return memoize(() => {
+      let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({
+        segPath: e,
+        cornerMin: min(this.insetSize.x / 2, this.insetSize.y / 2)
+      }))
+      if (result instanceof Array) {
+        result = result.join(' ')
+      }
+      return result
+    }, `svg`).call(this)
   }
 
   get svgPath() { return `path('${this.svg}')` }
