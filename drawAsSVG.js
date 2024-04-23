@@ -1440,6 +1440,23 @@ class ProtoSegment extends Segment {
   //MARK: Corner Arc
   // #region Corner Arc
   get hasArc() { return this.hasBothVerts }
+  //MEMO: cornerArcRadius
+  get cornerArcRadius() {
+    return memoize(() => {
+      return min(this.availableEndLength, this.endNeighbor.availableStartLength)
+    }, `cornerArcRadius`).call(this)
+  }
+
+  pointOnArcRotFromStart(deg) {
+    return Vertex.add(this.arcOriginCorner, this.arcOriginToStart.lineVector.rotate(radians(deg)))
+  }
+  pointOnArcRotFromEnd(deg) { return this.pointOnArcRotFromStart(90 - deg) }
+  get arcCenterVert() {
+    return memoize(() => {
+      return this.pointOnArcRotFromStart(45)
+    }, `arcOriginToStart`).call(this)
+  }
+
   get arcStartCorner() { return this.finalCubicEndVert }
   get arcNormalCorner() { return this.end }
   get arcEndCorner() { return this.endNeighbor.finalCubicStartVert }
@@ -1450,21 +1467,7 @@ class ProtoSegment extends Segment {
       return Vertex.add(this.arcStartCorner, segment(this.arcNormalCorner, this.arcEndCorner).lineVector)
     }, `arcOriginCorner`).call(this)
   }
-  get arcBounds() {
-    return OpArray.from([this.arcStartCorner, this.arcNormalCorner, this.arcEndCorner, this.arcOriginCorner])
-  }
-  //MEMO: arcOriginCorner
-  get arcBoundsUpright() {
-    return memoize(() => {
-      return this.arcBounds.gridVertSorted
-    }, `arcBoundsUpright`).call(this)
-  }
-  //MEMO: cornerArcRadius
-  get cornerArcRadius() {
-    return memoize(() => {
-      return min(this.availableEndLength, this.endNeighbor.availableStartLength)
-    }, `cornerArcRadius`).call(this)
-  }
+
   //MEMO: arcOriginToStart
   get arcOriginToStart() {
     return memoize(() => {
@@ -1484,53 +1487,69 @@ class ProtoSegment extends Segment {
     }, `arcOriginToEnd`).call(this)
   }
   get arcNormalDirection() { return this.arcOriginToNormal.direction }
+
+  get maxPossibleArcRadius() { return min(this.maxCubicEndLength, this.endNeighbor.maxCubicEndLength) }
+  get maxPossibleArcBoundsSeg() {
+    return memoize(() => {
+      const maxStartCorner = this.distancedEndPoint(this.maxPossibleArcRadius)
+      const maxEndCorner = this.endNeighbor.distancedStartPoint(this.maxPossibleArcRadius)
+      const maxOrigin = Vertex.add(maxStartCorner, segment(this.arcNormalCorner, maxEndCorner).lineVector)
+      return segment(maxOrigin, this.arcNormalCorner)
+    }, `maxPossibleArcBoundsSeg`).call(this)
+  }
   //METH: arcIsWithinThisArc()
   arcIsWithinArc(arcSeg) {
-    const thisArc = this.arcBoundsUpright
-    const thatArc = arcSeg.arcBoundsUpright
-    // console.log(`thisArc`, thisArc)
-    // console.log(`thatArc`, thatArc)
-    return roundToDec(thatArc[0].x, 0) <= roundToDec(thisArc[0].x, 0)
-      && roundToDec(thatArc[0].y, 0) <= roundToDec(thisArc[0].y, 0)
-      && roundToDec(thatArc[1].x, 0) >= roundToDec(thisArc[1].x, 0)
-      && roundToDec(thatArc[1].y, 0) <= roundToDec(thisArc[1].y, 0)
-      && roundToDec(thatArc[2].x, 0) <= roundToDec(thisArc[2].x, 0)
-      && roundToDec(thatArc[2].y, 0) >= roundToDec(thisArc[2].y, 0)
-      && roundToDec(thatArc[3].x, 0) >= roundToDec(thisArc[3].x, 0)
-      && roundToDec(thatArc[3].y, 0) >= roundToDec(thisArc[3].y, 0)
+    const segBounds = arcSeg instanceof ProtoSegment ? arcSeg.arcOriginToNormal : arcSeg
+    return boundsIsInsideTestBounds(this.arcOriginToNormal, segBounds)
   }
-  hasSameCornerDirection(seg) { return this.endCorner.equals(seg.endCorner) }
+  hasEqualCornerDirection(seg) { return this.endCorner.equals(seg.endCorner) }
   //METH: arcWrappedWithinThisArc()
   arcShouldWrapOutToArc(arcSeg) {
-    return this.arcIsWithinArc(arcSeg) && this.hasSameCornerDirection(arcSeg)
+    return this.arcIsWithinArc(arcSeg) && this.hasEqualCornerDirection(arcSeg)
   }
   arcIsRadiantToArc(arcSeg) {
-    return this.arcShouldWrapOutToArc(arcSeg) && !this.arcOriginCorner.equals(arcSeg.arcOriginCorner, 1)
+    return this.arcShouldWrapOutToArc(arcSeg) && this.arcOriginCorner.equals(arcSeg.arcOriginCorner, 1)
   }
 
+  //MARK: WRAPPING
   //MEMO: overlapWrap
   get overlapWrap() {
     return memoize(() => {
-      const turnDir = this.isOutsideCorner ? `isLeft` : `isRight`
-      const startWraps = this.overlapSegs
+      // const turnDir = this.isOutsideCorner ? `isLeft` : `isRight`        // overlap wraps run opposite
+      const startWraps = this.overlapSegs                                   // start with segs overlapping this seg
         .filter(s =>
-          s.start.equals(this.end, 0)
-          && s.turns.start[turnDir]
-          && this.endNeighbor.isOverlappingWith(s.startNeighbor)
+          s.start.equals(this.end, 0)                                       // overlap wraps share a corner point
+          // && s.turns.start[turnDir]
+          && this.hasEqualCornerDirection(s.startNeighbor)                  // overlap wraps share corner direction
+          && this.endNeighbor.isOverlappingWith(s.startNeighbor)            // neighbors must also overlap
         )
-      if (startWraps.length === 1) { return startWraps[0].startNeighbor }
+      if (startWraps.length === 1) { return startWraps[0].startNeighbor }   // startWrap.startNeighbor is the corner seg
     }, `overlapWrap`).call(this)
   }
-  get closestAdjacentWrap() {
-    return memoize(() => {
-
-    }, `closestAdjacentWrap`).call(this)
-  }
   get hasOverlapWrap() { return !!this.overlapWrap }
+  get colOutWrap() { if (this.isOutsideCorner) { return this.overlapWrap } }
+  get colInWrap() { if (!this.isOutsideCorner) { return this.overlapWrap } }
+
+  get adjacentWrap() {
+    return memoize(() => {
+      const outside = !this.isOutsideCorner
+      const adjWraps = this.inShapeSharedCornerDirections
+        .filter(s => s.isOutsideCorner === outside
+          && (this.arcIsWithinArc(s.maxPossibleArcBoundsSeg) || s.arcIsWithinArc(this.maxPossibleArcBoundsSeg))
+        )
+        .sort((a, b) => this.arcNormalCorner.dist(a.arcNormalCorner) - this.arcNormalCorner.dist(b.arcNormalCorner))
+
+      return adjWraps
+    }, `adjacentWrap`).call(this)
+  }
+  get adjOutWrap() { if (this.isOutsideCorner) { return this.overlapWrap } }
+  get adjInWrap() { if (this.isOutsideCorner) { return this.overlapWrap } }
+
   //MEMO: adjacentWraps
   get adjacentWraps() {
     return memoize(() => {
-      return this.shapeSharedNormalDirections
+      return this.inShapeSharedCornerDirections
+        .filter(s => this.arcIsWithinArc(s) || s.arcIsWithinArc(this))
         .sort((a, b) => this.arcNormalCorner.dist(a.arcNormalCorner) - this.arcNormalCorner.dist(b.arcNormalCorner))
       // .filter()
     }, `adjacentWraps`).call(this)
@@ -1539,12 +1558,13 @@ class ProtoSegment extends Segment {
   get adjacentInWraps() {
     return memoize(() => {
       if (!this.isOutsideCorner) { return }          // only outside corners can have inwraps
-      return this.shapeSharedNormalDirections
+      return this.inShapeSharedCornerDirections
         // .filter(s => s.isOutsideCorner && )
         .sort((a, b) => this.arcNormalCorner.dist(a.arcNormalCorner) - this.arcNormalCorner.dist(b.arcNormalCorner))
 
     }, `adjacentInWraps`).call(this)
   }
+
 
   //MEMO: sharedOrigins
   get sharedOrigins() {
@@ -1554,12 +1574,12 @@ class ProtoSegment extends Segment {
         .sort((a, b) => a.cornerArcRadius - b.cornerArcRadius)    // sorted small to large
     }, `sharedOrigins`).call(this)
   }
-  //MEMO: shapeSharedNormalDirections
-  get shapeSharedNormalDirections() {
+  //MEMO: inShapeSharedCornerDirections
+  get inShapeSharedCornerDirections() {
     return memoize(() => {
       return this.shape.simpleSubShapes.flat().exclude(this, 'id')
-        .filter(s => this.hasSameCornerDirection(s))
-    }, `shapeSharedNormalDirections`).call(this)
+        .filter(s => this.hasEqualCornerDirection(s))
+    }, `inShapeSharedCornerDirections`).call(this)
   }
   //MEMO: outWraps
   get outWraps() {
@@ -1572,11 +1592,7 @@ class ProtoSegment extends Segment {
     }, `outWraps`).call(this)
   }
   //MEMO: outWrapCount
-  get outWrapCount() {
-    // return memoize(() => {
-    return this.outWraps.length
-    // }, `outWraps`).call(this)
-  }
+  get outWrapCount() { return this.outWraps.length }
   get hasOutWraps() { return this.outWrapCount > 0 }
   //MEMO: outWrapsOfThisShapeAndNeighbors
   get outWrapsOfThisShapeAndNeighbors() {
@@ -1589,7 +1605,6 @@ class ProtoSegment extends Segment {
   //MEMO: inWraps
   get inWraps() {
     return memoize(() => {
-      const overlapWrap = this.isOutsideCorner ? undefined : [this.overlapWrap]
       let inWraps = this.grid.allSimpleSubShapes.flat().exclude(this, 'id')
         .filter(s => s.arcShouldWrapOutToArc(this))
       if (this.isOutsideCorner) {
@@ -1602,7 +1617,8 @@ class ProtoSegment extends Segment {
         .sort((a, b) => roundToDec(b.cornerArcRadius) - roundToDec(a.cornerArcRadius))    // sorted large to small
     }, `inWraps`).call(this)
   }
-
+  get inWrapCount() { return this.inWraps.length }
+  get hasInWraps() { return this.inWrapCount > 0 }
 
   // #endregion
   //MARK: Copy Methods
