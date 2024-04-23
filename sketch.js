@@ -354,6 +354,8 @@ function gridTests2() {
   // console.log('right opposite', Direction.Right.opposites)
   group004 = GRID.randGroup({ amount: 0.5 })
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
+  // console.log(group003)
+  // console.log(group004)
 
   // GRID.randGroup({amount:1 / GRID.cellCount})
   // GRID.outlineTaken({ direction: Direction.All, newGroup: true })
@@ -511,7 +513,7 @@ function gridTests2() {
 
   // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
-  // GRID.showCellsDebug()
+  GRID.showCellsDebug()
 
   // console.log(`multi-island simpleSubshapes`, GRID.allSimpleSubShapes.flat().map(s => s.parentID))
   let interCells01 = GRID.perimeterIslands[3].interCells
