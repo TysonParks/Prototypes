@@ -496,7 +496,7 @@ function findBounds(...geo) {
   } else {                                                              // geo is rest param array
     boundsVerts = geo
   }
-  console.log(`boundsVerts`, boundsVerts)
+  // console.log(`boundsVerts`, boundsVerts)
   boundsVerts = OpArray.format(boundsVerts).flat(Infinity).compacted
     .map(e => {                                                         // map segs to verts
       if (e instanceof Segment) { return [e.start, e.end] }
