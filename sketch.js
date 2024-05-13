@@ -261,7 +261,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  // gridX = 4
+  // gridX = 3
 
   GRID = new Grid({
     protoParent: FRAME,
@@ -326,7 +326,7 @@ function gridTests2() {
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
   group001 = GRID.outlineGroup({
     groupID: GRID.lastGroup.id,
-    direction: Direction.All.random(R.random_int(1, 4)),
+    direction: Direction.All.random(R.random_int(1, 8)),
     newGroup: true,
     amount: R.random_int(1, 2)
   })
@@ -357,7 +357,7 @@ function gridTests2() {
   // console.log(group003)
   // console.log(group004)
 
-  // GRID.randGroup({amount:1 / GRID.cellCount})
+  // GRID.randGroup({ amount: 1 / GRID.cellCount })
   // GRID.outlineTaken({ direction: Direction.All, newGroup: true })
   // GRID.outlineTaken({ direction: Direction.Right, newGroup: false })
 
@@ -407,12 +407,21 @@ function gridTests2() {
   //MARK: group000
   group000?.cutIslands({
     profile: Profile.rOut,
-    layerStart: 1.95,
+    layerStart: 2.95,
     layerEnd: .5,
     amount: 2,
     loftScale: 1 / 1,
     // direction: Direction.Horizontal
   })
+
+  // group000?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: .95,
+  //   layerEnd: 1 / 32,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  // })
 
   // group000?.cutIslands({
   //   profile: Profile.jIn,
