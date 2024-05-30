@@ -301,15 +301,24 @@ class OpArray extends Array {
 // CLASS: Array EXTENSIONS
 // SIZE: 13 lines
 // #region Array EXTENSIONS
-// PROTOTYPE: Array extension last() function
-Array.prototype.last = function () {
-  return this[this.lastIndex]
-}
+// // PROTOTYPE: Array extension `first` property
+// Object.defineProperty(Array.prototype, 'first', {
+//   get: function () {
+//     if (!this.isEmpty) { return this[0] }
+//   }
+// })
+
+// PROTOTYPE: Array extension `last` property
+Object.defineProperty(Array.prototype, 'last', {
+  get: function () { if (!this.isEmpty) { return this[this.lastIndex] } }
+})
 
 // PROTOTYPE: Array extension 'lastIndex' property
 Object.defineProperty(Array.prototype, 'lastIndex', {
   get: function () {
+    // if (!this.isEmpty) {
     return this.length - 1
+    // }
   }
 })
 // #endregion 
@@ -326,14 +335,14 @@ Set.prototype.equals = function (set, props) {
 // SIZE: 11 lines
 // PROTOTYPE: Object extension map() function
 Object.prototype.map = function (callback) {
-  const result = {};
+  const result = {}
 
   for (const key in this) {
     if (this.hasOwnProperty(key)) {
-      const mappedValue = callback(this[key], key, this);
-      result[key] = mappedValue;
+      const mappedValue = callback(this[key], key, this)
+      result[key] = mappedValue
     }
   }
 
-  return result;
+  return result
 }
