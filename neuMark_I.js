@@ -274,7 +274,7 @@ class Shade {
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
-      const offsetRange = range(offsets[0], offsets.last())   // range from offsets
+      const offsetRange = range(offsets[0], offsets.last)   // range from offsets
 
 
       //ARROW: easeInCircNormalized : number : normalizes and shifts value using circular easing
@@ -603,7 +603,7 @@ function exponentialSlices(min, max, amount, factor = 0.5) {
   // if (amount < 3) { return OpArray.from([min, max]) }
   const range = max - min
   const multipliers = createSlices(1, pow(2, amount - 1), factor).map(e => e - 1)
-  const last = multipliers.last()
+  const last = multipliers.last
   // console.log('multipliers', multipliers)
   return multipliers.map(e => min + e * (range / last))
 }
