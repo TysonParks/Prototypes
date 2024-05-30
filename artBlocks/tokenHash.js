@@ -187,7 +187,7 @@ const lastHash = [
   '0xff7b00c046aa9a16aa275b68fa00b7c6effd0248ae4934e710f7c382c606a050',
   '0xe33176d6c919843dee59bac80b34b083888e738391887367cf47977db2843a82',
   '0xd6a036c2e98a367ad9381e06118a4ea25c27569fe2b97fe87f8013c595eb8537',
-  '0x5567f10064e4f3ce7350d0b7cd017ca111dc3b15c4e7758b36e0e5cd7ab1177c',   //MARK: Single cellRadius pref: NOT FIXED
+  '0x5567f10064e4f3ce7350d0b7cd017ca111dc3b15c4e7758b36e0e5cd7ab1177c',   // LOOSIE!/SingeCell : RESURFACED : //FUNC:
   '0xb9087b1817151bd07d586eecd7b8cba17dba3f2ee7ed2a86c86ed6dfe963c9cf',   // !!!FIXED!!!
   '0xb72b742612e95fca51b635212ecb6018f192aa496ead29528dd6a5b48e8f41fe',   // 190 : !!!FIXED!!!
   '0x1c822ffc33f0388eee7b3a3fe594e75f17ac776220dbb7d73ddb371cbe85ed5e',   // !!!FIXED!!!
@@ -197,42 +197,66 @@ const lastHash = [
   '0xd182a4f166bdf052a95f9107a65c05660e5bc0eb4ccd232bcf066794d558c9fe',   // 195 : !!!FIXED!!!
   '0x76ef937271715a6f39edb9604018f13c3007ceefa6e53e6438e3cea07a801595',   // !!!FIXED!!!
   '0x9e2a1c1c131b92fd384a941e80bc544e70a93f6042ae20c5c34c397b68c3c4e9',   // !!!FIXED!!!
-  '0xcaa97996173c993170888f6f04f24c49871f4ba6fdf65bfbabba8cfffb1be8ff',   //MARK: COMPLEX TEST : cellRadius pref NOT
+  '0xcaa97996173c993170888f6f04f24c49871f4ba6fdf65bfbabba8cfffb1be8ff',   // COMPLEX TEST : cellRadius pref : //MARK:
   '0xbbd71385e1e9adb63559c486000c89b6979bcf626b83bfc84b572a68c616b465',   // !!!FIXED!!!
   '0x3b29ff22f29b6a023dc9255686daa5839ef4a3d76dbe7bb1ded13749033fba87',   // 200 : !!!FIXED!!!
   '0xe20efec038088d2ce5a78c7edd99191d5a9530e8819245fef2db1c3051609b9d',   // !!!FIXED!!!
   '0x5eb51eeb9b2056a51fe67528f19aa0fa7b46a6a0ec494d352abaea95175c3a55',   // !!!FIXED!!!
-  '0xcd8bd02d6d51104ccf282edac747f9f1dc5cc796842562e3a080f63e5e22a40e',   //MARK: Single cellRadius pref: NOT FIXED
-  '0x5bd8aaaef867f50bfb0f1c05cd3f4e77d53ee976b943cfd7090aebdadc04774f',   //MARK: Single cellRadius pref: NOT FIXED
-  '0xb144a21fc0d92c6876d4491877fd7bb86db40359ea0e9adaea33c6c4d6c42f92',   //MARK: 205 : UNRESOLVED
+  '0xcd8bd02d6d51104ccf282edac747f9f1dc5cc796842562e3a080f63e5e22a40e',   // Single cellRadius pref: //MARK:
+  '0x5bd8aaaef867f50bfb0f1c05cd3f4e77d53ee976b943cfd7090aebdadc04774f',   // LOOSIE!: !!!FIXED!!!
+  '0xb144a21fc0d92c6876d4491877fd7bb86db40359ea0e9adaea33c6c4d6c42f92',   // 205 : INTERSECT : !!!FIXED!!!
   '0xcb0f6a7ceac8d7bc5713f61a706d5c3dbaa66d134f962d77de0f0913eea3b2e3',   // !!!FIXED!!!
-  '0x4017e6496a4a1605e7d487f97504bd7bdcba796bcb849810ee152d783ec3a847',   // !!!FIXED!!!
+  '0x4017e6496a4a1605e7d487f97504bd7bdcba796bcb849810ee152d783ec3a847',   // INTERSECT : RESURFACED! : !!!FIXED!!!
   '0x4a00921bedb6283e1750cf4c6dff3ba0059853c67c805fef96ca7a4d30e6d1af',   // !!!FIXED!!!
   '0x605dde28e805c07ac2b63e68d44c48876e383ffc3dd51604d74e8eb65646dfc7',   // LOOPS!!! : !!!FIXED!!!
-  '0xffafcdca568419e2f6f7fc9286811c0162d36df61f8b8d0f482afb3ce25c9777',   // 210 : !!!FIXED!!!
+  '0xffafcdca568419e2f6f7fc9286811c0162d36df61f8b8d0f482afb3ce25c9777',   // 210 : LOOSIE! :RESURFACED! : !!!FIXED!!!
   '0x4e8216e7e003abd51dfc5b12b725dc885443cdace3398913818a1ec8cfd0d560',   // !!!FIXED!!!
   '0x431f1c54956ba0d07f571ee0f09fbffd8cffb8e35a0c60e505e2deb4cc08b0f1',   // !!!FIXED!!!
   '0x152a9f3bde4ccde59751c82a32e752db82481bf66534cb0a0408040e61721e01',   //MARK: Single cellRadius pref: NOT FIXED
   '0x3605e215da97312e009b7cdf1f239994b7e04609eb4c1b37cab28ae5e2be4acd',   // LOOPS!!! : !!!FIXED!!!
   '0xf1593b024cd1a2eec7523471f65c25af3a753615380cc3bc334e290613d6db4f',   // 215 : !!!FIXED!!!
-  '0x927ea0f21860e544d0e613cfc413befa642c4a1c81dc9746f34cfcd8f65c678e',   //MARK: Single cellRadius pref: NOT FIXED
-  '0xa762bee421dbbaa6b46dc9c599e3a3ddcdd23bf0f1635cac1315f83883662c75',   // !!!FIXED!!!
+  '0x927ea0f21860e544d0e613cfc413befa642c4a1c81dc9746f34cfcd8f65c678e',   // Single cellRadius pref: //MARK:
+  '0xa762bee421dbbaa6b46dc9c599e3a3ddcdd23bf0f1635cac1315f83883662c75',   // INTERSECT : !!!FIXED!!!
   '0x8588050d910c87319b6fbbd9e82833a8a1e8eab6fd4fca61d54e756bddbb988d',   // !!!FIXED!!!
-  '0xfc5c1bb4178c7528ae6bff4c60785bfafda13ab3d7482e3337b0d170e7977aec',   // Single cellRadius pref: NOT FIXED
+  '0xfc5c1bb4178c7528ae6bff4c60785bfafda13ab3d7482e3337b0d170e7977aec',   // Single cellRadius pref: //MARK:
   '0x495173990ce19156014b13a982af6919003cb4e4ebe49322ee4d5b32522d941f',   // 220 : INTERSECT! : !!!FIXED!!!
-  '0x741ae2ab6f0de06c9d516757df6ba744585119a5047ab8faa02166edaea2d2ac',   //MARK: IDEAL Single cellRadius pref: NOT
+  '0x741ae2ab6f0de06c9d516757df6ba744585119a5047ab8faa02166edaea2d2ac',   // IDEAL Single cellRadius pref: //MARK:
   '0x75698b7dade62ae19279decf70ad287a1f0f2b63a5b9a170651bb564c91b7780',   // !!!FIXED!!!
-  '0x688f9f8a30e72bc92c2a81e84c2fde98e307b09c22084b8262f324897c89f431',   // !!!FIXED!!!
-  '0xea76c05aa15df01dc0bd47b9be2a5c51906d5cbb9b1138566fa83c89df49cc84',   //METH: INTERSECT TEST : WORKING but...
+  '0x688f9f8a30e72bc92c2a81e84c2fde98e307b09c22084b8262f324897c89f431',   //METH: LOOSIE : resurfaced //FUNC:
+  '0xea76c05aa15df01dc0bd47b9be2a5c51906d5cbb9b1138566fa83c89df49cc84',   //METH: complex adjWrap : !!!FIXED!!!
   '0xf37c9444141bc2c96b70e5c46a27216cb5cf35d543a4fda8ed535fd2935b6e3f',   // 225 : INTERSECT! : !!!FIXED!!!  
-  '0x5e02d33a4267d7bb7dde9d73b5d0549214c3c5127c634dda114ed874c70b0234',   //METH: INTERSECT! : !!!FIXED!!! 
-  '0xcb03ef558da060c4d3463424abd4447dd0e414683a6f9c62e23a9ec14d87c84c',   //METH: QUADSHAPE DONUTS : UNRESOLVED
-  '0xf027aeef4096d40a1ee0bc7cab683451534f565441efa6edcf8feeb5dca0ccbe',   //METH: Single cellRadius pref: NOT FIXED
-  '0xcda1c19914e58bf08aec80534fc34d99c3334dd50238088a99c08c9e8ab83aab',   //METH: INTERSECT! : UNRESOLVED
-  '0x0decbe26c8c8a018b3da8272bac725705c3f01758a84f2f6eab63e8d4d920961',   //METH: 230 : INTERSECT! : UNRESOLVED
-  '0xed00a85b8003e87f6d49f546c721814d56353fc5e2b477367ec3dfee59819933',   //METH: INTERSECT! : UNRESOLVED
-  '0xf8f69eeca2e5bde1626f4493727af07798a0c98862fd1c51b151eb08aee9482e',   //METH: Single cellRadius pref: NOT FIXED
-  '0x1ab0d58515fa13c63b80ee0ab8113fa534e0a9941e0e39b59913c54a8d7f5ecc',   //METH: INTERSECT! : UNRESOLVED
+  '0x5e02d33a4267d7bb7dde9d73b5d0549214c3c5127c634dda114ed874c70b0234',   //METH: complex adjWrap : //FUNC:
+  '0xcb03ef558da060c4d3463424abd4447dd0e414683a6f9c62e23a9ec14d87c84c',   //METH: QUADSHAPE DONUTS : !!!FIXED!!!
+  '0xf027aeef4096d40a1ee0bc7cab683451534f565441efa6edcf8feeb5dca0ccbe',   //METH: SnglCell : loosewrap resurface //FUNC:
+  '0xcda1c19914e58bf08aec80534fc34d99c3334dd50238088a99c08c9e8ab83aab',   //METH: INTERSECT! : !!!FIXED!!! 
+  '0x0decbe26c8c8a018b3da8272bac725705c3f01758a84f2f6eab63e8d4d920961',   //METH: 230 : INTERSECT! : !!!FIXED!!! 
+  '0xed00a85b8003e87f6d49f546c721814d56353fc5e2b477367ec3dfee59819933',   //METH: LOOSIE : resurfaced //FUNC:
+  '0xf8f69eeca2e5bde1626f4493727af07798a0c98862fd1c51b151eb08aee9482e',   //METH: !!!FIXED!!! 
+  '0x1ab0d58515fa13c63b80ee0ab8113fa534e0a9941e0e39b59913c54a8d7f5ecc',   //METH: INTERSECT! : !!!FIXED!!! 
+  '0xe960f106695bdff5d57d03c63acbc00b275baf2a7fe2111ad38f827a09247948',   //METH: INTERSECT! : !!!FIXED!!! 
+  '0x136acf82b8d5e5372937b1f342ef09c351141ba029c5bca9fb4e34e5a750f854',   //METH: 235 : LooseWrap! resurfaced //FUNC:
+  '0xe1a35f722841c1a8965290323398e63aa79b64a285a58fac888088951e558dc8',   //METH: LOOSEBEAN resurfaced //FUNC:
+  '0x1ba35e580ca405845932aa84903de4ee5a2ec6b40c92fc2477efbdd960b69729',   //METH: LOOSEBEAN resurfaced //FUNC:
+  '0xcda2624dde433fc083bfab92e085df43335f5f81fc3ea4d5b073c419e236041d',   //METH: LOOSIE! : //FUNC:
+  '0x9a5b9bc8e91dc35f231cd852ab96d7bca1ecc72b7ac59b170820e5f5e51ed47f',   //METH: INTERSECT! : !!!FIXED!!! 
+  '0x723010b353fe209b40b6af76095acf1074708b0010cb50511397a9193a080c22',   //METH: 240 : complex adjWrap! : //FUNC:
+  '0xe6faae62aeea081013611214658753dadf4fb156e20c20d66ce3dc38716544a4',   //METH: LooseWrap! resurfaced //FUNC:
+  '0x469fd71ce19cedf699624f27f09deacca08f4c0cb26594b38e23c5e009585741',   //METH: INTERSECT! : !!!FIXED!!! 
+  '0x8acb1bd7cc6dea5a9d340c24fae9ce8fdcc0d31393029b9d452c8cc766275dd6',   //METH: LooseWrap! resurfaced //FUNC:
+  '0xfd35db6fbac61ef7394f087d5543919e2e23526f0d44bc7ac9a03506df89d465',   //METH: LooseWrap! resurfaced //FUNC:
+  '0xde563a7120eaaea771e93a991eb128f1e33dc5cbd3c1f5f000560b7c4973a08c',   // 245 METH:(ALL) : !!!FIXED!!! 
+  '0xdd797db88c6337292ab4beb812074f9f56d663641b71ded42a161d103b609dfd',   //METH:(ALL) : LOOSIE! : //FUNC:
+  '0x8e0dc5a3d792d020f64b1c682c964e853b11da52e254c906a3613d65ea0224f6',   //METH:(ALL) :INTERSECT! : //FUNC:
+  '0xffa40fcfbf482f17b60e81f8259b4e5208d6100665cab51690e5d458c770442a',   //METH:(ALL) : LOOP! : //FUNC:
+  '0x42eb8870cf847a67974fd7b6dbe62a533f11ca9521488817f5d1c67dacb3ae6b',   //METH:(ALL) : LOOSEWRAP! : !!!FIXED!!! 
+  '0x15910cac97c75381c00904bc09401ce8dec816479f7e0b370c5e0678374c3eea',   // 250 METH:(ALL) : LOOSEWRAP! : !!!FIXED!!! 
+  '0xd8c494a68361a020649166c839ddda35078e9432a6372754fec2a2639dbe864a',   //METH:(ALL) : LOOSIE! : !!!FIXED!!! 
+  '0x86ebaa3d49edcc451a95c10004689ea554f463cdadba3523e202d31db7bf3a6f',   //METH:(ALL) : LOOSIE! : !!!FIXED!!! 
+  '0xb485a5ae9842e6e0444282a46719922efdba43034148f40f502a4fc581b0e177',   //METH:(ALL) : LOOSIE! : !!!FIXED!!! 
+  '0xae9af1cfdf2e3693c74ddde8d8d3ece5adb522e89763fe0fbe4a8bf279d108e7',   //METH:(ALL) : LOOSEWRAP! : !!!FIXED!!! 
+  '0xa6fcd3cfb785a4eceda1bb4b59d1fee23c033e2f7e93a7845812a210a81acf5d',   // 255 METH:(ALL) : LOOSIE! : !!!FIXED!!! 
+  '0xd1071fb4ac0afb53b83ed533696bea0ea062df38eba17579d18f8736fef29b22',   //METH:(ALL) : LOOP! : !!!FIXED!!! 
+  '0x8de2667ee9bd6a52e780f12bcc13326285af4c7e97a27076299f5c085a28dc51',   //METH:(8) : Wrap Interference : //FUNC:
 ]
 
 function currentHash() {
