@@ -1,7 +1,7 @@
 let gui
 
 let testingControls = {
-  hashNumber: 233,
+  hashNumber: 257,
   lastHash: true,
   labels: true,
   borders: false,

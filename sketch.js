@@ -261,7 +261,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  // gridX = 3
+  // gridX = 10
 
   GRID = new Grid({
     protoParent: FRAME,
@@ -326,6 +326,7 @@ function gridTests2() {
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
   group001 = GRID.outlineGroup({
     groupID: GRID.lastGroup.id,
+    // direction: Direction.All,
     direction: Direction.All.random(R.random_int(1, 8)),
     newGroup: true,
     amount: R.random_int(1, 2)

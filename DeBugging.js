@@ -56,7 +56,7 @@ const Debuggable = {
 
   showRect() {
     if (this.drawSVG) {
-      const radius = 3
+      const radius = 2
       if (!this.deBugRectElt) { this.deBugRectElt = createSVGElt('rect').id(`${this.id}-deBugRect`) }
       // if (this.isShape) {
 
@@ -81,8 +81,8 @@ const Debuggable = {
       this.deBugRectElt
         .attribute('fill', protoColor(0, 0))
         .attribute('stroke', randHue)
-        .attribute('stroke-width', `.125`)
-        .attribute('stroke-dasharray', `4 1`)
+        .attribute('stroke-width', `.0625`)
+        .attribute('stroke-dasharray', `1 2`)
       // }
     }
   },
