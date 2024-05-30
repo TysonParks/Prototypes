@@ -121,6 +121,7 @@ class Direction {
   // get angle() { return this.valOp(a => ((((a * -1) - 1) % 4) + 2) * PI / 2) }
   get angle() { return this.directOp(a => this.#angles[a.name]) }
   get angleDegrees() { return radianToDegree(this.angle) }
+  get vector() { if (this.isSingle) { return this.moveCoord.normalize() } }
 
   get adjacents() {
     const directionsVals = this.directOp(a => OpArray.from([a.previous(), a.next()]))
@@ -531,8 +532,8 @@ function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3) {
       && y < roundToDec(yMax, accuracy)
   }
 }
-// FUNC: boundsIsInsideBoundsVerts() : BOOL : finds if vert is within bounds of testBounds
-function boundsIsInsideTestBounds(bounds, testBounds, includeBorder = true, justOverlaps = false, accuracy = 3) {
+// FUNC: boundsIsWithinTestBounds() : BOOL : finds if vert is within bounds of testBounds
+function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, justOverlaps = false, accuracy = 3) {
   bounds = findBounds(bounds)
   const boundsVerts = [vert(bounds.xMin, bounds.yMin), vert(bounds.xMax, bounds.yMax)]
   testBounds = findBounds(testBounds)
@@ -559,14 +560,20 @@ function safeWhile(conditionFunc, actionFunc, maxIterations = 10) {
 //FUNC: safeArrayWhile()
 function safeArrayWhile(conditionArrayFunc, actionFunc, arrayMin = 0, maxRepeats = 5) {
   let repeats = 0
+  let minCount = Infinity // Initialize minCount to a very large number
   let currentCount
   while (conditionArrayFunc().length > arrayMin && repeats < maxRepeats) {
     currentCount = conditionArrayFunc().length
     console.log(`currentCount`, currentCount)
+    if (currentCount < minCount) {
+      minCount = currentCount
+    }
     actionFunc()
-    if (conditionArrayFunc().length === currentCount) {
+    let newCount = conditionArrayFunc().length
+    if (newCount >= minCount) {
       repeats++
     } else {
+      minCount = newCount // Update minCount since we found a new lower count
       repeats = 0
     }
   }
