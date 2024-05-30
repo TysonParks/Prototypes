@@ -67,11 +67,11 @@ function functionTestPrint() {
   const vert0InBounds01NotBorder = vertIsInsideBounds(vert0, bounds01, false)
   console.log(`vert0InBounds01NotBorder`, vert0InBounds01NotBorder)
 
-  const bounds01InBounds02 = boundsIsInsideTestBounds(bounds01, bounds02)
+  const bounds01InBounds02 = boundsIsWithinTestBounds(bounds01, bounds02)
   console.log(`bounds01InBounds02`, bounds01InBounds02)
-  const bounds01InBounds12 = boundsIsInsideTestBounds(bounds01, bounds12)
+  const bounds01InBounds12 = boundsIsWithinTestBounds(bounds01, bounds12)
   console.log(`bounds01InBounds12`, bounds01InBounds12)
-  const bounds01OverlapsBounds12 = boundsIsInsideTestBounds(bounds01, bounds12, true, true)
+  const bounds01OverlapsBounds12 = boundsIsWithinTestBounds(bounds01, bounds12, true, true)
   console.log(`bounds01OverlapsBounds12`, bounds01OverlapsBounds12)
 
   //NOTE: OpArray Tests
