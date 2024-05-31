@@ -644,6 +644,8 @@ class Vertex extends p5.Vector {
   // sub(vert) { return Vertex.sub(this, vert) }
   // mult(vert) { return Vertex.mult(this, vert) }
   // div(vert) { return Vertex.div(this, vert) }
+  static min(verts) { return verts.gridVertSorted[0] }
+  static max(verts) { return verts.gridVertSorted.last }
 
   static rotate(v, deg) { return v.copy().rotate(deg) }
   static cleanRotate(v, deg, decimal = 5) {
@@ -678,6 +680,7 @@ class Vertex extends p5.Vector {
   }
 }
 
+//MARK: CLASS Segment 
 // CLASS: Segment 
 // SIZE: 199 lines
 function segment(start, end) {
@@ -695,17 +698,21 @@ class Segment {
     // this.#assignVerts(start, end, arguments)
   }
 
+  //MARK: computed
   get id() { return `(${this.start.id}) -> (${this.end.id})` }
   get string() { return `[(${this.start.string}), (${this.end.string})]` }
 
   get lineVector() { return p5.Vector.sub(this.end, this.start) }
   get opposite() { return segment(this.end, this.start) }
+  get gridSorted() { return segment(this.vertsArray.gridVertSorted[0], this.vertsArray.gridVertSorted[1]) }
 
   //TODO: I should be able to revert to instance properties with these
   get start() { return this._start }
   set start(vert) { this._start = vert }
   get end() { return this._end }
   set end(vert) { this._end = vert }
+
+  get vertsArray() { return OpArray.from([this.start, this.end]) }
 
   get x() { return this.start.x }
   get y() { return this.start.y }
@@ -748,6 +755,8 @@ class Segment {
     }
   }
 
+  //MARK: methods
+  //METH: vertIsInBounds()
   vertIsInBounds(vert, accuracy = 4) {
     const x = roundToDec(vert.x, accuracy)
     const y = roundToDec(vert.y, accuracy)
@@ -756,7 +765,7 @@ class Segment {
       && y >= roundToDec(this.yMin, accuracy)
       && y <= roundToDec(this.yMax, accuracy)
   }
-
+  //METH: vertIsOnLine()
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
   vertIsOnLine(vert, includeEnds = true, decimal = 0) {
     if (!includeEnds) {
@@ -791,11 +800,16 @@ class Segment {
   //METH: isParallelTo()
   // isParallelTo(seg) { return this.direction.andOpposites.equals(seg.direction.andOpposites) }
   isParallelTo(seg, accuracy = 4) {
-    return abs(roundToDec(Vertex.cross(this.lineVector, seg.lineVector).z, accuracy)) === 0    // MUCH FASTER!!!
+    // console.log(`this.lineVector`, this.lineVector)
+    // console.log(`seg`, seg)
+    // console.log(`seg.lineVector`, seg.lineVector)
+    const precise = Vertex.cross(this.lineVector, seg.lineVector).z
+    // console.log(`precise`, precise)
+    return abs(roundToDec(precise, accuracy)) === 0    // MUCH FASTER!!!
   }
   //METH: isColinearWith()
   isColinearWith(seg) { return this.isOverlappingWith({ seg: seg, infinite: true }) }
-
+  //METH: isOverlappingWith()
   isOverlappingWith({ seg, includeEnds = true, decimal = 0, mode = 2, infinite = false } = {}) {
     if (!this.isParallelTo(seg)) {
       // console.warn(`isOverlappingWith is not parallel`)
@@ -817,7 +831,7 @@ class Segment {
     if (isExactOverlap) { return true }                                   // true if exact overlap, either direction
     const isEndToEnd = sameDir ? this.start.equals(seg.end) || this.end.equals(seg.start)
       : this.start.equals(seg.start) || this.end.equals(seg.end)
-    if (isEndToEnd) { return false }                                      // false if end-to-end contact without overlap
+    if (isEndToEnd) { return includeEnds }                                // false if end-to-end contact without overlap
     const segInsideThis = this.vertIsOnLine(seg.start, includeEnds, decimal)
       || this.vertIsOnLine(seg.end, includeEnds, decimal)
     const thisInsideSeg = seg.vertIsOnLine(this.start, includeEnds, decimal)
@@ -841,13 +855,33 @@ class Segment {
     const r = this.lineVector
     const s = seg.lineVector
 
-    if (this.isParallelTo(seg)) { return }                                // parallel lines can't intersect
-    const t = Vertex.cross(Vertex.sub(q, p), s).z / Vertex.cross(r, s).z  // intersection t value for this seg
-    const u = Vertex.cross(Vertex.sub(q, p), r).z / Vertex.cross(r, s).z  // intersection u value for other seg
+    if (this.isParallelTo(seg)) {                                                   // check for parallelism
+      // console.warn(`yes isParallel`)
+      if (this.isOverlappingWith({ seg: seg, infinite: infinite })) {                                            // check for overlapping
+        // console.warn(`yes isOverlapping`)
+        const starts = OpArray.format([this.gridSorted.start, seg.gridSorted.start])  // gridSorted point same way
+        const ends = OpArray.format([this.gridSorted.end, seg.gridSorted.end])        // OpArrays from points
+        let overlapStart, overlapEnd
+        if (!infinite) {                                                            // get inner overlap
+          overlapStart = Vertex.max(starts)
+          overlapEnd = Vertex.min(ends)
+        } else {                                                                    // get outer overlap
+          overlapStart = Vertex.min(starts)
+          overlapEnd = Vertex.max(ends)
+        }
+        if (overlapStart.equals(overlapEnd, 1)) { return overlapStart }
+        const overlapSeg = segment(overlapStart, overlapEnd)                        // create overlapSeg
+        return overlapSeg.direction.equals(this.direction) ? overlapSeg : overlapSeg.opposite // align to this direction
+      }
+      return                                                              // No overlap, or parallel but not collinear
+    }
+    const crossZ = Vertex.cross(r, s).z
+    const t = Vertex.cross(Vertex.sub(q, p), s).z / crossZ  // intersection t value for this seg
+    const u = Vertex.cross(Vertex.sub(q, p), r).z / crossZ  // intersection u value for other seg
 
-    if (!infinite &&                    // check if intersection points are on both segs
-      (t < 0 || t > 1                                        // intersection point is not on the first segment
-        || u < 0 || u > 1)                                     // intersection point is not on the second segment
+    if (!infinite &&                                          // check if intersection points are on both segs
+      (t < 0 || t > 1                                         // intersection point is not on the first segment
+        || u < 0 || u > 1)                                    // intersection point is not on the second segment
     ) { return }
 
     const intersect = Vertex.add(p, Vertex.mult(r, t))                    // calculated intersection point
@@ -913,6 +947,7 @@ class Segment {
   // }
 }
 
+//MARK: CLASS ProtoSegment
 // CLASS: ProtoSegment
 // SIZE: 356 lines
 function protoSegment({ start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid, maxCubicVerts } = {}) {
@@ -947,7 +982,7 @@ class ProtoSegment extends Segment {
       console.log(this)
     }
   }
-
+  //MARK: computed 
   get cellRadius() { return this.grid.cellRadius }
   get shape() { return this.grid.shapeNamed(this.parentID) }
   //MEMO: turns
@@ -1186,6 +1221,7 @@ class ProtoSegment extends Segment {
   }
   get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
+  //MARK: Cubic Vert methods
   assignMid() {
     this.addCubicStartVert(this.mid)
     this.addCubicEndVert(this.mid)
@@ -1385,7 +1421,7 @@ class ProtoSegment extends Segment {
   // #region Combined Cubic Verts
   get hasAStartVert() { return this.hasMaxStartVert || this.hasCubicStartVert }
   get hasAnEndVert() { return this.hasMaxEndVert || this.hasCubicEndVert }
-  get hasBothVerts() { return this.hasAStartVert && this.hasAnEndVert }
+  get hasArc() { return this.hasAStartVert && this.hasAnEndVert }
   get startVert() { return this.cubicVerts.start || this.maxCubicVerts.start }
   get endVert() { return this.cubicVerts.end || this.maxCubicVerts.end }
   //MEMO: hasCompleteStartCorner
@@ -1436,17 +1472,18 @@ class ProtoSegment extends Segment {
   // #endregion
   //MARK: Corner Arc
   // #region Corner Arc
-  get hasArc() { return this.hasBothVerts }
+  // get hasArc() { return this.hasBothVerts }
   //MEMO: arcRadius
   get arcRadius() {
     return memoize(() => {
       return min(this.availableEndLength, this.endNeighbor.availableStartLength)
     }, `arcRadius`).call(this)
   }
-
+  //METH: pointOnArcRotFromStart()
   pointOnArcRotFromStart(deg) {
-    return Vertex.add(this.arcOriginCorner, this.arcOriginToStart.lineVector.rotate(deg))
+    return Vertex.add(this.arcOrigin, this.arcOriginToStart.lineVector.rotate(deg))
   }
+  //METH: pointOnArcRotFromEnd()
   pointOnArcRotFromEnd(deg) { return this.pointOnArcRotFromStart(90 - deg) }
 
   get arcCenterVert() {
@@ -1458,35 +1495,35 @@ class ProtoSegment extends Segment {
   get arcStartCorner() { return this.finalCubicEndVert }
   get arcNormalCorner() { return this.end }
   get arcEndCorner() { return this.endNeighbor.finalCubicStartVert }
-  //MEMO: arcOriginCorner
-  get arcOriginCorner() {
+  //MEMO: arcOrigin
+  get arcOrigin() {
     return memoize(() => {
-      if (!this.hasBothVerts) { return vert() }
+      if (!this.hasArc) { return this.maxArcOrigin }
       return Vertex.add(this.arcStartCorner, segment(this.arcNormalCorner, this.arcEndCorner).lineVector)
-    }, `arcOriginCorner`).call(this)
+    }, `arcOrigin`).call(this)
   }
 
   //MEMO: arcOriginToStart
   get arcOriginToStart() {
     return memoize(() => {
-      return segment(this.arcOriginCorner, this.arcStartCorner)
+      return segment(this.arcOrigin, this.arcStartCorner)
     }, `arcOriginToStart`).call(this)
   }
   //MEMO: arcOriginToNormal
   get arcOriginToNormal() {
     return memoize(() => {
-      return segment(this.arcOriginCorner, this.arcNormalCorner)
+      return segment(this.arcOrigin, this.arcNormalCorner)
     }, `arcOriginToNormal`).call(this)
   }
   //MEMO: arcOriginToEnd
   get arcOriginToEnd() {
     return memoize(() => {
-      return segment(this.arcOriginCorner, this.arcEndCorner)
+      return segment(this.arcOrigin, this.arcEndCorner)
     }, `arcOriginToEnd`).call(this)
   }
   get arcOriginToArcCenter() {
     return memoize(() => {
-      return segment(this.arcOriginCorner, this.arcCenterVert)
+      return segment(this.arcOrigin, this.arcCenterVert)
     }, `arcOriginToArcCenter`).call(this)
   }
   get arcNormalDirection() {
@@ -1494,30 +1531,33 @@ class ProtoSegment extends Segment {
 
   }
   //MEMO: arcCenterTangent
-  get arcCenterTangent() {
-    return memoize(() => {
-      const dist = this.arcRadius / 2
-      const vect = this.arcNormalDirection.toRight.vector.setMag(dist)
-      const start = this.arcCenterVert
-      const end = Vertex.add(vect, start)
-      return segment(start, end)
-    }, `arcCenterTangent`).call(this)
-  }
+  // get arcCenterTangent() {
+  //   return memoize(() => {
+  //     const dist = this.arcRadius / 2
+  //     const vect = this.arcNormalDirection.toRight.vector.setMag(dist)
+  //     const start = this.arcCenterVert
+  //     const end = Vertex.add(vect, start)
+  //     return segment(start, end)
+  //   }, `arcCenterTangent`).call(this)
+  // }
   //MEMO: arcCenterMidPointTangent
   get arcCenterMidPointTangent() {
+    // console.warn(`arcCenterMidPointTangent`, this.hasArc)
     return memoize(() => {
       const vect = this.arcNormalDirection.toRight.vector.setMag(this.arcRadius)
       const start = this.arcOriginToArcCenter.mid
       const end = Vertex.add(vect, start)
-      return segment(start, end)
+      const seg = segment(start, end)
+      // console.warn(`arcCenterMidPointTangent result`, seg)
+      return seg
     }, `arcCenterMidPointTangent`).call(this)
   }
 
   get hasMinArcRadius() { return roundToDec(this.maxArcRadius, 0) === roundToDec(this.cellRadius, 0) }
 
-  arcIsWithinArc(thisArc, thatArc) {
-    return boundsIsWithinTestBounds(thisBounds, segBounds)
-  }
+  // arcIsWithinArc(thisArc, thatArc) {
+  //   return boundsIsWithinTestBounds(thisBounds, segBounds)
+  // }
   //METH: arcIsWithinThisArc()
   arcIsWithinThisArc(arcSeg) {
     const thisBounds = this.minArcBoundsSeg
@@ -1535,7 +1575,7 @@ class ProtoSegment extends Segment {
     return this.arcIsWithinThisArc(arcSeg) && this.hasSameFacingCorner(arcSeg)
   }
   // arcIsRadiantToArc(arcSeg) {
-  //   return this.arcShouldWrapOutToArc(arcSeg) && this.arcOriginCorner.equals(arcSeg.arcOriginCorner, 1)
+  //   return this.arcShouldWrapOutToArc(arcSeg) && this.arcOrigin.equals(arcSeg.arcOriginCorner, 1)
   // }
 
   //MARK: Max and Min Possible Arcs 
@@ -1557,16 +1597,18 @@ class ProtoSegment extends Segment {
       return this.endNeighbor.distancedStartPoint(this.maxArcRadius)
     }, `maxEndCorner`).call(this)
   }
-  //MEMO: maxOrigin
-  get maxOrigin() {
+  //MEMO: maxArcOrigin
+  get maxArcOrigin() {
     return memoize(() => {
       return Vertex.add(this.maxStartCorner, segment(this.arcNormalCorner, this.maxEndCorner).lineVector)
-    }, `maxOrigin`).call(this)
+    }, `maxArcOrigin`).call(this)
   }
+
+  // get maxArcOriginToCenter() { return segment(this.maxArcOrigin, )}
   //MEMO: maxArcBoundsSeg
   get maxArcBoundsSeg() {
     return memoize(() => {
-      return segment(this.maxOrigin, this.arcNormalCorner)
+      return segment(this.maxArcOrigin, this.arcNormalCorner)
     }, `maxArcBoundsSeg`).call(this)
   }
   //MEMO: minArcRadius
@@ -1587,17 +1629,23 @@ class ProtoSegment extends Segment {
       return this.endNeighbor.distancedStartPoint(this.minArcRadius)
     }, `minEndCorner`).call(this)
   }
-  //MEMO: minOrigin
-  get minOrigin() {
+  //MEMO: minArcOrigin
+  get minArcOrigin() {
     return memoize(() => {
       return Vertex.add(this.minStartCorner, segment(this.arcNormalCorner, this.minEndCorner).lineVector)
-    }, `minOrigin`).call(this)
+    }, `minArcOrigin`).call(this)
   }
   //MEMO: minArcBoundsSeg
   get minArcBoundsSeg() {
     return memoize(() => {
-      return segment(this.minOrigin, this.arcNormalCorner)
+      return segment(this.minArcOrigin, this.arcNormalCorner)
     }, `minArcBoundsSeg`).call(this)
+  }
+  //MEMO: minToMaxArcOriginSeg
+  get minToMaxArcOriginSeg() {
+    return memoize(() => {
+      return segment(this.minArcOrigin, this.maxArcOrigin)
+    }, `minToMaxArcOriginSeg`).call(this)
   }
 
   //MARK: Edges
