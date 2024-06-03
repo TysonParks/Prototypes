@@ -20,6 +20,7 @@ const info = (seg) => {
 class SVGPath {
   //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
+    // console.warn(`segPath`, segPath)
     segPath = segPath.copy
     let curves = []
     let start, end, cornerStart, cornerEnd
@@ -950,8 +951,8 @@ class Segment {
 //MARK: CLASS ProtoSegment
 // CLASS: ProtoSegment
 // SIZE: 356 lines
-function protoSegment({ start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid, maxCubicVerts } = {}) {
-  return new ProtoSegment(start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid, maxCubicVerts)
+function protoSegment({ start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid, maxCubicVerts, insetScale } = {}) {
+  return new ProtoSegment(start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid, maxCubicVerts, insetScale)
 }
 
 class ProtoSegment extends Segment {
@@ -960,17 +961,19 @@ class ProtoSegment extends Segment {
   islandIDs
   taken = false
   grid
+  insetScale
 
   cubicVerts = { start: undefined, end: undefined }
   maxCubicVerts = { start: undefined, end: undefined }
   neighbors = { start: undefined, end: undefined }
 
-  constructor(start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid = GRID, maxCubicVerts) {
+  constructor(start, end, parentID, id, islandIDs, cubicVerts, neighbors, grid = GRID, maxCubicVerts, insetScale = 1) {
     super(start, end)
     this.parentID = parentID
     this.islandIDs = islandIDs
     this.id = id
     this.grid = grid
+    this.insetScale = insetScale
     if (maxCubicVerts) {
       this.maxCubicVerts = maxCubicVerts
     }
@@ -1170,6 +1173,9 @@ class ProtoSegment extends Segment {
         //   console.warn(`endLength is less than cellRadius!!!`)
         // }
       }
+      // console.warn(`this seg`, this)
+      // console.log(`startLength`, startLength)
+      // console.log(`endLength`, endLength)
       if (startLength && endLength) { // this.hasBothCubicVerts
         if (approxToDec(startLength, 2, 1) + approxToDec(endLength, 2, 1) > approxToDec(this.length, 2, 2)) {
           // usually only occurs in a stair segment wrapped from both sides
@@ -1281,6 +1287,10 @@ class ProtoSegment extends Segment {
     this.matchStartCorner()
     this.matchEndCorner()
   }
+  makeMinEndCorner() { this.addDistancedEndCornerVerts(this.cellRadius) }
+  makeMinStartCorner() { this.addDistancedStartCornerVerts(this.cellRadius) }
+  makeMinCorners() { this.addBothDistancedCornerVerts(this.cellRadius) }
+
   //METH: #addCubicVert()
   #addCubicVert(vert, start, max = false, replace = false) {
     // let report = false
@@ -1398,7 +1408,7 @@ class ProtoSegment extends Segment {
     return length
   }
 
-  get maxCubicLength() { return this.length - this.cellRadius }
+  get maxCubicLength() { return this.length - this.cellRadius * this.insetScale }
 
   get finalMaxStartVert() {
     const length = min(this.maxCubicStartLength, this.startNeighbor.maxCubicEndLength)
@@ -1480,7 +1490,15 @@ class ProtoSegment extends Segment {
     }, `arcRadius`).call(this)
   }
   //METH: pointOnArcRotFromStart()
-  pointOnArcRotFromStart(deg) {
+  pointOnArcRotFromStart(deg, useAvailable = true, max = true) {
+    let origin, originToStart
+    if (useAvailable) {
+      origin = this.arcOrigin
+      originToStart = this.arcOriginToStart
+    } else {
+      origin = max ? this.maxArcOrigin : this.minArcOrigin
+      originToStart = max ? segment(origin, this.maxStartCorner) : segment(origin, this.minStartCorner)
+    }
     return Vertex.add(this.arcOrigin, this.arcOriginToStart.lineVector.rotate(deg))
   }
   //METH: pointOnArcRotFromEnd()
@@ -1544,16 +1562,39 @@ class ProtoSegment extends Segment {
   get arcCenterMidPointTangent() {
     // console.warn(`arcCenterMidPointTangent`, this.hasArc)
     return memoize(() => {
-      const vect = this.arcNormalDirection.toRight.vector.setMag(this.arcRadius)
-      const start = this.arcOriginToArcCenter.mid
-      const end = Vertex.add(vect, start)
-      const seg = segment(start, end)
-      // console.warn(`arcCenterMidPointTangent result`, seg)
-      return seg
+      return this.#calcArcCenterMidTangent()
     }, `arcCenterMidPointTangent`).call(this)
   }
+  //MEMO: maxArcCenterMidTangent
+  get maxArcCenterMidTangent() {
+    // console.warn(`maxArcCenterMidTangent`, this.hasArc)
+    return memoize(() => {
+      return this.#calcArcCenterMidTangent(false)
+    }, `maxArcCenterMidTangent`).call(this)
+  }
+  //MEMO: minArcCenterMidTangent
+  get minArcCenterMidTangent() {
+    // console.warn(`minArcCenterMidTangent`, this.hasArc)
+    return memoize(() => {
+      return this.#calcArcCenterMidTangent(false, false)
+    }, `minArcCenterMidTangent`).call(this)
+  }
 
-  get hasMinArcRadius() { return roundToDec(this.maxArcRadius, 0) === roundToDec(this.cellRadius, 0) }
+  #calcArcCenterMidTangent(useArcRadius = true, max = true) {
+    let radius, start
+    if (useArcRadius) {
+      start = this.arcOriginToArcCenter.mid
+      radius = this.arcRadius
+    } else {
+      //       start = max ? segment(this.maxArcOrigin, this.).mid
+      // radius = max ? this.maxArcRadius : this.minArcRadius
+    }
+    const vect = this.arcNormalDirection.toRight.vector.setMag(radius)
+    const end = Vertex.add(vect, start)
+    return segment(start, end)
+  }
+
+  get hasMinArcRadius() { return equalsRoundedDec(this.maxArcRadius, this.cellRadius, 0) }
 
   // arcIsWithinArc(thisArc, thatArc) {
   //   return boundsIsWithinTestBounds(thisBounds, segBounds)
@@ -1582,7 +1623,7 @@ class ProtoSegment extends Segment {
   //MEMO: maxArcRadius
   get maxArcRadius() {
     return memoize(() => {
-      return approxToDec(min(this.maxCubicEndLength, this.endNeighbor.maxCubicEndLength), 4, 2)
+      return approxToDec(min(this.maxCubicEndLength, this.endNeighbor.maxCubicStartLength), 4, 2)
     }, `maxArcRadius`).call(this)
   }
   //MEMO: maxStartCorner
@@ -2116,16 +2157,25 @@ class ProtoSegment extends Segment {
     if (insetEnd.x < 0 || insetEnd.y < 0) { console.warn(`created insetEnd with negative values`) }
 
     const cubicMove = Vertex.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
-    const insetCubicStart = Vertex.add(this.finalCubicStartVert, cubicMove)
-    const insetCubicEnd = Vertex.add(this.finalCubicEndVert, cubicMove)
-    const insetCubicVerts = { start: insetCubicStart, end: insetCubicEnd } // assign new inset cubicVerts
 
-    let insetMaxVerts
-    // if (this.maxCubicVerts.start && this.maxCubicVerts.end) {
-    const insetMaxStart = Vertex.add(this.finalMaxStartVert, cubicMove)
-    const insetMaxEnd = Vertex.add(this.finalMaxEndVert, cubicMove)
-    insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
-    // }
+    let insetCubicVerts = { start: undefined, end: undefined }
+    if (this.cubicVerts.start) {
+      const insetCubicStart = Vertex.add(this.finalCubicStartVert, cubicMove)
+      insetCubicVerts.start = insetCubicStart
+      // const insetCubicEnd = Vertex.add(this.finalCubicEndVert, cubicMove)
+      // insetCubicVerts = { start: insetCubicStart, end: insetCubicEnd } // assign new inset cubicVerts
+    }
+    if (this.cubicVerts.end) {
+      const insetCubicEnd = Vertex.add(this.finalCubicEndVert, cubicMove)
+      insetCubicVerts.end = insetCubicEnd
+    }
+
+    let insetMaxVerts = { start: undefined, end: undefined }
+    if (this.maxCubicVerts.start && this.maxCubicVerts.end) {
+      const insetMaxStart = Vertex.add(this.finalMaxStartVert, cubicMove)
+      const insetMaxEnd = Vertex.add(this.finalMaxEndVert, cubicMove)
+      insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
+    }
 
 
     const insetCopy = protoSegment({ // new inset segment 
@@ -2136,6 +2186,7 @@ class ProtoSegment extends Segment {
       islandIDs: this.islandIDs,
       cubicVerts: insetCubicVerts,
       maxCubicVerts: insetMaxVerts,
+      insetScale: insetScale
     })
 
     return insetCopy
