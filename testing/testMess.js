@@ -43,6 +43,7 @@ function functionTestPrint() {
   const vert0 = vert(0, 0)
   const vert1 = vert(1, 1)
   const vert2 = vert(2, 2)
+  const vert3 = vert(3, 3)
 
   const seg01 = segment(vert0, vert1)
   console.log(`seg01`, seg01)
@@ -50,6 +51,8 @@ function functionTestPrint() {
   console.log(`seg02`, seg02)
   const seg12 = segment(vert1, vert2)
   console.log(`seg12`, seg12)
+  const seg23 = segment(vert2, vert3)
+  console.log(`seg23`, seg23)
 
   // const bounds0 = findBounds(vert0)
   // console.log(`bounds0`, bounds0)
@@ -90,6 +93,11 @@ function functionTestPrint() {
   console.log(`seg01IntrsctSeg12`, seg01IntrsctSeg12)
   const seg01INFIntrsctSeg12 = seg01.intersectionWith(seg12, true)
   console.log(`seg01INFIntrsctSeg12`, seg01INFIntrsctSeg12)
+
+  const seg01ColinearWithSeg02 = seg01.isColinearWith(seg02)
+  console.log(`seg01ColinearWithSeg02`, seg01ColinearWithSeg02)
+  const seg01ColinearWithSeg23 = seg01.isColinearWith(seg23)
+  console.log(`seg01ColinearWithSeg23`, seg01ColinearWithSeg23)
 
   //NOTE: OpArray Tests
   // console.log(`OpArray Tests`)
