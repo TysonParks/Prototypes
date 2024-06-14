@@ -27,7 +27,9 @@ class OpArray extends Array {
 
   get isEmpty() { return this.length === 0 }
   get randomIndex() { return R.random_int(0, this.lastIndex) }
-  get randomElement() { return this[this.randomIndex] }
+  get middleIndex() { return floor(this.length / 2) }
+  get middle() { return this.at(this.middleIndex) }
+  get randomElement() { return this.at(this.randomIndex) }
   get idMap() { return this.map(e => e.id) }
   get sum() {
     if (this.isEmpty) { return 0 }
@@ -302,11 +304,11 @@ class OpArray extends Array {
 // SIZE: 13 lines
 // #region Array EXTENSIONS
 // // PROTOTYPE: Array extension `first` property
-// Object.defineProperty(Array.prototype, 'first', {
-//   get: function () {
-//     if (!this.isEmpty) { return this[0] }
-//   }
-// })
+Object.defineProperty(Array.prototype, 'first', {
+  get: function () {
+    if (!this.isEmpty) { return this[0] }
+  }
+})
 
 // PROTOTYPE: Array extension `last` property
 Object.defineProperty(Array.prototype, 'last', {
