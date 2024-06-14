@@ -10,6 +10,8 @@ const Debuggable = {
 
   //MARK: Debuggable Computed Properties
   get isPerimeterShape() { return this.type === `PerimeterShape` },
+  get isPerimeterIsland() { return this.type === `PerimeterIsland` },
+  get isIsland() { return this.type === `Island` || this.isPerimeterIsland },
   get isShape() { return this.type === `Shape` || this.isPerimeterShape },
   get isShapeGroup() { return this.type === `ShapeGroup` },
 
@@ -41,6 +43,9 @@ const Debuggable = {
       } else if (this.isShapeGroup) {
         offset = vert(1, 8)
         font = `2px sans-serif`
+      } else if (this.isIsland) {
+        offset = this.isPerimeterIsland ? vert(1, 4) : vert(1, 8)
+        font = this.isPerimeterIsland ? `bold 3px sans-serif` : `3px sans-serif`
       } else {
         offset = vert(1, 4)
         font = `bold 2px sans-serif`
