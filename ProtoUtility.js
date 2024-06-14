@@ -113,15 +113,23 @@ class Direction {
   }
 
 
-  get directions() { return OpArray.from(this.vals.map(a => new Direction(a))) }
+  get directions() {
+    return memoize(() => {
+      return OpArray.from(this.vals.map(a => new Direction(a)))
+    }, `directions`).call(this)
+  }
   get names() { return OpArray.from(this.vals.map(a => this.#getName(a))) }
   get value() { return this.valOp(a => a) }
 
-  get moveCoord() { return this.directOp(a => this.#moveCoords[a.name]) }
+  get moveCoord() {
+    return memoize(() => {
+      return this.directOp(a => this.#moveCoords[a.name])
+    }, `moveCoord`).call(this)
+  }
   // get angle() { return this.valOp(a => ((((a * -1) - 1) % 4) + 2) * PI / 2) }
   get angle() { return this.directOp(a => this.#angles[a.name]) }
   get angleDegrees() { return radianToDegree(this.angle) }
-  get vector() { if (this.isSingle) { return this.moveCoord.normalize() } }
+  get lineVector() { if (this.isSingle) { return this.moveCoord.normalize() } }
 
   get adjacents() {
     const directionsVals = this.directOp(a => OpArray.from([a.previous(), a.next()]))
@@ -226,9 +234,9 @@ class Direction {
 
   static atAngle(angle) {
     angle = constrainAngle(angle)
-    let direction = Direction.Up
-    let name = direction.angleKeys.find(key => roundToDec(direction.#angles[key]) === roundToDec(angle))
-    let index = direction.#descriptions.findIndex(e => e === name)
+    const direction = Direction.None
+    const name = direction.angleKeys.find(key => roundToDec(direction.#angles[key]) === roundToDec(angle))
+    const index = direction.#descriptions.findIndex(e => e === name)
     // console.log(`angle`, angle)
     // console.log(`direction`, direction)
     // console.log(`name`, name)
@@ -247,6 +255,13 @@ class Direction {
   }
 
   equals(direction) { return this.vals.equalsSorted(direction.vals) }
+
+  static named(name) {
+    if (name === `up`) { return Direction.Up }
+    const direction = Direction.None
+    const index = direction.#descriptions.findIndex(e => e === name)
+    if (index) { return new Direction(index / 2) }
+  }
 
   #getName(number) {
     if (number instanceof Array) {
@@ -518,19 +533,24 @@ function findBounds(...geo) {
 function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3) {
   const x = roundToDec(vert.x, accuracy)
   const y = roundToDec(vert.y, accuracy)
-  bounds = findBounds(bounds)
+  bounds = { ...bounds }.map(val => roundToDec(val, accuracy))
+  // console.log(`x: ${x}, y: ${y}`)
+  // console.log(`bounds`, bounds)
   const { xMin, xMax, yMin, yMax } = bounds
+  let result
   if (includeBorder) {
-    return x >= roundToDec(xMin, accuracy)
-      && x <= roundToDec(xMax, accuracy)
-      && y >= roundToDec(yMin, accuracy)
-      && y <= roundToDec(yMax, accuracy)
+    result = x >= xMin
+      && x <= xMax
+      && y >= yMin
+      && y <= yMax
   } else {
-    return x > roundToDec(xMin, accuracy)
-      && x < roundToDec(xMax, accuracy)
-      && y > roundToDec(yMin, accuracy)
-      && y < roundToDec(yMax, accuracy)
+    result = x > xMin
+      && x < xMax
+      && y > yMin
+      && y < yMax
   }
+  // console.error(`result`, result)
+  return result
 }
 // FUNC: boundsIsWithinTestBounds() : BOOL : finds if vert is within bounds of testBounds
 function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, justOverlaps = false, accuracy = 3) {
@@ -543,6 +563,42 @@ function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, just
     return boundsVerts.every(v => vertIsInsideBounds(v, testBounds, includeBorder, accuracy))
   }
 }
+// FUNC: boundsOverlap() : BOUNDS : finds overlap of two pieces of GEO
+function boundsOverlap(...geo) {
+  let boundsArray
+
+  if (Array.isArray(geo[0])) {
+    boundsArray = geo[0]
+  } else {
+    boundsArray = geo
+  }
+  //ARROW: overlap(geo1, geo2)
+  const overlap = (geo1, geo2) => {
+    const bounds1 = findBounds(geo1)
+    const bounds2 = findBounds(geo2)
+
+    const minOverlap = vert(max(bounds1.xMin, bounds2.xMin), max(bounds1.yMin, bounds2.yMin))
+    const maxOverlap = vert(min(bounds1.xMax, bounds2.xMax), min(bounds1.yMax, bounds2.yMax))
+
+    if (minOverlap.x > maxOverlap.x || minOverlap.y > maxOverlap.y) return          // no overlap
+
+    return findBounds(minOverlap, maxOverlap)
+  }
+
+  if (boundsArray.length === 0) return
+  const initialBounds = boundsArray[0]          // Initial bounds should be the first geo's bounds
+
+  // Reduce over the geo array to find the cumulative overlap
+  const result = boundsArray.slice(1).reduce((prevBounds, currentGeo) => {
+    if (!prevBounds) return null
+    return overlap(prevBounds, currentGeo)
+  }, initialBounds)
+
+  if (!result) return
+
+  return result
+}
+
 // #endregion
 
 // MARK: Loop Utilities
@@ -608,9 +664,10 @@ function rotateCoords(x, y, degree) {
 }
 // FUNC: constrainAngle(angle) : keep angle between -PI and PI
 function constrainAngle(angle) {
-  angle = angle % (2 * PI)
+  angle = angle % (2 * PI)              // modulo 
   if (angle > PI) { angle -= 2 * PI }
-  if (angle <= -PI) { angle += 2 * PI }
+  if (angle < -PI) { angle += 2 * PI }
+  if (equalsRoundedDec(angle, -PI, 3)) { angle = PI }
   return angle
 }
 // FUNC: radiansToDegrees() convert radians to degrees
