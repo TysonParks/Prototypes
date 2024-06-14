@@ -52,7 +52,7 @@ function setup() {
   // mill.mkProtoType()
 
   //TESTING
-  createGUI()
+  // createGUI()
   console.log('random R useage', R.useage)
   console.log('random RuID useage', RuID.useage)
 }
@@ -261,7 +261,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  // gridX = 10
+  // gridX = 20
 
   GRID = new Grid({
     protoParent: FRAME,
@@ -408,8 +408,8 @@ function gridTests2() {
   //MARK: group000
   group000?.cutIslands({
     profile: Profile.rOut,
-    layerStart: 2.95,
-    layerEnd: .5,
+    layerStart: 2.5,
+    layerEnd: .75,
     amount: 2,
     loftScale: 1 / 1,
     // direction: Direction.Horizontal
@@ -435,8 +435,8 @@ function gridTests2() {
   //MARK: group001
   group001?.cutIslands({
     profile: Profile.jIn,
-    layerStart: .95,
-    layerEnd: .65,
+    layerStart: .9,
+    layerEnd: .6,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
@@ -462,8 +462,8 @@ function gridTests2() {
   //MARK: group002
   group002?.cutIslands({
     profile: Profile.jIn,
-    layerStart: .95,
-    layerEnd: .65,
+    layerStart: .9,
+    layerEnd: .01,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
@@ -480,8 +480,72 @@ function gridTests2() {
   //MARK: group003
   group003?.cutIslands({
     profile: Profile.jIn,
-    layerStart: .95,
-    layerEnd: 1 / 32,
+    layerStart: 1,
+    layerEnd: .8,
+    amount: 1,
+    loftScale: 1 / 1,
+    // direction: Direction.All
+  })
+  // group003?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: .9,
+  //   layerEnd: .8,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  // })
+  group003?.cutIslands({
+    profile: Profile.jIn,
+    layerStart: .8,
+    layerEnd: .65,
+    amount: 1,
+    loftScale: 1 / 1,
+    // direction: Direction.All
+  })
+  // group003?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: .7,
+  //   layerEnd: .6,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  // })
+  group003?.cutIslands({
+    profile: Profile.jIn,
+    layerStart: .6,
+    layerEnd: .45,
+    amount: 1,
+    loftScale: 1 / 1,
+    // direction: Direction.All
+  })
+  // group003?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: .5,
+  //   layerEnd: .4,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  // })
+  group003?.cutIslands({
+    profile: Profile.jIn,
+    layerStart: .4,
+    layerEnd: .25,
+    amount: 1,
+    loftScale: 1 / 1,
+    // direction: Direction.All
+  })
+  // group003?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: .3,
+  //   layerEnd: .2,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  // })
+  group003?.cutIslands({
+    profile: Profile.jIn,
+    layerStart: .2,
+    layerEnd: .05,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
@@ -489,8 +553,8 @@ function gridTests2() {
 
   // group003?.cutIslands({
   //   profile: Profile.jIn,
-  //   layerStart: 13/ 4,
-  //   layerEnd: .85,
+  //   layerStart: .1,
+  //   layerEnd: .0,
   //   loftScale: 1 / 1,
   //   amount: 1,
   //   // direction: Direction.Horizontal
