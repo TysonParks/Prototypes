@@ -44,6 +44,8 @@ function functionTestPrint() {
   const vert1 = vert(1, 1)
   const vert2 = vert(2, 2)
   const vert3 = vert(3, 3)
+  const vert01 = vert(0, 1)
+  const vert10 = vert(1, 0)
 
   const seg01 = segment(vert0, vert1)
   console.log(`seg01`, seg01)
@@ -94,10 +96,20 @@ function functionTestPrint() {
   const seg01INFIntrsctSeg12 = seg01.intersectionWith(seg12, true)
   console.log(`seg01INFIntrsctSeg12`, seg01INFIntrsctSeg12)
 
-  const seg01ColinearWithSeg02 = seg01.isColinearWith(seg02)
-  console.log(`seg01ColinearWithSeg02`, seg01ColinearWithSeg02)
-  const seg01ColinearWithSeg23 = seg01.isColinearWith(seg23)
-  console.log(`seg01ColinearWithSeg23`, seg01ColinearWithSeg23)
+  const seg01CollinearWithSeg02 = seg01.isCollinearWith(seg02)
+  console.log(`seg01CollinearWithSeg02`, seg01CollinearWithSeg02)
+  const seg01CollinearWithSeg23 = seg01.isCollinearWith(seg23)
+  console.log(`seg01CollinearWithSeg23`, seg01CollinearWithSeg23)
+
+  const vert0OrientToSeg01 = seg01.vertOrientation(vert0)
+  console.log(`vert0OrientToSeg01`, vert0OrientToSeg01.name)
+  const vert1OrientToSeg01 = seg01.vertOrientation(vert1)
+  console.log(`vert1OrientToSeg01`, vert1OrientToSeg01.name)
+
+  const vert01OrientToSeg01 = seg01.vertOrientation(vert01)
+  console.log(`vert01OrientToSeg01`, vert01OrientToSeg01.name)
+  const vert10OrientToSeg01 = seg01.vertOrientation(vert10)
+  console.log(`vert10OrientToSeg01`, vert10OrientToSeg01.name)
 
   //NOTE: OpArray Tests
   // console.log(`OpArray Tests`)
@@ -155,7 +167,7 @@ function functionTestPrint() {
   // console.log(`vert3 is on line? (true)`, seg1.vertIsOnLine(vert3))
   // console.log(`vert4 is on line? (false)`, seg1.vertIsOnLine(vert4))
 
-  // console.log(`seg2 is colinear with seg3? (true)`, seg2.isColinearWith(seg3))
+  // console.log(`seg2 is collinear with seg3? (true)`, seg2.isCollinearWith(seg3))
 
   // console.log(`distance between vert0 and vert1 (1)`, vert0.dist(vert1))
   // console.log(`distance between vert1 and vert2 (0.75)`, vert1.dist(vert2))
