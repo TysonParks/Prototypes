@@ -261,7 +261,7 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(4, 10)
-  // gridX = 20
+  // gridX = 14
 
   GRID = new Grid({
     protoParent: FRAME,
@@ -570,13 +570,21 @@ function gridTests2() {
 
   //MARK: group004
   group004?.cutIslands({
-    profile: Profile.jIn,
-    layerStart: .9,
-    layerEnd: 1 / 16,
+    profile: Profile.rOut,
+    layerStart: 1,
+    layerEnd: 3 / 4,
     amount: 1,
     loftScale: 1 / 1,
-    // direction: Direction.All
+    // direction: Direction.Horizontal
   })
+  // group004?.cutIslands({
+  //   profile: Profile.jOut,
+  //   layerStart: 1 / 2,
+  //   layerEnd: 1 / 4,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.Horizontal
+  // })
   // group004.createSubIslands({
   //   // direction: Direction.All,
   //   filter: shader5,
