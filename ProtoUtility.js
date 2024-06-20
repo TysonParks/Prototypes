@@ -670,10 +670,7 @@ function constrainAngle(angle) {
   if (equalsRoundedDec(angle, -PI, 3)) { angle = PI }
   return angle
 }
-// FUNC: radiansToDegrees() convert radians to degrees
-function radianToDegree(radians) {
-  return (radians * 180) / PI
-}
+
 // FUNC: normalizeDegree() normalize any positive or negative degree to 0-360 range
 function normalizeDegree(degree) {
   // return range(0, 359).normalize(degree)
@@ -681,7 +678,7 @@ function normalizeDegree(degree) {
 }
 // FUNC: normRadToDeg() convert rad to normalized degrees
 function normRadToDeg(radians) {
-  const radPipe = pipe(radianToDegree, normalizeDegree)
+  const radPipe = pipe(degrees, normalizeDegree)
   return radPipe(radians)
 }
 
