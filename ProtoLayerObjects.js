@@ -4,8 +4,8 @@
 // NOTE: https://stackoverflow.com/questions/38205867/resize-child-div-element-to-fit-in-parent-div-on-window-resize
 // NOTE: https://developer.mozilla.org/en-US/docs/Web/CSS/calc
 // MARK: PROTOLAYER CLASS
-// CLASS: ProtoLayer
-// SIZE: 237 lines
+// CLASS: ProtoLayer : conforms to IdentifiableStored and Debuggable
+// SIZE: 322 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
 class ProtoLayer {
@@ -337,7 +337,7 @@ Object.defineProperties(ProtoLayer.prototype, Object.getOwnPropertyDescriptors(D
 
 //MARK: FRAME CLASS
 // CLASS: Frame 
-// SIZE: 112 lines
+// SIZE: 123 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = true
 class Frame extends ProtoLayer {
@@ -467,7 +467,7 @@ class Frame extends ProtoLayer {
 
 //MARK: SELECTION BOUNDS CLASS
 // CLASS: SelectionBounds
-// SIZE: 320 lines
+// SIZE: 216 lines
 // NOTE: drawSVG = false    // SelectionBounds is not a ProtoLayer subClass 
 // NOTE: drawRect = false   // SelectionBounds is not a ProtoLayer subClass 
 class SelectionBounds {
@@ -689,7 +689,7 @@ class SelectionBounds {
 }
 //MARK: GRID CLASS
 // CLASS: Grid
-// SIZE: 2397 lines
+// SIZE: 2454 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
 class Grid extends ProtoLayer {
@@ -697,7 +697,7 @@ class Grid extends ProtoLayer {
   startCoord
   offset
   cellRows
-  cellRowsPref
+  cellRowsPref                                                                    // UNUSED
   interGrid
   // gridCellBounds
   groups = new OpArray
@@ -722,7 +722,7 @@ class Grid extends ProtoLayer {
 
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
-    this.cellRowsPref = this.transformedCellRows(transform)
+    // this.cellRowsPref = this.transformedCellRows(transform)                    // UNUSED
     this.setFrameRadii()
   }
 
@@ -810,34 +810,8 @@ class Grid extends ProtoLayer {
       .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
       .sort((a, b) => b.outWrappers.length - a.outWrappers.length)
   }
-  //MEMO: allInterferenceWrapped
-  get allInterferenceWrapped() {
-    return memoize(() => {
-      return this.allSimpleSubShapes.flat()
-        .filter(s => s.hasInterference)
-        .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
-        .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
-        .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
-    }, `allInterferenceWrapped`).call(this)
-  }
-  //MEMO: allInterferenceWrappers
-  get allInterferenceWrappers() {
-    // return memoize(() => {
-    return this.allInterferenceWrapped.flat()
-      .map(s => Object.values(s.interferenceWrappers)).flat().compacted
-    // }, `allInterferenceWrappers`).call(this)
-  }
-  get allInnerMostRadiantWrappers() {
-    return this.allSimpleSubShapes.flat()
-      .filter(s =>
-        !s.hasInterference
-        &&
-        s.isInnerMostRadiantWrapper
-        && s.radiantOutWrappers.length > 1
-      )
-      .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
-      .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
-  }
+
+
   get allMinRadiusCorners() {
     return this.allSimpleSubShapes.flat()
       .filter(s => s.hasMinArcRadius)
@@ -1271,8 +1245,7 @@ class Grid extends ProtoLayer {
   // #region end
 
 
-  //TODO: DELETE WRAP METHODS AFTER CONVERSION 1276-1924
-
+  //TODO: DELETE WRAP METHODS AFTER CONVERSION 1276-1715
   //MARK: Wrap Methods
   // #region Wrap Methods
   //METH: findCollinearWrapper() : ProtoSegment : find collinear wrapper(s) of input segment in segCollection
@@ -1451,7 +1424,7 @@ class Grid extends ProtoLayer {
       segs: segs, segCollection: segCollection, outWrap: false, outsideCorners: false, radiant: radiant, replace: replace
     })
   }
-  //FIXME: give replace more power within this function!
+
   //METH: outWrapAdjacentInsideCorner() : ProtoSegment :
   outWrapAdjacentInsideCorner(seg, radiant = true, replace = false) {
     let report = false
@@ -1874,135 +1847,80 @@ class Grid extends ProtoLayer {
     return { outside: outsideCorners.compacted.unique([`id`]), inside: insideCorners.compacted.unique([`id`]) }
   }
 
-  //MARK: wrapIsLoose()
-  //METH: looselyWrappedCorner() 
-  wrapIsLoose(seg, invertLineCheck = false) {
-    if (!seg.hasWrappers || !seg.hasArc) { return }
-    const wrappers = this.findCollinearWrappers({
-      seg: seg,
-      outsideCorner: seg.isOutsideCorner,
-      skipVertOnLine: false,
-      includeEnds: true,
-      invertLineCheck: invertLineCheck,
-    })
 
-    const isWrapped = wrappers.start.length > 0 && wrappers.end.length > 0
-    // console.error(`isWrapped 1`, isWrapped)
-    if (isWrapped !== seg.hasColWrap) {
-      // console.error(`isWrapped mismatch!`, seg.hasColWrap)
-      // console.warn(`wrappers`, wrappers)
-      // console.error(`seg.collinearWrap`, seg.collinearWrap)
-    }
+  //METH: curveCellRadiusCorners()
+  curveMinRadiusCorners(corners = this.allMinRadiusCorners, all = false) {
+    if (all) { corners = this.allSimpleSubShapes.flat() }
+    console.log(`this.allMinRadiusCorners`, this.allMinRadiusCorners)
+    console.log(`corners`, corners)
+    // if (!all) { console.log(`allMinRadiusCorners`, corners) }
+    corners.forEach(s => {
+      // if (s.id.includes('cell081')                                                                   //LOGGING:
+      //   // || s.id.includes('cell008')                                                               //LOGGING:
+      //   // || s.id.includes('cell001')                                                               //LOGGING:
+      // ) { report = true }                                                                            //LOGGING:
+      // let report = false                                                                             //LOGGING:
+      // if (report) {                                                                                  //LOGGING:
+      //   console.log(``)                                                                              //LOGGING:
+      //   console.log(s.id)                                                                            //LOGGING:
+      //   console.log(`this before`, s.cubicVerts)                                                     //LOGGING:
+      // }                                                                                              //LOGGING:
+      s.setMinEndCorner()
+      // if (report) { console.log(`this after`, s.cubicVerts) }                                        //LOGGING:
+      if (!all) {
+        s.colWrap()
 
-    const neighbor = seg.endNeighbor
-    const wrapObj = { start: seg, startWrap: wrappers.start[0], end: neighbor, endWrap: wrappers.end[0] }
-    const isNotQuad = seg.segPath.length > 4                          // don't cuddle quads
-    let wrapIsLoose = false
-    if (isWrapped) {
-      const { start, startWrap, end, endWrap } = wrapObj
-      const isNotBeanWrap = !start.isSmallBean && !endWrap.isSmallBean  // don't cuddle small beans  
-      // console.error(`No, maybe this is where it fails?`)
-      const cornerIsLoose = start.hasLooseCorner || endWrap.hasLooseCorner
-      // console.error(`Seriously, maybe this is where it fails?`)
-
-      wrapIsLoose =
-        !startWrap.cubicVerts.start?.equals(start.cubicVerts.end, 0)
-        || !endWrap.cubicVerts.end?.equals(end.cubicVerts.start, 0)
-      if (cornerIsLoose) {
-        wrapIsLoose = wrapIsLoose && isNotBeanWrap
+        // if (report) {                                                                                //LOGGING:
+        //   console.log(`calling colWrap:`, s.collinearWrapper?.id)                                    //LOGGING:
+        //   console.log(`colWrap:`, s.collinearWrapper)                                                //LOGGING:
+        //   console.log(`cubicVerts:`, s.collinearWrapper?.cubicVerts, s.collinearWrapper?.endNeighbor.cubicVerts)
+        // }                                                                                              //LOGGING:
       }
-    }
-
-    if (isNotQuad && isWrapped && wrapIsLoose) {
-      // console.log(`seg`, seg)
-      // console.log(`wrappers`, wrappers)
-      // console.log(`isWrapped`, isWrapped)
-      // console.log(`wrapped`, wrapped)
-      return wrapObj
-    }
-
+    })
   }
 
-  //MARK: Wrap State Collections
-  //TODO: DELETE Unused Wrap State Collections AFTER CONVERSION 1928-1970
-  //METH: allCanCurveCorners() 
-  get allCanCurveCorners() { return this.allSimpleSubShapes.flat().filter(s => s.canCurveMoreAtEnd) }
-  get allIncompleteCorners() { return this.allSimpleSubShapes.flat().filter(s => !s.hasBothCompleteCorners) }
 
-  //METH: allIncompleteEndCorners() 
-  allIncompleteEndCorners(segments = this.allSimpleSubShapes) {
-    return segments.flat()
-      .filter(s => !s.hasCompleteEndCorner)
-      .sort((a, b) => a.arcRadius - b.arcRadius)
-  }
-  //METH: allLooseCorners() 
-  allLooseCorners(segments = this.allSimpleSubShapes) {
-    return segments.flat()
-      // .filter(s => s.isOutsideCorner)
-      .filter(s => s.hasLooseCorner)
-      .sort((a, b) => b.maxCornerRadius - a.maxCornerRadius)
-  }
-  //METH: allLooseWraps() 
-  allLooseWraps(segments = this.allSimpleOutsideCorners) {
-    return segments.flat()
-      // .filter(s => s.isOutsideCorner)
-      .sort((a, b) => b.arcRadius - a.arcRadius)
-      .map(s => this.wrapIsLoose(s))
-      .compacted
-  }
-  //METH: largerInnerLooseWraps() 
-  largerInnerLooseWraps(segments = this.allSimpleOutsideCorners) {
-    return segments.flat()
-      // .filter(s => s.isOutsideCorner)
-      .sort((a, b) => b.arcRadius - a.arcRadius)
-      .map(s => this.wrapIsLoose(s, true))
-      .compacted
-      .filter(l => this.allLooseWraps().every(m => m.start.id !== l.start.id))
-  }
 
   //MARK: maximizeCuddles()
   //METH: maximizeCuddles()
-  maximizeCuddles(radiant = true) {
+  maximizeCuddles(nestleMode = 0) {
 
-    //ARROW: curveCellRadiusCorners()
-    const curveMinRadiusCorners = (all = false) => {
-      const corners = all ? this.allSimpleSubShapes.flat() : this.allMinRadiusCorners
-      if (!all) { console.log(`allMinRadiusCorners`, corners) }
-      corners.forEach(s => {
-        let report = false
-        if (s.id.includes('cell081')
-          // || s.id.includes('cell008')
-          // || s.id.includes('cell001')
-        ) { report = true }
-        if (report) {
-          console.log(``)
-          console.log(s.id)
-          console.log(`this before`, s.cubicVerts)
-        }
-        s.setMinEndCorner()
-        if (report) { console.log(`this after`, s.cubicVerts) }
-        if (!all) {
-          if (report) { console.log(`calling colWrap:`, s.collinearWrapper?.id) }
-          s.colWrap()
-          if (report) {
-            console.log(`colWrap:`, s.collinearWrapper)
-            console.log(`cubicVerts:`, s.collinearWrapper?.cubicVerts, s.collinearWrapper?.endNeighbor.cubicVerts)
-          }
-        }
-      }
-      )
+    //ARROW: allIncompleteEndCorners() 
+    const allIncompleteEndCorners = (segments = this.allSimpleSubShapes) => {
+      return segments.flat()
+        .filter(s => !s.hasCompleteEndCorner)
+        .sort((a, b) => a.arcRadius - b.arcRadius)
     }
+    //ARROW: completeEnds()
+    const completeEnds = (testPool = allIncompleteEndCorners()) => {
+      console.warn(`incompleteEnds`, testPool)
+      console.warn(`incompleteEnds`, testPool.map(s => s.arcRadius))
+      testPool.forEach(s => {
+        s.matchEndCorner()
+        s.colWrap()
+      })
+    }
+
+    const allInterferenceWrapped = this.allSimpleSubShapes.flat()
+      .filter(s => s.hasInterference)
+      .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
+      .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
+      .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
+
+    const allInterferenceWrappers = allInterferenceWrapped.flat()
+      .map(s => Object.values(s.interferenceWrappers)).flat().compacted
+
     //ARROW: wrapInterferenceCorners()
-    const wrapInterferenceCorners = (testPool = this.allInterferenceWrapped, preserveQuads = true) => {
+    const wrapInterferenceCorners = (testPool = allInterferenceWrapped, preserveQuads = true) => {
       console.warn(`allInterferenceWrapped`, testPool)                                                        //LOGGING:
       console.warn(`allInterferenceWrapped hasDoubleInterference`, testPool.map(s => s.hasDoubleInterference))//LOGGING:
       console.warn(`allInterferenceWrapped outWrapper count`, testPool.map(s => s.radiantOutWrappers.length)) //LOGGING:
       console.warn(`allInterferenceWrapped maxArcRadius`, testPool.map(s => s.maxArcRadius))                  //LOGGING:
       console.warn(`allInterferenceWrapped viableInterferenceOrigins`, testPool.map(s => s.viableInterferenceOrigins))
-      console.warn(`allInterferenceWrappers`, this.allInterferenceWrapped.map(w => w.interferenceWrappers))   //LOGGING:
-      console.warn(`allInterferenceWrappers flat`, this.allInterferenceWrappers)                              //LOGGING:
+      console.warn(`allInterferenceWrappers`, allInterferenceWrapped.map(w => w.interferenceWrappers))   //LOGGING:
+      console.warn(`allInterferenceWrappers flat`, allInterferenceWrappers)                              //LOGGING:
 
-      const wrappers = this.allInterferenceWrappers.map(w => w.innerMostRadiantWrapper)
+      const wrappers = allInterferenceWrappers.map(w => w.innerMostRadiantWrapper)
       console.log(`wrappers`, wrappers)
       // testPool = testPool.filter(s => wrappers.every(w => w.id !== s.id))
       // console.warn(`allInterferenceWrapped refined`, testPool)
@@ -2085,12 +2003,20 @@ class Grid extends ProtoLayer {
           console.log(`NO origin found!`)
         }
       })
-
-      // console.warn(`outerMostWrapper`, this.allInnerMostRadiantWrappers.map(s => s.outerMostRadiantWrapper))
     }
 
     //ARROW: wrapInnerMost()
-    const wrapInnerMost = (testPool = this.allInnerMostRadiantWrappers, preserveQuads = true) => {
+    const wrapInnerMost = (testPool = this.allSimpleSubShapes.flat(), preserveQuads = true) => {
+      testPool = testPool
+        .filter(s =>
+          !s.hasInterference                                           // interference wraps should be previously processed
+          && s.isInnerMostRadiantWrapper                               // only wrapping innerMostWrappers
+          && (s.colOutWrapper ? s.radiantOutWrappers.length > 1 : !!s) // filter out potential colWrap only
+        )
+        .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
+        .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
+
+
       console.warn(`allInnerMostWrappers`, testPool)
       console.warn(`allInnerMostWrappers outWrappers`, testPool.map(s => s.radiantOutWrappers.length))
       // console.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableRadiantOrigins))
@@ -2114,7 +2040,7 @@ class Grid extends ProtoLayer {
           if (preserveQuads
             && shape.isQuad
             && shape.simpleSubShapes.flat().every(c => !c.hasInterference)
-            && this.allInterferenceWrappers.every(i => i.innerMostRadiantWrapper.id !== s.id)
+            && allInterferenceWrappers.every(i => i.innerMostRadiantWrapper.id !== s.id)
           ) {  // shape is quad
             console.warn(`shape is quad!`, s)
             s.assignMid()                                                               // make circular/pill
@@ -2133,27 +2059,7 @@ class Grid extends ProtoLayer {
       })
     }
 
-    //ARROW: completeEnds()
-    const completeEnds = (testPool = this.allIncompleteEndCorners()) => {
-      console.warn(`incompleteEnds`, testPool)
-      console.warn(`incompleteEnds`, testPool.map(s => s.arcRadius))
-      testPool.forEach(s => {
-        s.matchEndCorner()
-        s.colWrap()
-      })
 
-      // const conditionFunc = () => { return this.allIncompleteEndCorners }
-      // const action = () => {
-      //   let incompletes = this.allIncompleteEndCorners
-      //   // console.error(`incompletes`, incompletes)
-      //   // console.log(`incompletes count`, incompletes.length)
-      //   const incomplete = incompletes[0]
-      //   // console.log(`incomplete in loop`, incomplete)
-      //   // console.log(`availEnd:${incomplete.availableEndLength}, availStart:${incomplete.endNeighbor.availableStartLength}`)
-      //   incomplete.matchEndCorner()
-      // }
-      // safeArrayWhile(conditionFunc, action)
-    }
 
     //ARROW: roundQuads()
     const roundQuads = (preserveQuads = true, wrap = true) => {
@@ -2433,25 +2339,10 @@ class Grid extends ProtoLayer {
       })
     }
 
-
+    //TODO: DELETE WHEN DONE: only kept as ref to safeArrayWhile() and 'changed' implementations
     //ARROW: fixLooseCorners()
     const fixLooseCorners = (testPool = this.allLooseCorners()) => {
       console.warn(`allLooseCorners`, testPool.map(s => s.id))
-      // while (testPool.length > 0) {
-      //   console.log(``)
-      //   console.log(`loosie count`, testPool.length)
-      //   let loosie = testPool.pop()
-      //   console.log(`loosie in loop`, loosie)
-      //   loosie.removeEndCornerVerts()
-      //   const changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
-      //   console.log(`changed loosies`, changed)
-      //   completeEnds()
-      //   testPool = testPool
-      //     .union(changed.outside, [`id`])
-      //     .union(changed.inside, [`id`])
-      //     .unique([`id`])
-      //   testPool = this.allLooseCorners(testPool)
-      // }
 
       const conditionFunc = () => { return testPool }
       const action = () => {
@@ -2487,7 +2378,6 @@ class Grid extends ProtoLayer {
         console.log(`changed loosies`, changed)
         completeEnds()
 
-
         testPool = testPool
           .union(changed.outside, [`id`])
           .union(changed.inside, [`id`])
@@ -2495,155 +2385,6 @@ class Grid extends ProtoLayer {
         testPool = this.allLooseCorners(testPool)
       }
       safeArrayWhile(conditionFunc, action)
-    }
-    //ARROW: fixLooseWraps()
-    const fixLooseWraps = (testPool = this.allLooseWraps()) => {
-      console.warn(`allLooseWraps`, testPool.map(s => s.start.id))
-      // while (testPool.length > 0) {
-      //   console.log(``)
-      //   console.log(`looseWraps`, testPool.map(s => s.start.id))
-      //   console.log(`looseWraps count`, testPool.length)
-      //   let looseWrap = testPool.pop()                                              // smallest first
-
-      //   console.log(`looseWrap in loop`, looseWrap?.start.id)
-      //   console.log(`looseWrap in loop`, looseWrap)
-      //   const flat = looseWrap.endWrap.flatAmount                                   // record initial flatness
-      //   const changed1 = this.recursiveOutWrapOutsideCorners(                       // outWrap and capture changed
-      //     [looseWrap.start], radiant, true)
-      //   console.log(`looseWrap changed1`, changed1)
-      //   let changed2
-      //   if (flat === looseWrap.endWrap.flatAmount) {                                // check if outWrap had an affect
-      //     console.error(`recursiveOutWrapOutsideCorners failed`)                    // use manual replacement if not
-      //     looseWrap.start.replaceCubicEndVert(looseWrap.startWrap.finalCubicStartVert)
-      //     looseWrap.end.replaceCubicStartVert(looseWrap.endWrap.finalCubicEndVert)
-      //     changed2 = this.recursiveOutWrapOutsideCorners(                           // outWrap again, capture changed
-      //       [looseWrap.start], radiant, true)
-      //   }
-      //   // if (flat === looseWrap.endWrap.flatAmount) {
-      //   //   console.error(`recursiveOutWrapOutsideCorners failed`)
-      //   //   this.createCubicCorners({ subshapes: looseWrap.start })
-      //   // }
-      //   console.log(`looseWrap changed2`, changed2)
-      //   completeEnds()
-
-      //   let changedPool                                                             // final changed pool
-      //   if (changed2) {
-      //     changedPool = changed1?.outside.union(changed2?.outside, `id`)            // combine changed1 & changed2
-      //   } else {
-      //     changedPool = changed1?.outside                                           // only use outsideCorners
-      //   }
-
-      //   testPool = testPool.map(w => w.start)                                       // reduce testPool to starts
-      //   if (!changedPool.isEmpty) { testPool = testPool.union(changedPool, `id`) }  // combine with changed
-      //   testPool = this.allLooseWraps(testPool)                                     // recalc loose wraps
-      //   console.log(`looseWraps after union`, testPool.map(s => s.start.id))
-      // }
-
-      const conditionFunc = () => { return testPool }
-      const action = () => {
-        console.log(``)
-        console.log(`looseWraps`, testPool.map(s => s.start.id))
-        console.log(`looseWraps count`, testPool.length)
-        let looseWrap = testPool.pop()                                              // smallest first
-
-        console.log(`looseWrap in loop`, looseWrap?.start.id)
-        console.log(`looseWrap in loop`, looseWrap)
-        const flat = looseWrap.endWrap.flatAmount                                   // record initial flatness
-        const changed1 = this.recursiveOutWrapOutsideCorners(                       // outWrap and capture changed
-          [looseWrap.start], radiant, true)
-        console.log(`looseWrap changed1`, changed1)
-        let changed2
-        if (flat === looseWrap.endWrap.flatAmount) {                                // check if outWrap had an affect
-          console.error(`recursiveOutWrapOutsideCorners failed`)                    // use manual replacement if not
-          looseWrap.start.replaceCubicEndVert(looseWrap.startWrap.finalCubicStartVert)
-          looseWrap.end.replaceCubicStartVert(looseWrap.endWrap.finalCubicEndVert)
-          changed2 = this.recursiveOutWrapOutsideCorners(                           // outWrap again, capture changed
-            [looseWrap.start], radiant, true)
-        }
-        // if (flat === looseWrap.endWrap.flatAmount) {
-        //   console.error(`recursiveOutWrapOutsideCorners failed`)
-        //   this.createCubicCorners({ subshapes: looseWrap.start })
-        // }
-        console.log(`looseWrap changed2`, changed2)
-        completeEnds()
-
-        let changedPool                                                             // final changed pool
-        if (changed2) {
-          changedPool = changed1?.outside.union(changed2?.outside, `id`)            // combine changed1 & changed2
-        } else {
-          changedPool = changed1?.outside                                           // only use outsideCorners
-        }
-
-        testPool = testPool.map(w => w.start)                                       // reduce testPool to starts
-        if (!changedPool.isEmpty) { testPool = testPool.union(changedPool, `id`) }  // combine with changed
-        testPool = this.allLooseWraps(testPool)                                     // recalc loose wraps
-        console.log(`looseWraps after union`, testPool.map(s => s.start.id))
-      }
-      safeArrayWhile(conditionFunc, action)
-    }
-    //ARROW: fixLooseWraps()
-    const fixTrickyLooseWraps = (testPool = this.largerInnerLooseWraps()) => {
-      // console.error(`this is where it fails?`)
-      console.warn(`largerInnerLooseWraps`, testPool.map(s => s.start.id))
-      let changedPool
-      while (testPool.length > 0) {
-        console.log(``)
-        console.log(`trickyWraps`, testPool.map(s => s.start.id))
-        console.log(`trickyWraps count`, testPool.length)
-        let trickyWrap = testPool.pop()
-
-        console.log(`trickyWrap in loop`, trickyWrap.start.id)
-        console.log(`trickyWrap in loop`, trickyWrap)
-        let changed
-        if (trickyWrap.endWrap.canCurveMoreAtEnd) {
-          trickyWrap.endWrap.removeEndCornerVerts()
-          changed = this.createCubicCorners({ subShapes: [trickyWrap.endWrap], outWrap: true, radiant: true, replace: true })
-        }
-        console.log(`trickyWrap changed`, changed)
-        trickyWrap.start.replaceCubicEndVert(trickyWrap.startWrap.finalCubicStartVert)
-        trickyWrap.end.replaceCubicStartVert(trickyWrap.endWrap.finalCubicEndVert)
-        completeEnds()
-
-        changedPool = []                                                                 // final changed pool
-        if (changed) { changedPool = changed.outside }                                    // only use outsideCorners
-
-        testPool = testPool.map(w => w.start)                                             // reduce testPool to starts
-        if (!changedPool.isEmpty) { testPool = testPool.union(changedPool, `id`) }        // combine with changed
-        testPool = this.largerInnerLooseWraps(testPool)                                   // recalc loose wraps
-        console.log(`largerInnerLooseWraps after union`, testPool.map(s => s.start.id))
-      }
-
-      ////// console.log(`changedPool`, changedPool)
-      ////// return changedPool
-
-      // const conditionFunc = () => { return testPool }
-      // const action = () => {
-      //   console.log(``)
-      //   console.log(`trickyWraps`, testPool.map(s => s.start.id))
-      //   console.log(`trickyWraps count`, testPool.length)
-      //   let trickyWrap = testPool.pop()
-
-      //   console.log(`trickyWrap in loop`, trickyWrap.start.id)
-      //   console.log(`trickyWrap in loop`, trickyWrap)
-      //   let changed
-      //   if (trickyWrap.endWrap.canCurveMoreAtEnd) {
-      //     trickyWrap.endWrap.removeEndCornerVerts()
-      //     changed = this.createCubicCorners({ subShapes: [trickyWrap.endWrap], outWrap: true, radiant: true, replace: true })
-      //   }
-      //   console.log(`trickyWrap changed`, changed)
-      //   trickyWrap.start.replaceCubicEndVert(trickyWrap.startWrap.finalCubicStartVert)
-      //   trickyWrap.end.replaceCubicStartVert(trickyWrap.endWrap.finalCubicEndVert)
-      //   completeEnds()
-
-      //   changedPool = []                                                                 // final changed pool
-      //   if (changed) { changedPool = changed.outside }                                    // only use outsideCorners
-
-      //   testPool = testPool.map(w => w.start)                                             // reduce testPool to starts
-      //   if (!changedPool.isEmpty) { testPool = testPool.union(changedPool, `id`) }        // combine with changed
-      //   testPool = this.largerInnerLooseWraps(testPool)                                   // recalc loose wraps
-      //   console.log(`largerInnerLooseWraps after union`, testPool.map(s => s.start.id))
-      // }
-      // safeArrayWhile(conditionFunc, action)
     }
 
     //ARROW: fixIssuess()
@@ -2654,7 +2395,7 @@ class Grid extends ProtoLayer {
       console.warn(`wrapInnerMost`)                                                                       //LOGGING:
       wrapInnerMost()
       console.warn(`curveMinRadiusCorners`)                                                               //LOGGING:
-      curveMinRadiusCorners(false)
+      this.curveMinRadiusCorners()
       console.warn(`completeEnds`)                                                                        //LOGGING:
       completeEnds()
 
@@ -3402,7 +3143,7 @@ class Grid extends ProtoLayer {
 
 //MARK: CELLGROUP CLASS
 // CLASS: CellGroup
-// SIZE: 120 lines
+// SIZE: 254 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
 class CellGroup extends ProtoLayer {
@@ -3663,7 +3404,7 @@ class CellGroup extends ProtoLayer {
 
 //MARK: SHAPEGROUP CLASS
 // CLASS: ShapeGroup
-// SIZE: 45 lines
+// SIZE: 121 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
 class ShapeGroup extends ProtoLayer {
@@ -3791,7 +3532,7 @@ class ShapeGroup extends ProtoLayer {
 
 //MARK: CELL CLASS
 // CLASS: Cell
-// SIZE: 145 lines
+// SIZE: 158 lines
 // NOTE: drawSVG = false
 // NOTE: drawRect = false
 class Cell extends ProtoLayer {
@@ -3956,7 +3697,7 @@ class Cell extends ProtoLayer {
 
 //MARK: ISLAND CLASS
 // CLASS: Island
-// SIZE: 523 lines
+// SIZE: 579 lines
 // NOTE: drawSVG = false
 // NOTE: drawRect = false
 class Island extends ProtoLayer {
@@ -4542,7 +4283,7 @@ class Island extends ProtoLayer {
 
 //MARK: SHAPE CLASS
 // CLASS: Shape
-// SIZE: 315 lines
+// SIZE: 309 lines
 // NOTE: drawSVG = false    // the SVG path gets passed back up to ShapeGroup for rendering
 // NOTE: drawRect = false
 class Shape extends ProtoLayer {
