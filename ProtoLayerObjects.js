@@ -788,10 +788,15 @@ class Grid extends ProtoLayer {
   get allIslands() { return this.islands.union(this.perimeterIslands, [`id`]).flat() }
   get shapes() { return this.allIslands.map(i => i.shape).flat() }
   get allSimpleSubShapes() {                                      // currently tests faster without memoization
-    // return memoize(() => {
-    return this.perimeterIslands
-      .map(i => i.shape.simpleSubShapes).flat()
-    // }, `allSimpleSubShapes`).call(this)
+    return memoize(() => {
+      return this.perimeterIslands
+        .map(i => i.shape.simpleSubShapes).flat()
+    }, `allSimpleSubShapes`).call(this)
+  }
+  get allSimpleSubShapesSegs() {                                      // currently tests faster without memoization
+    return memoize(() => {
+      return this.allSimpleSubShapes.flat()
+    }, `allSimpleSubShapesSegs`).call(this)
   }
   get allSingleSimpleSubShapes() {                 // subshapes that contain no internal subShapes          
     return this.perimeterIslands
@@ -805,29 +810,24 @@ class Grid extends ProtoLayer {
   }
 
   get allInnerMostWrappers() {
-    return this.allSimpleSubShapes.flat()
+    return this.allSimpleSubShapesSegs
       .filter(s => s.isInnerMostWrapper)
       .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
       .sort((a, b) => b.outWrappers.length - a.outWrappers.length)
   }
 
 
-  get allMinRadiusCorners() {
-    return this.allSimpleSubShapes.flat()
-      .filter(s => s.hasMinArcRadius)
-    // .gridVertSorted
-    // .sort((a, b) => b.outWrappers?.length - a.outWrappers?.length)
-  }
+
   //MEMO: allSimpleOutsideCorners
   get allSimpleOutsideCorners() {
     return memoize(() => {
-      return this.allSimpleSubShapes.flat().filter(s => s.isOutsideCorner)
+      return this.allSimpleSubShapesSegs.filter(s => s.isOutsideCorner)
     }, `allSimpleOutsideCorners`).call(this)
   }
   //MEMO: allSimpleInsideCorners
   get allSimpleInsideCorners() {
     return memoize(() => {
-      return this.allSimpleSubShapes.flat().filter(s => !s.isOutsideCorner)
+      return this.allSimpleSubShapesSegs.filter(s => !s.isOutsideCorner)
     }, `allSimpleInsideCorners`).call(this)
   }
 
@@ -1847,10 +1847,18 @@ class Grid extends ProtoLayer {
     return { outside: outsideCorners.compacted.unique([`id`]), inside: insideCorners.compacted.unique([`id`]) }
   }
 
+  //MARK: MAXIMIZE CUDDLES
+
+  get allMinRadiusCorners() {
+    return this.allSimpleSubShapesSegs
+      .filter(s => s.hasMinArcRadius)
+    // .gridVertSorted
+    // .sort((a, b) => b.outWrappers?.length - a.outWrappers?.length)
+  }
 
   //METH: curveCellRadiusCorners()
   curveMinRadiusCorners(corners = this.allMinRadiusCorners, all = false) {
-    if (all) { corners = this.allSimpleSubShapes.flat() }
+    if (all) { corners = this.allSimpleSubShapesSegs }
     console.log(`this.allMinRadiusCorners`, this.allMinRadiusCorners)
     console.log(`corners`, corners)
     // if (!all) { console.log(`allMinRadiusCorners`, corners) }
@@ -1879,37 +1887,34 @@ class Grid extends ProtoLayer {
     })
   }
 
-
-
   //MARK: maximizeCuddles()
-  //METH: maximizeCuddles()
-  maximizeCuddles(nestleMode = 0) {
 
-    //ARROW: allIncompleteEndCorners() 
-    const allIncompleteEndCorners = (segments = this.allSimpleSubShapes) => {
-      return segments.flat()
+  //METH: maximizeCuddles()
+  maximizeCuddles(nestleMode = 0, defaultPool = this.allSimpleSubShapesSegs, interGrid = false) {
+
+    //MARK: completeEnds()
+    //ARROW: completeEnds()
+    const completeEnds = (testPool = defaultPool) => {
+      testPool = testPool
         .filter(s => !s.hasCompleteEndCorner)
         .sort((a, b) => a.arcRadius - b.arcRadius)
-    }
-    //ARROW: completeEnds()
-    const completeEnds = (testPool = allIncompleteEndCorners()) => {
-      console.warn(`incompleteEnds`, testPool)
-      console.warn(`incompleteEnds`, testPool.map(s => s.arcRadius))
+
+      console.warn(`allIncompleteEnds`, testPool)
+      console.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
       testPool.forEach(s => {
         s.matchEndCorner()
         s.colWrap()
       })
     }
 
-    const allInterferenceWrapped = this.allSimpleSubShapes.flat()
+    //MARK: wrapInterferenceCorners()
+    const allInterferenceWrapped = defaultPool
       .filter(s => s.hasInterference)
       .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
       .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
       .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
-
     const allInterferenceWrappers = allInterferenceWrapped.flat()
       .map(s => Object.values(s.interferenceWrappers)).flat().compacted
-
     //ARROW: wrapInterferenceCorners()
     const wrapInterferenceCorners = (testPool = allInterferenceWrapped, preserveQuads = true) => {
       console.warn(`allInterferenceWrapped`, testPool)                                                        //LOGGING:
@@ -2005,8 +2010,9 @@ class Grid extends ProtoLayer {
       })
     }
 
+    //MARK: wrapInnerMost()
     //ARROW: wrapInnerMost()
-    const wrapInnerMost = (testPool = this.allSimpleSubShapes.flat(), preserveQuads = true) => {
+    const wrapInnerMost = (testPool = defaultPool, preserveQuads = true) => {
       testPool = testPool
         .filter(s =>
           !s.hasInterference                                           // interference wraps should be previously processed
@@ -2059,8 +2065,7 @@ class Grid extends ProtoLayer {
       })
     }
 
-
-
+    //MARK: roundQuads()
     //ARROW: roundQuads()
     const roundQuads = (preserveQuads = true, wrap = true) => {
       //ARROW: sumSides()
@@ -2078,7 +2083,7 @@ class Grid extends ProtoLayer {
       // .flat()
       // .filter(seg => seg.canCurveMoreAtEnd)
 
-      // .splice(2, 2)
+
 
 
 
@@ -2127,9 +2132,11 @@ class Grid extends ProtoLayer {
       // })
 
     }
+
+    //MARK: fixBadAdjWraps()
     //ARROW: fixBadAdjWraps()
-    const fixBadAdjWraps = (canWrapIn = true) => {
-      let testPool = this.allSimpleSubShapes.flat()
+    const fixBadAdjWraps = (testPool = defaultPool, canWrapIn = true) => {
+      testPool = testPool
         .filter(s =>
           s.isAdjOutWrapper
           && (s.adjWrapIsDiverging || s.adjWrapIsConverging)
@@ -2195,9 +2202,11 @@ class Grid extends ProtoLayer {
         // console.groupEnd()                                                                              //LOGGING:
       })
     }
+
+    //MARK: fixBadColWraps()
     //ARROW: fixBadColWraps()
-    const fixBadColWraps = (canWrapIn = true) => {
-      let testPool = this.allSimpleSubShapes.flat()
+    const fixBadColWraps = (testPool = defaultPool, canWrapIn = true) => {
+      testPool = testPool
         .filter(s =>
           s.isColOutWrapper
           && !s.hasMinArcRadius
@@ -2238,9 +2247,11 @@ class Grid extends ProtoLayer {
         }
       })
     }
+
+    //MARK: fixLoosies()
     //ARROW: fixLoosies()
-    const fixLoosies = (balanced = true, respectAdjacents = true, loners = true, ignoreMinRadius = true) => {
-      let testPool = this.allSimpleSubShapes.flat()
+    const fixLoosies = (testPool = defaultPool, balanced = true, respectAdjacents = true, loners = true, ignoreMinRadius = true) => {
+      testPool = testPool
         .filter(s =>
           s.canCurveMoreAtEnd
           && (s.isOuterMostWrapper || s.isInnerMostWrapper
@@ -2387,6 +2398,7 @@ class Grid extends ProtoLayer {
       safeArrayWhile(conditionFunc, action)
     }
 
+    //MARK: fixIssues()
     //ARROW: fixIssuess()
     const fixIssues = () => {
 
@@ -2419,7 +2431,7 @@ class Grid extends ProtoLayer {
   }
 
 
-  //MARK: CUSTOMIZE SHAPES
+  //MARK: NESTLE SHAPES
   //METH: nestleShapes() :
   nestleShapes(quadMode = 0, diagonals = false) {
     // const cellRadius = roundToDec(this.cellRadius)
@@ -2556,7 +2568,7 @@ class Grid extends ProtoLayer {
 
     console.group(`maximizeCuddles`)
     // console.groupCollapsed(`maximizeCuddles`)
-    this.maximizeCuddles(true)
+    this.maximizeCuddles()
     console.groupEnd()
 
     console.log(`  %%%% end nestleShapes %%%%`)
@@ -4596,5 +4608,3 @@ class Shape extends ProtoLayer {
   }
   // #endregion
 }
-
-
