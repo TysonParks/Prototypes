@@ -232,10 +232,14 @@ class Direction {
     }
   }
 
-  static atAngle(angle) {
+  static atAngle(angle, decimal = 2) {
     angle = constrainAngle(angle)
     const direction = Direction.None
-    const name = direction.angleKeys.find(key => roundToDec(direction.#angles[key]) === roundToDec(angle))
+    const name = direction.angleKeys.find(key => equalsRoundedDec(direction.#angles[key], angle, decimal))
+    if (!name) {
+      console.error(`no Direction found at this angle: ${angle}`)
+      return Direction.None
+    }
     const index = direction.#descriptions.findIndex(e => e === name)
     // console.log(`angle`, angle)
     // console.log(`direction`, direction)
@@ -531,6 +535,7 @@ function findBounds(...geo) {
 // FUNC: vertIsInsideBounds() : BOOL : finds if vert is within bounds of boundsVerts
 //NOTE: boundsVerts can be any number of verts above zero, the bounds of those points is calculated with min/max
 function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3) {
+  if (!vert || !bounds) { return false }
   const x = roundToDec(vert.x, accuracy)
   const y = roundToDec(vert.y, accuracy)
   bounds = { ...bounds }.map(val => roundToDec(val, accuracy))
@@ -553,7 +558,7 @@ function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3) {
   return result
 }
 // FUNC: boundsIsWithinTestBounds() : BOOL : finds if vert is within bounds of testBounds
-function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, justOverlaps = false, accuracy = 3) {
+function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, justOverlaps = false, accuracy = 2) {
   bounds = findBounds(bounds)
   const boundsVerts = [vert(bounds.xMin, bounds.yMin), vert(bounds.xMax, bounds.yMax)]
   testBounds = findBounds(testBounds)
