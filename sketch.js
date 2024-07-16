@@ -260,8 +260,8 @@ class ProtoMill {
 // FUNC: gridTests2()
 function gridTests2() {
 
-  let gridX = R.random_int(4, 10)
-  // gridX = 14
+  let gridX = R.random_int(3, 10)
+  // gridX = 4
 
   GRID = new Grid({
     protoParent: FRAME,
@@ -463,7 +463,7 @@ function gridTests2() {
   group002?.cutIslands({
     profile: Profile.jIn,
     layerStart: .9,
-    layerEnd: .01,
+    layerEnd: .001,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
