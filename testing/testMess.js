@@ -38,23 +38,31 @@ function functionTestPrint() {
   // similarSlicedNeighborsIndices(16)
   // similarGridNeighbors(16)
   console.groupCollapsed(`TestMess`)
-  //NOTE: Bounds Tests
-  console.log(`Bounds Tests`)
-  const vert0 = vert(0, 0)
-  const vert1 = vert(1, 1)
-  const vert2 = vert(2, 2)
-  const vert3 = vert(3, 3)
-  const vert01 = vert(0, 1)
-  const vert10 = vert(1, 0)
 
-  const seg01 = segment(vert0, vert1)
-  console.log(`seg01`, seg01)
-  const seg02 = segment(vert0, vert2)
-  console.log(`seg02`, seg02)
-  const seg12 = segment(vert1, vert2)
-  console.log(`seg12`, seg12)
-  const seg23 = segment(vert2, vert3)
-  console.log(`seg23`, seg23)
+
+  //NOTE: Bounds Tests
+  // console.log(`Bounds Tests`)
+  // const vert0 = vert(0, 0)
+  // const vert1 = vert(1, 1)
+  // const vert2 = vert(2, 2)
+  // const vert3 = vert(3, 3)
+  // const vert01 = vert(0, 1)
+  // const vert10 = vert(1, 0)
+  // const vert12 = vert(1, 2)
+  // const vert23 = vert(2, 3)
+
+  // const seg01 = segment(vert0, vert1)
+  // console.log(`seg01`, seg01)
+  // const seg02 = segment(vert0, vert2)
+  // console.log(`seg02`, seg02)
+  // const seg12 = segment(vert1, vert2)
+  // console.log(`seg12`, seg12)
+  // const seg23 = segment(vert2, vert3)
+  // console.log(`seg23`, seg23)
+  // const seg0112 = segment(vert01, vert12)
+  // console.log(`seg0112`, seg0112)
+  // const seg0123 = segment(vert01, vert23)
+  // console.log(`seg0123`, seg0123)
 
   // const bounds0 = findBounds(vert0)
   // console.log(`bounds0`, bounds0)
@@ -79,40 +87,44 @@ function functionTestPrint() {
   // const bounds01OverlapsBounds12 = boundsIsWithinTestBounds(bounds01, bounds12, true, true)
   // console.log(`bounds01OverlapsBounds12`, bounds01OverlapsBounds12)
 
-  console.log(`seg01.lineVector`, seg01.lineVector)
-  console.log(`seg02.lineVector`, seg02.lineVector)
-  console.log(`seg12.lineVector`, seg12.lineVector)
+  // console.log(`seg01.lineVector`, seg01.lineVector)
+  // console.log(`seg02.lineVector`, seg02.lineVector)
+  // console.log(`seg12.lineVector`, seg12.lineVector)
 
-  const seg01IsOverlappingSeg02 = seg01.isOverlappingWith({ seg: seg02 })
-  console.log(`seg01IsOverlappingSeg02`, seg01IsOverlappingSeg02)
+  // const seg01IsOverlappingSeg02 = seg01.isOverlappingWith({ seg: seg02 })
+  // console.log(`seg01IsOverlappingSeg02`, seg01IsOverlappingSeg02)
 
-  const seg01IntrsctSeg02 = seg01.intersectionWith(seg02)
-  console.log(`seg01IntrsctSeg02`, seg01IntrsctSeg02)
-  const seg01INFIntrsctSeg02 = seg01.intersectionWith(seg02, true)
-  console.log(`seg01INFIntrsctSeg02`, seg01INFIntrsctSeg02)
+  // const seg01IntrsctSeg02 = seg01.intersectionWith(seg02)
+  // console.log(`seg01IntrsctSeg02`, seg01IntrsctSeg02)
+  // const seg01INFIntrsctSeg02 = seg01.intersectionWith(seg02, true)
+  // console.log(`seg01INFIntrsctSeg02`, seg01INFIntrsctSeg02)
 
-  const seg01IntrsctSeg12 = seg01.intersectionWith(seg12)
-  console.log(`seg01IntrsctSeg12`, seg01IntrsctSeg12)
-  const seg01INFIntrsctSeg12 = seg01.intersectionWith(seg12, true)
-  console.log(`seg01INFIntrsctSeg12`, seg01INFIntrsctSeg12)
+  // const seg01IntrsctSeg12 = seg01.intersectionWith(seg12)
+  // console.log(`seg01IntrsctSeg12`, seg01IntrsctSeg12)
+  // const seg01INFIntrsctSeg12 = seg01.intersectionWith(seg12, true)
+  // console.log(`seg01INFIntrsctSeg12`, seg01INFIntrsctSeg12)
 
-  const seg01CollinearWithSeg02 = seg01.isCollinearWith(seg02)
-  console.log(`seg01CollinearWithSeg02`, seg01CollinearWithSeg02)
-  const seg01CollinearWithSeg23 = seg01.isCollinearWith(seg23)
-  console.log(`seg01CollinearWithSeg23`, seg01CollinearWithSeg23)
+  // const seg01CollinearWithSeg02 = seg01.isCollinearWith(seg02)
+  // console.log(`seg01CollinearWithSeg02`, seg01CollinearWithSeg02)   // expect: true
+  // const seg01CollinearWithSeg23 = seg01.isCollinearWith(seg23)
+  // console.log(`seg01CollinearWithSeg23`, seg01CollinearWithSeg23)   // expect: true
+  // const seg01CollinearWithSeg0112 = seg01.isCollinearWith(seg0112)
+  // console.log(`seg01CollinearWithSeg0112`, seg01CollinearWithSeg0112)   // expect: false
+  // const seg0112CollinearWithSeg0123 = seg0112.isCollinearWith(seg0123)
+  // console.log(`seg0112CollinearWithSeg0123`, seg0112CollinearWithSeg0123)   // expect: true
 
-  const vert0OrientToSeg01 = seg01.vertOrientation(vert0)
-  console.log(`vert0OrientToSeg01`, vert0OrientToSeg01.name)
-  const vert1OrientToSeg01 = seg01.vertOrientation(vert1)
-  console.log(`vert1OrientToSeg01`, vert1OrientToSeg01.name)
+  // const vert0OrientToSeg01 = seg01.vertOrientation(vert0)
+  // console.log(`vert0OrientToSeg01`, vert0OrientToSeg01.name)
+  // const vert1OrientToSeg01 = seg01.vertOrientation(vert1)
+  // console.log(`vert1OrientToSeg01`, vert1OrientToSeg01.name)
 
-  const vert01OrientToSeg01 = seg01.vertOrientation(vert01)
-  console.log(`vert01OrientToSeg01`, vert01OrientToSeg01.name)
-  const vert10OrientToSeg01 = seg01.vertOrientation(vert10)
-  console.log(`vert10OrientToSeg01`, vert10OrientToSeg01.name)
+  // const vert01OrientToSeg01 = seg01.vertOrientation(vert01)
+  // console.log(`vert01OrientToSeg01`, vert01OrientToSeg01.name)
+  // const vert10OrientToSeg01 = seg01.vertOrientation(vert10)
+  // console.log(`vert10OrientToSeg01`, vert10OrientToSeg01.name)
 
   //NOTE: OpArray Tests
-  // console.log(`OpArray Tests`)
+  console.log(`OpArray Tests`)
 
   // let array = [`a`, `b`, `c`, `d`]
   // let opArray01 = OpArray.format(array)
@@ -127,10 +139,15 @@ function functionTestPrint() {
 
   // let union = opArray01.union(opArray02)
   // console.log(`union`, union)
-  // let idBoy1 = { name: `bro`, id: `b01` }
-  // let idBoy2 = { name: `dude`, id: `b02` }
-  // let idBoy3 = { name: `bruh`, id: `b03` }
-  // let idBoy4 = { name: `boieee`, id: `b04` }
+  let idBoy1 = { name: `bro`, id: `b01` }
+  let idBoy2 = { name: `dude`, id: `b02` }
+  let idBoy3 = { name: `bruh`, id: `b03` }
+  let idBoy4 = { name: `boieee`, id: `b04` }
+
+
+  const idBoy1Values = Object.values(idBoy1).join('-')
+  console.log(`idBoy1Values`, idBoy1Values)
+  // console.log(`idBoy1.values.string`, idBoy1Values.join('-'))
 
   // let boyToy1 = { start: idBoy1, end: idBoy2 }
   // let boyToy2 = { start: idBoy1, end: idBoy2 }
@@ -144,6 +161,34 @@ function functionTestPrint() {
   // console.log(`boyColxn4`, boyColxn4)
   // let boyColxn5 = boyColxn1.union(boyColxn3, `start`)
   // console.log(`boyColxn5`, boyColxn5)
+
+  const boysWithNoRepeats = OpArray.format([idBoy1, idBoy2, idBoy3, idBoy4])
+  console.log(`boysWithNoRepeats`, boysWithNoRepeats)
+  const boysWithRepeats = OpArray.format([idBoy1, idBoy2, idBoy3, idBoy4, idBoy2])
+  console.log(`boysWithRepeats`, boysWithRepeats)
+  console.log(`boysWithRepeats.kvArray`, boysWithRepeats.kvArray([`name`, 'id']))
+  console.log(`boysWithRepeats.kvArray2`, boysWithRepeats.kvArray())
+  console.log(`boysWithRepeats.kvMap`, boysWithRepeats.kvMap([`name`, 'id']))
+  console.log(`boysWithRepeats.vcMap`, boysWithRepeats.valueCountMap([`name`, 'id']))
+
+  console.log(`findDuplicateObjs01`, boysWithNoRepeats.duplicates(`id`)) // expect: []
+  console.log(`findDuplicateObjs02`, boysWithRepeats.duplicates(`id`)) // expect: [idBoy2]
+  console.log(`findDuplicateObjs03`, boysWithRepeats.duplicates([`name`, 'id'])) // expect: [idBoy2]
+
+  const numberArray01 = OpArray.format([3, 7, 4, 2, 6])
+  console.log(`numberArray01`, numberArray01)
+  console.log(`findDuplicateNumbers01`, numberArray01.duplicates()) // expect: []
+  const numberArray02 = OpArray.format([3, 7, 4, 2, 6, 7])
+  console.log(`numberArray02`, numberArray02)
+  console.log(`findDuplicateNumbers01`, numberArray02.duplicates()) // expect: [7]
+
+  const stringsArray01 = OpArray.format(['cow', 'dog', 'pig'])
+  console.log(`stringsArray01`, stringsArray01)
+  console.log(`findDuplicateStringss01`, stringsArray01.duplicates()) // expect: []
+  const stringsArray02 = OpArray.format(['cow', 'dog', 'pig', 'cow'])
+  console.log(`stringsArray02`, stringsArray02)
+  console.log(`findDuplicateStringss02`, stringsArray02.duplicates()) // expect: ['cow']
+
 
   // NOTE: ProtoSegment Tests
   // console.log(`ProtoSegment Tests`)
