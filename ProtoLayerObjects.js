@@ -307,6 +307,7 @@ class ProtoLayer {
         this.svgElt
           .layout(this.anchor, this.size, this.padding)
           .viewBox(this.anchor, this.size, this.padding)
+        // .style('image-rendering', `high-quality`)
       }
       if (this.drawRect) {
         // console.log(`${this.id} assignElement layout rect: insetAnchor: ${this.insetAnchor.string}, insetSize: ${this.insetSize.string}`)
@@ -819,13 +820,20 @@ class Grid extends ProtoLayer {
         .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
     }, `allInterferenceWrapped`).call(this)
   }
+  //MEMO: allInterferenceWrappers
+  get allInterferenceWrappers() {
+    // return memoize(() => {
+    return this.allInterferenceWrapped.flat()
+      .map(s => Object.values(s.interferenceWrappers)).flat().compacted
+    // }, `allInterferenceWrappers`).call(this)
+  }
   get allInnerMostRadiantWrappers() {
     return this.allSimpleSubShapes.flat()
       .filter(s =>
         !s.hasInterference
         &&
         s.isInnerMostRadiantWrapper
-        // && s.radiantOutWrappers.length > 1
+        && s.radiantOutWrappers.length > 1
       )
       .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
       .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
@@ -1919,7 +1927,7 @@ class Grid extends ProtoLayer {
   allIncompleteEndCorners(segments = this.allSimpleSubShapes) {
     return segments.flat()
       .filter(s => !s.hasCompleteEndCorner)
-      .sort((a, b) => a.cornerArcRadius - b.cornerArcRadius)
+      .sort((a, b) => a.arcRadius - b.arcRadius)
   }
   //METH: allLooseCorners() 
   allLooseCorners(segments = this.allSimpleSubShapes) {
@@ -1932,7 +1940,7 @@ class Grid extends ProtoLayer {
   allLooseWraps(segments = this.allSimpleOutsideCorners) {
     return segments.flat()
       // .filter(s => s.isOutsideCorner)
-      .sort((a, b) => b.cornerArcRadius - a.cornerArcRadius)
+      .sort((a, b) => b.arcRadius - a.arcRadius)
       .map(s => this.wrapIsLoose(s))
       .compacted
   }
@@ -1940,7 +1948,7 @@ class Grid extends ProtoLayer {
   largerInnerLooseWraps(segments = this.allSimpleOutsideCorners) {
     return segments.flat()
       // .filter(s => s.isOutsideCorner)
-      .sort((a, b) => b.cornerArcRadius - a.cornerArcRadius)
+      .sort((a, b) => b.arcRadius - a.arcRadius)
       .map(s => this.wrapIsLoose(s, true))
       .compacted
       .filter(l => this.allLooseWraps().every(m => m.start.id !== l.start.id))
@@ -1951,7 +1959,7 @@ class Grid extends ProtoLayer {
     return segments.flat()
       // .filter(s => s.outWrapCount > 1 && !s.hasInWraps)
       .filter(s => s.hasIntersectingWrapper)
-      .sort((a, b) => b.cornerArcRadius - a.cornerArcRadius)
+      .sort((a, b) => b.arcRadius - a.arcRadius)
       .sort((a, b) => b.outWrapCount - a.outWrapCount)
   }
 
@@ -2026,49 +2034,96 @@ class Grid extends ProtoLayer {
       )
     }
     //ARROW: wrapInterferenceCorners()
-    const wrapInterferenceCorners = (testPool = this.allInterferenceWrapped) => {
+    const wrapInterferenceCorners = (testPool = this.allInterferenceWrapped, preserveQuads = true) => {
       console.warn(`allInterferenceWrapped`, testPool)                                                        //LOGGING:
       console.warn(`allInterferenceWrapped hasDoubleInterference`, testPool.map(s => s.hasDoubleInterference))//LOGGING:
       console.warn(`allInterferenceWrapped outWrapper count`, testPool.map(s => s.radiantOutWrappers.length)) //LOGGING:
       console.warn(`allInterferenceWrapped maxArcRadius`, testPool.map(s => s.maxArcRadius))                  //LOGGING:
       console.warn(`allInterferenceWrapped viableInterferenceOrigins`, testPool.map(s => s.viableInterferenceOrigins))
-      console.warn(`allInterferenceWrapped`, testPool.map(s => s.interferenceWrappers).flat())                //LOGGING:
+      console.warn(`allInterferenceWrappers`, this.allInterferenceWrapped.map(w => w.interferenceWrappers))   //LOGGING:
+      console.warn(`allInterferenceWrappers flat`, this.allInterferenceWrappers)                              //LOGGING:
+
+      const wrappers = this.allInterferenceWrappers.map(w => w.innerMostRadiantWrapper)
+      console.log(`wrappers`, wrappers)
+      // testPool = testPool.filter(s => wrappers.every(w => w.id !== s.id))
+      // console.warn(`allInterferenceWrapped refined`, testPool)
+
+      // const wrappers = () => { return testPool.map(s => Object.values(s.interferenceWrappers)).flat().compacted }
+      const dupes = testPool.intersect(wrappers, `id`)
+      console.warn(`dupes`, dupes)
+      // testPool = testPool.filter(wrapped => !dupes.some(d => d.id === wrapped.id))
+      // console.warn(`refined testPool`, testPool)
+
+      //FIXME: complete implementation of reducer that culls out duplicates from allWraps
+      // let reducePool = testPool.reversed
+      // dupes.forEach(d => {
+      //   let dupeCount = 0
+      //   while (reducePool.length > 0) {
+      //     const wrap = reducePool.pop()
+      //     if (wrap.id === d.id) {
+      //       dupeCount += 1
+      //       if (dupeCount > 1) {
+      //         testPool = testPool.filter(w => w.id !== d.id)
+      //         dupeCount -= 1
+      //       }
+      //     }
+      //   }
+      // })
 
       testPool.forEach(s => {
         //ARROW: setCurve()
         const setCurve = (seg, isStart) => {
-          // console.warn(`setCurve`)
-          const dir = isStart ? s.direction.toLeft : s.direction
-          const perpEnd = Vertex.add(dir.lineVector, origin)
-          const perpSeg = segment(origin, perpEnd)
-          const projected = perpSeg.intersectionWith(seg.maxArcBoundsSeg, true)
-          // console.log(`seg`, seg.id)                                                                      //LOGGING:
-          // console.log(`dir`, dir)                                                                         //LOGGING:
-          // console.log(`perpSeg`, perpSeg)                                                                 //LOGGING:
-          // console.log(`projected`, projected)                                                             //LOGGING:
+          const wrapType = isStart ? `start` : `end`
+          console.warn(`setCurve ${wrapType}`)
+          let dir                                                               // direction of perpendicular seg
+          if (s.isOutsideCorner) {
+            dir = isStart ? s.direction.toLeft : s.direction
+          } else {
+            dir = isStart ? s.direction : s.direction.toRight
+          }
+          const perpEnd = Vertex.add(dir.lineVector, origin)                    // calculate end of perpendicular seg
+          const perpSeg = segment(origin, perpEnd)                              // calculate perpendicular seg
+          const projected = perpSeg.intersectionWith(seg.maxArcBoundsSeg, true) // calculate intersect
+          console.log(`seg`, seg.id)                                                                      //LOGGING:
+          console.log(`wrapped direction`, s.direction.name)                                              //LOGGING:
+          console.log(`wrapper direction`, seg.direction.name)                                            //LOGGING:
+          console.log(`perp direction`, dir.name)                                                         //LOGGING:
+          console.log(`perpSeg`, perpSeg)                                                                 //LOGGING:
+          console.log(`projected`, projected)                                                             //LOGGING:
+          console.log(`viableArcOrigins`, seg.viableArcOrigins)
           if (seg.radiantInWrappers) {
             seg = seg.innerMostRadiantWrapper
-            // console.error(`changed seg`, seg.id)                                                          //LOGGING:
-            // console.log(seg)                                                                              //LOGGING:
+            console.error(`changed seg`, seg.id)                                                          //LOGGING:
+            console.log(seg)                                                                              //LOGGING:
           }
-          seg.setEndCurveOrigin(projected)
-          seg.radiantOutWrappers?.forEach(w => w.setEndCurveOrigin(projected))
-          // seg.matchNeighborCorners()
-          // seg.neighborsArray.forEach(s => s.colWrap())
-
+          if (seg.viableArcOrigins.some(o => o.equals(projected, 1))) {
+            seg.setEndConcOutWrapsOrigin(projected)
+          }
         }
-        // console.error(`interferenceWrapped in cue:`, s)
 
-        const origin = s.viableInterferenceOrigins?.middle
+        console.error(`interferenceWrapped in queue:`, s)
+        console.error(`interferenceWrappers:`, s.interferenceWrappers)
+
+        const viables = s.viableInterferenceOrigins
+        let origin
+        if (viables) {
+          if (preserveQuads && s.isEdgeOfQuad && viables.some(v => v.equals(s.shape?.center, 1))) {
+            origin = s.shape.center
+            // origin = viables.middle
+          } else {
+            origin = viables.middle
+          }
+        } else {
+          console.log(`NO viableInterferenceOrigins found!`)
+        }
         if (origin) {
-          // console.log(`origin found!`, origin)
-          s.setEndCurveOrigin(origin)
-          s.radiantOutWrappers.forEach(w => w.setEndCurveOrigin(origin))
-          // s.matchNeighborCorners()
-          // s.neighborsArray.forEach(s => s.colWrap())
+          console.log(`origin found!`, origin)
+          s.setEndConcOutWrapsOrigin(origin)
           let { start, end } = s.interferenceWrappers
           if (start) { setCurve(start, true) }
           if (end) { setCurve(end, false) }
+        } else {
+          console.log(`NO origin found!`)
         }
       })
 
@@ -2076,7 +2131,7 @@ class Grid extends ProtoLayer {
     }
 
     //ARROW: wrapInnerMost()
-    const wrapInnerMost = (testPool = this.allInnerMostRadiantWrappers) => {
+    const wrapInnerMost = (testPool = this.allInnerMostRadiantWrappers, preserveQuads = true) => {
       console.warn(`allInnerMostWrappers`, testPool)
       console.warn(`allInnerMostWrappers outWrappers`, testPool.map(s => s.radiantOutWrappers.length))
       // console.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableRadiantOrigins))
@@ -2086,29 +2141,35 @@ class Grid extends ProtoLayer {
         const needsMiddle = (seg) => {
           return !seg.hasInterference && seg.isInnerMostRadiantWrapper                  // 
         }
-        // console.error(`innerMost in queue`, s)                                                        //LOGGING:
-        const origins = s.viableRadiantOrigins
-        // console.log(`viableArcOrigins`, s.viableArcOrigins)                                           //LOGGING:
-        // console.log(`origins`, origins)                                                               //LOGGING:
 
-        if (origins) {
-          let origin
+        console.warn(`innerMost in queue`, s)                                                  //LOGGING:
+        // console.groupCollapsed(`innerMost in queue`, s)                                                  //LOGGING:
+        const viables = s.viableRadiantOrigins
+        console.log(`viableArcOrigins`, s.viableArcOrigins)                                           //LOGGING:
+        console.log(`viables`, viables)                                                               //LOGGING:
+
+        if (viables) {
+          // let origin
           const shape = s.shape
           console.log(shape)
-          if (shape.isQuad && shape.simpleSubShapes.flat().every(c => !c.hasInterference)) {  // shape is quad
-            console.warn(`shape is quad!`, this)
+          if (preserveQuads
+            && shape.isQuad
+            && shape.simpleSubShapes.flat().every(c => !c.hasInterference)
+            && this.allInterferenceWrappers.every(i => i.innerMostRadiantWrapper.id !== s.id)
+          ) {  // shape is quad
+            console.warn(`shape is quad!`, s)
             s.assignMid()                                                               // make circular/pill
             s.endNeighbor.assignMid()                                                   // make circular/pill
-          } else if (needsMiddle(s.startNeighbor) || needsMiddle(s.endNeighbor)) {      // 
-            s.setEndCurveOrigin(origins.middle)
+            s.setEndConcOutWrapsOrigin()
+            return
           } else {
-            s.setEndCurveOrigin(origins.last)
+            const origin = needsMiddle(s.startNeighbor) || needsMiddle(s.endNeighbor) ? viables.middle : viables.last
+            s.setEndConcOutWrapsOrigin(origin)
+            if (s.outerMostRadiantWrapper.outWrapper) { s.outerMostRadiantWrapper.adjWrap() }
+            // completeEnds(s.neighborsArray)
           }
 
-          s.radiantOutWrappers.forEach(w => {
-            w.setEndCurveOrigin(s.arcOrigin)
-          }
-          )
+          // console.groupEnd()                                                                             //LOGGING:
         }
       })
     }
@@ -2116,7 +2177,7 @@ class Grid extends ProtoLayer {
     //ARROW: completeEnds()
     const completeEnds = (testPool = this.allIncompleteEndCorners()) => {
       console.warn(`incompleteEnds`, testPool)
-      // console.warn(`incompleteEnds`, testPool.map(s => s.cornerArcRadius))
+      console.warn(`incompleteEnds`, testPool.map(s => s.arcRadius))
       testPool.forEach(s => {
         s.matchEndCorner()
         s.colWrap()
@@ -2136,78 +2197,280 @@ class Grid extends ProtoLayer {
     }
 
     //ARROW: roundQuads()
-    const roundQuads = (wrap = true) => {
+    const roundQuads = (preserveQuads = true, wrap = true) => {
       //ARROW: sumSides()
-      const sumSides = (sides) => sides.reduce((a, b) => a + b)
+      const sumSegs = (segs) => segs.map(s => s.length).reduce((a, b) => a + b)
 
       let testPool = this.allSingleSimpleSubShapes
-        .filter(sub => sub.length === 4)                        // filter for 4-sided shapes
-        .filter(sub => sub.some(s => s.isUTurnOut))             // filter for Outside shapes only (UTurnOut)
-        .flat()
-        .filter(seg => seg.canCurveMoreAtEnd)
+        .filter(sub => sub.length === 4                     // filter for 4-sided shapes
+          && sub.some(s => s.isUTurnOut)                    // filter for Outside shapes only (UTurnOut)
+          && sub.every(seg => !seg.hasMinArcRadius)         // filter out minRadius shapes
+        )
+        .sort((a, b) => sumSegs(b) - sumSegs(a))            // sort smallest to largest
 
-      // .sort((a, b) => sumSides(b) - sumSides(a)) // sort smallest to largest
+
+
+      // .flat()
+      // .filter(seg => seg.canCurveMoreAtEnd)
+
+      // .splice(2, 2)
+
+
+
+
+
+
 
       console.log(`quads`, testPool)
-      testPool.forEach(s => {
-        s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
-        if (wrap) { s.colWrap(true) }
-      })
+
+
+      // let processed = new OpArray
+      // testPool.forEach(s => {
+      //   console.log(`current quad Corner`, s)
+      //   if (preserveQuads) {
+
+      //     if (wrap) {
+      //       console.error(s.shape)
+      //       if (!processed.some(p => s.id === p)) {
+      //         s.segPath.forEach(seg => {
+      //           if (!seg.arcOrigin.isUsingMiddleOrigin) {
+      //             console.log(`seg in segPath`, seg)
+      //             seg.replaceEndConcOutWrapsOrigin(s.middleArcOrigin)
+      //             let badWraps = seg.radiantOutWrappers?.slice(1)
+      //               .filter(o => o.colWrapIsNonEquidistant)
+      //             console.log(`badWraps`, badWraps)
+      //             if (!badWraps.isEmpty) {
+      //               console.log(`colWrapIsNonEquidistant!`)
+      //               badWraps.forEach(b => { b.colWrap(true) })
+      //             }
+      //           }
+      //         })
+      //         processed.push(s.shape.id)
+      //         console.log(`processed`, processed)
+      //       }
+
+
+
+      //     } else {
+      //       s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+      //       s.colWrap(true)
+      //     }
+
+      //     // completeEnds(s.andNeighborsArray)
+      //   }
+
+      // })
 
     }
     //ARROW: fixBadAdjWraps()
-    const fixBadAdjWraps = (wrapIn = false) => {
+    const fixBadAdjWraps = (canWrapIn = true) => {
       let testPool = this.allSimpleSubShapes.flat()
         .filter(s =>
-          s.isAdjInWrapper
+          s.isAdjOutWrapper
           && (s.adjWrapIsDiverging || s.adjWrapIsConverging)
         )
+        .sort((a, b) => b.arcRadius - a.arcRadius)
       console.log(`badAdjWraps`, testPool)
       testPool.forEach(s => {
-        //FIXME: Utilize adjWrap() once working!!!
-        if (s.adjWrapIsConverging) {
-          s.outWrapper.replaceEndCurveOrigin(s.arcOrigin)
-          s.outWrapper.colWrap(true)
+        console.warn(`badAdjWrap in queue:`, s)                                                //LOGGING:
+        // console.groupCollapsed(`badAdjWrap in queue:`, s)                                                //LOGGING:
+
+        //ARROW: wrapOutFix()
+        const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
+          console.log(`inWrapper:`, s.inWrapper)
+          s.inWrapper.adjWrap(true)                             // adjWrap() should handle div/conv and equid/prox
+          s.inWrapper.replaceEndConcOutWrapsOrigin(s.arcOrigin) // concentric outwrapping
         }
-        if (s.adjWrapIsDiverging) {
-          if (s.outWrapper.canCurveMoreAtEnd) {
-            s.outWrapper.replaceEndCurveOrigin(s.arcOrigin)
-            s.outWrapper.colWrap(true)
+        //ARROW: wrapInFix()
+        const wrapInFix = () => {
+          console.log(`inWrapper:`, s.inWrapper)
+          if (s.inWrapper.isInWrappedToConcentrics) {
+            console.log(`abort fix: inWrapper is wrapped to concentrics`)
+            return
           }
-          if (s.canCurveLessAtEnd && wrapIn) {
-            s.replaceEndCurveOrigin(s.outWrapper.arcOrigin)
-            s.colWrap(true)
+          s.adjWrap(true)                                       // adjWrap self to wrap in
+          s.inWrapper.colWrap(true)                             // only do a single colWrap in
+        }
+
+        if (s.isOutWrappedToConcentrics) {                      // bail if s is already wrapped to outer concentrics
+          console.log(`is outWrapped to concentrics`)                                                      //LOGGING:
+          if (s.inWrapper.isInWrapped || s.inWrapper.isInWrappedToConcentrics) {
+            console.log(`inWrapper is inWrapped to concentrics`)                                           //LOGGING:
+            const inner = s.inWrapper.innerMostRadiantWrapper
+            inner.replaceEndConcOutWrapsOrigin(inner.viableRadiantOrigins?.last)
+            completeEnds(inner.andNeighborsArray)
+          }
+          return
+        }
+
+        if (s.adjWrapIsConverging) {                            // curveOuterLess or curveInnerMore to fix
+          console.log(`wrap is converging`)
+          if (s.canCurveLessAtEnd) {
+            console.log(`curve outer less with wrapOutFix()`)
+            wrapOutFix()
+          } else if (canWrapIn && s.inWrapper.canCurveMoreAtEnd) {
+            console.log(`curve inner more with wrapInFix()`)
+            wrapInFix()
+          } else {
+            console.log(`no fix: can't use wrapIn`)
+          }
+        } else if (s.adjWrapIsDiverging) {                      // curveOuterMore or curveInnerLess to fix
+          console.log(`wrap is diverging`)
+          if (s.canCurveMoreAtEnd) {
+            console.log(`curve outer more with wrapOutFix()`)
+            wrapOutFix()
+          } else if (canWrapIn && s.inWrapper.canCurveLessAtEnd) {
+            console.log(`curve inner less with wrapInFix()`)
+            wrapInFix()
+          } else {
+            console.log(`no fix: can't use wrapIn`)
           }
         }
+        completeEnds(s.andNeighborsArray)
+        // console.groupEnd()                                                                              //LOGGING:
       })
     }
     //ARROW: fixBadColWraps()
-    const fixBadColWraps = (wrapIn = false) => {
+    const fixBadColWraps = (canWrapIn = true) => {
       let testPool = this.allSimpleSubShapes.flat()
         .filter(s =>
-          s.isColInWrapper
-          && !s.outWrapper.hasMinArcRadius
-          && (s.colWrapIsDiverging || s.colWrapIsConverging)
+          s.isColOutWrapper
+          && !s.hasMinArcRadius
+          && s.colWrapIsNonEquidistant
         )
       console.log(`badColWraps`, testPool)
       testPool.forEach(s => {
 
-        if (s.colWrapIsConverging) {
-          // if (s.radiantOutWrappers.length > 1) {
-          s.radiantOutWrappers.forEach(w => w.replaceEndCurveOrigin(s.arcOrigin))
-          // }
+        //ARROW: wrapOutFix()
+        const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
+          console.log(`using wrapOutFix`)
+          s.inWrapper.colWrap()
+          s.inWrapper.replaceEndConcOutWrapsOrigin()
+          // s.inWrapper.radiantOutWrappers.forEach(w => {
+          //   // if (!w.startNeighbor.isInWrappedToConcentrics       // avoid possible off-axis interference wrap
+          //   //   && !w.endNeighbor.isInWrappedToConcentrics) {     // avoid possible off-axis interference wrap
+          //   w.replaceEndCurveOrigin(s.inWrapper.arcOrigin)
+          //   // }
+          // })
         }
-        //FIXME: finish diverging implementation
-        //   if (s.adjWrapIsDiverging) {
-        //     if (s.outWrapper.canCurveMoreAtEnd) {
-        //       s.outWrapper.replaceEndCurveOrigin(s.arcOrigin)
-        //       s.outWrapper.colWrap(true)
-        //     }
-        //     if (s.canCurveLessAtEnd && wrapIn) {
-        //       s.replaceEndCurveOrigin(s.outWrapper.arcOrigin)
-        //       s.colWrap(true)
-        //     }
-        //   }
+        //ARROW: wrapInFix()
+        const wrapInFix = () => {
+          s.inWrapper.replaceEndCurveOrigin(s.arcOrigin)
+        }
+
+        if (s.colWrapIsConverging) {
+          if (s.canCurveLessAtEnd) {
+            wrapOutFix()
+          } else if (canWrapIn && s.inWrapper.canCurveMoreAtEnd) {
+            wrapInFix()
+          }
+        } else if (s.colWrapIsDiverging) {                      // curveOuterMore or curveInnerLess to fix
+          if (s.canCurveMoreAtEnd) {
+            wrapOutFix()
+          } else if (canWrapIn && s.inWrapper.canCurveLessAtEnd) {
+            wrapInFix()
+          }
+        }
+      })
+    }
+    //ARROW: fixLoosies()
+    const fixLoosies = (balanced = true, respectAdjacents = true, loners = true, ignoreMinRadius = true) => {
+      let testPool = this.allSimpleSubShapes.flat()
+        .filter(s =>
+          s.canCurveMoreAtEnd
+          && (s.isOuterMostWrapper || s.isInnerMostWrapper
+            || s.hasNoWrappers
+          )
+          // && !s.isOuterMostRadiantWrapper
+          // && !s.hasInterference
+          // && !s.innerMostRadiantWrapper?.hasInterference
+        )
+        .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
+        .sort((a, b) => (a.radiantOutWrappers?.length || 0) - (b.radiantOutWrappers?.length || 0))
+      // .sort((a, b) => !!a.radiantOutWrappers - !!b.radiantOutWrappers)
+
+      console.log(`loosies`, testPool)
+      console.log(`loosies outWrappers`, testPool.map(s => s.outWrappers?.length))
+      // return
+
+      testPool.forEach(s => {
+        console.log(`current seg`, s)
+
+        if (s.isEdgeOfQuad) {                                         // skip quads
+          console.log(`skip quad`)
+          return
+        }
+
+        else if (loners && s.hasNoWrappers) {                         // loners: corners without wrappers
+          console.log(`loners fix`)
+          s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+        }
+
+        else if (s.isOutsideCorner && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)) {  // minRadius outWrappers
+          console.log(`minRadius fix`)
+          // console.log(`has outWrappers`, s.outWrappers)
+          if (s.outWrappers) {
+            console.log(`has outWrappers`, s.id)
+            if (s.isOutWrappedToConcentrics) {
+              console.log(`outwrapping`)
+              s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+            } else {
+              if (s.outWrapper.hasMinArcRadius && s.canCurveMoreAtEnd) {
+                console.log(`maximizing neighbor curves first`)
+                if (s.neighborsArray.some(n => n.canCurveMoreAtEnd)) {          // check and curve neighbor fully
+                  if (s.startNeighbor.canCurveMoreAtEnd) {                      // check startNeighbor
+                    // s.startNeighbor.replaceEndCurveOrigin(s.startNeighbor.currentMaxArcOrigin)
+                    s.startNeighbor.replaceEndConcOutWrapsOrigin(s.startNeighbor.currentMaxArcOrigin)
+                  }
+                  if (s.endNeighbor.canCurveMoreAtEnd) {                        // check endNeighbor
+                    // s.endNeighbor.replaceEndCurveOrigin(s.endNeighbor.currentMaxArcOrigin)
+                    s.endNeighbor.replaceEndConcOutWrapsOrigin(s.endNeighbor.currentMaxArcOrigin)
+                  }
+                  if (ignoreMinRadius) {                                        // check if this can still curve more
+                    s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+                  }
+                }
+                // if (s.outWrapper.canCurveMoreAtEnd) {
+                //   console.log(s.outWrapper)
+                //   s.replaceEndConcOutWrapsOrigin()
+                // }
+              }
+              else if (ignoreMinRadius && s.currentMaxArcRadius > 3 * s.cellRadius) {
+                // s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+                s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+              }
+            }
+          }
+
+        }
+        //FIXME: STILL NEED TO FIX DIVERGE IN 258
+        else if (s.outWrappers) {                                               // has outWrappers
+          if (s.outWrapper.id !== s.outWrapper.inWrapper.id) {
+            s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+            s.colWrap(true)
+            s.radiantOutWrappers?.forEach(o => {
+              if (o.canCurveMoreAtEnd) { o.replaceEndCurveOrigin(s.currentMaxArcOrigin) }
+            })
+            // s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+          }
+          else if (s.radiantOutWrappers?.some(w => w.canCurveMoreAtEnd)) {
+            console.log(`outWrappers fix`)
+            s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+          }
+        } else if (s.inWrappers) {
+          if (s.radiantInWrappers) {
+            console.log(`inWrappers fix`)
+            if (!s.isInWrapped) {
+              if (!s.isInWrappedToConcentrics) {
+                s.innerMostRadiantWrapper.replaceEndConcOutWrapsOrigin()
+              }
+            }
+          } else {
+            s.inWrapper.adjWrap()
+          }
+        }
+
+        else { console.log(`skipped: no cases met`) }
       })
     }
 
@@ -2448,23 +2711,27 @@ class Grid extends ProtoLayer {
       wrapInnerMost()
       console.warn(`curveMinRadiusCorners`)                                                               //LOGGING:
       curveMinRadiusCorners(false)
-
       console.warn(`completeEnds`)                                                                        //LOGGING:
       completeEnds()
-      console.warn(`roundQuads`)                                                                          //LOGGING:
-      roundQuads()
+
       console.warn(`fixBadAdjWraps`)
       fixBadAdjWraps()
       console.warn(`fixBadColWraps`)
       fixBadColWraps()
+      console.warn(`fixLoosies`)
+      fixLoosies()
 
-      console.warn(`fixLooseCorners`)                                                                     //LOGGING:
+      console.warn(`roundQuads`)                                                                          //LOGGING:
+      roundQuads()
+
+
+      // console.warn(`fixLooseCorners`)                                                                     //LOGGING:
       // fixLooseCorners()
-      console.warn(`fixLooseWraps`)                                                                       //LOGGING:
+      // console.warn(`fixLooseWraps`)                                                                       //LOGGING:
       // fixLooseWraps()
-      console.log(`fixIntersectingWraps`)                                                                 //LOGGING:
+      // console.log(`fixIntersectingWraps`)                                                                 //LOGGING:
       // fixIntersectingWraps()
-      console.warn(`fixTrickyLooseWraps`)                                                                 //LOGGING:
+      // console.warn(`fixTrickyLooseWraps`)                                                                 //LOGGING:
       // fixTrickyLooseWraps()
 
       // console.warn(`fixLooseCorners`)  // unused                                                       //LOGGING:
