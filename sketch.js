@@ -392,7 +392,7 @@ function gridTests2() {
   group001?.createPerimiters('maxCorners', Direction.Cardinal)
   group002?.createPerimiters('maxCorners', Direction.Cardinal)
   group003?.createPerimiters('maxCorners', Direction.Cardinal)
-  group004?.createPerimiters('maxCorners', Direction.Cardinal)
+  group004?.createPerimiters('maxCorners', Direction.All)
   // will need to create check to make sure all groups used
   // console.log(`groups`, GRID.groups)
 
@@ -571,11 +571,11 @@ function gridTests2() {
   //MARK: group004
   group004?.cutIslands({
     profile: Profile.rOut,
-    layerStart: 1,
-    layerEnd: 3 / 4,
+    layerStart: 1.35,
+    layerEnd: .85,
     amount: 1,
     loftScale: 1 / 1,
-    // direction: Direction.Horizontal
+    direction: Direction.All
   })
   // group004?.cutIslands({
   //   profile: Profile.jOut,
