@@ -1269,6 +1269,10 @@ class Grid extends ProtoLayer {
     console.groupEnd()
   }
   // #region end
+
+
+  //TODO: DELETE WRAP METHODS AFTER CONVERSION 1276-1924
+
   //MARK: Wrap Methods
   // #region Wrap Methods
   //METH: findCollinearWrapper() : ProtoSegment : find collinear wrapper(s) of input segment in segCollection
@@ -1918,7 +1922,9 @@ class Grid extends ProtoLayer {
     }
 
   }
+
   //MARK: Wrap State Collections
+  //TODO: DELETE Unused Wrap State Collections AFTER CONVERSION 1928-1970
   //METH: allCanCurveCorners() 
   get allCanCurveCorners() { return this.allSimpleSubShapes.flat().filter(s => s.canCurveMoreAtEnd) }
   get allIncompleteCorners() { return this.allSimpleSubShapes.flat().filter(s => !s.hasBothCompleteCorners) }
@@ -1953,54 +1959,7 @@ class Grid extends ProtoLayer {
       .compacted
       .filter(l => this.allLooseWraps().every(m => m.start.id !== l.start.id))
   }
-  //METH: intersectingWraps() 
-  intersectingWraps(segments = this.allSimpleOutsideCorners) {
-    //FIXME: complete implementation using PrSeg.outWrappers
-    return segments.flat()
-      // .filter(s => s.outWrapCount > 1 && !s.hasInWraps)
-      .filter(s => s.hasIntersectingWrapper)
-      .sort((a, b) => b.arcRadius - a.arcRadius)
-      .sort((a, b) => b.outWrapCount - a.outWrapCount)
-  }
 
-
-  //MARK: maximizeCuddle() : DEPRECATE
-  //METH: maximizeCuddle() : maximize cuddle by finding wrapped corners that aren't fully cuddled
-  maximizeCuddle(loosie, radiant = true, mode = 0) {
-    console.log(``)
-    console.log(`mode`, mode)
-    console.log(`loosie`, loosie)
-    //ARROW: cuddle()
-    const cuddle = (loose, mode) => {
-      // console.log(loose)
-      let { start, startWrap, end, endWrap } = loose
-      if (start.segPath.length <= 4) { return }
-      if (mode === 0) {                                               // looselyWrappedTightCorners
-        if (endWrap?.canCurveMoreAtEnd) {
-          const flat = endWrap.flatAmount
-          this.recursiveOutWrapOutsideCorners([start], radiant, true)
-          console.log(`flat change?`, flat, endWrap.flatAmount)
-          if (endWrap.flatAmount === flat) { this.createCubicCorners({ subShapes: [endWrap], outWrap: true, radiant: true, replace: true }) }
-        } else if (
-          start.segPath.length > 4                                    // don't cuddle quads!
-          && !start.isSmallBean                                       // don't cuddle small beans
-          && !endWrap.isSmallBean                                       // don't cuddle small beans
-          && start.canCurveLessAtEnd
-        ) {
-          start.replaceCubicEndVert(startWrap.finalCubicStartVert)
-          end.replaceCubicStartVert(endWrap.finalCubicEndVert)
-          this.recursiveOutWrapOutsideCorners([start], radiant, true)
-        }
-      }
-      if (mode === 2) {                                               // looselyWrappedLooseCorners
-        endWrap.removeEndCornerVerts()
-        this.createCubicCorners({ subShapes: [endWrap], outWrap: true, radiant: true, replace: true })
-        this.inWrapInsideCorners([endWrap], this.allSimpleSubShapes, true)
-      }
-    }
-
-    cuddle(loosie, mode)
-  }
   //MARK: maximizeCuddles()
   //METH: maximizeCuddles()
   maximizeCuddles(radiant = true) {
@@ -2686,21 +2645,6 @@ class Grid extends ProtoLayer {
       // }
       // safeArrayWhile(conditionFunc, action)
     }
-    //ARROW: fixLooseWraps()
-    const fixIntersectingWraps = (testPool = this.intersectingWraps()) => {
-      console.warn(`intersectingWraps`, testPool)
-      while (testPool.length > 0) {
-        console.log(``)
-        console.log(`intersectingWraps`, testPool.map(s => s.id))
-        console.log(`intersectingWraps count`, testPool.length)
-        let intersect = testPool.pop()
-        console.log(`intersect in loop`, intersect.id)
-        console.log(`intersect in loop`, intersect)
-        let changed =
-          this.recursiveOutWrapAdjInsideCorners(intersect.adjInWrapper, true, true)
-        completeEnds()
-      }
-    }
 
     //ARROW: fixIssuess()
     const fixIssues = () => {
@@ -2723,34 +2667,14 @@ class Grid extends ProtoLayer {
 
       console.warn(`roundQuads`)                                                                          //LOGGING:
       roundQuads()
-
-
-      // console.warn(`fixLooseCorners`)                                                                     //LOGGING:
-      // fixLooseCorners()
-      // console.warn(`fixLooseWraps`)                                                                       //LOGGING:
-      // fixLooseWraps()
-      // console.log(`fixIntersectingWraps`)                                                                 //LOGGING:
-      // fixIntersectingWraps()
-      // console.warn(`fixTrickyLooseWraps`)                                                                 //LOGGING:
-      // fixTrickyLooseWraps()
-
-      // console.warn(`fixLooseCorners`)  // unused                                                       //LOGGING:
-      // fixLooseCorners()                // unused
     }
+
     console.error(`FIX Issues 1`)                                                                         //LOGGING:
     fixIssues()
     console.error(``)                                                                                     //LOGGING:
     console.error(`FIX Issues 2`)                                                                         //LOGGING:
     // fixIssues()
 
-    // console.warn(`still incomplete`, this.allIncompleteCorners)                                           //LOGGING:
-    // console.warn(`canCurve`, this.allCanCurveCorners)                                                     //LOGGING:
-    // console.warn(`allLooseCorners`, this.allLooseCorners())                                               //LOGGING:
-    // console.warn(`allLooseWraps`, this.allLooseWraps())                                                   //LOGGING:
-    // console.warn(`intersectingWraps`, this.intersectingWraps())                                           //LOGGING:
-    // console.warn(`TrickyLooseWraps`, this.largerInnerLooseWraps())                                        //LOGGING:
-    // console.warn(`again incomplete`, this.allIncompleteCorners)                                           //LOGGING:
-    // console.warn(`still canCurve`, this.allCanCurveCorners)                                               //LOGGING:
   }
 
 
