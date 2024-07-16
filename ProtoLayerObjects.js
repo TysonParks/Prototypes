@@ -2804,41 +2804,6 @@ class Grid extends ProtoLayer {
       // this.recursiveOutWrapOutsideCorners(quads.flat(), true)
     }
 
-    //ARROW: sortStairs() : sorting for createStairs()
-    const sortStairs = () => {
-      return this.allSimpleSubShapes
-        .flat()
-        .filter(s => s.isStair) // only include UTurnOut segments
-        .filter(s => !s.hasSomeCubicVerts) // remove segments with any cubicVerts assigned
-        // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-      // .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-      // return utoSimples
-    }
-    //TODO: Finish implementation for creating diagonal lines
-    //ARROW: createStairs()
-    const createStairs = () => {
-      let curved = new OpArray
-      let stairs = sortStairs(this.allSimpleSubShapes)
-      while (stairs.length > 0) {
-        const seg = stairs[0]
-        const startNeighbor = seg.startNeighbor
-        const endNeighbor = seg.endNeighbor
-      }
-    }
-    //ARROW: finish()
-    const finish = () => {
-      this.allSimpleSubShapes.flat().forEach(s => {
-        s.matchStartCorner()
-        if (s.turns.end.isRight) {
-          this.recursiveOutWrapOutsideCorners(s, true)
-        }
-        if (s.turns.start.isLeft) {
-          this.recursiveOutWrapAdjInsideCorners(s, true)
-        }
-      })
-    }
-
     //MARK: Nestle Main
     console.groupCollapsed(`createSimpleSubShapes`)
     this.createSimpleSubShapes()                                        // createSimpleSubShapes 
@@ -2848,42 +2813,9 @@ class Grid extends ProtoLayer {
     // createQuadShapes(quadMode)                                                 // createQuadShapes
     console.groupEnd()
 
-    let maxCurve = true
-    if (maxCurve) {
-      console.groupCollapsed(`createUTurnsIN`)
-      // this.createUTurns({ out: false, radiant: true })                 // createUTurns IN
-      console.groupEnd()
-    }
-
-    console.groupCollapsed(`outWrapAdjacentInsideCorners`)
-    // this.outWrapAdjacentInsideCorners({ segs: this.allInternalSimpleSubShapes })  // outWrapAdjacents of internal subShapes
-    console.groupEnd()
-
-    // console.log(this.allSimpleSubShapes)
-
-    if (maxCurve) {
-      console.groupCollapsed(`createUTurnsOUT`)
-      // this.createUTurns({ radiant: true })                             // createUTurns OUT                    
-      console.groupEnd()
-
-      // console.log(this.allSimpleSubShapes)
-
-      console.groupCollapsed(`createCubicCorners`)
-      // this.createCubicCorners({ radiant: true })                                         // createCubicCorners   
-      console.groupEnd()
-    }
-
-    console.groupCollapsed(`finish`)
-    // finish()                                                              // finish 
-    console.groupEnd()
-
     console.group(`maximizeCuddles`)
     // console.groupCollapsed(`maximizeCuddles`)
     this.maximizeCuddles(true)
-    console.groupEnd()
-
-    console.groupCollapsed(`outWrapAdjacentInsideCorners`)
-    // this.outWrapAdjacentInsideCorners({ segs: this.allInternalSimpleSubShapes })  // outWrapAdjacents of internal subShapes
     console.groupEnd()
 
     console.log(`  %%%% end nestleShapes %%%%`)
