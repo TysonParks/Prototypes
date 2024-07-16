@@ -113,16 +113,25 @@ class OpArray extends Array {
   }
 
   // MARK: Key Value / Boolean
-  kvMap(props) {
-    if (this.isEmpty) { return new Map() }
-    props = OpArray.format(props)
-    let clean = this.compacted
-    const kvArray = clean.map(el => {
-      const key = props.map(k => el[k]).join('-')
-      return [key, el]
+  kvArray(props) {
+    if (this.isEmpty) { return new OpArray }
+    const clean = this.compacted
+    props = OpArray.format(props).compacted
+    // console.log(`props`, props)
+    return clean.map(e => {
+      let key
+      if (props.isEmpty) {
+        const isObject = Object.prototype.toString.call(e) === '[object Object]'
+        key = isObject ? Object.values(e).join('-') : e
+      } else {
+        key = props.map(k => e[k]).join('-')
+      }
+
+      return [key, e]
     })
-    return new Map(kvArray)
   }
+
+  kvMap(props) { return new Map(this.kvArray(props)) }
 
   kvObj(values, props) {
     const aMap = this.kvMap(props)
@@ -136,6 +145,34 @@ class OpArray extends Array {
       bKeys: OpArray.from(bMap.keys()),
       unionKeys: OpArray.from(unionMap.keys()),
     }
+  }
+
+  // NOTE: implemented with ChatGPT 4o on Jul 9. 2024
+  valueCountMap(props) {
+    const counts = new Map()
+    // const 
+    this.kvArray(props).forEach(kv => {
+      if (counts.has(kv[0])) {
+        counts.set(kv[0], counts.get(kv[0]) + 1)
+      } else {
+        counts.set(kv[0], 1)
+      }
+    })
+    return counts
+  }
+
+  duplicates(props) {
+    const counts = this.valueCountMap(props)
+    const duplicates = new OpArray
+
+    counts.forEach((count, key) => {
+      if (count > 1) {
+        const obj = this.kvArray(props).find(ob => ob[0] === key)
+        duplicates.push(obj[1])
+      }
+    })
+
+    return duplicates
   }
 
   // NOTE: implementation from: https://stackoverflow.com/a/49222733
@@ -154,6 +191,7 @@ class OpArray extends Array {
       (a, b) => a.length === b.length && a.numSorted.toString() === b.numSorted.toString(),
     )
   }
+
   //METH: checks if this array contains any elements from another array
   includesAny(vals, props) {
     return this.boolOp(vals, props,
