@@ -3,8 +3,8 @@
 
 // NOTE: https://stackoverflow.com/questions/38205867/resize-child-div-element-to-fit-in-parent-div-on-window-resize
 // NOTE: https://developer.mozilla.org/en-US/docs/Web/CSS/calc
-// MARK: PROTOLAYER CLASS
-// CLASS: ProtoLayer : conforms to IdentifiableStored and Debuggable
+// MARK: PROTOLAYER CLASS 
+//conforms to IdentifiableStored and Debuggable
 // SIZE: 322 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
@@ -331,12 +331,11 @@ class ProtoLayer {
   }
   // #endregion
 }
-// CLASS: ProtoLayer Mixin/Protocol Assignment
+// MIXIN: ProtoLayer Mixin/Protocol Assignment
 Object.assign(ProtoLayer.prototype, IdentifiableStored)
 Object.defineProperties(ProtoLayer.prototype, Object.getOwnPropertyDescriptors(Debuggable))
 
 //MARK: FRAME CLASS
-// CLASS: Frame 
 // SIZE: 123 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = true
@@ -466,7 +465,6 @@ class Frame extends ProtoLayer {
 }
 
 //MARK: SELECTION BOUNDS CLASS
-// CLASS: SelectionBounds
 // SIZE: 216 lines
 // NOTE: drawSVG = false    // SelectionBounds is not a ProtoLayer subClass 
 // NOTE: drawRect = false   // SelectionBounds is not a ProtoLayer subClass 
@@ -688,7 +686,6 @@ class SelectionBounds {
   // #endregion
 }
 //MARK: GRID CLASS
-// CLASS: Grid
 // SIZE: 2454 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
@@ -779,25 +776,25 @@ class Grid extends ProtoLayer {
     })
   }
   //NOTE: perimeters must be created for every group!
-  get perimeterIslands() {                                        // currently tests faster without memoization
-    // return memoize(() => {
-    return this.groups.map(g => g.perimeterIslands).flat()
-    // }, `perimeterIslands`).call(this)
-  }
+  get perimeterIslands() { return this.groups.map(g => g.perimeterIslands).flat() }
   get islands() { return this.groups.map(g => g.islands).flat() }
   get allIslands() { return this.islands.union(this.perimeterIslands, [`id`]).flat() }
   get shapes() { return this.allIslands.map(i => i.shape).flat() }
-  get allSimpleSubShapes() {                                      // currently tests faster without memoization
+
+  //MEMO: allSimpleSubShapes()
+  get allSimpleSubShapes() {
     return memoize(() => {
       return this.perimeterIslands
         .map(i => i.shape.simpleSubShapes).flat()
     }, `allSimpleSubShapes`).call(this)
   }
-  get allSimpleSubShapesSegs() {                                      // currently tests faster without memoization
+  //MEMO: allSimpleSubShapesSegs()
+  get allSimpleSubShapesSegs() {
     return memoize(() => {
       return this.allSimpleSubShapes.flat()
     }, `allSimpleSubShapesSegs`).call(this)
   }
+
   get allSingleSimpleSubShapes() {                 // subshapes that contain no internal subShapes          
     return this.perimeterIslands
       .map(i => i.shape.simpleSubShapes)           // get unflattened to test subShape count
@@ -808,15 +805,6 @@ class Grid extends ProtoLayer {
       .filter(i => i.shape.simpleSubShapes.length > 1)    // only shapes with more than 1 simpleSubShape are internal
       .map(i => i.shape.simpleSubShapes.slice(1)).flat()  // remove external subShapes
   }
-
-  get allInnerMostWrappers() {
-    return this.allSimpleSubShapesSegs
-      .filter(s => s.isInnerMostWrapper)
-      .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
-      .sort((a, b) => b.outWrappers.length - a.outWrappers.length)
-  }
-
-
 
   //MEMO: allSimpleOutsideCorners
   get allSimpleOutsideCorners() {
@@ -1890,7 +1878,7 @@ class Grid extends ProtoLayer {
   //MARK: maximizeCuddles()
 
   //METH: maximizeCuddles()
-  maximizeCuddles(nestleMode = 0, defaultPool = this.allSimpleSubShapesSegs, interGrid = false) {
+  maximizeCuddles(nestleMode = 0, defaultPool = this.allSimpleSubShapesSegs, preserveQs = false, interGrid = false) {
 
     //MARK: completeEnds()
     //ARROW: completeEnds()
@@ -1916,7 +1904,7 @@ class Grid extends ProtoLayer {
     const allInterferenceWrappers = allInterferenceWrapped.flat()
       .map(s => Object.values(s.interferenceWrappers)).flat().compacted
     //ARROW: wrapInterferenceCorners()
-    const wrapInterferenceCorners = (testPool = allInterferenceWrapped, preserveQuads = true) => {
+    const wrapInterferenceCorners = (testPool = allInterferenceWrapped, preserveQuads = preserveQs) => {
       console.warn(`allInterferenceWrapped`, testPool)                                                        //LOGGING:
       console.warn(`allInterferenceWrapped hasDoubleInterference`, testPool.map(s => s.hasDoubleInterference))//LOGGING:
       console.warn(`allInterferenceWrapped outWrapper count`, testPool.map(s => s.radiantOutWrappers.length)) //LOGGING:
@@ -2012,7 +2000,7 @@ class Grid extends ProtoLayer {
 
     //MARK: wrapInnerMost()
     //ARROW: wrapInnerMost()
-    const wrapInnerMost = (testPool = defaultPool, preserveQuads = true) => {
+    const wrapInnerMost = (testPool = defaultPool, preserveQuads = preserveQs) => {
       testPool = testPool
         .filter(s =>
           !s.hasInterference                                           // interference wraps should be previously processed
@@ -2030,7 +2018,9 @@ class Grid extends ProtoLayer {
 
         //ARROW: needsMiddle()
         const needsMiddle = (seg) => {
-          return !seg.hasInterference && seg.isInnerMostRadiantWrapper                  // 
+          return !seg.hasInterference
+            && seg.isInnerMostRadiantWrapper
+            && seg.radiantOutWrappers.length > 1
         }
 
         console.warn(`innerMost in queue`, s)                                                  //LOGGING:
@@ -2063,74 +2053,6 @@ class Grid extends ProtoLayer {
           // console.groupEnd()                                                                             //LOGGING:
         }
       })
-    }
-
-    //MARK: roundQuads()
-    //ARROW: roundQuads()
-    const roundQuads = (preserveQuads = true, wrap = true) => {
-      //ARROW: sumSides()
-      const sumSegs = (segs) => segs.map(s => s.length).reduce((a, b) => a + b)
-
-      let testPool = this.allSingleSimpleSubShapes
-        .filter(sub => sub.length === 4                     // filter for 4-sided shapes
-          && sub.some(s => s.isUTurnOut)                    // filter for Outside shapes only (UTurnOut)
-          && sub.every(seg => !seg.hasMinArcRadius)         // filter out minRadius shapes
-        )
-        .sort((a, b) => sumSegs(b) - sumSegs(a))            // sort smallest to largest
-
-
-
-      // .flat()
-      // .filter(seg => seg.canCurveMoreAtEnd)
-
-
-
-
-
-
-
-
-
-      console.log(`quads`, testPool)
-
-
-      // let processed = new OpArray
-      // testPool.forEach(s => {
-      //   console.log(`current quad Corner`, s)
-      //   if (preserveQuads) {
-
-      //     if (wrap) {
-      //       console.error(s.shape)
-      //       if (!processed.some(p => s.id === p)) {
-      //         s.segPath.forEach(seg => {
-      //           if (!seg.arcOrigin.isUsingMiddleOrigin) {
-      //             console.log(`seg in segPath`, seg)
-      //             seg.replaceEndConcOutWrapsOrigin(s.middleArcOrigin)
-      //             let badWraps = seg.radiantOutWrappers?.slice(1)
-      //               .filter(o => o.colWrapIsNonEquidistant)
-      //             console.log(`badWraps`, badWraps)
-      //             if (!badWraps.isEmpty) {
-      //               console.log(`colWrapIsNonEquidistant!`)
-      //               badWraps.forEach(b => { b.colWrap(true) })
-      //             }
-      //           }
-      //         })
-      //         processed.push(s.shape.id)
-      //         console.log(`processed`, processed)
-      //       }
-
-
-
-      //     } else {
-      //       s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
-      //       s.colWrap(true)
-      //     }
-
-      //     // completeEnds(s.andNeighborsArray)
-      //   }
-
-      // })
-
     }
 
     //MARK: fixBadAdjWraps()
@@ -2253,11 +2175,9 @@ class Grid extends ProtoLayer {
     const fixLoosies = (testPool = defaultPool, balanced = true, respectAdjacents = true, loners = true, ignoreMinRadius = true) => {
       testPool = testPool
         .filter(s =>
-          s.canCurveMoreAtEnd
-          && (s.isOuterMostWrapper || s.isInnerMostWrapper
-            || s.hasNoWrappers
-          )
-          // && !s.isOuterMostRadiantWrapper
+          s.canCurveMoreAtEnd                                                 // main defining property of a loosie
+          && !s.isEdgeOfQuad                                                  // roundQuads() handles quad corners
+          && (s.hasNoWrappers || s.isInnerMostWrapper || s.isOuterMostWrapper)// 3 main categories, inbetweens not needed
           // && !s.hasInterference
           // && !s.innerMostRadiantWrapper?.hasInterference
         )
@@ -2269,29 +2189,28 @@ class Grid extends ProtoLayer {
       console.log(`loosies outWrappers`, testPool.map(s => s.outWrappers?.length))
       // return
 
+      //FIXME: STILL NEED TO FIX DIVERGE IN 258
       testPool.forEach(s => {
         console.log(`current seg`, s)
 
-        if (s.isEdgeOfQuad) {                                         // skip quads
-          console.log(`skip quad`)
-          return
-        }
-
-        else if (loners && s.hasNoWrappers) {                         // loners: corners without wrappers
+        // case: s.hasNoWrappers
+        if (s.hasNoWrappers && loners) {
           console.log(`loners fix`)
           s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
         }
 
-        else if (s.isOutsideCorner && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)) {  // minRadius outWrappers
-          console.log(`minRadius fix`)
-          // console.log(`has outWrappers`, s.outWrappers)
-          if (s.outWrappers) {
-            console.log(`has outWrappers`, s.id)
+        // case: s.isInnerMostWrapper
+        if (s.isInnerMostWrapper) {
+          console.log(`s.isInnerMostWrapper`)
+          if (s.isOutsideCorner && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)) {  // minRadius outWrappers
+            console.log(`minRadius fix`)
+
             if (s.isOutWrappedToConcentrics) {
               console.log(`outwrapping`)
               s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
             } else {
-              if (s.outWrapper.hasMinArcRadius && s.canCurveMoreAtEnd) {
+
+              if (s.outWrapper.hasMinArcRadius && s.canCurveMoreAtEnd) {        // case: tucked inside minRadius corner
                 console.log(`maximizing neighbor curves first`)
                 if (s.neighborsArray.some(n => n.canCurveMoreAtEnd)) {          // check and curve neighbor fully
                   if (s.startNeighbor.canCurveMoreAtEnd) {                      // check startNeighbor
@@ -2306,10 +2225,6 @@ class Grid extends ProtoLayer {
                     s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
                   }
                 }
-                // if (s.outWrapper.canCurveMoreAtEnd) {
-                //   console.log(s.outWrapper)
-                //   s.replaceEndConcOutWrapsOrigin()
-                // }
               }
               else if (ignoreMinRadius && s.currentMaxArcRadius > 3 * s.cellRadius) {
                 // s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
@@ -2318,140 +2233,34 @@ class Grid extends ProtoLayer {
             }
           }
 
-        }
-        //FIXME: STILL NEED TO FIX DIVERGE IN 258
-        else if (s.outWrappers) {                                               // has outWrappers
-          if (s.outWrapper.id !== s.outWrapper.inWrapper.id) {
+          if (s.outWrapper.id !== s.outWrapper.inWrapper.id) {  // case: this isn't the inWrapper to this outWrapper
             s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
             s.colWrap(true)
             s.radiantOutWrappers?.forEach(o => {
               if (o.canCurveMoreAtEnd) { o.replaceEndCurveOrigin(s.currentMaxArcOrigin) }
             })
-            // s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
-          }
-          else if (s.radiantOutWrappers?.some(w => w.canCurveMoreAtEnd)) {
+          } else if (s.radiantOutWrappers?.some(w => w.canCurveMoreAtEnd)) {
             console.log(`outWrappers fix`)
             s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
           }
-        } else if (s.inWrappers) {
-          if (s.radiantInWrappers) {
+        }
+
+        // case: s.isOuterMostWrapper
+        if (s.isOuterMostWrapper) {
+          console.log(`s.isOuterMostWrapper`)
+          if (s.radiantInWrappers                            // case: has radiantInWrappers but is not inWrapped
+            && !s.isInWrapped
+            && !s.isInWrappedToConcentrics) {
             console.log(`inWrappers fix`)
-            if (!s.isInWrapped) {
-              if (!s.isInWrappedToConcentrics) {
-                s.innerMostRadiantWrapper.replaceEndConcOutWrapsOrigin()
-              }
-            }
+            s.innerMostRadiantWrapper.replaceEndConcOutWrapsOrigin()
           } else {
             s.inWrapper.adjWrap()
           }
         }
 
-        else { console.log(`skipped: no cases met`) }
+        // else { console.log(`skipped: no cases met`) }
       })
     }
-
-    //TODO: DELETE WHEN DONE: only kept as ref to safeArrayWhile() and 'changed' implementations
-    //ARROW: fixLooseCorners()
-    const fixLooseCorners = (testPool = this.allLooseCorners()) => {
-      console.warn(`allLooseCorners`, testPool.map(s => s.id))
-
-      const conditionFunc = () => { return testPool }
-      const action = () => {
-        console.log(``)
-        console.log(`loosie count`, testPool.length)
-        let loosie = testPool.pop()
-        console.log(`loosie in loop`, loosie)
-
-        let changed
-        let flat = roundToDec(loosie.flatAmount, 1)
-        const localWrap = () => {
-          loosie.removeEndCornerVerts()
-          changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
-        }
-        if (loosie.inWrappers) {
-          const innerMost = loosie.innerMostWrapper
-          console.log(`attempting outWrap on ${innerMost.id}`)
-          console.log(`innerMost`, innerMost)
-          innerMost.removeEndCornerVerts()
-          changed =
-            this.createCubicCorners({ subShapes: [innerMost], outWrap: true, radiant: true, replace: true })
-        } else {
-          localWrap()
-        }
-        loosie.matchEndCorner()
-        // console.log(`loosie`, loosie)
-        // console.log(`flat: ${flat}, new flatAmount: ${loosie.flatAmount}`)
-        // if (loosie.hasLooseCorner) {
-        //   console.log(`attempting localWrap()`)
-        //   localWrap()
-        // }
-
-        console.log(`changed loosies`, changed)
-        completeEnds()
-
-        testPool = testPool
-          .union(changed.outside, [`id`])
-          .union(changed.inside, [`id`])
-          .unique([`id`])
-        testPool = this.allLooseCorners(testPool)
-      }
-      safeArrayWhile(conditionFunc, action)
-    }
-
-    //MARK: fixIssues()
-    //ARROW: fixIssuess()
-    const fixIssues = () => {
-
-      console.warn(`wrapInterferenceCorners`)                                                             //LOGGING:
-      wrapInterferenceCorners()
-      console.warn(`wrapInnerMost`)                                                                       //LOGGING:
-      wrapInnerMost()
-      console.warn(`curveMinRadiusCorners`)                                                               //LOGGING:
-      this.curveMinRadiusCorners()
-      console.warn(`completeEnds`)                                                                        //LOGGING:
-      completeEnds()
-
-      console.warn(`fixBadAdjWraps`)
-      fixBadAdjWraps()
-      console.warn(`fixBadColWraps`)
-      fixBadColWraps()
-      console.warn(`fixLoosies`)
-      fixLoosies()
-
-      console.warn(`roundQuads`)                                                                          //LOGGING:
-      roundQuads()
-    }
-
-    console.error(`FIX Issues 1`)                                                                         //LOGGING:
-    fixIssues()
-    console.error(``)                                                                                     //LOGGING:
-    console.error(`FIX Issues 2`)                                                                         //LOGGING:
-    // fixIssues()
-
-  }
-
-
-  //MARK: NESTLE SHAPES
-  //METH: nestleShapes() :
-  nestleShapes(quadMode = 0, diagonals = false) {
-    // const cellRadius = roundToDec(this.cellRadius)
-    const cellRadius = this.cellRadius
-
-    //TODO: can minCorners be handled elsewhere?
-    // handle 'minCorners' perimeter types
-    if (this.groups.some(g => g.perimeterType === 'minCorners')) {
-      // console.log(`there is a minCorners Group`)
-      let minCornerSegs = this.groups
-        .filter(g => g.perimeterType === 'minCorners') // groups with 'minCorners' perimeterType
-        .map(g => g.perimeterIslands).flat() // perimeterIslands in thse groups
-        .map(isl => isl.cells).flat() // cells within those perimiterIslands
-        .map(cell => cell.segments).flat() // segments within those cells
-        .filter(seg => seg.isCorner) // corner segments within those segments
-        .exclude(madeSegs, ['id']) // exclude segments already made in previous stairs
-      // console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
-      assignMids(minCornerSegs, 'Corner', false) // assign midpoints to these segs + shared segs with inside turns
-    }
-    // else { console.log(`there is NOT a minCorners Group`) }
 
     //MARK: QUAD SHAPES
     //ARROW: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
@@ -2556,6 +2365,171 @@ class Grid extends ProtoLayer {
       })
       // this.recursiveOutWrapOutsideCorners(quads.flat(), true)
     }
+
+    //MARK: roundQuads()
+    //ARROW: roundQuads()
+    const roundQuads = (mode = 0, preserveQuads = true, wrap = true) => {
+
+      //ARROW: sumSides()
+      const perimeter = (segs) => segs.map(s => s.length).reduce((a, b) => a + b)
+
+      let testPool = this.allSingleSimpleSubShapes
+        .filter(sub => sub.length === 4                     // filter for 4-sided shapes
+          && sub.some(s => s.isUTurnOut)                    // filter for Outside shapes only (UTurnOut)
+          && sub.every(seg => !seg.hasMinArcRadius)         // filter out minRadius shapes
+        )
+        .sort((a, b) => perimeter(b) - perimeter(a))        // sort smallest to largest
+
+
+      console.log(`quads`, testPool)
+
+
+
+
+      // let processed = new OpArray
+      // testPool.forEach(s => {
+      //   console.log(`current quad Corner`, s)
+      //   if (preserveQuads) {
+
+      //     if (wrap) {
+      //       console.error(s.shape)
+      //       if (!processed.some(p => s.id === p)) {
+      //         s.segPath.forEach(seg => {
+      //           if (!seg.arcOrigin.isUsingMiddleOrigin) {
+      //             console.log(`seg in segPath`, seg)
+      //             seg.replaceEndConcOutWrapsOrigin(s.middleArcOrigin)
+      //             let badWraps = seg.radiantOutWrappers?.slice(1)
+      //               .filter(o => o.colWrapIsNonEquidistant)
+      //             console.log(`badWraps`, badWraps)
+      //             if (!badWraps.isEmpty) {
+      //               console.log(`colWrapIsNonEquidistant!`)
+      //               badWraps.forEach(b => { b.colWrap(true) })
+      //             }
+      //           }
+      //         })
+      //         processed.push(s.shape.id)
+      //         console.log(`processed`, processed)
+      //       }
+
+
+
+      //     } else {
+      //       s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+      //       s.colWrap(true)
+      //     }
+
+      //     // completeEnds(s.andNeighborsArray)
+      //   }
+
+      // })
+
+    }
+
+
+    //TODO: DELETE WHEN DONE: only kept as ref to safeArrayWhile() and 'changed' implementations
+    //ARROW: fixLooseCorners()
+    const fixLooseCorners = (testPool = this.allLooseCorners()) => {
+      console.warn(`allLooseCorners`, testPool.map(s => s.id))
+
+      const conditionFunc = () => { return testPool }
+      const action = () => {
+        console.log(``)
+        console.log(`loosie count`, testPool.length)
+        let loosie = testPool.pop()
+        console.log(`loosie in loop`, loosie)
+
+        let changed
+        let flat = roundToDec(loosie.flatAmount, 1)
+        const localWrap = () => {
+          loosie.removeEndCornerVerts()
+          changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
+        }
+        if (loosie.inWrappers) {
+          const innerMost = loosie.innerMostWrapper
+          console.log(`attempting outWrap on ${innerMost.id}`)
+          console.log(`innerMost`, innerMost)
+          innerMost.removeEndCornerVerts()
+          changed =
+            this.createCubicCorners({ subShapes: [innerMost], outWrap: true, radiant: true, replace: true })
+        } else {
+          localWrap()
+        }
+        loosie.matchEndCorner()
+        // console.log(`loosie`, loosie)
+        // console.log(`flat: ${flat}, new flatAmount: ${loosie.flatAmount}`)
+        // if (loosie.hasLooseCorner) {
+        //   console.log(`attempting localWrap()`)
+        //   localWrap()
+        // }
+
+        console.log(`changed loosies`, changed)
+        completeEnds()
+
+        testPool = testPool
+          .union(changed.outside, [`id`])
+          .union(changed.inside, [`id`])
+          .unique([`id`])
+        testPool = this.allLooseCorners(testPool)
+      }
+      safeArrayWhile(conditionFunc, action)
+    }
+
+    //MARK: fixIssues()
+    //ARROW: fixIssuess()
+    const fixIssues = () => {
+
+      console.warn(`wrapInterferenceCorners`)                                                             //LOGGING:
+      wrapInterferenceCorners()
+      console.warn(`wrapInnerMost`)                                                                       //LOGGING:
+      wrapInnerMost()
+      console.warn(`curveMinRadiusCorners`)                                                               //LOGGING:
+      this.curveMinRadiusCorners()
+      console.warn(`completeEnds`)                                                                        //LOGGING:
+      completeEnds()
+
+      console.warn(`fixBadAdjWraps`)
+      fixBadAdjWraps()
+      console.warn(`fixBadColWraps`)
+      fixBadColWraps()
+      console.warn(`fixLoosies`)
+      fixLoosies()
+
+      console.warn(`roundQuads`)                                                                          //LOGGING:
+      // roundQuads()
+    }
+
+    console.error(`FIX Issues 1`)                                                                         //LOGGING:
+    fixIssues()
+    console.error(``)                                                                                     //LOGGING:
+    console.error(`FIX Issues 2`)                                                                         //LOGGING:
+    // fixIssues()
+
+  }
+
+
+  //MARK: NESTLE SHAPES
+  //METH: nestleShapes() :
+  nestleShapes(quadMode = 0, diagonals = false) {
+    // const cellRadius = roundToDec(this.cellRadius)
+    const cellRadius = this.cellRadius
+
+    //TODO: can minCorners be handled elsewhere?
+    // handle 'minCorners' perimeter types
+    if (this.groups.some(g => g.perimeterType === 'minCorners')) {
+      // console.log(`there is a minCorners Group`)
+      let minCornerSegs = this.groups
+        .filter(g => g.perimeterType === 'minCorners') // groups with 'minCorners' perimeterType
+        .map(g => g.perimeterIslands).flat() // perimeterIslands in thse groups
+        .map(isl => isl.cells).flat() // cells within those perimiterIslands
+        .map(cell => cell.segments).flat() // segments within those cells
+        .filter(seg => seg.isCorner) // corner segments within those segments
+        .exclude(madeSegs, ['id']) // exclude segments already made in previous stairs
+      // console.log(`minCornerSegs`, minCornerSegs.map(c => c.id))
+      assignMids(minCornerSegs, 'Corner', false) // assign midpoints to these segs + shared segs with inside turns
+    }
+    // else { console.log(`there is NOT a minCorners Group`) }
+
+
 
     //MARK: Nestle Main
     console.groupCollapsed(`createSimpleSubShapes`)
@@ -3154,7 +3128,6 @@ class Grid extends ProtoLayer {
 }
 
 //MARK: CELLGROUP CLASS
-// CLASS: CellGroup
 // SIZE: 254 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
@@ -3415,7 +3388,6 @@ class CellGroup extends ProtoLayer {
 }
 
 //MARK: SHAPEGROUP CLASS
-// CLASS: ShapeGroup
 // SIZE: 121 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
@@ -3543,7 +3515,6 @@ class ShapeGroup extends ProtoLayer {
 }
 
 //MARK: CELL CLASS
-// CLASS: Cell
 // SIZE: 158 lines
 // NOTE: drawSVG = false
 // NOTE: drawRect = false
@@ -3708,7 +3679,6 @@ class Cell extends ProtoLayer {
 }
 
 //MARK: ISLAND CLASS
-// CLASS: Island
 // SIZE: 579 lines
 // NOTE: drawSVG = false
 // NOTE: drawRect = false
@@ -4294,7 +4264,6 @@ class Island extends ProtoLayer {
 }
 
 //MARK: SHAPE CLASS
-// CLASS: Shape
 // SIZE: 309 lines
 // NOTE: drawSVG = false    // the SVG path gets passed back up to ShapeGroup for rendering
 // NOTE: drawRect = false
@@ -4477,16 +4446,16 @@ class Shape extends ProtoLayer {
 
   get svgPath() { return `path('${this.svg}')` }
 
-  get perimeter() {
-    let result = this.subShapes.map(e =>
-      SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 1 })
-    )
-    if (result instanceof Array) {
-      result = result.join(' ')
-    }
-    return result
-  }
-  get perimeterPath() { return `path('${this.perimeter}')` }
+  // get perimeter() {
+  //   let result = this.subShapes.map(e =>
+  //     SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 1 })
+  //   )
+  //   if (result instanceof Array) {
+  //     result = result.join(' ')
+  //   }
+  //   return result
+  // }
+  // get perimeterPath() { return `path('${this.perimeter}')` }
 
   get extractedVerts() { return extractVerts(this.svg) }
 
@@ -4496,7 +4465,9 @@ class Shape extends ProtoLayer {
   createSimpleSubShapes() {
     console.warn(`${this.id}.createSimpleSubShapes called!!!`)
     this.simpleSubShapes = this.subShapes.map(sub =>
-      SegPath.refine(sub, this.id, this.island.perimeterType === 'minCorners', this.grid)
+      new SegPath(sub)
+        .refined(this.id, this.island.perimeterType === 'minCorners', this.grid)
+        .path
     )
     // this.drawElement()
     // console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
