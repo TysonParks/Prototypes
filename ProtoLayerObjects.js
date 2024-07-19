@@ -57,16 +57,16 @@ class ProtoLayer {
   // #region 
 
   get type() { return this._type }
-  get padding() { return 20 }                                               // UNUSED
+  get padding() { return 20 }                                                                             //UNUSED:
 
-  get testLook() { return SVGLook.test() }                                  // UNUSED
-  get blackLook() { }                                                       // UNUSED
-  get protoLook() { return SVGLook.clear }                                  // UNUSED
-  get testColor() { return protoColor(0, 230, 230, 1) }                     // UNUSED
+  get testLook() { return SVGLook.test() }                                                                //UNUSED:
+  get blackLook() { }                                                                                     //UNUSED:
+  get protoLook() { return SVGLook.clear }                                                                //UNUSED:
+  get testColor() { return protoColor(0, 230, 230, 1) }                                                   //UNUSED:
 
-  get color() { return protoColor(230) }                                    // UNUSED
+  get color() { return protoColor(230) }                                                                  //UNUSED:
 
-  get look() {                                                              // UNUSED
+  get look() {                                                                                            //UNUSED:
     const clear = SVGLook.clear
     const stroke = testingControls.borders ? SVGLook.testStroke() : []
     const fill = testingControls.testColors ? SVGLook.testFill() : []
@@ -87,8 +87,8 @@ class ProtoLayer {
     if (this.protoParent?.filter) { return this.protoParent.filter }
   }
 
-  get filterLoft() { return this._filterLoft ?? 0 }                         // UNUSED
-  get loft() { return this.protoParent.loft + this.filterLoft }             // UNUSED
+  get filterLoft() { return this._filterLoft ?? 0 }                                                       //UNUSED:
+  get loft() { return this.protoParent.loft + this.filterLoft }                                           //UNUSED:
   // #endregion
 
   // MARK: Memoized Properties
@@ -464,7 +464,7 @@ class Frame extends ProtoLayer {
   // #endregion
 }
 
-//MARK: SELECTION BOUNDS CLASS
+//MARK: SelectionBounds CLASS
 // SIZE: 216 lines
 // NOTE: drawSVG = false    // SelectionBounds is not a ProtoLayer subClass 
 // NOTE: drawRect = false   // SelectionBounds is not a ProtoLayer subClass 
@@ -694,7 +694,7 @@ class Grid extends ProtoLayer {
   startCoord
   offset
   cellRows
-  cellRowsPref                                                                    // UNUSED
+  // cellRowsPref                                                                                      //UNUSED: 
   interGrid
   // gridCellBounds
   groups = new OpArray
@@ -719,7 +719,7 @@ class Grid extends ProtoLayer {
 
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
-    // this.cellRowsPref = this.transformedCellRows(transform)                    // UNUSED
+    // this.cellRowsPref = this.transformedCellRows(transform)                                         //UNUSED:
     this.setFrameRadii()
   }
 
@@ -766,15 +766,15 @@ class Grid extends ProtoLayer {
   get cellColumns() { return this.cellRowsFlipped() }
   get availableCells() { return this.cells.filter(cell => cell.available) }
   get takenCells() { return this.cells.filter(cell => cell.taken) }
-  get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }                // UNUSED
+  // get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }                         //UNUSED:
   get isFull() { return this.availableCells.length === 0 }
   get lastGroup() { return this.groups.last }
-  get biggestGroup() {                                                                         // UNUSED
-    return this.groups.reduce((max, grp) => {
-      if (grp.cells.length > max.cells.length) { return grp }
-      else { return max }
-    })
-  }
+  // get biggestGroup() {                                                                                  //UNUSED:
+  //   return this.groups.reduce((max, grp) => {
+  //   if (grp.cells.length > max.cells.length) { return grp }
+  //   else { return max }
+  // })
+  // }
   //NOTE: perimeters must be created for every group!
   get perimeterIslands() { return this.groups.map(g => g.perimeterIslands).flat() }
   get islands() { return this.groups.map(g => g.islands).flat() }
@@ -823,7 +823,7 @@ class Grid extends ProtoLayer {
   // MARK: Grid Geometry Methods
   // #region Geometry Methods
   //METH:
-  cellNamed(id) { return this.cells.find(c => c.id = id) }                                     // UNUSED
+  // cellNamed(id) { return this.cells.find(c => c.id = id) }                                             //UNUSED:
   //METH: 
   cellAnchor(x, y) { return Vertex.mult(this.cellSize, vert(x, y)).add(this.insetAnchor) }
   //METH: 
@@ -853,17 +853,17 @@ class Grid extends ProtoLayer {
   //METH: 
   cellAt(cellIndex) { return this.cells.find(e => e.index === cellIndex) }
   //METH: 
-  rowContaining(cellIndex) { return this.cellRows[this.coords(cellIndex).y] }                 // UNUSED
+  // rowContaining(cellIndex) { return this.cellRows[this.coords(cellIndex).y] }                              //UNUSED:
   //METH: 
-  columnContaining(cellIndex) { return this.cellColumns[this.coords(cellIndex).x] }           // UNUSED
+  // columnContaining(cellIndex) { return this.cellColumns[this.coords(cellIndex).x] }                        //UNUSED:
   //METH: 
-  rowContains(rowIndex, cellIndex) { return this.coords(cellIndex).y === rowIndex }           // UNUSED
+  // rowContains(rowIndex, cellIndex) { return this.coords(cellIndex).y === rowIndex }                        //UNUSED:
   //METH: 
-  columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }  // UNUSED
+  // columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }               //UNUSED:
   //METH:
-  cellIsInAnIsland(cellIndex) {                                                               // UNUSED (caller)
-    return this.allIslands.some(isle => isle.cells.some(cell => cell.index === cellIndex))
-  }
+  // cellIsInAnIsland(cellIndex) {                                                                         //UNUSED: (caller)
+  //   return this.allIslands.some(isle => isle.cells.some(cell => cell.index === cellIndex))
+  // }
   //METH: 
   cellSegmentBetween(indexA, indexB) {
     const indices = OpArray.from([indexA, indexB]).numSorted
@@ -974,11 +974,11 @@ class Grid extends ProtoLayer {
   //METH: neighbors() : [Cell]
   neighbors(cellIndex) { return Direction.All.directions.map(dir => this.neighbor(cellIndex, dir)) }
   //METH: availableNeighbors() : [Cell]
-  availableNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.available) }       // UNUSED
+  availableNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.available) }       //UNUSED:
   //METH: takenNeighbors() : [Cell]
-  takenNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.taken) }               // UNUSED
+  takenNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.taken) }               //UNUSED:
   //METH: ordinalNeghbors() : [Cell]
-  ordinalNeighbors(cellIndex) {                                                                           // UNUSED
+  ordinalNeighbors(cellIndex) {                                                                           //UNUSED:
     return Direction.Ordinal.directions.map(dir => this.neighbor(cellIndex, dir))
   }
 
@@ -1006,7 +1006,7 @@ class Grid extends ProtoLayer {
     return OpArray.from(rows.values())
   }
   //METH: randomly transforms a 1D or 2D selection array into a 2D CellRows array
-  randTransformedCells(selection) {                                                                 // UNUSED
+  randTransformedCells(selection) {                                                                           //UNUSED:
     return this.transformedCellRows({
       selection: selection,
       start: R.random_int(0, 3),
@@ -1236,604 +1236,609 @@ class Grid extends ProtoLayer {
   //TODO: DELETE WRAP METHODS AFTER CONVERSION 1276-1715
   //MARK: Wrap Methods
   // #region Wrap Methods
-  //METH: findCollinearWrapper() : ProtoSegment : find collinear wrapper(s) of input segment in segCollection
-  findCollinearWrapper({
-    seg,
-    outWrap = true,           // 
-    outsideCorner = true,     // 
-    isNeighbor = false,       // 
-    invertLineCheck = false,  // 
-    skipVertOnLine = false,   // 
-    includeEnds = true,       // 
-  } = {}) {
-    //FIXME: incorporate seg.andNeighborSimples into search reduction for massive performance gain!
-    // const localSegs = seg.andNeighborSimples
-    // if (localSegs) { segCollection = localSegs }
-    const segDir = seg.direction
-    const wrapDir = outWrap ? segDir.opposites : segDir              // expected direction of wrapper 
-    const turn = isNeighbor === outWrap ? 'end' : 'start'            // which turn to check turn direction of
-    const oppTurn = isNeighbor === outWrap ? 'start' : 'end'         // opposite of turn
-    const turnDir = outWrap !== outsideCorner ? `isRight` : `isLeft` // expected turn direction
-    const vertOnLineCheck = (s) => {                                 // verify cubicVert is on segment
-      if (skipVertOnLine) {
-        return !seg[oppTurn].equals(s[oppTurn], 0)         // seg.end not equal to s.end (hand drawn case)
-      }
-      let checkSeg = outWrap && !invertLineCheck ? s : seg                // segment to check
-      // if (invertLineCheck) {
-      //   checkSeg = segment(checkSeg[oppTurn], checkSeg.cubicVerts[turn])    // only use curvable part of segment 
-      // }
-      const cubicSeg = outWrap && !invertLineCheck ? seg : s                // segment to take cubicVert from
-      const vert = !isNeighbor ? cubicSeg.finalCubicEndVert : cubicSeg.finalCubicStartVert  // cubicVert to check
+  //METH: findCollinearWrapper() : ProtoSegment :                                                          //UNUSED:
+  //find collinear wrapper(s) of input segment in segCollection
+  // findCollinearWrapper({
+  //   seg,
+  //   outWrap = true,           // 
+  //   outsideCorner = true,     // 
+  //   isNeighbor = false,       // 
+  //   invertLineCheck = false,  // 
+  //   skipVertOnLine = false,   // 
+  //   includeEnds = true,       // 
+  // } = {}) {
+  //   //FIXME: incorporate seg.andNeighborSimples into search reduction for massive performance gain!
+  //   // const localSegs = seg.andNeighborSimples
+  //   // if (localSegs) { segCollection = localSegs }
+  //   const segDir = seg.direction
+  //   const wrapDir = outWrap ? segDir.opposites : segDir              // expected direction of wrapper 
+  //   const turn = isNeighbor === outWrap ? 'end' : 'start'            // which turn to check turn direction of
+  //   const oppTurn = isNeighbor === outWrap ? 'start' : 'end'         // opposite of turn
+  //   const turnDir = outWrap !== outsideCorner ? `isRight` : `isLeft` // expected turn direction
+  //   const vertOnLineCheck = (s) => {                                 // verify cubicVert is on segment
+  //     if (skipVertOnLine) {
+  //       return !seg[oppTurn].equals(s[oppTurn], 0)         // seg.end not equal to s.end (hand drawn case)
+  //     }
+  //     let checkSeg = outWrap && !invertLineCheck ? s : seg                // segment to check
+  //     // if (invertLineCheck) {
+  //     //   checkSeg = segment(checkSeg[oppTurn], checkSeg.cubicVerts[turn])    // only use curvable part of segment 
+  //     // }
+  //     const cubicSeg = outWrap && !invertLineCheck ? seg : s                // segment to take cubicVert from
+  //     const vert = !isNeighbor ? cubicSeg.finalCubicEndVert : cubicSeg.finalCubicStartVert  // cubicVert to check
 
-      return checkSeg.vertIsOnLine(vert, false)                           // vertIsOnLine, but not at start or end points
-    }
-    const cornerCheck = (opposite = true) => { return isNeighbor === opposite ? 'end' : 'start' }
-    // console.log(` ** findCollinear seg`, info(seg))
-    // console.log(`cubicVert`, cubicVert)
-    // console.log(`segCollection`, segCollection)
-    // let wrapper = segCollection.flat()
-    // console.log(`findCollinearWrapper overlapSegs`, seg.overlapSegs)
-    let wrapper = seg.overlapSegs
-      .filter(s =>
-        // s.isOverlappingWith(seg, includeEnds)        // collinear wraps overlap seg
-        // &&
-        s.direction.equals(wrapDir)  // collinear subIsland wraps point in same direction as seg
-        && s.turns[turn][turnDir]       // collinear wraps turn left
-        && vertOnLineCheck(s)           // collinear wraps will contain the transferrable cubicVert
-        // && !seg[oppTurn].equals(s[oppTurn], 0)
-        // && s.corners.end.equals(seg.corners.end)
-        // && seg[cornerCheck(false)].equals(s[cornerCheck()], 1)  
-      )
-      .sort((a, b) => seg[oppTurn].dist(a[turn]) - seg[oppTurn].dist(b[turn]))
-    return wrapper
-  }
-  //METH: findCollinearWrappers()
-  findCollinearWrappers({
-    seg,
-    outWrap = true,
-    outsideCorner = true,
-    invertLineCheck = false,
-    skipVertOnLine = false,
-    includeEnds = true,
-  } = {}) {
-    // const localSegs = seg.andNeighborSimples
-    // if (localSegs) { segCollection = localSegs }
-    const neighbor = seg.endNeighbor // runs clockwise, seg then rightTurn end neighbor
-    const start = this.findCollinearWrapper({  // find start of corner wrapper
-      seg: seg,
-      outWrap: outWrap,
-      outsideCorner: outsideCorner,
-      invertLineCheck: invertLineCheck,
-      skipVertOnLine: skipVertOnLine,
-      includeEnds: includeEnds,
-    })
-    const end = this.findCollinearWrapper({    // find end of corner wrapper
-      seg: neighbor,
-      outWrap: outWrap,
-      outsideCorner: outsideCorner,
-      invertLineCheck: invertLineCheck,
-      skipVertOnLine: skipVertOnLine,
-      includeEnds: includeEnds,
-      isNeighbor: true
-    })
-    return { start: start, end: end }
-  }
-  //METH: wrapCollinearCorner() : finds collinear wrapped corners and transfers cubic verts inwards to wrapped
+  //     return checkSeg.vertIsOnLine(vert, false)                           // vertIsOnLine, but not at start or end points
+  //   }
+  //   const cornerCheck = (opposite = true) => { return isNeighbor === opposite ? 'end' : 'start' }
+  //   // console.log(` ** findCollinear seg`, info(seg))
+  //   // console.log(`cubicVert`, cubicVert)
+  //   // console.log(`segCollection`, segCollection)
+  //   // let wrapper = segCollection.flat()
+  //   // console.log(`findCollinearWrapper overlapSegs`, seg.overlapSegs)
+  //   let wrapper = seg.overlapSegs
+  //     .filter(s =>
+  //       // s.isOverlappingWith(seg, includeEnds)        // collinear wraps overlap seg
+  //       // &&
+  //       s.direction.equals(wrapDir)  // collinear subIsland wraps point in same direction as seg
+  //       && s.turns[turn][turnDir]       // collinear wraps turn left
+  //       && vertOnLineCheck(s)           // collinear wraps will contain the transferrable cubicVert
+  //       // && !seg[oppTurn].equals(s[oppTurn], 0)
+  //       // && s.corners.end.equals(seg.corners.end)
+  //       // && seg[cornerCheck(false)].equals(s[cornerCheck()], 1)  
+  //     )
+  //     .sort((a, b) => seg[oppTurn].dist(a[turn]) - seg[oppTurn].dist(b[turn]))
+  //   return wrapper
+  // }
+  //METH: findCollinearWrappers()                                                                        //UNUSED:
+  // findCollinearWrappers({
+  //   seg,
+  //   outWrap = true,
+  //   outsideCorner = true,
+  //   invertLineCheck = false,
+  //   skipVertOnLine = false,
+  //   includeEnds = true,
+  // } = {}) {
+  //   // const localSegs = seg.andNeighborSimples
+  //   // if (localSegs) { segCollection = localSegs }
+  //   const neighbor = seg.endNeighbor // runs clockwise, seg then rightTurn end neighbor
+  //   const start = this.findCollinearWrapper({  // find start of corner wrapper
+  //     seg: seg,
+  //     outWrap: outWrap,
+  //     outsideCorner: outsideCorner,
+  //     invertLineCheck: invertLineCheck,
+  //     skipVertOnLine: skipVertOnLine,
+  //     includeEnds: includeEnds,
+  //   })
+  //   const end = this.findCollinearWrapper({    // find end of corner wrapper
+  //     seg: neighbor,
+  //     outWrap: outWrap,
+  //     outsideCorner: outsideCorner,
+  //     invertLineCheck: invertLineCheck,
+  //     skipVertOnLine: skipVertOnLine,
+  //     includeEnds: includeEnds,
+  //     isNeighbor: true
+  //   })
+  //   return { start: start, end: end }
+  // }
+  //METH: wrapCollinearCorner() :                                                                         //UNUSED:
+  //finds collinear wrapped corners and transfers cubic verts inwards to wrapped
   // NOTE: in Grid.nestleShapes(): use outWrapOutsideCorner (outWrap = true, outsideCorner = true)
   // NOTE: in Island.copyAllToCardinal(): inWrapInsideCorner & inWrapOutsideCorner (outWrap = true, outsideCorner = both)
-  wrapCollinearCorner(seg, segCollection, outWrap = true, outsideCorner = true, radiant = true, replace = false) {
-    let report = false
-    // if (
-    //   seg.id.includes('cell026')
-    //   // || seg.id.includes('cell040')
-    //   // || seg.id.includes('cell046')
-    // ) {
-    //   console.error(``)
-    //   console.warn(`FOUND cell026!`)
-    //   console.error(``)
-    //   report = true
-    // }
-    if (report) {
-      console.log(`wrapCollinearCorner seg`, seg)
-      console.log(`wrapCollinearCorner segCollection`, segCollection)
-    }
-    // let outsideCorners = new OpArray
-    // let insideCorners = new OpArray
-    const isDir = outsideCorner ? `isRight` : `isLeft`
-    if (!seg.turns.end[isDir]) { // must be an outside corner, so end of seg turns Right
-      console.error(`INVALID: wrapCollinearCorner only works on segment corners ending in ${isDir} turns `)
-      return
-    }
-    if (!segCollection) {                         // assign appropriate segCollection
-      segCollection = outsideCorner ? this.allSimpleOutsideCorners : this.allSimpleInsideCorners
-    }
-    const wrappers = this.findCollinearWrappers({  // find start of corner wrapper
-      seg: seg,
-      outWrap: outWrap,
-      outsideCorner: outsideCorner
-    })
+  // wrapCollinearCorner(seg, segCollection, outWrap = true, outsideCorner = true, radiant = true, replace = false) {
+  //   let report = false
+  //   // if (
+  //   //   seg.id.includes('cell026')
+  //   //   // || seg.id.includes('cell040')
+  //   //   // || seg.id.includes('cell046')
+  //   // ) {
+  //   //   console.error(``)
+  //   //   console.warn(`FOUND cell026!`)
+  //   //   console.error(``)
+  //   //   report = true
+  //   // }
+  //   if (report) {
+  //     console.log(`wrapCollinearCorner seg`, seg)
+  //     console.log(`wrapCollinearCorner segCollection`, segCollection)
+  //   }
+  //   // let outsideCorners = new OpArray
+  //   // let insideCorners = new OpArray
+  //   const isDir = outsideCorner ? `isRight` : `isLeft`
+  //   if (!seg.turns.end[isDir]) { // must be an outside corner, so end of seg turns Right
+  //     console.error(`INVALID: wrapCollinearCorner only works on segment corners ending in ${isDir} turns `)
+  //     return
+  //   }
+  //   if (!segCollection) {                         // assign appropriate segCollection
+  //     segCollection = outsideCorner ? this.allSimpleOutsideCorners : this.allSimpleInsideCorners
+  //   }
+  //   const wrappers = this.findCollinearWrappers({  // find start of corner wrapper
+  //     seg: seg,
+  //     outWrap: outWrap,
+  //     outsideCorner: outsideCorner
+  //   })
 
-    // if (report) {
-    //   console.log(`--> wrapperStart`, wrapperStart)
-    //   console.log(`--> wrapperEnd`, wrapperEnd)
-    //   console.log(``)
-    // }
+  //   // if (report) {
+  //   //   console.log(`--> wrapperStart`, wrapperStart)
+  //   //   console.log(`--> wrapperEnd`, wrapperEnd)
+  //   //   console.log(``)
+  //   // }
 
-    //ARROW: transferCubicStart() : 
-    const transferCubicStart = () => {
-      if (outWrap) {
-        wrappers.start[0].addCubicStartVert(seg.finalCubicEndVert, radiant, replace)
-      } else { // inWrap
-        seg.addCubicEndVert(wrappers.start[0].finalCubicEndVert, radiant, replace)
-      }
-    }
-    //ARROW: transferCubicEnd() : 
-    const transferCubicEnd = () => {
-      const neighbor = seg.endNeighbor
-      if (outWrap) {
-        wrappers.end[0].addCubicEndVert(neighbor.finalCubicStartVert, radiant, replace)
-      } else { // inWrap
-        neighbor.addCubicStartVert(wrappers.end[0].finalCubicStartVert, radiant, replace)
-      }
-    }
+  //   //ARROW: transferCubicStart() : 
+  //   const transferCubicStart = () => {
+  //     if (outWrap) {
+  //       wrappers.start[0].addCubicStartVert(seg.finalCubicEndVert, replace, radiant)
+  //     } else { // inWrap
+  //       seg.addCubicEndVert(wrappers.start[0].finalCubicEndVert, replace, radiant)
+  //     }
+  //   }
+  //   //ARROW: transferCubicEnd() : 
+  //   const transferCubicEnd = () => {
+  //     const neighbor = seg.endNeighbor
+  //     if (outWrap) {
+  //       wrappers.end[0].addCubicEndVert(neighbor.finalCubicStartVert, replace, radiant)
+  //     } else { // inWrap
+  //       neighbor.addCubicStartVert(wrappers.end[0].finalCubicStartVert, replace, radiant)
+  //     }
+  //   }
 
-    let wrapped = { start: undefined, end: undefined }
-    if (wrappers.start.length === 1 && wrappers.end.length === 1) {       // fully wrapped corner
-      transferCubicStart()
-      transferCubicEnd()
-      wrapped.start = wrappers.start[0]
-      wrapped.end = wrappers.end[0]
-      // return wrappers.start[0]                     // return fully wrapped corner for adjacent wrapping
-    } else if (wrappers.start.length === 1) {                           // only start is wrapped
-      transferCubicStart()
-      wrapped.start = wrappers.start[0]
-    } else if (wrappers.end.length === 1) {                             // only end is wrapped
-      transferCubicEnd()
-      wrapped.end = wrappers.end[0]
-    }
-    return wrapped
-  }
-  //METH: wrapCorners() : 
-  wrapCorners({ segs, segCollection, outWrap = true, outsideCorners = true, radiant = true, replace = false } = {}) {
-    // console.log(`wrapCorners segs`, segs)
-    return segs.flat().map(seg => this.wrapCollinearCorner(seg, segCollection, outWrap, outsideCorners, radiant, replace))
-  }
-  //METH: outWrapOutsideCorners() : 
-  outWrapOutsideCorners(segs, segCollection, radiant = true, replace = false) {
-    return this.wrapCorners({ segs: segs, segCollection: segCollection, radiant: radiant, replace: replace })
-  }
-  //METH: inWrapOutsideCorners() : 
-  inWrapOutsideCorners(segs, segCollection, radiant = true) {
-    return this.wrapCorners({ segs: segs, segCollection: segCollection, outWrap: false, radiant: radiant })
-  }
-  //METH: inWrapInsideCorners() : 
-  inWrapInsideCorners(segs, segCollection, radiant = true, replace = true) {
-    return this.wrapCorners({
-      segs: segs, segCollection: segCollection, outWrap: false, outsideCorners: false, radiant: radiant, replace: replace
-    })
-  }
+  //   let wrapped = { start: undefined, end: undefined }
+  //   if (wrappers.start.length === 1 && wrappers.end.length === 1) {       // fully wrapped corner
+  //     transferCubicStart()
+  //     transferCubicEnd()
+  //     wrapped.start = wrappers.start[0]
+  //     wrapped.end = wrappers.end[0]
+  //     // return wrappers.start[0]                     // return fully wrapped corner for adjacent wrapping
+  //   } else if (wrappers.start.length === 1) {                           // only start is wrapped
+  //     transferCubicStart()
+  //     wrapped.start = wrappers.start[0]
+  //   } else if (wrappers.end.length === 1) {                             // only end is wrapped
+  //     transferCubicEnd()
+  //     wrapped.end = wrappers.end[0]
+  //   }
+  //   return wrapped
+  // }
+  //METH: wrapCorners() :                                                                                 //UNUSED:
+  // wrapCorners({ segs, segCollection, outWrap = true, outsideCorners = true, radiant = true, replace = false } = {}) {
+  //   // console.log(`wrapCorners segs`, segs)
+  //   return segs.flat().map(seg => this.wrapCollinearCorner(seg, segCollection, outWrap, outsideCorners, radiant, replace))
+  // }
+  //METH: outWrapOutsideCorners() :                                                                       //UNUSED:
+  // outWrapOutsideCorners(segs, segCollection, radiant = true, replace = false) {
+  //   return this.wrapCorners({ segs: segs, segCollection: segCollection, radiant: radiant, replace: replace })
+  // }
+  //METH: inWrapOutsideCorners() :                                                                        //UNUSED:
+  // inWrapOutsideCorners(segs, segCollection, radiant = true) {
+  //   return this.wrapCorners({ segs: segs, segCollection: segCollection, outWrap: false, radiant: radiant })
+  // }
+  //METH: inWrapInsideCorners() :                                                                         //UNUSED:
+  // inWrapInsideCorners(segs, segCollection, radiant = true, replace = true) {
+  //   return this.wrapCorners({
+  //     segs: segs, segCollection: segCollection, outWrap: false, outsideCorners: false, radiant: radiant, replace: replace
+  //   })
+  // }
 
-  //METH: outWrapAdjacentInsideCorner() : ProtoSegment :
-  outWrapAdjacentInsideCorner(seg, radiant = true, replace = false) {
-    let report = false
-    // if (
-    //   seg.id.includes('cell121')
-    //   || seg.id.includes('cell112')
-    //   // || seg.id.includes('cell046')
-    // ) { report = true }
-    if (report) {
-      console.warn(`outWrapAdjacentInsideCorner seg`, seg.id)
-    }
+  //METH: outWrapAdjacentInsideCorner() : ProtoSegment :                                                  //UNUSED:
+  // outWrapAdjacentInsideCorner(seg, radiant = true, replace = false) {
+  //   let report = false
+  //   // if (
+  //   //   seg.id.includes('cell121')
+  //   //   || seg.id.includes('cell112')
+  //   //   // || seg.id.includes('cell046')
+  //   // ) { report = true }
+  //   if (report) {
+  //     console.warn(`outWrapAdjacentInsideCorner seg`, seg.id)
+  //   }
 
-    // if (!seg.turns.end.isLeft) { // must be an inside corner, so end of seg turns Left
-    //   console.error(`outWrapAdjacentInsideCorner only works on segment corners ending in left turns `)
-    //   console.log(seg)
-    //   return
-    // }
-    const neighbor = seg.startNeighbor // use start neighbor to run clockwise like findCollinearWrappedCorner()
+  //   // if (!seg.turns.end.isLeft) { // must be an inside corner, so end of seg turns Left
+  //   //   console.error(`outWrapAdjacentInsideCorner only works on segment corners ending in left turns `)
+  //   //   console.log(seg)
+  //   //   return
+  //   // }
+  //   const neighbor = seg.startNeighbor // use start neighbor to run clockwise like findCollinearWrappedCorner()
 
-    //ARROW: adjWrapper() : ProtoSegment : find adjacent wrapper(s) of input segment
-    const adjWrapper = (seg, isNeighbor = false) => {
-      const segDir = seg.direction
-      const adjDir = segDir.opposites // adjacent wraps point opposite of segDir
-      const turn = !isNeighbor ? 'end' : 'start'
-      const cubicVert = isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
-      const normCoord = segDir.rotated(90).moveCoord // normals always point left 90deg from segment direction
-      const normal = segment(
-        cubicVert,
-        Vertex.add(cubicVert, Vertex.mult(normCoord, seg.shape.cellBounds.size || this.gridCellBounds.size))
-      )
-      const name = isNeighbor ? `end` : `start`
-      // console.warn(`!!!adjWrapper!!! segDir: ${segDir}, normCoord: ${normCoord}, normal:`, normal)
-      // console.log(` ** findAdjacent seg`, info(seg))
-      // console.log(`normal`, normal.string)
+  //ARROW: adjWrapper() : ProtoSegment :                                                            
+  //find adjacent wrapper(s) of input segment
+  //   const adjWrapper = (seg, isNeighbor = false) => {
+  //     const segDir = seg.direction
+  //     const adjDir = segDir.opposites // adjacent wraps point opposite of segDir
+  //     const turn = !isNeighbor ? 'end' : 'start'
+  //     const cubicVert = isNeighbor ? seg.finalCubicEndVert : seg.finalCubicStartVert
+  //     const normCoord = segDir.rotated(90).moveCoord // normals always point left 90deg from segment direction
+  //     const normal = segment(
+  //       cubicVert,
+  //       Vertex.add(cubicVert, Vertex.mult(normCoord, seg.shape.cellBounds.size || this.gridCellBounds.size))
+  //     )
+  //     const name = isNeighbor ? `end` : `start`
+  //     // console.warn(`!!!adjWrapper!!! segDir: ${segDir}, normCoord: ${normCoord}, normal:`, normal)
+  //     // console.log(` ** findAdjacent seg`, info(seg))
+  //     // console.log(`normal`, normal.string)
 
-      let closestAdjacentWrapper = seg.shape.simpleSubShapes.flat()
-        .filter(s =>
-          s.direction.equals(adjDir)  // adjacent wraps point in opposite direction as seg
-          && s.turns[turn].isRight    // adjacent wraps turn right
-          // && seg.arcShouldWrapOutToArc(s)
-        )
-        .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null) // adjWraps intersect normal
-        .compacted
-        .filter(s => !s[0].start.equals(s[1], 1) && !s[0].end.equals(s[1], 1)) // adjWraps cant have ends on normal
-        .sort((a, b) => segment(seg[name], a[1]).length - segment(seg[name], b[1]).length) // sorted shortest first
-      // console.log(`closestAdjacentWrapper`, closestAdjacentWrapper)
-      // closestAdjacentWrapper = closestAdjacentWrapper
-      if (replace) {
-        // closestAdjacentWrapper = closestAdjacentWrapper.filter(s => s.hasLooseCorner)  // safe replacement edge case
-      }
-      // console.log(`closestAdjacentWrapper`, closestAdjacentWrapper)
-      closestAdjacentWrapper = closestAdjacentWrapper[0] // take shortest/closest
+  //     let closestAdjacentWrapper = seg.shape.simpleSubShapes.flat()
+  //       .filter(s =>
+  //         s.direction.equals(adjDir)  // adjacent wraps point in opposite direction as seg
+  //         && s.turns[turn].isRight    // adjacent wraps turn right
+  //         // && seg.arcShouldWrapOutToArc(s)
+  //       )
+  //       .map(s => s.intersectionWith(normal) ? [s, s.intersectionWith(normal)] : null) // adjWraps intersect normal
+  //       .compacted
+  //       .filter(s => !s[0].start.equals(s[1], 1) && !s[0].end.equals(s[1], 1)) // adjWraps cant have ends on normal
+  //       .sort((a, b) => segment(seg[name], a[1]).length - segment(seg[name], b[1]).length) // sorted shortest first
+  //     // console.log(`closestAdjacentWrapper`, closestAdjacentWrapper)
+  //     // closestAdjacentWrapper = closestAdjacentWrapper
+  //     if (replace) {
+  //       // closestAdjacentWrapper = closestAdjacentWrapper.filter(s => s.hasLooseCorner)  // safe replacement edge case
+  //     }
+  //     // console.log(`closestAdjacentWrapper`, closestAdjacentWrapper)
+  //     closestAdjacentWrapper = closestAdjacentWrapper[0] // take shortest/closest
 
-      return closestAdjacentWrapper
-    }
+  //     return closestAdjacentWrapper
+  //   }
 
-    // const wrapperStart = adjWrapper(seg)
-    // const wrapperEnd = adjWrapper(neighbor, true)
+  //   // const wrapperStart = adjWrapper(seg)
+  //   // const wrapperEnd = adjWrapper(neighbor, true)
 
-    //----------------------------------------------------
-    console.error(`outWrapAdjacentInsideCorner seg`, seg)
-    const adjWrap = seg.adjacentWrapper
-    let wrapped = { start: undefined, end: undefined }
-    console.log(`adjWrap`, adjWrap)
+  //   //----------------------------------------------------
+  //   console.error(`outWrapAdjacentInsideCorner seg`, seg)
+  //   const adjWrap = seg.adjacentWrapper
+  //   let wrapped = { start: undefined, end: undefined }
+  //   console.log(`adjWrap`, adjWrap)
 
-    if (adjWrap) {
-      const wrapperStart = seg.adjacentWrapper
-      const wrapperEnd = seg.adjacentWrapper.endNeighbor
+  //   if (adjWrap) {
+  //     const wrapperStart = seg.adjacentWrapper
+  //     const wrapperEnd = seg.adjacentWrapper.endNeighbor
 
-      adjWrap.addDistancedEndCornerVerts(adjWrap.intendedArcRadius, radiant, replace)
+  //     adjWrap.addDistancedEndCornerVerts(adjWrap.intendedArcRadius, replace, radiant)
 
-      wrapped.start = wrapperStart
-      wrapped.end = wrapperEnd
-    }
+  //     wrapped.start = wrapperStart
+  //     wrapped.end = wrapperEnd
+  //   }
 
-    return wrapped
-    //-------------------------------------------------------
-
-
-
+  //   return wrapped
+  //   //-------------------------------------------------------
 
 
-    // if (report) {
-    console.log(`--> wrapperStart`, wrapperStart)
-    console.log(`--> wrapperEnd`, wrapperEnd)
-    console.log(``)
-    // }
 
-    // let wrapped = { start: undefined, end: undefined }
-    if (wrapperStart && wrapperEnd) {
-      if (wrapperStart[0].endNeighbor.id !== wrapperEnd[0].id) {
-        console.error(`INVALID: Wrapper segs ${wrapperStart[0].id} and ${wrapperEnd[0].id} are not a connected corner`)
-        return
-      }
-      if (wrapperStart[0].isCollinearWith(seg) || wrapperEnd[0].isCollinearWith(neighbor)) {
-        console.warn(`INVALID: Wrapper corner is collinear with segment corner`)
-        return
-      }
 
-      if (report) {
-        console.log(`!!! ADJACENT WRAPPED CORNER FOUND !!!`)
-        console.log(seg)
-        console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
-        console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
-      }
 
-      const startGap = segment(seg.finalCubicStartVert, wrapperStart[1])  // gap between corner segs
-      const endGap = segment(neighbor.finalCubicEndVert, wrapperEnd[1])   // gap between corner segs
-      // console.log(`startGap`, startGap.length, startGap.string)
-      // console.log(`endGap`, endGap.length, endGap.string)
-      // console.log(``)
-      const startGapLength = roundToDec(startGap.length)               // gap distance
-      const endGapLength = roundToDec(endGap.length)                   // gap distance
-      if (startGapLength === endGapLength) {                              // wrap both if equidistant
-        // console.log(`wrapperStart`, JSON.parse(JSON.stringify({
-        //   cub: wrapperStart[0].cubicVerts,
-        //   max: wrapperStart[0].maxCubicVerts,
-        //   seg: { start: wrapperStart[0].start, end: wrapperStart[0].end }
-        // })))
-        // console.log(`wrapperEnd`, JSON.parse(JSON.stringify({
-        //   cub: wrapperEnd[0].cubicVerts,
-        //   max: wrapperEnd[0].maxCubicVerts,
-        //   seg: { start: wrapperEnd[0].start, end: wrapperEnd[0].end }
-        // })))
-        console.warn(`Wrapping both segments`)
+  //   // if (report) {
+  //   console.log(`--> wrapperStart`, wrapperStart)
+  //   console.log(`--> wrapperEnd`, wrapperEnd)
+  //   console.log(``)
+  //   // }
 
-        if (radiant) {
-          wrapperStart[0].addCubicEndVert(wrapperStart[1], replace)
-          wrapperEnd[0].addCubicStartVert(wrapperEnd[1], replace)
-        } else {
-          wrapperStart[0].addMaxStartVert(wrapperStart[1], replace)
-          wrapperEnd[0].addMaxEndVert(wrapperEnd[1], replace)
-        }
-        // console.log(`wrapperStart`, JSON.parse(JSON.stringify({
-        //   cub: wrapperStart[0].cubicVerts,
-        //   max: wrapperStart[0].maxCubicVerts,
-        //   seg: { start: wrapperStart[0].start, end: wrapperStart[0].end }
-        // })))
-        // console.log(`wrapperEnd`, JSON.parse(JSON.stringify({
-        //   cub: wrapperEnd[0].cubicVerts,
-        //   max: wrapperEnd[0].maxCubicVerts,
-        //   seg: { start: wrapperEnd[0].start, end: wrapperEnd[0].end }
-        // })))
+  //   // let wrapped = { start: undefined, end: undefined }
+  //   if (wrapperStart && wrapperEnd) {
+  //     if (wrapperStart[0].endNeighbor.id !== wrapperEnd[0].id) {
+  //       console.error(`INVALID: Wrapper segs ${wrapperStart[0].id} and ${wrapperEnd[0].id} are not a connected corner`)
+  //       return
+  //     }
+  //     if (wrapperStart[0].isCollinearWith(seg) || wrapperEnd[0].isCollinearWith(neighbor)) {
+  //       console.warn(`INVALID: Wrapper corner is collinear with segment corner`)
+  //       return
+  //     }
 
-        // console.log(``)
-        wrapped.start = wrapperStart[0]
-        wrapped.end = wrapperEnd[0]
-        // return wrapperStart[0]                                            // only return corner when both wrapped 
-      }
+  //     if (report) {
+  //       console.log(`!!! ADJACENT WRAPPED CORNER FOUND !!!`)
+  //       console.log(seg)
+  //       console.log(`** ${seg.id} is wrapped by --> ${wrapperStart[0].id}`)
+  //       console.log(`** ${neighbor.id} is wrapped by --> ${wrapperEnd[0].id}`)
+  //     }
 
-      else if (startGapLength < endGapLength) {                           // wrap seg with shortest distance
-        console.log(`Wrapping end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
-        console.log(`prev availableEndLength: ${wrapperStart[0].availableEndLength}`)
-        if (radiant) {
-          wrapperStart[0].addCubicEndVert(wrapperStart[1], replace)
-        } else {
-          wrapperStart[0].addMaxEndVert(wrapperStart[1], replace)
-        }
-        if (replace) {
-          wrapperStart[0].endNeighbor.removeCubicStartVert()        // remove neighbor vert to prevent bad match
-          wrapperStart[0].matchEndCorner()                          // match new vert on neighbor
-        }
-        wrapped.start = wrapperStart[0]
-        console.log(`new availableEndLength: ${wrapperStart[0].availableEndLength}`)
-      } else {
-        console.log(`Wrapping start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
-        console.log(`prev availableEndLength: ${wrapperStart[1].availableStartLength}`)
-        if (radiant) {
-          wrapperEnd[0].addCubicStartVert(wrapperEnd[1], replace)
-        } else {
-          wrapperEnd[0].addMaxStartVert(wrapperEnd[1], replace)
-        }
-        if (replace) {
-          wrapperStart[0].startNeighbor.removeCubicEndVert()        // remove neighbor vert to prevent bad match
-          wrapperStart[0].matchStartCorner()                        // match new vert on neighbor
-        }
-        wrapped.end = wrapperEnd[0]
-        console.log(`new availableEndLength: ${wrapperStart[1].availableStartLength}`)
-      }
-      // console.log(``)
-    }
-    return wrapped
-  }
+  //     const startGap = segment(seg.finalCubicStartVert, wrapperStart[1])  // gap between corner segs
+  //     const endGap = segment(neighbor.finalCubicEndVert, wrapperEnd[1])   // gap between corner segs
+  //     // console.log(`startGap`, startGap.length, startGap.string)
+  //     // console.log(`endGap`, endGap.length, endGap.string)
+  //     // console.log(``)
+  //     const startGapLength = roundToDec(startGap.length)               // gap distance
+  //     const endGapLength = roundToDec(endGap.length)                   // gap distance
+  //     if (startGapLength === endGapLength) {                              // wrap both if equidistant
+  //       // console.log(`wrapperStart`, JSON.parse(JSON.stringify({
+  //       //   cub: wrapperStart[0].cubicVerts,
+  //       //   max: wrapperStart[0].maxCubicVerts,
+  //       //   seg: { start: wrapperStart[0].start, end: wrapperStart[0].end }
+  //       // })))
+  //       // console.log(`wrapperEnd`, JSON.parse(JSON.stringify({
+  //       //   cub: wrapperEnd[0].cubicVerts,
+  //       //   max: wrapperEnd[0].maxCubicVerts,
+  //       //   seg: { start: wrapperEnd[0].start, end: wrapperEnd[0].end }
+  //       // })))
+  //       console.warn(`Wrapping both segments`)
 
-  //METH: outWrapAdjacentInsideCorners()
-  outWrapAdjacentInsideCorners({ segs, radiant = true, replace = false } = {}) {
-    return segs.flat().map(seg => this.outWrapAdjacentInsideCorner(seg, radiant, replace))
-  }
+  //       if (radiant) {
+  //         wrapperStart[0].addCubicEndVert(wrapperStart[1], replace)
+  //         wrapperEnd[0].addCubicStartVert(wrapperEnd[1], replace)
+  //       } else {
+  //         wrapperStart[0].addMaxStartVert(wrapperStart[1], replace)
+  //         wrapperEnd[0].addMaxEndVert(wrapperEnd[1], replace)
+  //       }
+  //       // console.log(`wrapperStart`, JSON.parse(JSON.stringify({
+  //       //   cub: wrapperStart[0].cubicVerts,
+  //       //   max: wrapperStart[0].maxCubicVerts,
+  //       //   seg: { start: wrapperStart[0].start, end: wrapperStart[0].end }
+  //       // })))
+  //       // console.log(`wrapperEnd`, JSON.parse(JSON.stringify({
+  //       //   cub: wrapperEnd[0].cubicVerts,
+  //       //   max: wrapperEnd[0].maxCubicVerts,
+  //       //   seg: { start: wrapperEnd[0].start, end: wrapperEnd[0].end }
+  //       // })))
 
-  //METH: recursiveOutWrapOutsideCorners() : recursive collinear/adjacent combo wrap functions for outside corners
-  recursiveOutWrapOutsideCorners(segCollection, radiant = true, replace = false) {
-    segCollection = OpArray.format(segCollection)
-    // console.log(`recursiveOutWrapOutsideCorners input`, segCollection.map(s => s.id))
-    let outsideCorners = new OpArray
-    let insideCorners = new OpArray
-    const collinears = this.outWrapOutsideCorners(segCollection, this.allSimpleSubShapes, radiant, replace)
-      .compacted
-    if (!collinears.isEmpty) {
-      // console.log(`recursiveOutWrapOutsideCorners collinears`, collinears)
-      let colOut = new OpArray
-      collinears.forEach(col => {
-        if (col.start) { insideCorners.push(col.start) }
-        if (col.end) { insideCorners.push(col.end) }
-        if (col.start && col.end) { colOut.push(col.start) }
-      })
-      const adjacents = this.outWrapAdjacentInsideCorners({ segs: colOut, radiant: radiant, replace: replace })
-        .compacted
-      if (!adjacents.isEmpty) {
-        // console.log(`recursiveOutWrapOutsideCorners adjacents`, adjacents)
-        let adjOut = new OpArray
-        adjacents.forEach(adj => {
-          if (adj.start) { outsideCorners.push(adj.start) }
-          if (adj.end) { outsideCorners.push(adj.end) }
-          if (adj.start && adj.end) { adjOut.push(adj.start) }
-        })
-        const combined = this.recursiveOutWrapOutsideCorners(adjOut, radiant, replace)
-        if (!combined.isEmpty) {
-          outsideCorners = outsideCorners.union(combined.outsideCorners)
-          insideCorners = insideCorners.union(combined.insideCorners)
-        }
-      }
-    }
-    return { outside: outsideCorners, inside: insideCorners }
-  }
+  //       // console.log(``)
+  //       wrapped.start = wrapperStart[0]
+  //       wrapped.end = wrapperEnd[0]
+  //       // return wrapperStart[0]                                            // only return corner when both wrapped 
+  //     }
 
-  //METH: recursiveOutWrapAdjInsideCorners() : recursive combination of adjacent/collinear wrap functions for inside corners
-  recursiveOutWrapAdjInsideCorners(segCollection, radiant = true, replace = false) {
-    segCollection = OpArray.format(segCollection)
-    let outsideCorners = new OpArray
-    let insideCorners = new OpArray
-    // console.log(`recursiveOutWrapAdjInsideCorners input`, segCollection)
-    const adjacents = this.outWrapAdjacentInsideCorners({ segs: segCollection, radiant: radiant, replace: replace })
-      .compacted
-    if (!adjacents.isEmpty) {
-      // console.log(`recursiveOutWrapAdjInsideCorners adjacents`, adjacents)
-      let adjOut = new OpArray
-      adjacents.forEach(adj => {
-        if (adj.start) { outsideCorners.push(adj.start) }
-        if (adj.end) { outsideCorners.push(adj.end) }
-        if (adj.start && adj.end) { adjOut.push(adj.start) }
-      })
-      const collinears = this.outWrapOutsideCorners(adjOut, this.allSimpleSubShapes, radiant, replace)
-        .compacted
-      if (!collinears.isEmpty) {
-        // console.log(`recursiveOutWrapAdjInsideCorners collinears`, collinears)
-        let colOut = new OpArray
-        collinears.forEach(col => {
-          if (col.start) { insideCorners.push(col.start) }
-          if (col.end) { insideCorners.push(col.end) }
-          if (col.start && col.end) { colOut.push(col.start) }
-        })
-        const combined = this.recursiveOutWrapAdjInsideCorners(colOut, radiant, replace)
-        if (!combined.isEmpty) {
-          outsideCorners = outsideCorners.union(combined.outsideCorners)
-          insideCorners = insideCorners.union(combined.insideCorners)
-        }
-      }
-    }
-    return { outside: outsideCorners, inside: insideCorners }
-  }
+  //     else if (startGapLength < endGapLength) {                           // wrap seg with shortest distance
+  //       console.log(`Wrapping end of start segment ${wrapperStart[0].id} with ${wrapperStart[1].string}`)
+  //       console.log(`prev availableEndLength: ${wrapperStart[0].availableEndLength}`)
+  //       if (radiant) {
+  //         wrapperStart[0].addCubicEndVert(wrapperStart[1], replace)
+  //       } else {
+  //         wrapperStart[0].addMaxEndVert(wrapperStart[1], replace)
+  //       }
+  //       if (replace) {
+  //         wrapperStart[0].endNeighbor.removeCubicStartVert()        // remove neighbor vert to prevent bad match
+  //         wrapperStart[0].matchEndCorner()                          // match new vert on neighbor
+  //       }
+  //       wrapped.start = wrapperStart[0]
+  //       console.log(`new availableEndLength: ${wrapperStart[0].availableEndLength}`)
+  //     } else {
+  //       console.log(`Wrapping start of end segment ${wrapperEnd[0].id} with ${wrapperEnd[1].string}`)
+  //       console.log(`prev availableEndLength: ${wrapperStart[1].availableStartLength}`)
+  //       if (radiant) {
+  //         wrapperEnd[0].addCubicStartVert(wrapperEnd[1], replace)
+  //       } else {
+  //         wrapperEnd[0].addMaxStartVert(wrapperEnd[1], replace)
+  //       }
+  //       if (replace) {
+  //         wrapperStart[0].startNeighbor.removeCubicEndVert()        // remove neighbor vert to prevent bad match
+  //         wrapperStart[0].matchStartCorner()                        // match new vert on neighbor
+  //       }
+  //       wrapped.end = wrapperEnd[0]
+  //       console.log(`new availableEndLength: ${wrapperStart[1].availableStartLength}`)
+  //     }
+  //     // console.log(``)
+  //   }
+  //   return wrapped
+  // }
+
+  //METH: outWrapAdjacentInsideCorners()                                                                   //UNUSED:
+  // outWrapAdjacentInsideCorners({ segs, radiant = true, replace = false } = {}) {
+  //   return segs.flat().map(seg => this.outWrapAdjacentInsideCorner(seg, radiant, replace))
+  // }
+
+  //METH: recursiveOutWrapOutsideCorners() :                                                               //UNUSED:
+  //recursive collinear/adjacent combo wrap functions for outside corners
+  // recursiveOutWrapOutsideCorners(segCollection, radiant = true, replace = false) {
+  //   segCollection = OpArray.format(segCollection)
+  //   // console.log(`recursiveOutWrapOutsideCorners input`, segCollection.map(s => s.id))
+  //   let outsideCorners = new OpArray
+  //   let insideCorners = new OpArray
+  //   const collinears = this.outWrapOutsideCorners(segCollection, this.allSimpleSubShapes, radiant, replace)
+  //     .compacted
+  //   if (!collinears.isEmpty) {
+  //     // console.log(`recursiveOutWrapOutsideCorners collinears`, collinears)
+  //     let colOut = new OpArray
+  //     collinears.forEach(col => {
+  //       if (col.start) { insideCorners.push(col.start) }
+  //       if (col.end) { insideCorners.push(col.end) }
+  //       if (col.start && col.end) { colOut.push(col.start) }
+  //     })
+  //     const adjacents = this.outWrapAdjacentInsideCorners({ segs: colOut, radiant: radiant, replace: replace })
+  //       .compacted
+  //     if (!adjacents.isEmpty) {
+  //       // console.log(`recursiveOutWrapOutsideCorners adjacents`, adjacents)
+  //       let adjOut = new OpArray
+  //       adjacents.forEach(adj => {
+  //         if (adj.start) { outsideCorners.push(adj.start) }
+  //         if (adj.end) { outsideCorners.push(adj.end) }
+  //         if (adj.start && adj.end) { adjOut.push(adj.start) }
+  //       })
+  //       const combined = this.recursiveOutWrapOutsideCorners(adjOut, radiant, replace)
+  //       if (!combined.isEmpty) {
+  //         outsideCorners = outsideCorners.union(combined.outsideCorners)
+  //         insideCorners = insideCorners.union(combined.insideCorners)
+  //       }
+  //     }
+  //   }
+  //   return { outside: outsideCorners, inside: insideCorners }
+  // }
+
+  //METH: recursiveOutWrapAdjInsideCorners() :                                                             //UNUSED:
+  //recursive combination of adjacent/collinear wrap functions for inside corners
+  // recursiveOutWrapAdjInsideCorners(segCollection, radiant = true, replace = false) {
+  //   segCollection = OpArray.format(segCollection)
+  //   let outsideCorners = new OpArray
+  //   let insideCorners = new OpArray
+  //   // console.log(`recursiveOutWrapAdjInsideCorners input`, segCollection)
+  //   const adjacents = this.outWrapAdjacentInsideCorners({ segs: segCollection, radiant: radiant, replace: replace })
+  //     .compacted
+  //   if (!adjacents.isEmpty) {
+  //     // console.log(`recursiveOutWrapAdjInsideCorners adjacents`, adjacents)
+  //     let adjOut = new OpArray
+  //     adjacents.forEach(adj => {
+  //       if (adj.start) { outsideCorners.push(adj.start) }
+  //       if (adj.end) { outsideCorners.push(adj.end) }
+  //       if (adj.start && adj.end) { adjOut.push(adj.start) }
+  //     })
+  //     const collinears = this.outWrapOutsideCorners(adjOut, this.allSimpleSubShapes, radiant, replace)
+  //       .compacted
+  //     if (!collinears.isEmpty) {
+  //       // console.log(`recursiveOutWrapAdjInsideCorners collinears`, collinears)
+  //       let colOut = new OpArray
+  //       collinears.forEach(col => {
+  //         if (col.start) { insideCorners.push(col.start) }
+  //         if (col.end) { insideCorners.push(col.end) }
+  //         if (col.start && col.end) { colOut.push(col.start) }
+  //       })
+  //       const combined = this.recursiveOutWrapAdjInsideCorners(colOut, radiant, replace)
+  //       if (!combined.isEmpty) {
+  //         outsideCorners = outsideCorners.union(combined.outsideCorners)
+  //         insideCorners = insideCorners.union(combined.insideCorners)
+  //       }
+  //     }
+  //   }
+  //   return { outside: outsideCorners, inside: insideCorners }
+  // }
   // #endregion
 
   //MARK: Nestle Methods
   // #region Nestle Methods
   //MARK: createUTurns()
-  //METH: createUTurns()
-  createUTurns({ subShapes = this.allSimpleSubShapes, out = true, outWrap = true, radiant = true } = {}) {
-    // let curved = new OpArray                               // processed corner/seg storage
-    let uTurns = subShapes.flat()
-      .filter(s => out ? s.isUTurnOut : s.isUTurnIn)       // only include UTurnOut segments
-      // .filter(s => s.length < s.startNeighbor.length && s.length < s.endNeighbor.length)
-      // .filter(s => !s.hasSomeCubicVerts)                   // remove segments with any cubicVerts assigned
-      .filter(s => !s.hasBothVerts)                   // remove segments with both cubicVerts assigned
-      .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
-    const name = out ? `out` : `in`
-    console.warn(`uTurns ${name}`, uTurns.map(u => [u.id, u.availableEndLength]))
-    // console.warn(`uTurns ${name}`, uTurns.map(u => u.availableEndLength))
-    let outsideCorners = new OpArray
-    let insideCorners = new OpArray
-    while (uTurns.length > 0) {
-      let seg = uTurns.last
-      // seg = uTurns.pop()                          // pop gets segs with smallest minCubicLength first
+  //METH: createUTurns()                                                                  //UNUSED:
+  // createUTurns({ subShapes = this.allSimpleSubShapes, out = true, outWrap = true, radiant = true } = {}) {
+  //   // let curved = new OpArray                               // processed corner/seg storage
+  //   let uTurns = subShapes.flat()
+  //     .filter(s => out ? s.isUTurnOut : s.isUTurnIn)       // only include UTurnOut segments
+  //     // .filter(s => s.length < s.startNeighbor.length && s.length < s.endNeighbor.length)
+  //     // .filter(s => !s.hasSomeCubicVerts)                   // remove segments with any cubicVerts assigned
+  //     .filter(s => !s.hasBothVerts)                   // remove segments with both cubicVerts assigned
+  //     .sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
+  //   const name = out ? `out` : `in`
+  //   console.warn(`uTurns ${name}`, uTurns.map(u => [u.id, u.availableEndLength]))
+  //   // console.warn(`uTurns ${name}`, uTurns.map(u => u.availableEndLength))
+  //   let outsideCorners = new OpArray
+  //   let insideCorners = new OpArray
+  //   while (uTurns.length > 0) {
+  //     let seg = uTurns.last
+  //     // seg = uTurns.pop()                          // pop gets segs with smallest minCubicLength first
 
-      if (seg.hasNoCubicVerts) {
-        const startRadius = min(seg.startNeighbor.availableEndLength, seg.availableStartLength)
-        const endRadius = min(seg.availableEndLength, seg.endNeighbor.availableStartLength)
+  //     if (seg.hasNoCubicVerts) {
+  //       const startRadius = min(seg.startNeighbor.availableEndLength, seg.availableStartLength)
+  //       const endRadius = min(seg.availableEndLength, seg.endNeighbor.availableStartLength)
 
-        // let curved = new OpArray
+  //       // let curved = new OpArray
 
-        if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
-          console.log(`curving ${seg.id} both sides with radius: ${roundToDec(startRadius / this.minCellWidth)}`)
-          seg.addBothDistancedCornerVerts(startRadius)
-          // curved.push(out ? seg.startNeighbor : seg)
-          // curved.push(out ? seg : seg.endNeighbor)
-          if (out) {
-            outsideCorners.push(seg.startNeighbor)
-            outsideCorners.push(seg)
-          } else {
-            insideCorners.push(seg)
-            insideCorners.push(seg.endNeighbor)
-          }
+  //       if (approxToDec(startRadius) === approxToDec(endRadius)) { // curve both corner segs
+  //         console.log(`curving ${seg.id} both sides with radius: ${roundToDec(startRadius / this.minCellWidth)}`)
+  //         seg.addBothDistancedCornerVerts(startRadius)
+  //         // curved.push(out ? seg.startNeighbor : seg)
+  //         // curved.push(out ? seg : seg.endNeighbor)
+  //         if (out) {
+  //           outsideCorners.push(seg.startNeighbor)
+  //           outsideCorners.push(seg)
+  //         } else {
+  //           insideCorners.push(seg)
+  //           insideCorners.push(seg.endNeighbor)
+  //         }
 
-        } else if (approxToDec(startRadius) < approxToDec(endRadius)) { // curve smallest corner seg: start
-          seg.addDistancedStartCornerVerts(startRadius)
-          // curved.push(out ? seg.startNeighbor : seg)
-          if (out) {
-            outsideCorners.push(seg.startNeighbor)
-          } else {
-            insideCorners.push(seg)
-          }
+  //       } else if (approxToDec(startRadius) < approxToDec(endRadius)) { // curve smallest corner seg: start
+  //         seg.addDistancedStartCornerVerts(startRadius)
+  //         // curved.push(out ? seg.startNeighbor : seg)
+  //         if (out) {
+  //           outsideCorners.push(seg.startNeighbor)
+  //         } else {
+  //           insideCorners.push(seg)
+  //         }
 
-        } else {                                                      // curve smallest corner seg: end 
-          seg.addDistancedEndCornerVerts(endRadius)
-          // curved.push(out ? seg : seg.endNeighbor)
-          if (out) {
-            outsideCorners.push(seg)
-          } else {
-            insideCorners.push(seg.endNeighbor)
-          }
-        }
+  //       } else {                                                      // curve smallest corner seg: end 
+  //         seg.addDistancedEndCornerVerts(endRadius)
+  //         // curved.push(out ? seg : seg.endNeighbor)
+  //         if (out) {
+  //           outsideCorners.push(seg)
+  //         } else {
+  //           insideCorners.push(seg.endNeighbor)
+  //         }
+  //       }
 
-        console.log(`resulting seg.hasBothVerts`, seg.hasBothVerts)
+  //       console.log(`resulting seg.hasBothVerts`, seg.hasBothVerts)
 
-        if (outWrap) {
-          // console.log(`recursive processing of curved:`, curved.map(s => s.id))
+  //       if (outWrap) {
+  //         // console.log(`recursive processing of curved:`, curved.map(s => s.id))
 
-          console.log(`recursive outWrap of outsideCorners:`, outsideCorners.map(s => s.id))
-          console.log(`recursive outWrap of insideCorners:`, insideCorners.map(s => s.id))
-          const wrapOuts = this.recursiveOutWrapOutsideCorners(outsideCorners, radiant)
-          const wrapIns = this.recursiveOutWrapAdjInsideCorners(insideCorners, radiant)
-          console.log(`createUTurns wrapOuts`, wrapOuts)
-          console.log(`createUTurns wrapIns`, wrapIns)
+  //         console.log(`recursive outWrap of outsideCorners:`, outsideCorners.map(s => s.id))
+  //         console.log(`recursive outWrap of insideCorners:`, insideCorners.map(s => s.id))
+  //         const wrapOuts = this.recursiveOutWrapOutsideCorners(outsideCorners, radiant)
+  //         const wrapIns = this.recursiveOutWrapAdjInsideCorners(insideCorners, radiant)
+  //         console.log(`createUTurns wrapOuts`, wrapOuts)
+  //         console.log(`createUTurns wrapIns`, wrapIns)
 
-          // if (out) {
-          //   this.recursiveOutWrapOutsideCorners(curved, radiant)
-          // } else {
-          //   this.recursiveOutWrapAdjInsideCorners(curved, radiant)
-          // }
-        }
-        uTurns = uTurns.sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
+  //         // if (out) {
+  //         //   this.recursiveOutWrapOutsideCorners(curved, radiant)
+  //         // } else {
+  //         //   this.recursiveOutWrapAdjInsideCorners(curved, radiant)
+  //         // }
+  //       }
+  //       uTurns = uTurns.sort((a, b) => b.minCubicLength - a.minCubicLength) // sort by large-small availableEndLength
 
-      } else {
-        seg = uTurns.pop()
-        const cubicCorners = this.createCubicCorners({ subShapes: [seg], radiant: radiant })
-        outsideCorners = outsideCorners.union(cubicCorners.outside, [`id`])
-        insideCorners = insideCorners.union(cubicCorners.inside, [`id`])
-      }
-    }
-    console.warn(`createUTurns outsideCorners`, outsideCorners)
-    console.warn(`createUTurns insideCorners`, insideCorners)
-    return { outside: outsideCorners, inside: insideCorners }
-  }
+  //     } else {
+  //       seg = uTurns.pop()
+  //       const cubicCorners = this.createCubicCorners({ subShapes: [seg], radiant: radiant })
+  //       outsideCorners = outsideCorners.union(cubicCorners.outside, [`id`])
+  //       insideCorners = insideCorners.union(cubicCorners.inside, [`id`])
+  //     }
+  //   }
+  //   console.warn(`createUTurns outsideCorners`, outsideCorners)
+  //   console.warn(`createUTurns insideCorners`, insideCorners)
+  //   return { outside: outsideCorners, inside: insideCorners }
+  // }
   //MARK: createCubicCorners()
-  //METH: createCubicCorners() :
-  createCubicCorners({ subShapes = this.allSimpleSubShapes, outWrap = true, radiant = true, replace = false } = {}) {
-    let corners = subShapes.flat()
-      .filter(s => !s.hasBothCubicVerts)                      // remove segments with both cubicVerts assigned
-      .sort((a, b) => b.minCubicLength - a.minCubicLength)    // sort large-small availableEndLength
-      .sort((a, b) => b.cubicVertCount - a.cubicVertCount)    // sort large-small cubicVertCount
+  //METH: createCubicCorners() :                                                                      //UNUSED:
+  // createCubicCorners({ subShapes = this.allSimpleSubShapes, outWrap = true, radiant = true, replace = false } = {}) {
+  //   let corners = subShapes.flat()
+  //     .filter(s => !s.hasBothCubicVerts)                      // remove segments with both cubicVerts assigned
+  //     .sort((a, b) => b.minCubicLength - a.minCubicLength)    // sort large-small availableEndLength
+  //     .sort((a, b) => b.cubicVertCount - a.cubicVertCount)    // sort large-small cubicVertCount
 
-    let outsideCorners = new OpArray
-    let insideCorners = new OpArray
-    while (corners.length > 0) {
-      let seg = corners.pop()
+  //   let outsideCorners = new OpArray
+  //   let insideCorners = new OpArray
+  //   while (corners.length > 0) {
+  //     let seg = corners.pop()
 
-      let useStartCorner, cornerStart, cornerEnd
-      if (seg.hasNoCubicVerts) {
-        console.log(`createCubicCorners seg hasNoCubicVerts`)
-        useStartCorner = seg.startNeighbor.availableEndLength <= seg.endNeighbor.availableStartLength ? true : false
-      } else if (seg.hasSomeCubicVerts) {
-        console.log(`createCubicCorners seg hasSomeCubicVerts`)
-        useStartCorner = seg.hasCubicStartVert ? false : true
-      }
-      if (useStartCorner) {
-        cornerStart = seg.startNeighbor
-        cornerEnd = seg
-      } else {
-        cornerStart = seg
-        cornerEnd = seg.endNeighbor
-      }
+  //     let useStartCorner, cornerStart, cornerEnd
+  //     if (seg.hasNoCubicVerts) {
+  //       console.log(`createCubicCorners seg hasNoCubicVerts`)
+  //       useStartCorner = seg.startNeighbor.availableEndLength <= seg.endNeighbor.availableStartLength ? true : false
+  //     } else if (seg.hasSomeCubicVerts) {
+  //       console.log(`createCubicCorners seg hasSomeCubicVerts`)
+  //       useStartCorner = seg.hasCubicStartVert ? false : true
+  //     }
+  //     if (useStartCorner) {
+  //       cornerStart = seg.startNeighbor
+  //       cornerEnd = seg
+  //     } else {
+  //       cornerStart = seg
+  //       cornerEnd = seg.endNeighbor
+  //     }
 
-      const radius = min(cornerStart.availableEndLength, cornerEnd.availableStartLength)
-      cornerStart.addDistancedEndCornerVerts(radius)                                    // assign new endVert
+  //     const radius = min(cornerStart.availableEndLength, cornerEnd.availableStartLength)
+  //     cornerStart.addDistancedEndCornerVerts(radius)                                    // assign new endVert
 
-      if (outWrap) {
-        console.log(`I'm out wrapping yo!`)
-        let wrapOuts
-        let wrapIns
-        if (cornerStart.turns.end.isRight) {
-          console.log(`making wrapOuts`)
-          wrapOuts = this.recursiveOutWrapOutsideCorners(cornerStart, radiant, replace)
-          outsideCorners.push(seg)                               // push outside corners for further processing
-        } else {
-          console.log(`making wrapIns`)
-          wrapIns = this.recursiveOutWrapAdjInsideCorners(cornerStart, radiant, replace)
-          insideCorners.push(seg)                                // push inside corners for further processing
-        }
-        if (wrapOuts) {
-          console.log(`createCubicCorners wrapOuts`, wrapOuts)
-          outsideCorners = outsideCorners.union(wrapOuts.outside, [`id`])
-          insideCorners = insideCorners.union(wrapOuts.inside, [`id`])
-        }
-        if (wrapIns) {
-          console.log(`createCubicCorners wrapIns`, wrapIns)
-          outsideCorners = outsideCorners.union(wrapIns.outside, [`id`])
-          insideCorners = insideCorners.union(wrapIns.inside, [`id`])
-        }
-      }
+  //     if (outWrap) {
+  //       console.log(`I'm out wrapping yo!`)
+  //       let wrapOuts
+  //       let wrapIns
+  //       if (cornerStart.turns.end.isRight) {
+  //         console.log(`making wrapOuts`)
+  //         wrapOuts = this.recursiveOutWrapOutsideCorners(cornerStart, radiant, replace)
+  //         outsideCorners.push(seg)                               // push outside corners for further processing
+  //       } else {
+  //         console.log(`making wrapIns`)
+  //         wrapIns = this.recursiveOutWrapAdjInsideCorners(cornerStart, radiant, replace)
+  //         insideCorners.push(seg)                                // push inside corners for further processing
+  //       }
+  //       if (wrapOuts) {
+  //         console.log(`createCubicCorners wrapOuts`, wrapOuts)
+  //         outsideCorners = outsideCorners.union(wrapOuts.outside, [`id`])
+  //         insideCorners = insideCorners.union(wrapOuts.inside, [`id`])
+  //       }
+  //       if (wrapIns) {
+  //         console.log(`createCubicCorners wrapIns`, wrapIns)
+  //         outsideCorners = outsideCorners.union(wrapIns.outside, [`id`])
+  //         insideCorners = insideCorners.union(wrapIns.inside, [`id`])
+  //       }
+  //     }
 
-      if (!seg.hasBothCubicVerts) {
-        corners.push(seg)
-      }
-      corners = corners
-        // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
-        .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
-        .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
-    }
-    console.error(`createCubicCorners outsideCorners`, outsideCorners)
-    console.error(`createCubicCorners insideCorners`, insideCorners)
-    return { outside: outsideCorners.compacted.unique([`id`]), inside: insideCorners.compacted.unique([`id`]) }
-  }
+  //     if (!seg.hasBothCubicVerts) {
+  //       corners.push(seg)
+  //     }
+  //     corners = corners
+  //       // .filter(s => !s.hasBothCubicVerts) // remove segments with both cubicVerts assigned
+  //       .sort((a, b) => a.minCubicLength - b.minCubicLength) // sort by smallest availableEndLength
+  //       .sort((a, b) => a.cubicVertCount - b.cubicVertCount) // sort by smallest cubicVertCount
+  //   }
+  //   console.error(`createCubicCorners outsideCorners`, outsideCorners)
+  //   console.error(`createCubicCorners insideCorners`, insideCorners)
+  //   return { outside: outsideCorners.compacted.unique([`id`]), inside: insideCorners.compacted.unique([`id`]) }
+  // }
 
   //MARK: MAXIMIZE CUDDLES
 
@@ -2045,6 +2050,7 @@ class Grid extends ProtoLayer {
             return
           } else {
             const origin = needsMiddle(s.startNeighbor) || needsMiddle(s.endNeighbor) ? viables.middle : viables.last
+            console.log(`concentric wrapping to ${origin.string}`)
             s.setEndConcOutWrapsOrigin(origin)
             if (s.outerMostRadiantWrapper.outWrapper) { s.outerMostRadiantWrapper.adjWrap() }
             // completeEnds(s.neighborsArray)
@@ -2370,20 +2376,29 @@ class Grid extends ProtoLayer {
     //ARROW: roundQuads()
     const roundQuads = (mode = 0, preserveQuads = true, wrap = true) => {
 
-      //ARROW: sumSides()
-      const perimeter = (segs) => segs.map(s => s.length).reduce((a, b) => a + b)
-
       let testPool = this.allSingleSimpleSubShapes
-        .filter(sub => sub.length === 4                     // filter for 4-sided shapes
-          && sub.some(s => s.isUTurnOut)                    // filter for Outside shapes only (UTurnOut)
-          && sub.every(seg => !seg.hasMinArcRadius)         // filter out minRadius shapes
+        .map(p => new SegPath(p))
+        .filter(p => p.isQuad                                  // filter for 4-sided shapes
+          && p.isOutsideShape                                  // filter for Outside shapes only (UTurnOut)
+          && !p.hasMinRadii                                   // filter out minRadius shapes
         )
-        .sort((a, b) => perimeter(b) - perimeter(a))        // sort smallest to largest
+        .sort((a, b) => b.perimeter - a.perimeter)        // sort smallest to largest
+
+      console.log(`quads`, testPool.map(p => p.shape.id))
+
+      testPool.forEach(segPath => {
+        console.error(`current segPath`, segPath.shape.id)
+        console.log(`current segPath start`, segPath.path[0].id)
+        // const segPath = new SegPath(p)
+        // console.log(`isComplete`, segPath.isComplete)
+        // console.log(`isQuad`, segPath.isQuad)
+        // console.log(`isOutsideShape`, segPath.isOutsideShape)
+        // console.log(`hasLoosies`, segPath.hasLoosies)
+        // console.log(`perimeter`, segPath.perimeter)
+        if (preserveQuads) { segPath.makeCurves() }
 
 
-      console.log(`quads`, testPool)
-
-
+      })
 
 
       // let processed = new OpArray
@@ -2427,52 +2442,52 @@ class Grid extends ProtoLayer {
 
 
     //TODO: DELETE WHEN DONE: only kept as ref to safeArrayWhile() and 'changed' implementations
-    //ARROW: fixLooseCorners()
-    const fixLooseCorners = (testPool = this.allLooseCorners()) => {
-      console.warn(`allLooseCorners`, testPool.map(s => s.id))
+    //ARROW: fixLooseCorners()                                                                          //UNUSED:
+    // const fixLooseCorners = (testPool = this.allLooseCorners()) => {
+    //   console.warn(`allLooseCorners`, testPool.map(s => s.id))
 
-      const conditionFunc = () => { return testPool }
-      const action = () => {
-        console.log(``)
-        console.log(`loosie count`, testPool.length)
-        let loosie = testPool.pop()
-        console.log(`loosie in loop`, loosie)
+    //   const conditionFunc = () => { return testPool }
+    //   const action = () => {
+    //     console.log(``)
+    //     console.log(`loosie count`, testPool.length)
+    //     let loosie = testPool.pop()
+    //     console.log(`loosie in loop`, loosie)
 
-        let changed
-        let flat = roundToDec(loosie.flatAmount, 1)
-        const localWrap = () => {
-          loosie.removeEndCornerVerts()
-          changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
-        }
-        if (loosie.inWrappers) {
-          const innerMost = loosie.innerMostWrapper
-          console.log(`attempting outWrap on ${innerMost.id}`)
-          console.log(`innerMost`, innerMost)
-          innerMost.removeEndCornerVerts()
-          changed =
-            this.createCubicCorners({ subShapes: [innerMost], outWrap: true, radiant: true, replace: true })
-        } else {
-          localWrap()
-        }
-        loosie.matchEndCorner()
-        // console.log(`loosie`, loosie)
-        // console.log(`flat: ${flat}, new flatAmount: ${loosie.flatAmount}`)
-        // if (loosie.hasLooseCorner) {
-        //   console.log(`attempting localWrap()`)
-        //   localWrap()
-        // }
+    //     let changed
+    //     let flat = roundToDec(loosie.flatAmount, 1)
+    //     const localWrap = () => {
+    //       loosie.removeEndCornerVerts()
+    //       changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
+    //     }
+    //     if (loosie.inWrappers) {
+    //       const innerMost = loosie.innerMostWrapper
+    //       console.log(`attempting outWrap on ${innerMost.id}`)
+    //       console.log(`innerMost`, innerMost)
+    //       innerMost.removeEndCornerVerts()
+    //       changed =
+    //         this.createCubicCorners({ subShapes: [innerMost], outWrap: true, radiant: true, replace: true })
+    //     } else {
+    //       localWrap()
+    //     }
+    //     loosie.matchEndCorner()
+    //     // console.log(`loosie`, loosie)
+    //     // console.log(`flat: ${flat}, new flatAmount: ${loosie.flatAmount}`)
+    //     // if (loosie.hasLooseCorner) {
+    //     //   console.log(`attempting localWrap()`)
+    //     //   localWrap()
+    //     // }
 
-        console.log(`changed loosies`, changed)
-        completeEnds()
+    //     console.log(`changed loosies`, changed)
+    //     completeEnds()
 
-        testPool = testPool
-          .union(changed.outside, [`id`])
-          .union(changed.inside, [`id`])
-          .unique([`id`])
-        testPool = this.allLooseCorners(testPool)
-      }
-      safeArrayWhile(conditionFunc, action)
-    }
+    //     testPool = testPool
+    //       .union(changed.outside, [`id`])
+    //       .union(changed.inside, [`id`])
+    //       .unique([`id`])
+    //     testPool = this.allLooseCorners(testPool)
+    //   }
+    //   safeArrayWhile(conditionFunc, action)
+    // }
 
     //MARK: fixIssues()
     //ARROW: fixIssuess()
@@ -2483,19 +2498,22 @@ class Grid extends ProtoLayer {
       console.warn(`wrapInnerMost`)                                                                       //LOGGING:
       wrapInnerMost()
       console.warn(`curveMinRadiusCorners`)                                                               //LOGGING:
-      this.curveMinRadiusCorners()
+      // this.curveMinRadiusCorners()
       console.warn(`completeEnds`)                                                                        //LOGGING:
-      completeEnds()
+      // completeEnds()
 
       console.warn(`fixBadAdjWraps`)
-      fixBadAdjWraps()
+      // fixBadAdjWraps()
       console.warn(`fixBadColWraps`)
-      fixBadColWraps()
+      // fixBadColWraps()
       console.warn(`fixLoosies`)
-      fixLoosies()
+      // fixLoosies()
 
       console.warn(`roundQuads`)                                                                          //LOGGING:
       // roundQuads()
+
+      console.warn(`fixBadColWraps`)
+      // fixBadColWraps()
     }
 
     console.error(`FIX Issues 1`)                                                                         //LOGGING:
@@ -3606,7 +3624,7 @@ class Cell extends ProtoLayer {
   get x() { return this.coords.x }
   get y() { return this.coords.y }
   get taken() { return !this.available }
-  get isInAnIsland() { return this.grid.cellIsInAnIsland(this.index) }                          // UNUSED
+  // get isInAnIsland() { return this.grid.cellIsInAnIsland(this.index) }                                    //UNUSED:
   get hasAUTurn() { return this.segments.some(seg => seg.isUTurn) }
   get hasAStair() { return this.segments.some(seg => seg.isStair) }
   get hasACorner() { return this.segments.some(seg => seg.isCorner) }
@@ -4369,9 +4387,9 @@ class Shape extends ProtoLayer {
     // .flat()
   }
 
-  // get hasFlatness() { return this.allSimpleSegs.some(s => s.hasFlatness) }              // UNUSED
-  // get canCurveMore() { return this.allSimpleSegs.some(s => s.canCurveMore) }            // UNUSED
-  // get segsThatCanCurveMore() { return this.allSimpleSegs.filter(s => s.canCurveMore) }  // UNUSED
+  // get hasFlatness() { return this.allSimpleSegs.some(s => s.hasFlatness) }                               //UNUSED:
+  // get canCurveMore() { return this.allSimpleSegs.some(s => s.canCurveMore) }                             //UNUSED:
+  // get segsThatCanCurveMore() { return this.allSimpleSegs.filter(s => s.canCurveMore) }                   //UNUSED:
 
   get minCornerRadius() { return min(this.allSimpleSegs.map(s => s.startCornerRadius)) }
   get maxCornerRadius() { return max(this.allSimpleSegs.map(s => seg.startCornerRadius)) }
@@ -4444,9 +4462,9 @@ class Shape extends ProtoLayer {
     }, `svg`).call(this)
   }
 
-  get svgPath() { return `path('${this.svg}')` }
+  // get svgPath() { return `path('${this.svg}')` }                                                         //UNUSED:
 
-  // get perimeter() {
+  // get perimeter() {                                                                                      //UNUSED:
   //   let result = this.subShapes.map(e =>
   //     SVGPath.fromSegPath({ segPath: e, refine: false, straightness: 1 })
   //   )
@@ -4457,7 +4475,7 @@ class Shape extends ProtoLayer {
   // }
   // get perimeterPath() { return `path('${this.perimeter}')` }
 
-  get extractedVerts() { return extractVerts(this.svg) }
+  // get extractedVerts() { return extractVerts(this.svg) }                                                 //UNUSED:
 
   // MARK: methods
   // #region methods
