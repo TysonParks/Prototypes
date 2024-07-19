@@ -203,10 +203,66 @@ class SegPath {
   constructor(path) {
     this.path = path
   }
+  //MEMO: isComplete()
+  get isComplete() {
+    return memoize(() => {
+      return this.path.first.start.equals(this.path.last.end, 1)
+    }, `isComplete`).call(this)
+  }
+  //MEMO: isQuad()
+  get isQuad() {
+    return memoize(() => {
+      return this.isComplete && this.path.length === 4
+    }, `isQuad`).call(this)
+  }
+  //MEMO: hasMinRadii()
+  get hasMinRadii() {
+    return memoize(() => {
+      return this.path.every(s => s.hasMinArcRadius)
+    }, `hasMinRadii`).call(this)
+  }
+  //MEMO: isOutsideShape()
+  get isOutsideShape() {
+    return memoize(() => {
+      return this.path.some(s => s.isUTurnOut)
+    }, `isOutsideShape`).call(this)
+  }
+  //MEMO: perimeter()
+  get perimeter() {
+    return memoize(() => {
+      return this.path.map(s => s.length).reduce((a, b) => a + b)
+    }, `perimeter`).call(this)
+  }
+  //MEMO: shape()
+  get shape() {
+    return memoize(() => {
+      return this.path[0].shape
+    }, `shape`).call(this)
+  }
 
-  get isComplete() { return this.path.first.start.equals(this.path.last.end, 1) }
-  get isQuad() { return this.isComplete && this.path.length === 4 }
 
+  get hasLoosies() { return this.path.some(s => s.canCurveMoreAtEnd) }
+
+  //MARK: Quad Methods
+  makeCurves(equal = true, max = true, outWrap = true) {
+    // let radius
+    // if (equal && max) { radius = min(...this.path.map(s => s.length / 2)) }
+    this.path.forEach(s => {
+      // console.log(s.middleArcOrigin)
+      if (equal && max) {
+        if (outWrap) {
+          s.replaceEndConcOutWrapsOrigin(s.middleArcOrigin)
+        } else {
+          s.replaceEndCurveOrigin(s.middleArcOrigin)
+          s.colWrap(true)
+        }
+
+      }
+    })
+  }
+
+
+  //MARK: REFINE Methods
   //METH: refine() : remove collinear segments to simplify seg path to single segments connecting corners
   refined(parentID, minCorners = false, grid) {
     let report = true // DEBUG
@@ -1247,27 +1303,27 @@ class ProtoSegment extends Segment {
     this.addCubicEndVert(this.mid)
   }
 
-  addCubicStartVert(vert, radiant = true, replace = false) { this.#addCubicVert(vert, true, !radiant, replace) }
-  addCubicEndVert(vert, radiant = true, replace = false) { this.#addCubicVert(vert, false, !radiant, replace) }
+  addCubicStartVert(vert, replace = false, radiant = true) { this.#addCubicVert(vert, true, replace, radiant) }
+  addCubicEndVert(vert, replace = false, radiant = true) { this.#addCubicVert(vert, false, replace, radiant) }
 
-  addDistancedCubicStartVert(distance, radiant = true, replace = false) {
-    this.addCubicStartVert(this.distancedStartPoint(distance), radiant, replace)
+  addDistancedCubicStartVert(distance, replace = false, radiant = true) {
+    this.addCubicStartVert(this.distancedStartPoint(distance), replace, radiant)
   }
-  addDistancedCubicEndVert(distance, radiant = true, replace = false) {
-    this.addCubicEndVert(this.distancedEndPoint(distance), radiant, replace)
+  addDistancedCubicEndVert(distance, replace = false, radiant = true) {
+    this.addCubicEndVert(this.distancedEndPoint(distance), replace, radiant)
   }
 
-  addDistancedStartCornerVerts(distance, radiant = true, replace = false) {
-    this.neighbors.start.addDistancedCubicEndVert(distance, radiant, replace)
-    this.addDistancedCubicStartVert(distance, radiant, replace)
+  addDistancedStartCornerVerts(distance, replace = false, radiant = true) {
+    this.neighbors.start.addDistancedCubicEndVert(distance, replace, radiant)
+    this.addDistancedCubicStartVert(distance, replace, radiant)
   }
-  addDistancedEndCornerVerts(distance, radiant = true, replace = false) {
-    this.addDistancedCubicEndVert(distance, radiant, replace)
-    this.neighbors.end.addDistancedCubicStartVert(distance, radiant, replace)
+  addDistancedEndCornerVerts(distance, replace = false, radiant = true) {
+    this.addDistancedCubicEndVert(distance, replace, radiant)
+    this.neighbors.end.addDistancedCubicStartVert(distance, replace, radiant)
   }
-  addBothDistancedCornerVerts(distance, radiant = true, replace = false) {
-    this.addDistancedStartCornerVerts(distance, radiant, replace)
-    this.addDistancedEndCornerVerts(distance, radiant, replace)
+  addBothDistancedCornerVerts(distance, replace = false, radiant = true) {
+    this.addDistancedStartCornerVerts(distance, replace, radiant)
+    this.addDistancedEndCornerVerts(distance, replace, radiant)
   }
 
   // removeCubicStartVert() { this.#removeCubicVert() }
@@ -1285,35 +1341,35 @@ class ProtoSegment extends Segment {
   replaceCubicStartVert(vert) { this.#replaceCubicVert(vert) }
   replaceCubicEndVert(vert) { this.#replaceCubicVert(vert, false) }
 
-  matchStartCorner() {
-    // const start = this.startNeighbor
-    // const neighborEnd = start.hasNoCubicVerts ? start.maxCubicStartLength : start.availableStartLength
-    const startMin = min(this.availableStartLength, this.startNeighbor.availableStartLength)
-    this.addDistancedStartCornerVerts(startMin)
-  }
+  // matchStartCorner() {                                                                                   //UNUSED:
+  //   // const start = this.startNeighbor
+  //   // const neighborEnd = start.hasNoCubicVerts ? start.maxCubicStartLength : start.availableStartLength
+  //   const startMin = min(this.availableStartLength, this.startNeighbor.availableStartLength)
+  //   this.addDistancedStartCornerVerts(startMin, true)
+  // }
   matchEndCorner() {
     // const end = this.endNeighbor
     // const neighborStart = end.hasNoCubicVerts ? end.maxCubicStartLength : end.availableStartLength
     const endMin = min(this.availableEndLength, this.endNeighbor.availableStartLength)
-    this.addDistancedEndCornerVerts(endMin, true, true)
+    this.addDistancedEndCornerVerts(endMin, true)
   }
-  matchCorners() {
-    this.matchStartCorner()
-    this.matchEndCorner()
-  }
-  matchNeighborCorners() {
-    this.matchStartCorner()
-    this.endNeighbor.matchEndCorner()
-  }
+  // matchCorners() {                                                                                    //UNUSED:
+  //   this.matchStartCorner()
+  //   this.matchEndCorner()
+  // }
+  // matchNeighborCorners() {                                                                            //UNUSED:
+  //   this.matchStartCorner()
+  //   this.endNeighbor.matchEndCorner()
+  // }
   setMinEndCorner() { this.addDistancedEndCornerVerts(this.cellRadius) }
-  setMinStartCorner() { this.addDistancedStartCornerVerts(this.cellRadius) }
-  setMinCorners() { this.addBothDistancedCornerVerts(this.cellRadius) }
+  // setMinStartCorner() { this.addDistancedStartCornerVerts(this.cellRadius) }                          //UNUSED:
+  // setMinCorners() { this.addBothDistancedCornerVerts(this.cellRadius) }                               //UNUSED:
 
 
-  // setStartCurveOrigin(vert) { return this.#setCurveOrigin(vert, true) }
+  // setStartCurveOrigin(vert) { return this.#setCurveOrigin(vert, true) }                               //UNUSED:
   setEndCurveOrigin(vert) { return this.#setCurveOrigin(vert, false) }
 
-  // replaceStartCurveOrigin(vert) { return this.#setCurveOrigin(vert, true, true) }
+  // replaceStartCurveOrigin(vert) { return this.#setCurveOrigin(vert, true, true) }                     //UNUSED:
   replaceEndCurveOrigin(vert) { return this.#setCurveOrigin(vert, false, true) }
 
   setEndConcOutWrapsOrigin(vert) { this.#setConcentricsOrigin(vert, false) }
@@ -1328,7 +1384,7 @@ class ProtoSegment extends Segment {
   #setCurveOrigin(toVert, start, replace = false, radiant = true) {
     const seg = start ? this.startNeighbor : this             // seg/corner to reference
     let report = false                                                                                  //LOGGING:
-    // if (this.id.includes('cell156')                                                                     //LOGGING:
+    // if (this.id.includes('cell098')                                                                     //LOGGING:
     //   // || s.id.includes('cell008')                                                                       //LOGGING:
     //   // || s.id.includes('cell001')                                                                       //LOGGING:
     // ) { report = true }                                                                                 //LOGGING:
@@ -1346,15 +1402,17 @@ class ProtoSegment extends Segment {
         console.log(`intersect`, intersect)                                                             //LOGGING:
         console.log(`newRadius`, newRadius)                                                             //LOGGING:
       }
-      seg.addDistancedEndCornerVerts(newRadius, radiant, replace)
+      seg.addDistancedEndCornerVerts(newRadius, replace, radiant)
     }
   }
   //METH: #addCubicVert()
-  #addCubicVert(vert, start, max = false, replace = false) {
+  #addCubicVert(vert, start, replace = false, radiant = true) {
+
+    if (!radiant) { console.error(`radiant = false`, this) }
     let report = false
     const mode = start ? 'Start' : `End`
     // if (
-    //   this.id.includes('cell156')                                                                       //LOGGING:
+    //   this.id.includes('cell098')                                                                       //LOGGING:
     //   // || this.id.includes('cell008')                                                                    //LOGGING:
     //   // || this.id.includes('cell001')                                                                    //LOGGING:
     // ) { report = true }                                                                                 //LOGGING:
@@ -1366,7 +1424,7 @@ class ProtoSegment extends Segment {
       if (this.availableEndLength) { console.log(`availableEndLength: ${this.availableEndLength}`) }    //LOGGING:
     }
     let cubicVert
-    if (!max) {
+    if (radiant) {
       cubicVert = start ? this.cubicVerts.start : this.cubicVerts.end
     } else {
       cubicVert = start ? this.maxCubicVerts.start : this.maxCubicVerts.end
@@ -1384,13 +1442,14 @@ class ProtoSegment extends Segment {
         const terminus = start ? this.start : this.end
         if (vert.dist(terminus) >= cubicVert.dist(terminus)) { return }
       }
-      if (!max) {
+      if (radiant) {
         if (start) {
           this.cubicVerts.start = vert
         } else {
           this.cubicVerts.end = vert
         }
       } else {
+        console.warn(`max verts called!!!`)
         if (start) {
           this.maxCubicVerts.start = vert
         } else {
@@ -1415,8 +1474,8 @@ class ProtoSegment extends Segment {
   //   this.#resetMemoProps()
   // }
   //METH: #replaceCubicVert()
-  #replaceCubicVert(vert, start = true, max = false) {
-    this.#addCubicVert(vert, start, max, true)
+  #replaceCubicVert(vert, start = true, radiant = true) {
+    this.#addCubicVert(vert, start, true, radiant)
   }
   //METH: #resetMemoProps()
   #resetMemoProps(andNeighbors = true) {
@@ -1488,8 +1547,8 @@ class ProtoSegment extends Segment {
   //   console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
   //   this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
   // }
-  addMaxStartVert(vert, replace = false) { this.#addCubicVert(vert, true, true, replace) }
-  addMaxEndVert(vert, replace = false) { this.#addCubicVert(vert, false, true, replace) }
+  // addMaxStartVert(vert, replace = false) { this.#addCubicVert(vert, true, replace, false) }             //UNUSED:
+  // addMaxEndVert(vert, replace = false) { this.#addCubicVert(vert, false, replace, false) }              //UNUSED:
   // #endregion
   //MARK: Combined Cubic Verts
   // #region Combined Cubic Verts
@@ -1593,7 +1652,7 @@ class ProtoSegment extends Segment {
       const radius = min(this.length, this.endNeighbor.length) / 2
       const arcStartCorner = this.distancedEndPoint(radius)
       const arcEndCorner = this.endNeighbor.distancedEndPoint(radius)
-      return Vertex.add(arcStartCorner, segment(this.arcNormalCorner, this.arcEndCorner).lineVector)
+      return Vertex.add(arcStartCorner, segment(this.arcNormalCorner, arcEndCorner).lineVector)
     }, `middleArcOrigin`).call(this)
   }
   //MEMO: arcOriginToStart
