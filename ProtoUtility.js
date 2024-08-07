@@ -569,18 +569,22 @@ function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, just
   }
 }
 // FUNC: boundsOverlap() : BOUNDS : finds overlap of two pieces of GEO
-function boundsOverlap(...geo) {
+function boundsOverlap({ geo, accuracy = 3 } = {}) {
+  // console.log(`boundsOverlap geo`, geo)                                                                          //LOGGING:
   let boundsArray
 
   if (Array.isArray(geo[0])) {
+    // console.log(`boundsOverlap found subArray`)
     boundsArray = geo[0]
   } else {
     boundsArray = geo
   }
   //ARROW: overlap(geo1, geo2)
   const overlap = (geo1, geo2) => {
-    const bounds1 = findBounds(geo1)
-    const bounds2 = findBounds(geo2)
+    const bounds1 = findBounds(geo1).map(v => roundToDec(v, accuracy))
+    const bounds2 = findBounds(geo2).map(v => roundToDec(v, accuracy))
+    // console.log(`overlap() bounds1`, bounds1)
+    // console.log(`overlap() bounds2`, bounds2)
 
     const minOverlap = vert(max(bounds1.xMin, bounds2.xMin), max(bounds1.yMin, bounds2.yMin))
     const maxOverlap = vert(min(bounds1.xMax, bounds2.xMax), min(bounds1.yMax, bounds2.yMax))
@@ -590,14 +594,19 @@ function boundsOverlap(...geo) {
     return findBounds(minOverlap, maxOverlap)
   }
 
+
   if (boundsArray.length === 0) return
-  const initialBounds = boundsArray[0]          // Initial bounds should be the first geo's bounds
+  // console.error(`boundsArray`, boundsArray)
+
+  const initialBounds = boundsArray[0]        // Initial bounds should be the first geo's bounds
 
   // Reduce over the geo array to find the cumulative overlap
-  const result = boundsArray.slice(1).reduce((prevBounds, currentGeo) => {
-    if (!prevBounds) return null
-    return overlap(prevBounds, currentGeo)
-  }, initialBounds)
+  const result = boundsArray
+    // .slice(1)                                    //FIXME: this might be breaking things, re-enable if so
+    .reduce((prevBounds, currentGeo) => {
+      if (!prevBounds) return null
+      return overlap(prevBounds, currentGeo)
+    }, initialBounds)
 
   if (!result) return
 
@@ -763,9 +772,9 @@ function swapVals(a, b) {
   b = temp
 }
 // FUNC: equalsRoundedDec() round to number of decimal places
-function equalsRoundedDec(num1, num2, decimalPlaces) {
-  num1 = roundToDec(num1, decimalPlaces)
-  num2 = roundToDec(num2, decimalPlaces)
+function equalsRoundedDec(num1, num2, accuracy) {
+  num1 = roundToDec(num1, accuracy)
+  num2 = roundToDec(num2, accuracy)
   return num1 === num2
 }
 
