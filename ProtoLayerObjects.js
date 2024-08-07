@@ -598,6 +598,46 @@ class SelectionBounds {
       })
   }
 
+  //MEMO: cellPoints
+  get cellPoints() {
+    return memoize(() => {
+      return this.selection
+        .map(c => c.points).flat()
+        .unique(`id`)
+        .gridVertSorted
+    }, `cellPoints`).call(this)
+  }
+  //MEMO: xGuidePoints
+  get xGuidePoints() {
+    return memoize(() => {
+      return this.upRowCells
+        .map(c => c.sides.up.points).flat()
+        .unique(`id`)
+      // .gridVertSorted
+    }, `xGuidePoints`).call(this)
+  }
+  //MEMO: yGuidePoints
+  get yGuidePoints() {
+    return memoize(() => {
+      return this.leftColCells
+        .map(c => c.sides.left.points).flat()
+        .unique(`id`)
+        .gridVertSorted
+    }, `yGuidePoints`).call(this)
+  }
+  //MEMO: xGuides
+  get xGuides() {
+    return memoize(() => {
+      return this.xGuidePoints.map(c => c.x).flat()
+    }, `xGuides`).call(this)
+  }
+  //MEMO: yGuides
+  get yGuides() {
+    return memoize(() => {
+      return this.yGuidePoints.map(c => c.y).flat()
+    }, `yGuides`).call(this)
+  }
+
   get cellsCentroid() { return Vertex.div(this.cellBoundsSize, 2) }
   get centroid() { return Vertex.mult(this.cellsCentroid, this.cellSize) }
   //#endregion
@@ -761,6 +801,12 @@ class Grid extends ProtoLayer {
     return memoize(() => {
       return this.cellRows.flat()
     }, `cells`).call(this)
+  }
+  //MEMO: cellPoints
+  get cellPoints() {
+    return memoize(() => {
+      return this.gridCellBounds.cellPoints
+    }, `cellPoints`).call(this)
   }
 
   get cellColumns() { return this.cellRowsFlipped() }
@@ -1226,9 +1272,9 @@ class Grid extends ProtoLayer {
   // #region Grid Shape Methods
   //METH:
   createSimpleSubShapes() {
-    console.group(`GRID.createSimpleSubShapes called!!!`)
+    // console.group(`GRID.createSimpleSubShapes called!!!`)
     this.groups.forEach(g => g.createSimpleSubShapes())
-    console.groupEnd()
+    // console.groupEnd()
   }
   // #region end
 
@@ -1884,7 +1930,7 @@ class Grid extends ProtoLayer {
 
   //METH: maximizeCuddles()
   maximizeCuddles(nestleMode = 0, defaultPool = this.allSimpleSubShapesSegs, preserveQs = false, interGrid = false) {
-
+    console.log(`defaultPool`, defaultPool)
     //MARK: completeEnds()
     //ARROW: completeEnds()
     const completeEnds = (testPool = defaultPool) => {
@@ -1908,6 +1954,9 @@ class Grid extends ProtoLayer {
       .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
     const allInterferenceWrappers = allInterferenceWrapped.flat()
       .map(s => Object.values(s.interferenceWrappers)).flat().compacted
+    console.log(`allInterferenceWrapped`, allInterferenceWrapped)
+    console.log(`allInterferenceWrappers`, allInterferenceWrappers)
+
     //ARROW: wrapInterferenceCorners()
     const wrapInterferenceCorners = (testPool = allInterferenceWrapped, preserveQuads = preserveQs) => {
       console.warn(`allInterferenceWrapped`, testPool)                                                        //LOGGING:
@@ -1944,6 +1993,7 @@ class Grid extends ProtoLayer {
       //     }
       //   }
       // })
+      // return
 
       testPool.forEach(s => {
         //ARROW: setCurve()
@@ -1991,7 +2041,7 @@ class Grid extends ProtoLayer {
         } else {
           console.log(`NO viableInterferenceOrigins found!`)
         }
-        if (origin) {
+        if (origin && s.outerMostRadiantWrapper.canCurveTo(origin, true)) {
           console.log(`origin found!`, origin)
           s.setEndConcOutWrapsOrigin(origin)
           let { start, end } = s.interferenceWrappers
@@ -2008,8 +2058,10 @@ class Grid extends ProtoLayer {
     const wrapInnerMost = (testPool = defaultPool, preserveQuads = preserveQs) => {
       testPool = testPool
         .filter(s =>
-          !s.hasInterference                                           // interference wraps should be previously processed
-          && s.isInnerMostRadiantWrapper                               // only wrapping innerMostWrappers
+          //FIXME: removed !s.hasInterference to fix #469    
+          // !s.hasInterference                                     // interference wraps should be previously processed
+          // &&
+          s.isInnerMostRadiantWrapper                               // only wrapping innerMostWrappers
           && (s.colOutWrapper ? s.radiantOutWrappers.length > 1 : !!s) // filter out potential colWrap only
         )
         .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
@@ -2019,6 +2071,8 @@ class Grid extends ProtoLayer {
       console.warn(`allInnerMostWrappers`, testPool)
       console.warn(`allInnerMostWrappers outWrappers`, testPool.map(s => s.radiantOutWrappers.length))
       // console.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableRadiantOrigins))
+      // return
+
       testPool.forEach(s => {
 
         //ARROW: needsMiddle()
@@ -2028,11 +2082,12 @@ class Grid extends ProtoLayer {
             && seg.radiantOutWrappers.length > 1
         }
 
-        console.warn(`innerMost in queue`, s)                                                  //LOGGING:
-        // console.groupCollapsed(`innerMost in queue`, s)                                                  //LOGGING:
+        console.warn(`innerMost in queue`, s)                                                                 //LOGGING:
+        // console.groupCollapsed(`innerMost in queue`, s)                                                       //LOGGING:
         const viables = s.viableRadiantOrigins
-        console.log(`viableArcOrigins`, s.viableArcOrigins)                                           //LOGGING:
-        console.log(`viables`, viables)                                                               //LOGGING:
+        console.log(`viableArcOrigins`, s.viableArcOrigins)                                                   //LOGGING:
+        console.log(`currentViableArcOrigins`, s.currentViableArcOrigins)
+        console.log(`viableRadiants`, viables)                                                                //LOGGING:
 
         if (viables) {
           // let origin
@@ -2052,7 +2107,10 @@ class Grid extends ProtoLayer {
             const origin = needsMiddle(s.startNeighbor) || needsMiddle(s.endNeighbor) ? viables.middle : viables.last
             console.log(`concentric wrapping to ${origin.string}`)
             s.setEndConcOutWrapsOrigin(origin)
-            if (s.outerMostRadiantWrapper.outWrapper) { s.outerMostRadiantWrapper.adjWrap() }
+            if (s.outerMostRadiantWrapper.outWrapper) {
+              console.log(`outerMostRadiantWrapper`, s.outerMostRadiantWrapper)
+              s.outerMostRadiantWrapper.adjWrap()
+            }
             // completeEnds(s.neighborsArray)
           }
 
@@ -2071,8 +2129,10 @@ class Grid extends ProtoLayer {
         )
         .sort((a, b) => b.arcRadius - a.arcRadius)
       console.log(`badAdjWraps`, testPool)
+      // return
+
       testPool.forEach(s => {
-        console.warn(`badAdjWrap in queue:`, s)                                                //LOGGING:
+        console.warn(`badAdjWrap in queue:`, s)                                                          //LOGGING:
         // console.groupCollapsed(`badAdjWrap in queue:`, s)                                                //LOGGING:
 
         //ARROW: wrapOutFix()
@@ -2094,8 +2154,11 @@ class Grid extends ProtoLayer {
 
         if (s.isOutWrappedToConcentrics) {                      // bail if s is already wrapped to outer concentrics
           console.log(`is outWrapped to concentrics`)                                                      //LOGGING:
-          if (s.inWrapper.isInWrapped || s.inWrapper.isInWrappedToConcentrics) {
+          if ((s.inWrapper.isInWrapped || s.inWrapper.isInWrappedToConcentrics)
+            && s.neighborsArray.every(n => !n.isInWrappedToConcentrics)
+          ) {
             console.log(`inWrapper is inWrapped to concentrics`)                                           //LOGGING:
+            // console.log(`neighbors`, s.neighborsArray.map(n => n.isInWrappedToConcentrics))                //LOGGING:
             const inner = s.inWrapper.innerMostRadiantWrapper
             inner.replaceEndConcOutWrapsOrigin(inner.viableRadiantOrigins?.last)
             completeEnds(inner.andNeighborsArray)
@@ -2119,7 +2182,9 @@ class Grid extends ProtoLayer {
           if (s.canCurveMoreAtEnd) {
             console.log(`curve outer more with wrapOutFix()`)
             wrapOutFix()
-          } else if (canWrapIn && s.inWrapper.canCurveLessAtEnd) {
+          } else if (canWrapIn
+            && s.inWrapper.canCurveTo(s.arcOrigin)
+          ) {
             console.log(`curve inner less with wrapInFix()`)
             wrapInFix()
           } else {
@@ -2141,6 +2206,7 @@ class Grid extends ProtoLayer {
           && s.colWrapIsNonEquidistant
         )
       console.log(`badColWraps`, testPool)
+      // return
       testPool.forEach(s => {
 
         //ARROW: wrapOutFix()
@@ -2157,7 +2223,11 @@ class Grid extends ProtoLayer {
         }
         //ARROW: wrapInFix()
         const wrapInFix = () => {
+          console.log(`using wrapInFix`)
           s.inWrapper.replaceEndCurveOrigin(s.arcOrigin)
+          if (s.inWrapper.radiantOutWrappers?.some(o => !s.isConcentricWrapped(o) && s.canRadiateTo(o))) {
+            s.inWrapper.replaceEndConcOutWrapsOrigin()
+          }
         }
 
         if (s.colWrapIsConverging) {
@@ -2179,93 +2249,195 @@ class Grid extends ProtoLayer {
     //MARK: fixLoosies()
     //ARROW: fixLoosies()
     const fixLoosies = (testPool = defaultPool, balanced = true, respectAdjacents = true, loners = true, ignoreMinRadius = true) => {
-      testPool = testPool
-        .filter(s =>
-          s.canCurveMoreAtEnd                                                 // main defining property of a loosie
-          && !s.isEdgeOfQuad                                                  // roundQuads() handles quad corners
-          && (s.hasNoWrappers || s.isInnerMostWrapper || s.isOuterMostWrapper)// 3 main categories, inbetweens not needed
-          // && !s.hasInterference
-          // && !s.innerMostRadiantWrapper?.hasInterference
-        )
-        .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
-        .sort((a, b) => (a.radiantOutWrappers?.length || 0) - (b.radiantOutWrappers?.length || 0))
-      // .sort((a, b) => !!a.radiantOutWrappers - !!b.radiantOutWrappers)
 
-      console.log(`loosies`, testPool)
+      //ARROW: filterPool()
+      const filterPool = (pool) => {
+        return pool
+          .filter(s =>
+            s.canCurveMoreAtEnd                                                 // main defining property of a loosie
+            && !s.isEdgeOfQuad                                                  // roundQuads() handles quad corners
+            && (s.hasNoWrappers || s.isInnerMostWrapper || s.isOuterMostWrapper)// 3 main categories, inbetweens not needed
+            // && !s.hasInterference
+            // && !s.innerMostRadiantWrapper?.hasInterference
+          )
+          .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
+          .sort((a, b) => {
+            const radiantsCount = (s) => { s.radiantOutWrappers?.length || s.radiantInWrappers?.length || 0 }
+            return radiantsCount(a) - radiantsCount(b)
+          })
+          .sort((a, b) => b.isOutsideCorner - a.isOutsideCorner)
+      }
+
+      testPool = filterPool(testPool)
+
+      console.log(`loosies`, testPool.map(s => s.id))
       console.log(`loosies outWrappers`, testPool.map(s => s.outWrappers?.length))
       // return
 
-      //FIXME: STILL NEED TO FIX DIVERGE IN 258
-      testPool.forEach(s => {
-        console.log(`current seg`, s)
+      let processed = new OpArray
+
+      // const conditionFunc = () => { return testPool }
+      // const action = () => {
+
+
+      while (testPool.length > 0) {
+        const s = testPool.shift()
+
+        // testPool.forEach(s => {
+        console.error(`current loosie`, s)
+        // return
+
+        //ARROW: minRadFix()
+        const minRadFix = () => {
+          console.log(`minRadFix()`)
+          if (s.neighborsArray.some(n =>
+            n.canCurveMoreAtEnd
+            && n.collinearWrapper.canCurveMoreAtEnd
+          )) {          // check and curve neighbor fully
+            if (balanced) {
+              console.log(`balanced fix`)
+              if (s.canCurveToMiddleOrigin) {
+                if (s.startNeighbor.canCurveToMiddleOrigin) {
+                  s.startNeighbor.setArcToMiddle()
+                  s.setArcToMiddle()
+                  s.endNeighbor.replaceEndCurveOrigin(s.endNeighbor.currentMaxArcOrigin)
+                } else if (s.endNeighbor.canCurveToMiddleOrigin) {
+                  s.setArcToMiddle()
+                  s.endNeighbor.setArcToMiddle()
+                  // console.log(`hasArc`, s.startNeighbor.hasArc)
+                  // console.log(`flatAmount`, s.startNeighbor.flatAmount)
+                  // console.log(`arcOrigin`, s.startNeighbor.arcOrigin)
+                  // console.log(`currentMaxArcOrigin`, s.startNeighbor.currentMaxArcOrigin)
+                  s.startNeighbor.replaceEndCurveOrigin(s.startNeighbor.currentMaxArcOrigin)
+                }
+              }
+            } else {
+              console.log(`Unbalanced fix`)
+              if (s.startNeighbor.canCurveMoreAtEnd) {                      // check startNeighbor
+                s.startNeighbor.replaceEndConcOutWrapsOrigin(s.startNeighbor.currentMaxArcOrigin)
+              }
+              if (s.endNeighbor.canCurveMoreAtEnd) {                        // check endNeighbor
+                s.endNeighbor.replaceEndConcOutWrapsOrigin(s.endNeighbor.currentMaxArcOrigin)
+              }
+
+            }
+            if (ignoreMinRadius) {                                        // check if this can still curve more
+              s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+            }
+
+            // fixBadAdjWraps(s.segPath)
+            fixBadColWraps(s.segPath)
+          } else {
+            //TODO: Might need to add constraints to this!
+            if (s.canCurveMoreAtEnd) {
+              s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+            }
+          }
+        }
 
         // case: s.hasNoWrappers
         if (s.hasNoWrappers && loners) {
           console.log(`loners fix`)
-          s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+          if (s.isOutsideCorner && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)) {
+            minRadFix()
+          } else {
+            s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+          }
         }
 
         // case: s.isInnerMostWrapper
         if (s.isInnerMostWrapper) {
           console.log(`s.isInnerMostWrapper`)
-          if (s.isOutsideCorner && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)) {  // minRadius outWrappers
-            console.log(`minRadius fix`)
 
-            if (s.isOutWrappedToConcentrics) {
+          if (s.isOutsideCorner && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)) {  // case:  this has minRadius 
+            console.log(`this has minRadius`)
+
+            if (s.isOutWrappedToConcentrics && !s.outWrapper.hasMinArcRadius) {
               console.log(`outwrapping`)
-              s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+              if (s.viableRadiantOrigins?.some(v => v.equals(s.currentMaxArcOrigin, 1))) {
+                s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+              }
             } else {
-
               if (s.outWrapper.hasMinArcRadius && s.canCurveMoreAtEnd) {        // case: tucked inside minRadius corner
                 console.log(`maximizing neighbor curves first`)
-                if (s.neighborsArray.some(n => n.canCurveMoreAtEnd)) {          // check and curve neighbor fully
-                  if (s.startNeighbor.canCurveMoreAtEnd) {                      // check startNeighbor
-                    // s.startNeighbor.replaceEndCurveOrigin(s.startNeighbor.currentMaxArcOrigin)
-                    s.startNeighbor.replaceEndConcOutWrapsOrigin(s.startNeighbor.currentMaxArcOrigin)
-                  }
-                  if (s.endNeighbor.canCurveMoreAtEnd) {                        // check endNeighbor
-                    // s.endNeighbor.replaceEndCurveOrigin(s.endNeighbor.currentMaxArcOrigin)
-                    s.endNeighbor.replaceEndConcOutWrapsOrigin(s.endNeighbor.currentMaxArcOrigin)
-                  }
-                  if (ignoreMinRadius) {                                        // check if this can still curve more
-                    s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
-                  }
-                }
+                minRadFix()
               }
               else if (ignoreMinRadius && s.currentMaxArcRadius > 3 * s.cellRadius) {
                 // s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
                 s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
               }
+              else {
+                minRadFix()
+              }
             }
           }
 
-          if (s.outWrapper.id !== s.outWrapper.inWrapper.id) {  // case: this isn't the inWrapper to this outWrapper
+          if (s.id !== s.outWrapper.inWrapper.id) {  // case: this isn't the inWrapper to this outWrapper
+            console.log(`this isn't the inWrapper to this outWrapper`)
             s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
             s.colWrap(true)
             s.radiantOutWrappers?.forEach(o => {
               if (o.canCurveMoreAtEnd) { o.replaceEndCurveOrigin(s.currentMaxArcOrigin) }
             })
-          } else if (s.radiantOutWrappers?.some(w => w.canCurveMoreAtEnd)) {
+          }
+
+          //TODO: Might need to refine further, it fixes #393 and #390
+          if (s.radiantOutWrappers?.every(w => w.canCurveMoreAtEnd)) {
             console.log(`outWrappers fix`)
             s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+          }
+
+          const outWrapper = s.inOutColWrappers[1]
+          if (s.colWrapIsEquidistant && outWrapper.radiantOutWrappers) { // case: colWrapped & has rad outWrappers
+            console.log(`colWrapped & has rad outWrappers`)
+            console.log(`outWrapper`, outWrapper)
+
+            if (outWrapper.canCurveMoreAtEnd                            // outWrapper can STILL curve more
+              && !outWrapper.isOutWrappedToConcentrics                  // outWrapper is not outwrapped to concentrics
+              && outWrapper.radiantOutWrappers.every(ro => !ro.canCurveMoreAtEnd)) { // radiant outWrappers can't curve more
+              outWrapper.replaceEndCurveOrigin(outWrapper.currentMaxArcOrigin)
+              outWrapper.colWrap(true)
+            }
           }
         }
 
         // case: s.isOuterMostWrapper
         if (s.isOuterMostWrapper) {
           console.log(`s.isOuterMostWrapper`)
-          if (s.radiantInWrappers                            // case: has radiantInWrappers but is not inWrapped
-            && !s.isInWrapped
-            && !s.isInWrappedToConcentrics) {
+          if (s.radiantInWrappers                            // case: has radiantInWrappers
+            // && !s.isInWrapped
+            // && !s.isInWrappedToConcentrics
+          ) {
             console.log(`inWrappers fix`)
-            s.innerMostRadiantWrapper.replaceEndConcOutWrapsOrigin()
-          } else {
-            s.inWrapper.adjWrap()
+            console.log(`innerMostRadiantWrapper`, s.innerMostRadiantWrapper)
+            if (s.isInWrapped && s.isInWrappedToConcentrics) {
+              s.inWrapper.adjWrap()
+            }
+            else if (s.canCurveTo(s.innerMostRadiantWrapper.currentMaxArcOrigin), true) {
+              console.log(`case1 viables`, s.currentViableArcOrigins)
+              // console.log(`case1 currentMaxArcOrigin`, s.innerMostRadiantWrapper.currentMaxArcOrigin)
+              s.innerMostRadiantWrapper.replaceEndConcOutWrapsOrigin(s.innerMostRadiantWrapper.currentMaxArcOrigin)
+            }
+            else if (s.innerMostRadiantWrapper.canCurveTo(s.currentMaxArcOrigin), true) {
+              console.log(`case2 viables`, s.innerMostRadiantWrapper.currentViableArcOrigins)
+              // console.log(`case2 currentMaxArcOrigin`, s.currentMaxArcOrigin)
+              s.innerMostRadiantWrapper.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+            }
           }
         }
 
         // else { console.log(`skipped: no cases met`) }
-      })
+        testPool = testPool
+          .union(s.neighborsArray, `id`)
+          .exclude(processed, `id`)
+        console.log(`add neighbors testPool`, testPool)
+        testPool = filterPool(testPool)
+        console.log(`filtered testPool`, testPool)
+        processed.push(s)
+      }
+      // safeArrayWhile(conditionFunc, action)
+      // fixBadAdjWraps()
+      fixBadColWraps()
     }
 
     //MARK: QUAD SHAPES
@@ -2382,23 +2554,42 @@ class Grid extends ProtoLayer {
           && p.isOutsideShape                                  // filter for Outside shapes only (UTurnOut)
           && !p.hasMinRadii                                   // filter out minRadius shapes
         )
+        // .sort((a, b) => a.perimeter - b.perimeter)        // sort largest to smallest
         .sort((a, b) => b.perimeter - a.perimeter)        // sort smallest to largest
 
       console.log(`quads`, testPool.map(p => p.shape.id))
+      // return
 
       testPool.forEach(segPath => {
-        console.error(`current segPath`, segPath.shape.id)
-        console.log(`current segPath start`, segPath.path[0].id)
+        console.error(`current segPath start`, segPath.path[0].id)
+        console.log(`current segPath`, segPath.shape.id)
         // const segPath = new SegPath(p)
         // console.log(`isComplete`, segPath.isComplete)
         // console.log(`isQuad`, segPath.isQuad)
         // console.log(`isOutsideShape`, segPath.isOutsideShape)
         // console.log(`hasLoosies`, segPath.hasLoosies)
         // console.log(`perimeter`, segPath.perimeter)
-        if (preserveQuads) { segPath.makeCurves() }
-
+        if (preserveQuads && !segPath.hasAllMiddleArcs) { segPath.makeCurves() }
+        else { console.log(`segPath.hasAllMiddleArcs`) }
 
       })
+
+      const changed = testPool.flat()
+        .map(s => s.outWrappers).flat().compacted
+      console.warn(`changed`, changed)
+
+      // fixBadAdjWraps(changed, false)
+      // fixBadColWraps(changed)
+      // fixLoosies(changed)
+
+      // fixBadAdjWraps(testPool.flat(), false)
+      // fixBadColWraps(testPool.flat())
+      // fixBadAdjWraps(defaultPool, false)
+
+      //NOTE: using only these two fixes: #431
+      console.warn(`roundQuads fixIssues()`)
+      fixBadColWraps()
+      fixLoosies()
 
 
       // let processed = new OpArray
@@ -2493,33 +2684,31 @@ class Grid extends ProtoLayer {
     //ARROW: fixIssuess()
     const fixIssues = () => {
 
-      console.warn(`wrapInterferenceCorners`)                                                             //LOGGING:
+      console.warn(`wrapInterferenceCorners`)                                                   //LOGGING:
       wrapInterferenceCorners()
-      console.warn(`wrapInnerMost`)                                                                       //LOGGING:
+      console.warn(`wrapInnerMost`)                                                             //LOGGING:
       wrapInnerMost()
-      console.warn(`curveMinRadiusCorners`)                                                               //LOGGING:
-      // this.curveMinRadiusCorners()
-      console.warn(`completeEnds`)                                                                        //LOGGING:
-      // completeEnds()
+      console.warn(`curveMinRadiusCorners`)                                                     //LOGGING:
+      this.curveMinRadiusCorners()
+      console.warn(`completeEnds`)                                                              //LOGGING:
+      completeEnds()
 
       console.warn(`fixBadAdjWraps`)
-      // fixBadAdjWraps()
+      fixBadAdjWraps()
       console.warn(`fixBadColWraps`)
       // fixBadColWraps()
       console.warn(`fixLoosies`)
       // fixLoosies()
 
-      console.warn(`roundQuads`)                                                                          //LOGGING:
+      console.warn(`roundQuads`)                                                                //LOGGING:
       // roundQuads()
 
-      console.warn(`fixBadColWraps`)
-      // fixBadColWraps()
     }
 
     console.error(`FIX Issues 1`)                                                                         //LOGGING:
     fixIssues()
     console.error(``)                                                                                     //LOGGING:
-    console.error(`FIX Issues 2`)                                                                         //LOGGING:
+    // console.error(`FIX Issues 2`)                                                                         //LOGGING:
     // fixIssues()
 
   }
@@ -2554,14 +2743,15 @@ class Grid extends ProtoLayer {
     this.createSimpleSubShapes()                                        // createSimpleSubShapes 
     console.groupEnd()
 
-    console.groupCollapsed(`createQuadShapes`)
-    // createQuadShapes(quadMode)                                                 // createQuadShapes
-    console.groupEnd()
+    // console.groupCollapsed(`createQuadShapes`)
+    // // createQuadShapes(quadMode)                                                 // createQuadShapes
+    // console.groupEnd()
 
     console.group(`maximizeCuddles`)
     // console.groupCollapsed(`maximizeCuddles`)
     this.maximizeCuddles()
     console.groupEnd()
+    // console.groupEnd()
 
     console.log(`  %%%% end nestleShapes %%%%`)
     console.log(``)
@@ -2761,6 +2951,7 @@ class Grid extends ProtoLayer {
   // MARK: Grid Grammar Modifiers
   // #region Grammar Modifiers
   //METH: iterative outliner driven by directions
+  //FIXME: bug: when 'amount' is larger than available space (in grid?) outline returns nothing
   outline({
     selection,
     groupID,
@@ -2769,7 +2960,7 @@ class Grid extends ProtoLayer {
     amount = 1,
     newGroup = true
   } = {}) {
-    // if (amount < 1) { return }
+    if (amount < 1 || this.isFull) { return }
     if ((selection && groupID) || (selection && islandID) || (groupID && islandID)) {
       console.error('Grid.outline can only use one selection method')
       return
@@ -2787,19 +2978,33 @@ class Grid extends ProtoLayer {
         selection = island.cells
       }
     }
-    while (amount > 0) {
+
+    while (amount > 0 && !this.isFull) {
       if (selection.length > 0) {
         const outline = this.validNeighbors({ selection: selection, direction: direction })
           .filter(cell => cell.available)
-        if (outline.isEmpty) { return }
-        if (newGroup === true) { group = undefined } //allow assign to create new group
-        if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
-        else { this.assignCells(outline, group?.id) } //assign to group
-        if (newGroup === true && !group) { //continue adding to the new group
-          group = this.lastGroup
-          newGroup = false
-        }
-        selection = group.cells
+        console.log(`${groupID} outline ${amount}:`, outline.map(c => c.available))
+        // if (outline.isEmpty) { return }
+        // if (newGroup === true) { group = undefined } //allow assign to create new group
+        // if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
+        // else { this.assignCells(outline, group?.id) } //assign to group
+        // if (newGroup === true && !group) { //continue adding to the new group
+        //   group = this.lastGroup
+        //   newGroup = false
+        // }
+        // selection = group.cells
+        //FIXME: this solution is not quite there: it allows outline to absorb prev group or overlap?
+        if (!outline.isEmpty) {
+          if (newGroup === true) { group = undefined } //allow assign to create new group
+          if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
+          else { this.assignCells(outline, group?.id) } //assign to group
+          if (newGroup === true && !group) { //continue adding to the new group
+            group = this.lastGroup
+            newGroup = false
+          }
+          selection = group.cells
+        } else if (amount === 1) { return }
+
       }
       amount -= 1
     }
