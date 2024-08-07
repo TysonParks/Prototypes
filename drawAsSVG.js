@@ -1368,27 +1368,27 @@ class ProtoSegment extends Segment {
     this.addCubicEndVert(this.mid)
   }
 
-  addCubicStartVert(vert, replace = false, radiant = true) { this.#addCubicVert(vert, true, replace, radiant) }
-  addCubicEndVert(vert, replace = false, radiant = true) { this.#addCubicVert(vert, false, replace, radiant) }
+  addCubicStartVert(vert, replace = false) { this.#addCubicVert(vert, true, replace) }
+  addCubicEndVert(vert, replace = false) { this.#addCubicVert(vert, false, replace) }
 
-  addDistancedCubicStartVert(distance, replace = false, radiant = true) {
-    this.addCubicStartVert(this.distancedStartPoint(distance), replace, radiant)
+  addDistancedCubicStartVert(distance, replace = false) {
+    this.addCubicStartVert(this.distancedStartPoint(distance), replace)
   }
-  addDistancedCubicEndVert(distance, replace = false, radiant = true) {
-    this.addCubicEndVert(this.distancedEndPoint(distance), replace, radiant)
+  addDistancedCubicEndVert(distance, replace = false) {
+    this.addCubicEndVert(this.distancedEndPoint(distance), replace)
   }
 
-  addDistancedStartCornerVerts(distance, replace = false, radiant = true) {
-    this.neighbors.start.addDistancedCubicEndVert(distance, replace, radiant)
-    this.addDistancedCubicStartVert(distance, replace, radiant)
+  addDistancedStartCornerVerts(distance, replace = false) {
+    this.neighbors.start.addDistancedCubicEndVert(distance, replace)
+    this.addDistancedCubicStartVert(distance, replace)
   }
-  addDistancedEndCornerVerts(distance, replace = false, radiant = true) {
-    this.addDistancedCubicEndVert(distance, replace, radiant)
-    this.neighbors.end.addDistancedCubicStartVert(distance, replace, radiant)
+  addDistancedEndCornerVerts(distance, replace = false) {
+    this.addDistancedCubicEndVert(distance, replace)
+    this.neighbors.end.addDistancedCubicStartVert(distance, replace)
   }
-  addBothDistancedCornerVerts(distance, replace = false, radiant = true) {
-    this.addDistancedStartCornerVerts(distance, replace, radiant)
-    this.addDistancedEndCornerVerts(distance, replace, radiant)
+  addBothDistancedCornerVerts(distance, replace = false) {
+    this.addDistancedStartCornerVerts(distance, replace)
+    this.addDistancedEndCornerVerts(distance, replace)
   }
 
   // removeCubicStartVert() { this.#removeCubicVert() }
@@ -1451,13 +1451,13 @@ class ProtoSegment extends Segment {
   setEndConcOutWrapsOrigin(vert) { this.#setConcentricsOrigin(vert, false) }
   replaceEndConcOutWrapsOrigin(vert) { this.#setConcentricsOrigin(vert, false, true) }
 
-  #setConcentricsOrigin(vert, start, replace = false, radiant = true, out = true) {
-    if (vert) { this.#setCurveOrigin(vert, start, replace, radiant) }
+  #setConcentricsOrigin(vert, start, replace = false, out = true) {
+    if (vert) { this.#setCurveOrigin(vert, start, replace) }
     const wrappers = out ? this.radiantOutWrappers : this.radiantInWrappers
-    wrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, start, replace, radiant))
+    wrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, start, replace))
   }
 
-  #setCurveOrigin(toVert, start, replace = false, radiant = true) {
+  #setCurveOrigin(toVert, start, replace = false) {
     const seg = start ? this.startNeighbor : this             // seg/corner to reference
     let report = false                                                                                  //LOGGING:
     // if (this.id.includes('cell013')                                                                     //LOGGING:
@@ -1482,13 +1482,13 @@ class ProtoSegment extends Segment {
         // console.log(`intersect`, intersect)                                                             //LOGGING:
         console.log(`newRadius`, newRadius)                                                             //LOGGING:
       }
-      seg.addDistancedEndCornerVerts(newRadius, replace, radiant)
+      seg.addDistancedEndCornerVerts(newRadius, replace)
     }
   }
   //METH: #addCubicVert()
-  #addCubicVert(vert, start, replace = false, radiant = true) {
+  #addCubicVert(vert, start, replace = false) {
 
-    if (!radiant) { console.error(`radiant = false`, this) }
+    // if (!radiant) { console.error(`radiant = false`, this) }
     let report = false
     const mode = start ? 'Start' : `End`
     // if (
@@ -1504,11 +1504,11 @@ class ProtoSegment extends Segment {
       if (this.availableEndLength) { console.log(`availableEndLength: ${this.availableEndLength}`) }    //LOGGING:
     }
     let cubicVert
-    if (radiant) {
-      cubicVert = start ? this.cubicVerts.start : this.cubicVerts.end
-    } else {
-      cubicVert = start ? this.maxCubicVerts.start : this.maxCubicVerts.end
-    }
+    // if (radiant) {
+    cubicVert = start ? this.cubicVerts.start : this.cubicVerts.end
+    // } else {
+    //   cubicVert = start ? this.maxCubicVerts.start : this.maxCubicVerts.end
+    // }
     if (vert instanceof Vertex) {
       if (!this.vertIsOnLine(vert)) {
         console.error(`trying to assign a cubicVert that is not on this segment`)
@@ -1522,20 +1522,20 @@ class ProtoSegment extends Segment {
         const terminus = start ? this.start : this.end
         if (vert.dist(terminus) >= cubicVert.dist(terminus)) { return }
       }
-      if (radiant) {
-        if (start) {
-          this.cubicVerts.start = vert
-        } else {
-          this.cubicVerts.end = vert
-        }
+      // if (radiant) {
+      if (start) {
+        this.cubicVerts.start = vert
       } else {
-        console.warn(`max verts called!!!`)
-        if (start) {
-          this.maxCubicVerts.start = vert
-        } else {
-          this.maxCubicVerts.end = vert
-        }
+        this.cubicVerts.end = vert
       }
+      // } else {
+      //   console.warn(`max verts called!!!`)
+      //   if (start) {
+      //     this.maxCubicVerts.start = vert
+      //   } else {
+      //     this.maxCubicVerts.end = vert
+      //   }
+      // }
       this.#resetMemoProps()
       if (report) {
         console.log(`this.cubicStartVert: ${this.cubicVerts.start?.string}`)
@@ -1554,8 +1554,8 @@ class ProtoSegment extends Segment {
   //   this.#resetMemoProps()
   // }
   //METH: #replaceCubicVert()
-  #replaceCubicVert(vert, start = true, radiant = true) {
-    this.#addCubicVert(vert, start, true, radiant)
+  #replaceCubicVert(vert, start = true) {
+    this.#addCubicVert(vert, start, true)
   }
   //METH: #resetMemoProps()
   #resetMemoProps(andNeighbors = true) {
@@ -2549,7 +2549,7 @@ class ProtoSegment extends Segment {
     }, `viableAdjWrapOrigins`).call(this)
   }
 
-  //MARK: RADIANT WRAPPING
+  //MARK: CONCENTRIC WRAPPING
   //MEMO: viableRadOutWrappersOriginBounds
   get viableRadOutWrappersOriginBounds() {
     // return memoize(() => {
