@@ -1950,7 +1950,7 @@ class Grid extends ProtoLayer {
     const allInterferenceWrapped = defaultPool
       .filter(s => s.hasInterference)
       .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
-      .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
+      .sort((a, b) => b.concentricOutWrappers.length - a.concentricOutWrappers.length)
       .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
     const allInterferenceWrappers = allInterferenceWrapped.flat()
       .map(s => Object.values(s.interferenceWrappers)).flat().compacted
@@ -1961,13 +1961,13 @@ class Grid extends ProtoLayer {
     const wrapInterferenceCorners = (testPool = allInterferenceWrapped, preserveQuads = preserveQs) => {
       console.warn(`allInterferenceWrapped`, testPool)                                                        //LOGGING:
       console.warn(`allInterferenceWrapped hasDoubleInterference`, testPool.map(s => s.hasDoubleInterference))//LOGGING:
-      console.warn(`allInterferenceWrapped outWrapper count`, testPool.map(s => s.radiantOutWrappers.length)) //LOGGING:
+      console.warn(`allInterferenceWrapped outWrapper count`, testPool.map(s => s.concentricOutWrappers.length)) //LOGGING:
       console.warn(`allInterferenceWrapped maxArcRadius`, testPool.map(s => s.maxArcRadius))                  //LOGGING:
       console.warn(`allInterferenceWrapped viableInterferenceOrigins`, testPool.map(s => s.viableInterferenceOrigins))
       console.warn(`allInterferenceWrappers`, allInterferenceWrapped.map(w => w.interferenceWrappers))   //LOGGING:
       console.warn(`allInterferenceWrappers flat`, allInterferenceWrappers)                              //LOGGING:
 
-      const wrappers = allInterferenceWrappers.map(w => w.innerMostRadiantWrapper)
+      const wrappers = allInterferenceWrappers.map(w => w.innerMostConcentricWrapper)
       console.log(`wrappers`, wrappers)
       // testPool = testPool.filter(s => wrappers.every(w => w.id !== s.id))
       // console.warn(`allInterferenceWrapped refined`, testPool)
@@ -2016,8 +2016,8 @@ class Grid extends ProtoLayer {
           console.log(`perpSeg`, perpSeg)                                                                 //LOGGING:
           console.log(`projected`, projected)                                                             //LOGGING:
           console.log(`viableArcOrigins`, seg.viableArcOrigins)
-          if (seg.radiantInWrappers) {
-            seg = seg.innerMostRadiantWrapper
+          if (seg.concentricInWrappers) {
+            seg = seg.innerMostConcentricWrapper
             console.error(`changed seg`, seg.id)                                                          //LOGGING:
             console.log(seg)                                                                              //LOGGING:
           }
@@ -2041,7 +2041,7 @@ class Grid extends ProtoLayer {
         } else {
           console.log(`NO viableInterferenceOrigins found!`)
         }
-        if (origin && s.outerMostRadiantWrapper.canCurveTo(origin, true)) {
+        if (origin && s.outerMostConcentricWrapper.canCurveTo(origin, true)) {
           console.log(`origin found!`, origin)
           s.setEndConcOutWrapsOrigin(origin)
           let { start, end } = s.interferenceWrappers
@@ -2061,16 +2061,16 @@ class Grid extends ProtoLayer {
           //FIXME: removed !s.hasInterference to fix #469    
           // !s.hasInterference                                     // interference wraps should be previously processed
           // &&
-          s.isInnerMostRadiantWrapper                               // only wrapping innerMostWrappers
-          && (s.colOutWrapper ? s.radiantOutWrappers.length > 1 : !!s) // filter out potential colWrap only
+          s.isInnerMostConcentricWrapper                               // only wrapping innerMostWrappers
+          && (s.colOutWrapper ? s.concentricOutWrappers.length > 1 : !!s) // filter out potential colWrap only
         )
         .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
-        .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
+        .sort((a, b) => b.concentricOutWrappers.length - a.concentricOutWrappers.length)
 
 
       console.warn(`allInnerMostWrappers`, testPool)
-      console.warn(`allInnerMostWrappers outWrappers`, testPool.map(s => s.radiantOutWrappers.length))
-      // console.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableRadiantOrigins))
+      console.warn(`allInnerMostWrappers outWrappers`, testPool.map(s => s.concentricOutWrappers.length))
+      // console.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableConcentricOrigins))
       // return
 
       testPool.forEach(s => {
@@ -2078,16 +2078,16 @@ class Grid extends ProtoLayer {
         //ARROW: needsMiddle()
         const needsMiddle = (seg) => {
           return !seg.hasInterference
-            && seg.isInnerMostRadiantWrapper
-            && seg.radiantOutWrappers.length > 1
+            && seg.isInnerMostConcentricWrapper
+            && seg.concentricOutWrappers.length > 1
         }
 
         console.warn(`innerMost in queue`, s)                                                                 //LOGGING:
         // console.groupCollapsed(`innerMost in queue`, s)                                                       //LOGGING:
-        const viables = s.viableRadiantOrigins
+        const viables = s.viableConcentricOrigins
         console.log(`viableArcOrigins`, s.viableArcOrigins)                                                   //LOGGING:
         console.log(`currentViableArcOrigins`, s.currentViableArcOrigins)
-        console.log(`viableRadiants`, viables)                                                                //LOGGING:
+        console.log(`viableConcentrics`, viables)                                                                //LOGGING:
 
         if (viables) {
           // let origin
@@ -2096,7 +2096,7 @@ class Grid extends ProtoLayer {
           if (preserveQuads
             && shape.isQuad
             && shape.simpleSubShapes.flat().every(c => !c.hasInterference)
-            && allInterferenceWrappers.every(i => i.innerMostRadiantWrapper.id !== s.id)
+            && allInterferenceWrappers.every(i => i.innerMostConcentricWrapper.id !== s.id)
           ) {  // shape is quad
             console.warn(`shape is quad!`, s)
             s.assignMid()                                                               // make circular/pill
@@ -2107,9 +2107,9 @@ class Grid extends ProtoLayer {
             const origin = needsMiddle(s.startNeighbor) || needsMiddle(s.endNeighbor) ? viables.middle : viables.last
             console.log(`concentric wrapping to ${origin.string}`)
             s.setEndConcOutWrapsOrigin(origin)
-            if (s.outerMostRadiantWrapper.outWrapper) {
-              console.log(`outerMostRadiantWrapper`, s.outerMostRadiantWrapper)
-              s.outerMostRadiantWrapper.adjWrap()
+            if (s.outerMostConcentricWrapper.outWrapper) {
+              console.log(`outerMostConcentricWrapper`, s.outerMostConcentricWrapper)
+              s.outerMostConcentricWrapper.adjWrap()
             }
             // completeEnds(s.neighborsArray)
           }
@@ -2159,8 +2159,8 @@ class Grid extends ProtoLayer {
           ) {
             console.log(`inWrapper is inWrapped to concentrics`)                                           //LOGGING:
             // console.log(`neighbors`, s.neighborsArray.map(n => n.isInWrappedToConcentrics))                //LOGGING:
-            const inner = s.inWrapper.innerMostRadiantWrapper
-            inner.replaceEndConcOutWrapsOrigin(inner.viableRadiantOrigins?.last)
+            const inner = s.inWrapper.innerMostConcentricWrapper
+            inner.replaceEndConcOutWrapsOrigin(inner.viableConcentricOrigins?.last)
             completeEnds(inner.andNeighborsArray)
           }
           return
@@ -2214,7 +2214,7 @@ class Grid extends ProtoLayer {
           console.log(`using wrapOutFix`)
           s.inWrapper.colWrap()
           s.inWrapper.replaceEndConcOutWrapsOrigin()
-          // s.inWrapper.radiantOutWrappers.forEach(w => {
+          // s.inWrapper.concentricOutWrappers.forEach(w => {
           //   // if (!w.startNeighbor.isInWrappedToConcentrics       // avoid possible off-axis interference wrap
           //   //   && !w.endNeighbor.isInWrappedToConcentrics) {     // avoid possible off-axis interference wrap
           //   w.replaceEndCurveOrigin(s.inWrapper.arcOrigin)
@@ -2225,7 +2225,7 @@ class Grid extends ProtoLayer {
         const wrapInFix = () => {
           console.log(`using wrapInFix`)
           s.inWrapper.replaceEndCurveOrigin(s.arcOrigin)
-          if (s.inWrapper.radiantOutWrappers?.some(o => !s.isConcentricWrapped(o) && s.canRadiateTo(o))) {
+          if (s.inWrapper.concentricOutWrappers?.some(o => !s.isConcentricWrapped(o) && s.canRadiateTo(o))) {
             s.inWrapper.replaceEndConcOutWrapsOrigin()
           }
         }
@@ -2258,12 +2258,12 @@ class Grid extends ProtoLayer {
             && !s.isEdgeOfQuad                                                  // roundQuads() handles quad corners
             && (s.hasNoWrappers || s.isInnerMostWrapper || s.isOuterMostWrapper)// 3 main categories, inbetweens not needed
             // && !s.hasInterference
-            // && !s.innerMostRadiantWrapper?.hasInterference
+            // && !s.innerMostConcentricWrapper?.hasInterference
           )
           .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
           .sort((a, b) => {
-            const radiantsCount = (s) => { s.radiantOutWrappers?.length || s.radiantInWrappers?.length || 0 }
-            return radiantsCount(a) - radiantsCount(b)
+            const concentricsCount = (s) => { s.concentricOutWrappers?.length || s.concentricInWrappers?.length || 0 }
+            return concentricsCount(a) - concentricsCount(b)
           })
           .sort((a, b) => b.isOutsideCorner - a.isOutsideCorner)
       }
@@ -2354,7 +2354,7 @@ class Grid extends ProtoLayer {
 
             if (s.isOutWrappedToConcentrics && !s.outWrapper.hasMinArcRadius) {
               console.log(`outwrapping`)
-              if (s.viableRadiantOrigins?.some(v => v.equals(s.currentMaxArcOrigin, 1))) {
+              if (s.viableConcentricOrigins?.some(v => v.equals(s.currentMaxArcOrigin, 1))) {
                 s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
               }
             } else {
@@ -2376,25 +2376,25 @@ class Grid extends ProtoLayer {
             console.log(`this isn't the inWrapper to this outWrapper`)
             s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
             s.colWrap(true)
-            s.radiantOutWrappers?.forEach(o => {
+            s.concentricOutWrappers?.forEach(o => {
               if (o.canCurveMoreAtEnd) { o.replaceEndCurveOrigin(s.currentMaxArcOrigin) }
             })
           }
 
           //TODO: Might need to refine further, it fixes #393 and #390
-          if (s.radiantOutWrappers?.every(w => w.canCurveMoreAtEnd)) {
+          if (s.concentricOutWrappers?.every(w => w.canCurveMoreAtEnd)) {
             console.log(`outWrappers fix`)
             s.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
           }
 
           const outWrapper = s.inOutColWrappers[1]
-          if (s.colWrapIsEquidistant && outWrapper.radiantOutWrappers) { // case: colWrapped & has rad outWrappers
+          if (s.colWrapIsEquidistant && outWrapper.concentricOutWrappers) { // case: colWrapped & has rad outWrappers
             console.log(`colWrapped & has rad outWrappers`)
             console.log(`outWrapper`, outWrapper)
 
             if (outWrapper.canCurveMoreAtEnd                            // outWrapper can STILL curve more
               && !outWrapper.isOutWrappedToConcentrics                  // outWrapper is not outwrapped to concentrics
-              && outWrapper.radiantOutWrappers.every(ro => !ro.canCurveMoreAtEnd)) { // radiant outWrappers can't curve more
+              && outWrapper.concentricOutWrappers.every(ro => !ro.canCurveMoreAtEnd)) { // concentric outWrappers can't curve more
               outWrapper.replaceEndCurveOrigin(outWrapper.currentMaxArcOrigin)
               outWrapper.colWrap(true)
             }
@@ -2404,24 +2404,24 @@ class Grid extends ProtoLayer {
         // case: s.isOuterMostWrapper
         if (s.isOuterMostWrapper) {
           console.log(`s.isOuterMostWrapper`)
-          if (s.radiantInWrappers                            // case: has radiantInWrappers
+          if (s.concentricInWrappers                            // case: has concentricInWrappers
             // && !s.isInWrapped
             // && !s.isInWrappedToConcentrics
           ) {
             console.log(`inWrappers fix`)
-            console.log(`innerMostRadiantWrapper`, s.innerMostRadiantWrapper)
+            console.log(`innerMostConcentricWrapper`, s.innerMostConcentricWrapper)
             if (s.isInWrapped && s.isInWrappedToConcentrics) {
               s.inWrapper.adjWrap()
             }
-            else if (s.canCurveTo(s.innerMostRadiantWrapper.currentMaxArcOrigin), true) {
+            else if (s.canCurveTo(s.innerMostConcentricWrapper.currentMaxArcOrigin), true) {
               console.log(`case1 viables`, s.currentViableArcOrigins)
-              // console.log(`case1 currentMaxArcOrigin`, s.innerMostRadiantWrapper.currentMaxArcOrigin)
-              s.innerMostRadiantWrapper.replaceEndConcOutWrapsOrigin(s.innerMostRadiantWrapper.currentMaxArcOrigin)
+              // console.log(`case1 currentMaxArcOrigin`, s.innerMostConcentricWrapper.currentMaxArcOrigin)
+              s.innerMostConcentricWrapper.replaceEndConcOutWrapsOrigin(s.innerMostConcentricWrapper.currentMaxArcOrigin)
             }
-            else if (s.innerMostRadiantWrapper.canCurveTo(s.currentMaxArcOrigin), true) {
-              console.log(`case2 viables`, s.innerMostRadiantWrapper.currentViableArcOrigins)
+            else if (s.innerMostConcentricWrapper.canCurveTo(s.currentMaxArcOrigin), true) {
+              console.log(`case2 viables`, s.innerMostConcentricWrapper.currentViableArcOrigins)
               // console.log(`case2 currentMaxArcOrigin`, s.currentMaxArcOrigin)
-              s.innerMostRadiantWrapper.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
+              s.innerMostConcentricWrapper.replaceEndConcOutWrapsOrigin(s.currentMaxArcOrigin)
             }
           }
         }
@@ -2604,7 +2604,7 @@ class Grid extends ProtoLayer {
       //           if (!seg.arcOrigin.isUsingMiddleOrigin) {
       //             console.log(`seg in segPath`, seg)
       //             seg.replaceEndConcOutWrapsOrigin(s.middleArcOrigin)
-      //             let badWraps = seg.radiantOutWrappers?.slice(1)
+      //             let badWraps = seg.concentricOutWrappers?.slice(1)
       //               .filter(o => o.colWrapIsNonEquidistant)
       //             console.log(`badWraps`, badWraps)
       //             if (!badWraps.isEmpty) {
