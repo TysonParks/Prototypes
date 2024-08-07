@@ -261,7 +261,8 @@ class ProtoMill {
 function gridTests2() {
 
   let gridX = R.random_int(3, 10)
-  // gridX = 4
+  // gridX = R.random_int(10, 20)
+  // gridX = 2
 
   GRID = new Grid({
     protoParent: FRAME,
@@ -280,9 +281,9 @@ function gridTests2() {
   console.log('minCellSWidth', minCellSWidth)
 
 
-  let group000, group001, group002, group003, group004
+  let group0, group1, group2, group3, group4
   // GRID.randGroup({amount:1 / GRID.cellCount})
-  // group000 = GRID.randomComb({
+  // group0 = GRID.randomComb({
   //   selection: (GRID.cellRows
   //     .rotated2D(90)
   //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
@@ -292,7 +293,7 @@ function gridTests2() {
   //   start: 0
   // })
 
-  // group000 = GRID.comb({
+  // group0 = GRID.comb({
   //   selection: (GRID.cellRows
   //     .rotated2D(R.random_int(0, 3) * 90)
   //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
@@ -307,8 +308,8 @@ function gridTests2() {
 
 
   // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  group000 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
-  // group000 = GRID.randGroup({ amount: 0.4 })
+  group0 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  // group0 = GRID.randGroup({ amount: 0.4 })
   // GRID.squares(16 / GRID.cellCount)
   // GRID.squares(0.2)
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, directioqn: Direction.All.random(R.random_int(1, 4)), newGroup: false, amount: R.random_int(0, 1) })
@@ -322,41 +323,49 @@ function gridTests2() {
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
   // const randDir = Direction.All.random(3)
   // console.log('randDirection', randDir)
-  // group001 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 2) })
+  // group1 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 2) })
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
-  group001 = GRID.outlineGroup({
+
+  const grp1Dir = Direction.All.random(R.random_int(1, 8))
+  const grp1Amount = R.random_int(1, 2)
+  console.log(`grp1Dir`, grp1Dir.name)
+  console.log(`grp1Amount`, grp1Amount)
+
+  group1 = GRID.outlineGroup({
     groupID: GRID.lastGroup.id,
     // direction: Direction.All,
-    direction: Direction.All.random(R.random_int(1, 8)),
+    direction: grp1Dir,
     newGroup: true,
-    amount: R.random_int(1, 2)
+    amount: grp1Amount
   })
 
-  // group002 = GRID.randGroup({ amount: 0.5 })
-  group002 = GRID.outlineGroup({
+  // console.log(group1.cells.map(c => c.available))
+
+  group2 = GRID.outlineGroup({
     groupID: GRID.lastGroup.id,
     //  direction: Direction.All.random(R.random_int(1, 4)), 
     newGroup: true,
     amount: R.random_int(1, 1)
   })
-  // group002 = GRID.randGroup({ amount: .25 })
-  // group002 = GRID.squares({ coverage: 0.1, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never' })
-  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.Horizontal, newGroup: false, amount: 2 })
-  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, diresction: Direction.Down.adjacents, newGroup: false, amount: 4 })
 
-  group003 = GRID.outlineGroup({
+  const grp3Dir = R.random_int(1, 2)
+  console.log(`grp3Dir`, grp1Dir.name)
+
+  group3 = GRID.outlineGroup({
     groupID: GRID.lastGroup.id,
     // direction: Direction.All.random(R.random_int(1, 4)), 
     newGroup: true,
-    amount: R.random_int(1, 2)
+    amount: grp3Dir
   })
   // console.log('right adj', Direction.Right.adjacents)
   // console.log('right and adj', Direction.Right.andAdjacents)
   // console.log('right opposite', Direction.Right.opposites)
-  group004 = GRID.randGroup({ amount: 0.5 })
+
+  group4 = GRID.randGroup({ amount: 0.5 })
+
   // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
-  // console.log(group003)
-  // console.log(group004)
+  // console.log(group3)
+  // console.log(group4)
 
   // GRID.randGroup({ amount: 1 / GRID.cellCount })
   // GRID.outlineTaken({ direction: Direction.All, newGroup: true })
@@ -371,8 +380,8 @@ function gridTests2() {
   // GRID.outlineTaken(Direction.Horizontal, true)
   // GRID.groupNamed('grp001')?.setFilter(shader2)
 
-  // group004 = GRID.groupAvail()
-  // group001 = GRID.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
+  // group4 = GRID.groupAvail()
+  // group1 = GRID.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   //MARK: SYMMETRY
   // console.log('pre-symmetrized cellRows', GRID.cellRows)
@@ -388,11 +397,17 @@ function gridTests2() {
   let insetScale = R.random_num(0.9, 0.97)
   insetScale = .8
 
-  group000?.createPerimiters('maxCorners', Direction.Cardinal)
-  group001?.createPerimiters('maxCorners', Direction.Cardinal)
-  group002?.createPerimiters('maxCorners', Direction.Cardinal)
-  group003?.createPerimiters('maxCorners', Direction.Cardinal)
-  group004?.createPerimiters('maxCorners', Direction.All)
+  console.log(`group0`, group0)
+  console.log(`group1`, group1)
+  console.log(`group2`, group2)
+  console.log(`group3`, group3)
+  console.log(`group4`, group4)
+
+  group0?.createPerimiters('maxCorners', Direction.Cardinal)
+  group1?.createPerimiters('maxCorners', Direction.Cardinal)
+  group2?.createPerimiters('maxCorners', Direction.Cardinal)
+  group3?.createPerimiters('maxCorners', Direction.Cardinal)
+  group4?.createPerimiters('maxCorners', Direction.All)
   // will need to create check to make sure all groups used
   // console.log(`groups`, GRID.groups)
 
@@ -405,8 +420,8 @@ function gridTests2() {
   console.error(`  ######################   `)
   console.log(``)
 
-  //MARK: group000
-  group000?.cutIslands({
+  //MARK: group0
+  group0?.cutIslands({
     profile: Profile.rOut,
     layerStart: 2.5,
     layerEnd: .75,
@@ -415,7 +430,7 @@ function gridTests2() {
     // direction: Direction.Horizontal
   })
 
-  // group000?.cutIslands({
+  // group0?.cutIslands({
   //   profile: Profile.jIn,
   //   layerStart: .95,
   //   layerEnd: 1 / 32,
@@ -424,7 +439,7 @@ function gridTests2() {
   //   // direction: Direction.All
   // })
 
-  // group000?.cutIslands({
+  // group0?.cutIslands({
   //   profile: Profile.jIn,
   //   layerStart: 1 / 16,
   //   layerEnd: .00001,
@@ -432,8 +447,8 @@ function gridTests2() {
   //   loftScale: 1 / 1,
   // })
 
-  //MARK: group001
-  group001?.cutIslands({
+  //MARK: group1
+  group1?.cutIslands({
     profile: Profile.jIn,
     layerStart: .9,
     layerEnd: .6,
@@ -442,7 +457,7 @@ function gridTests2() {
     // direction: Direction.All
   })
 
-  // group001?.cutIslands({
+  // group1?.cutIslands({
   //   profile: Profile.rOut,
   //   layerStart: 1.25,
   //   layerEnd: 1,
@@ -450,7 +465,7 @@ function gridTests2() {
   //   loftScale: 4 / 4,
   // })
 
-  // group001?.cutIslands({
+  // group1?.cutIslands({
   //   profile: Profile.jIn,
   //   layerStart: 1 / 16,
   //   layerEnd: .00001,
@@ -459,8 +474,8 @@ function gridTests2() {
   //   direction: Direction.None,
   // })
 
-  //MARK: group002
-  group002?.cutIslands({
+  //MARK: group2
+  group2?.cutIslands({
     profile: Profile.jIn,
     layerStart: .9,
     layerEnd: .001,
@@ -469,7 +484,7 @@ function gridTests2() {
     // direction: Direction.All
   })
 
-  // group002?.cutIslands({
+  // group2?.cutIslands({
   //   profile: Profile.rOut,
   //   layerStart: .5,
   //   layerEnd: .0001,
@@ -477,8 +492,8 @@ function gridTests2() {
   //   loftScale: 1 / 1,
   // })
 
-  //MARK: group003
-  group003?.cutIslands({
+  //MARK: group3
+  group3?.cutIslands({
     profile: Profile.jIn,
     layerStart: 1,
     layerEnd: .8,
@@ -486,7 +501,7 @@ function gridTests2() {
     loftScale: 1 / 1,
     // direction: Direction.All
   })
-  // group003?.cutIslands({
+  // group3?.cutIslands({
   //   profile: Profile.jIn,
   //   layerStart: .9,
   //   layerEnd: .8,
@@ -494,7 +509,7 @@ function gridTests2() {
   //   loftScale: 1 / 1,
   //   // direction: Direction.All
   // })
-  group003?.cutIslands({
+  group3?.cutIslands({
     profile: Profile.jIn,
     layerStart: .8,
     layerEnd: .65,
@@ -502,7 +517,7 @@ function gridTests2() {
     loftScale: 1 / 1,
     // direction: Direction.All
   })
-  // group003?.cutIslands({
+  // group3?.cutIslands({
   //   profile: Profile.jIn,
   //   layerStart: .7,
   //   layerEnd: .6,
@@ -510,7 +525,7 @@ function gridTests2() {
   //   loftScale: 1 / 1,
   //   // direction: Direction.All
   // })
-  group003?.cutIslands({
+  group3?.cutIslands({
     profile: Profile.jIn,
     layerStart: .6,
     layerEnd: .45,
@@ -518,7 +533,7 @@ function gridTests2() {
     loftScale: 1 / 1,
     // direction: Direction.All
   })
-  // group003?.cutIslands({
+  // group3?.cutIslands({
   //   profile: Profile.jIn,
   //   layerStart: .5,
   //   layerEnd: .4,
@@ -526,7 +541,7 @@ function gridTests2() {
   //   loftScale: 1 / 1,
   //   // direction: Direction.All
   // })
-  group003?.cutIslands({
+  group3?.cutIslands({
     profile: Profile.jIn,
     layerStart: .4,
     layerEnd: .25,
@@ -534,7 +549,7 @@ function gridTests2() {
     loftScale: 1 / 1,
     // direction: Direction.All
   })
-  // group003?.cutIslands({
+  // group3?.cutIslands({
   //   profile: Profile.jIn,
   //   layerStart: .3,
   //   layerEnd: .2,
@@ -542,7 +557,7 @@ function gridTests2() {
   //   loftScale: 1 / 1,
   //   // direction: Direction.All
   // })
-  group003?.cutIslands({
+  group3?.cutIslands({
     profile: Profile.jIn,
     layerStart: .2,
     layerEnd: .05,
@@ -551,7 +566,7 @@ function gridTests2() {
     // direction: Direction.All
   })
 
-  // group003?.cutIslands({
+  // group3?.cutIslands({
   //   profile: Profile.jIn,
   //   layerStart: .1,
   //   layerEnd: .0,
@@ -560,7 +575,7 @@ function gridTests2() {
   //   // direction: Direction.Horizontal
   // })
 
-  // group003?.cutIslands({
+  // group3?.cutIslands({
   //   profile: Profile.rOut,
   //   layerStart: 1 / 16,
   //   layerEnd: .00001,
@@ -568,8 +583,8 @@ function gridTests2() {
   //   direction: Direction.None,
   // })
 
-  //MARK: group004
-  group004?.cutIslands({
+  //MARK: group4
+  group4?.cutIslands({
     profile: Profile.rOut,
     layerStart: 1.35,
     layerEnd: .85,
@@ -577,7 +592,7 @@ function gridTests2() {
     loftScale: 1 / 1,
     direction: Direction.All
   })
-  // group004?.cutIslands({
+  // group4?.cutIslands({
   //   profile: Profile.jOut,
   //   layerStart: 1 / 2,
   //   layerEnd: 1 / 4,
@@ -585,7 +600,7 @@ function gridTests2() {
   //   loftScale: 1 / 1,
   //   // direction: Direction.Horizontal
   // })
-  // group004.createSubIslands({
+  // group4.createSubIslands({
   //   // direction: Direction.All,
   //   filter: shader5,
   //   insetScale: .9,
@@ -593,13 +608,13 @@ function gridTests2() {
 
   // FRAME.setFilter(shader0)
 
-  // console.log(group001.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
+  // console.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
   GRID.showCellsDebug()
 
   // console.log(`multi-island simpleSubshapes`, GRID.allSimpleSubShapes.flat().map(s => s.parentID))
-  let interCells01 = GRID.perimeterIslands[3].interCells
-  console.log(`interCells01`, interCells01.map(c => c.id))
+  let interCells01 = GRID.perimeterIslands[3]?.interCells
+  console.log(`interCells01`, interCells01?.map(c => c.id))
   // console.log(`GRID.islands`, GRID.islands)
   // console.log(`are squares?`, GRID.islands.map(i => i.isSquare))
   // console.log(`are roundedSquares?`, GRID.islands.map(i => i.shape.isRoundedSquare))
