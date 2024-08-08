@@ -2062,7 +2062,7 @@ class Grid extends ProtoLayer {
           //FIXME: removed !s.hasInterference to fix #469    
           // !s.hasInterference                                     // interference wraps should be previously processed
           // &&
-          s.isinnerMostRadiantWrapper                               // only wrapping innerMostWrappers
+          s.isInnerMostRadiantWrapper                               // only wrapping innerMostWrappers
           && (s.colOutWrapper ? s.radiantOutWrappers.length > 1 : !!s) // filter out potential colWrap only
         )
         .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
@@ -2071,7 +2071,7 @@ class Grid extends ProtoLayer {
       console.warn(`allInnerMostWrappers`, testPool)
       console.warn(`allInnerMostWrappers outWrappers`, testPool.map(s => s.radiantOutWrappers.length))
       // console.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableRadiantOrigins))
-      return
+      // return
 
       testPool.forEach(s => {
 
@@ -2690,16 +2690,16 @@ class Grid extends ProtoLayer {
       console.warn(`wrapInnerMost`)                                                             //LOGGING:
       wrapInnerMost()
       console.warn(`curveMinRadiusCorners`)                                                     //LOGGING:
-      // this.curveMinRadiusCorners()
+      this.curveMinRadiusCorners()
       console.warn(`completeEnds`)                                                              //LOGGING:
-      // completeEnds()
+      completeEnds()
 
       console.warn(`fixBadAdjWraps`)
-      // fixBadAdjWraps()
+      fixBadAdjWraps()
       console.warn(`fixBadColWraps`)
-      // fixBadColWraps()
+      fixBadColWraps()
       console.warn(`fixLoosies`)
-      // fixLoosies()
+      fixLoosies()
 
       console.warn(`roundQuads`)                                                                //LOGGING:
       // roundQuads()
