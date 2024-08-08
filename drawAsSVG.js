@@ -1448,12 +1448,12 @@ class ProtoSegment extends Segment {
   // replaceStartCurveOrigin(vert) { return this.#setCurveOrigin(vert, true, true) }                     //UNUSED:
   replaceEndCurveOrigin(vert) { return this.#setCurveOrigin(vert, false, true) }
 
-  setEndConcOutWrapsOrigin(vert) { this.#setConcentricsOrigin(vert, false) }
-  replaceEndConcOutWrapsOrigin(vert) { this.#setConcentricsOrigin(vert, false, true) }
+  setEndConcOutWrapsOrigin(vert) { this.#setRadiantOrigin(vert, false) }
+  replaceEndConcOutWrapsOrigin(vert) { this.#setRadiantOrigin(vert, false, true) }
 
-  #setConcentricsOrigin(vert, start, replace = false, out = true) {
+  #setRadiantOrigin(vert, start, replace = false, out = true) {
     if (vert) { this.#setCurveOrigin(vert, start, replace) }
-    const wrappers = out ? this.concentricOutWrappers : this.concentricInWrappers
+    const wrappers = out ? this.radiantOutWrappers : this.radiantInWrappers
     wrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, start, replace))
   }
 
@@ -2372,35 +2372,35 @@ class ProtoSegment extends Segment {
       if (this.outWrapper) { return OpArray.format(this.outWrapper).union(this.outWrapper.outWrappers, `id`) }
     }, `outWrappers`).call(this)
   }
-  //MEMO: concentricOutWrappers
-  get concentricOutWrappers() {
+  //MEMO: radiantOutWrappers
+  get radiantOutWrappers() {
     return memoize(() => {
-      // if (this.outWrapperIsConcentric
-      //   // && boundsIsWithinTestBounds(this.innerMostConcentricWrapper.minArcBoundsSeg, this.outWrapper.maxArcBoundsSeg)
+      // if (this.outWrapperIsRadiant
+      //   // && boundsIsWithinTestBounds(this.innerMostRadiantWrapper.minArcBoundsSeg, this.outWrapper.maxArcBoundsSeg)
       // ) {
       //   return OpArray.format(this.outWrapper)
-      //     .union(this.outWrapper.concentricOutWrappers, `id`)
-      //   // .filter(s => boundsIsWithinTestBounds(this.innerMostConcentricWrapper.minArcBoundsSeg, s.maxArcBoundsSeg))
+      //     .union(this.outWrapper.radiantOutWrappers, `id`)
+      //   // .filter(s => boundsIsWithinTestBounds(this.innerMostRadiantWrapper.minArcBoundsSeg, s.maxArcBoundsSeg))
       // }
-      // console.log(`concentricOutWrappers for`, this)
+      // console.log(`radiantOutWrappers for`, this)
       if (this.outWrappers) {
         let wrappers
         if (this.isInnerMostWrapper) {
-          if (this.outWrapperIsConcentric) {
+          if (this.outWrapperIsRadiant) {
             wrappers = this.outWrappers
               .filter(s => this.canRadiateTo(s))
           }
         } else {                                  //this is NOT innerMostWrapper
-          if (!this.inWrapper.outWrapperIsConcentric && this.outWrapperIsConcentric) {
+          if (!this.inWrapper.outWrapperIsRadiant && this.outWrapperIsRadiant) {
             wrappers = this.outWrappers
               .filter(s => this.canRadiateTo(s))
           } else {
-            wrappers = this.innerMostConcentricWrapper.concentricOutWrappers?.intersect(this.outWrappers, `id`)
+            wrappers = this.innerMostRadiantWrapper.radiantOutWrappers?.intersect(this.outWrappers, `id`)
           }
         }
         if (!wrappers || !wrappers.isEmpty) { return wrappers }
       }
-    }, `concentricOutWrappers`).call(this)
+    }, `radiantOutWrappers`).call(this)
   }
   //MEMO: inWrappers
   get inWrappers() {
@@ -2409,13 +2409,13 @@ class ProtoSegment extends Segment {
       if (this.inWrapper) { return OpArray.format(this.inWrapper).union(this.inWrapper.inWrappers, `id`) }
     }, `inWrappers`).call(this)
   }
-  //MEMO: concentricInWrappers
-  get concentricInWrappers() {
+  //MEMO: radiantInWrappers
+  get radiantInWrappers() {
     return memoize(() => {
-      if (this.inWrapperIsConcentric) {
-        return OpArray.format(this.inWrapper).union(this.inWrapper.concentricInWrappers, `id`)
+      if (this.inWrapperIsRadiant) {
+        return OpArray.format(this.inWrapper).union(this.inWrapper.radiantInWrappers, `id`)
       }
-      // if (this.inWrappers && this.inWrapperIsConcentric) {
+      // if (this.inWrappers && this.inWrapperIsRadiant) {
       //   let wrappers
       //   if (this.isOuterMostWrapper) {
       //     wrappers = this.inWrappers
@@ -2424,15 +2424,15 @@ class ProtoSegment extends Segment {
       //         && this.hasDiagonalCorner(s)
       //       )
       //   } else {
-      //     wrappers = this.outerMostWrapper.concentricInWrappers?.intersect(this.inWrappers, `id`)
+      //     wrappers = this.outerMostWrapper.radiantInWrappers?.intersect(this.inWrappers, `id`)
       //   }
       //   if (wrappers && !wrappers.isEmpty) { return wrappers }
       // }
-    }, `concentricInWrappers`).call(this)
+    }, `radiantInWrappers`).call(this)
   }
 
-  get inWrapperIsConcentric() { if (this.inWrapper) { return this.canRadiateTo(this.inWrapper) } }
-  get outWrapperIsConcentric() { if (this.outWrapper) { return this.canRadiateTo(this.outWrapper) } }
+  get inWrapperIsRadiant() { if (this.inWrapper) { return this.canRadiateTo(this.inWrapper) } }
+  get outWrapperIsRadiant() { if (this.outWrapper) { return this.canRadiateTo(this.outWrapper) } }
 
 
 
@@ -2443,26 +2443,26 @@ class ProtoSegment extends Segment {
       return !!this.outWrappers && !this.inWrappers
     }, `isInnerMostWrapper`).call(this)
   }
-  //MEMO: isInnerMostConcentricWrapper
-  get isInnerMostConcentricWrapper() {
+  //MEMO: isInnerMostRadiantWrapper
+  get isInnerMostRadiantWrapper() {
     return memoize(() => {
-      return !!this.concentricOutWrappers && !this.concentricInWrappers
-    }, `isInnerMostConcentricWrapper`).call(this)
+      return !!this.radiantOutWrappers && !this.radiantInWrappers
+    }, `isInnerMostRadiantWrapper`).call(this)
   }
 
   get innerMostWrapper() { if (this.inWrappers) { return this.inWrappers.filter(s => s.isInnerMostWrapper)[0] } }
-  get innerMostConcentricWrapper() {
-    if (this.concentricInWrappers) { return this.concentricInWrappers.last }
-    else if (this.concentricOutWrappers) { return this }
+  get innerMostRadiantWrapper() {
+    if (this.radiantInWrappers) { return this.radiantInWrappers.last }
+    else if (this.radiantOutWrappers) { return this }
 
-    // console.log(`innerMostConcentricWrapper`, this)
+    // console.log(`innerMostRadiantWrapper`, this)
     // if (!!this.inWrappers) {
     //   // console.log(`this.inWrappers`, this.inWrappers)
-    //   if (this.innerMostWrapper.concentricOutWrappers.some(s => s.id === this.id)) {
+    //   if (this.innerMostWrapper.radiantOutWrappers.some(s => s.id === this.id)) {
     //     return this.innerMostWrapper
     //   } else {
     //     return this.inWrappers
-    //       .exclude(this.innerMostWrapper.concentricOutWrappers, `id`)
+    //       .exclude(this.innerMostWrapper.radiantOutWrappers, `id`)
     //       .filter(s => boundsIsWithinTestBounds(s.minArcBoundsSeg, this.maxArcBoundsSeg))[0]
     //   }
     // } else {
@@ -2471,18 +2471,18 @@ class ProtoSegment extends Segment {
   }
 
   get isOuterMostWrapper() { return !!this.inWrappers && !this.outWrappers }
-  get isOuterMostConcentricWrapper() { return !!this.concentricInWrappers && !this.concentricOutWrappers }
+  get isOuterMostRadiantWrapper() { return !!this.radiantInWrappers && !this.radiantOutWrappers }
   get outerMostWrapper() { if (this.outWrappers) { return this.outWrappers.filter(s => s.isOuterMostWrapper)[0] } }
-  get outerMostConcentricWrapper() {
-    if (this.concentricOutWrappers) { return this.concentricOutWrappers.last }
-    else if (this.concentricInWrappers) { return this }
+  get outerMostRadiantWrapper() {
+    if (this.radiantOutWrappers) { return this.radiantOutWrappers.last }
+    else if (this.radiantInWrappers) { return this }
 
     // if (this.outWrappers) {
-    //   if (this.outerMostWrapper.concentricInWrappers?.some(s => s.id === this.id)) {
+    //   if (this.outerMostWrapper.radiantInWrappers?.some(s => s.id === this.id)) {
     //     return this.outerMostWrapper
     //   } else {
     //     return this.outWrappers
-    //       .exclude(this.outerMostWrapper.concentricInWrappers, `id`)
+    //       .exclude(this.outerMostWrapper.radiantInWrappers, `id`)
     //       .filter(s => boundsIsWithinTestBounds(this.minArcBoundsSeg, s.maxArcBoundsSeg))[0]
     //   }
     // }
@@ -2534,13 +2534,13 @@ class ProtoSegment extends Segment {
     }, `viableAdjWrapOrigins`).call(this)
   }
 
-  //MARK: CONCENTRIC WRAPPING
+  //MARK: RADIANT WRAPPING
   //MEMO: viableRadOutWrappersOriginBounds
   get viableRadOutWrappersOriginBounds() {
     // return memoize(() => {
-    if (this.isInnerMostConcentricWrapper) {
-      // console.log(`viableRadOutWrappersOriginBounds concentricOutWrappers`, this.concentricOutWrappers)
-      let viables = this.concentricOutWrappers
+    if (this.isInnerMostRadiantWrapper) {
+      // console.log(`viableRadOutWrappersOriginBounds radiantOutWrappers`, this.radiantOutWrappers)
+      let viables = this.radiantOutWrappers
         .map(s => s.currentViableArcOriginsSeg)
       // console.log(`viableRadOutWrappersOriginBounds viables`, viables)                                  //LOGGING:
       const result = boundsOverlap({ geo: [viables], accuracy: 0 })
@@ -2550,24 +2550,24 @@ class ProtoSegment extends Segment {
     // }, `viableRadOutWrappersOriginBounds`).call(this)
   }
 
-  //MEMO: viableConcentricOriginBounds
-  get viableConcentricOriginBounds() {
+  //MEMO: viableRadiantOriginBounds
+  get viableRadiantOriginBounds() {
     return memoize(() => {
-      if (this.isInnerMostConcentricWrapper && this.outerMostConcentricWrapper) {
+      if (this.isInnerMostRadiantWrapper && this.outerMostRadiantWrapper) {
         return boundsOverlap({
-          geo: [this.viableArcOriginsSeg, this.outerMostConcentricWrapper.viableArcOriginsSeg], accuracy: 0
+          geo: [this.viableArcOriginsSeg, this.outerMostRadiantWrapper.viableArcOriginsSeg], accuracy: 0
         })
       }
-    }, `viableConcentricOriginBounds`).call(this)
+    }, `viableRadiantOriginBounds`).call(this)
   }
-  //MEMO: viableConcentricOrigins
-  get viableConcentricOrigins() {
-    // console.error(`can has viableConcentricOrigins?`)
+  //MEMO: viableRadiantOrigins
+  get viableRadiantOrigins() {
+    // console.error(`can has viableRadiantOrigins?`)
     // return memoize(() => {
-    if (this.viableConcentricOriginBounds) {
-      // console.warn(`yes! viableConcentricOrigins`)
+    if (this.viableRadiantOriginBounds) {
+      // console.warn(`yes! viableRadiantOrigins`)
       // console.error(`viableArcOrigins`, this.viableArcOrigins.map(v => v.string))
-      // console.error(`viableConcentricOriginBounds`, this.viableConcentricOriginBounds)
+      // console.error(`viableRadiantOriginBounds`, this.viableRadiantOriginBounds)
       const viableBounds = this.viableRadOutWrappersOriginBounds
       // console.log(`viableRadOutWrappersOriginBounds`, viableBounds)
       const origins = this.currentViableArcOrigins
@@ -2576,16 +2576,16 @@ class ProtoSegment extends Segment {
       if (!origins.isEmpty) { return origins }
 
     }
-    // }, `viableConcentricOrigins`).call(this)
+    // }, `viableRadiantOrigins`).call(this)
   }
   //MARK: INTERFERENCE WRAPPING
   get interferenceWrappers() {
     if (
       // !this.hasMinArcRadius
       // &&
-      this.isInnerMostConcentricWrapper && this.concentricOutWrappers.length > 1) {
-      const segs = this.outerMostConcentricWrapper.neighborsArray.flat()
-        // const segs = this.concentricOutWrappers
+      this.isInnerMostRadiantWrapper && this.radiantOutWrappers.length > 1) {
+      const segs = this.outerMostRadiantWrapper.neighborsArray.flat()
+        // const segs = this.radiantOutWrappers
         //   .map(s => s.neighborsArray).flat()
         //   // .map(s => {
         //   return !s.isOutsideCorner && s.colInWrapper ? s.inWrapper : s
@@ -2596,37 +2596,37 @@ class ProtoSegment extends Segment {
           // &&
           s.arcNormalDirection.equals(this.arcNormalDirection.opposites)
           && (
-            s.isInnerMostConcentricWrapper
-            || s.colInWrapper?.isInnerMostConcentricWrapper
-            || s.isOuterMostConcentricWrapper
-            || s.colOutWrapper?.isOuterMostConcentricWrapper
+            s.isInnerMostRadiantWrapper
+            || s.colInWrapper?.isInnerMostRadiantWrapper
+            || s.isOuterMostRadiantWrapper
+            || s.colOutWrapper?.isOuterMostRadiantWrapper
           )
           //NOTE: using this fixes #323
           // && (
-          //   s.isInnerMostConcentricWrapper
-          //   || s.innerMostConcentricWrapper
-          //   || s.isOuterMostConcentricWrapper
-          //   || s.outerMostConcentricWrapper
+          //   s.isInnerMostRadiantWrapper
+          //   || s.innerMostRadiantWrapper
+          //   || s.isOuterMostRadiantWrapper
+          //   || s.outerMostRadiantWrapper
           // )
         )
         .map(s => {
-          if (s.colInWrapper?.isInnerMostConcentricWrapper) {
+          if (s.colInWrapper?.isInnerMostRadiantWrapper) {
             return s.colInWrapper
-          } else if (s.colOutWrapper?.isOuterMostConcentricWrapper) {
+          } else if (s.colOutWrapper?.isOuterMostRadiantWrapper) {
             return s.colOutWrapper
           } else {
             return s
           }
           //NOTE: using this fixes #323
-          // if (s.innerMostConcentricWrapper) {
-          //   return s.innerMostConcentricWrapper
-          // } else if (s.outerMostConcentricWrapper) {
-          //   return s.outerMostConcentricWrapper
+          // if (s.innerMostRadiantWrapper) {
+          //   return s.innerMostRadiantWrapper
+          // } else if (s.outerMostRadiantWrapper) {
+          //   return s.outerMostRadiantWrapper
           // } else {
           //   return s
           // }
         })
-        // .filter(s => s.concentricOutWrappers.length > 1)
+        // .filter(s => s.radiantOutWrappers.length > 1)
         .compacted
       if (!segs.isEmpty) {
         const start = segs.filter(s => this.maxArcBoundsSeg.vertOrientation(s.end).isLeft)[0]
@@ -2781,8 +2781,8 @@ class ProtoSegment extends Segment {
     return this.viableArcOriginsSeg.isOverlappingWith({ seg: seg.viableArcOriginsSeg })
       && this.hasDiagonalCorner(seg)
   }
-  //METH: isConcentricWrapped() : two corners currently have an equidistant concentric wrap
-  isConcentricWrapped(seg, decimal = 2) {
+  //METH: isRadiantWrapped() : two corners currently have an equidistant radiant wrap
+  isRadiantWrapped(seg, decimal = 2) {
     return this.arcOrigin.equals(seg.arcOrigin, decimal) && this.hasDiagonalCorner(seg)
   }
   //METH: isProximalWrapped() : two corners currently have an aligned proximal wrap
@@ -2791,13 +2791,13 @@ class ProtoSegment extends Segment {
     return segment(this.start, seg.start).isCardinal || segment(this.end, seg.end).isCardinal
   }
 
-  get isOutWrappedToConcentrics() {
+  get isOutWrappedToRadiants() {
     const min = this.isColInWrapper ? 1 : 0
-    return this.concentricOutWrappers?.filter(w => this.isConcentricWrapped(w)).length > min
+    return this.radiantOutWrappers?.filter(w => this.isRadiantWrapped(w)).length > min
   }
-  get isInWrappedToConcentrics() {
+  get isInWrappedToRadiants() {
     const min = this.isColInWrapper ? 0 : 1
-    return this.concentricInWrappers?.filter(w => this.isConcentricWrapped(w)).length > min
+    return this.radiantInWrappers?.filter(w => this.isRadiantWrapped(w)).length > min
   }
 
   get isOutWrapped() { return this.#isWrapped(true) }
@@ -2805,7 +2805,7 @@ class ProtoSegment extends Segment {
 
   #isWrapped(out, decimal = 2) {
     const wrapper = out ? this.outWrapper : this.inWrapper
-    return wrapper?.isConcentricWrapped(this, decimal) || wrapper?.isProximalWrapped(this)
+    return wrapper?.isRadiantWrapped(this, decimal) || wrapper?.isProximalWrapped(this)
   }
 
   get hasNoWrappers() {
