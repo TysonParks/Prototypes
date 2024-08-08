@@ -610,7 +610,7 @@ function gridTests2() {
 
   // console.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
-  // GRID.showCellsDebug()
+  GRID.showCellsDebug()
 
   // console.log(`multi-island simpleSubshapes`, GRID.allSimpleSubShapes.flat().map(s => s.parentID))
   let interCells01 = GRID.perimeterIslands[3]?.interCells
