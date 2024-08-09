@@ -826,6 +826,7 @@ class Grid extends ProtoLayer {
   get islands() { return this.groups.map(g => g.islands).flat() }
   get allIslands() { return this.islands.union(this.perimeterIslands, [`id`]).flat() }
   get shapes() { return this.allIslands.map(i => i.shape).flat() }
+  get perimeterShapes() { return this.perimeterIslands.map(i => i.shape) }
 
   //MEMO: allSimpleSubShapes()
   get allSimpleSubShapes() {
@@ -841,15 +842,21 @@ class Grid extends ProtoLayer {
     }, `allSimpleSubShapesSegs`).call(this)
   }
 
-  get allSingleSimpleSubShapes() {                 // subshapes that contain no internal subShapes          
-    return this.perimeterIslands
-      .map(i => i.shape.simpleSubShapes)           // get unflattened to test subShape count
-      .filter(subs => subs.length === 1).flat()    // only subShapes with a single simpleSubShape
+  get allSingleSimpleSubShapes() {                 // subshapes that contain no internal subShapes    
+    return this.perimeterShapes
+      .filter(s => s.isSingleShape)                // filter shapes for singles
+      .map(s => s.simpleSubShapes).flat()          // map to simpleSubShapes 
+    // return this.perimeterIslands
+    //   .map(i => i.shape.simpleSubShapes)           // get unflattened to test subShape count
+    //   .filter(subs => subs.length === 1).flat()    // only subShapes with a single simpleSubShape
   }
-  get allInternalSimpleSubShapes() {        // Internal subshapes run counter-clockwise
-    return this.perimeterIslands
-      .filter(i => i.shape.simpleSubShapes.length > 1)    // only shapes with more than 1 simpleSubShape are internal
-      .map(i => i.shape.simpleSubShapes.slice(1)).flat()  // remove external subShapes
+  get allInternalSimpleSubShapes() {               // Internal subshapes run counter-clockwise
+    return this.perimeterShapes
+      .filter(s => !s.isSingleShape)               // filter shapes for not singles!
+      .map(s => s.simpleSubShapes.slice(1)).flat()   // map to simpleSubShapes minus their outer shape
+    // return this.perimeterIslands
+    //   .filter(i => i.shape.simpleSubShapes.length > 1)    // only shapes with more than 1 simpleSubShape are internal
+    //   .map(i => i.shape.simpleSubShapes.slice(1)).flat()  // remove external subShapes
   }
 
   //MEMO: allSimpleOutsideCorners
@@ -3994,7 +4001,7 @@ class Island extends ProtoLayer {
   get cellCount() { return this.cells.length }
   get minCornerRadius() { return this.shape.minCornerRadius }
 
-  get isSingle() {
+  get isSingleCell() {
     return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index, Direction.All))
   }
   get isCardinalSingle() {
@@ -4004,17 +4011,17 @@ class Island extends ProtoLayer {
   get isOrdinalCapsule() { return this.cellCount === 2 && this.isOrdinal }
 
   get isHorizontal() {
-    return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Vertical))
+    return !this.isSingleCell && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Vertical))
   }
   get isVertical() {
-    return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Horizontal))
+    return !this.isSingleCell && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Horizontal))
   }
-  get isLine() { return this.isSingle || this.isHorizontal || this.isVertical }
+  get isLine() { return this.isSingleCell || this.isHorizontal || this.isVertical }
   get isCardinal() {
-    return !this.isSingle
+    return !this.isSingleCell
       && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Ordinal))
   }
-  get isOrdinal() { return !this.isSingle && this.cells.every(e => this.cellIsIsolated(e.index)) }
+  get isOrdinal() { return !this.isSingleCell && this.cells.every(e => this.cellIsIsolated(e.index)) }
 
   get isRectangle() { return !this.isLine && this.cellBounds.isFull }
   get isSquare() { return this.isRectangle && this.cellBounds.aspect.isSquare }
@@ -4564,6 +4571,7 @@ class Shape extends ProtoLayer {
   }
 
   get isPerimeterShape() { return this.type === `PerimeterShape` }
+  get isSingleShape() { return this.subShapes.length === 1 }
 
   get isLine() { return this.island.isLine }
   get isQuad() { return this.island.isRectangle }
