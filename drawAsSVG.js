@@ -263,12 +263,12 @@ class SegPath {
         // if (outWrap) {
         //   if (s.outWrapper?.canCurveToMiddleOrigin)) {
         //     console.log(`CAN curve!`)
-        //     s.replaceEndConcOutWrapsOrigin()
+        //     s.replaceEndRadiantOutWrapsOrigin()
         //   } else {
         //     console.log(`can't curve!`)
         //   }
         // } else {
-        //   s.colWrap(true)
+        //   s.tightWrap(true)
         // }
 
       }
@@ -278,14 +278,14 @@ class SegPath {
       if (outWrap) {
         if (s.outWrapper?.canCurveToMiddleOrigin) {
           // console.log(`CAN curve!`)
-          // s.colWrap(true)
+          // s.tightWrap(true)
           // console.log(s)
-          s.replaceEndConcOutWrapsOrigin()
+          s.replaceEndRadiantOutWrapsOrigin()
         } else {
           // console.log(`can't curve!`)
         }
       } else {
-        s.colWrap(true)
+        s.tightWrap(true)
       }
     })
 
@@ -1368,8 +1368,8 @@ class ProtoSegment extends Segment {
     this.addCubicEndVert(this.mid)
   }
 
-  addCubicStartVert(vert, replace = false) { this.#addCubicVert(vert, true, replace) }
-  addCubicEndVert(vert, replace = false) { this.#addCubicVert(vert, false, replace) }
+  addCubicStartVert(vert, replace = false) { this.#addCubicVert(vert, replace, true) }
+  addCubicEndVert(vert, replace = false) { this.#addCubicVert(vert, replace, false) }
 
   addDistancedCubicStartVert(distance, replace = false) {
     this.addCubicStartVert(this.distancedStartPoint(distance), replace)
@@ -1391,22 +1391,22 @@ class ProtoSegment extends Segment {
     this.addDistancedEndCornerVerts(distance, replace)
   }
 
-  // removeCubicStartVert() { this.#removeCubicVert() }
-  // removeCubicEndVert() { this.#removeCubicVert(false) }
+  // removeCubicStartVert() { this.#removeCubicVert() }                                                          //UNUSED:
+  // removeCubicEndVert() { this.#removeCubicVert(false) }                                                       //UNUSED:
 
-  // removeStartCornerVerts() {
+  // removeStartCornerVerts() {                                                                                  //UNUSED:
   //   this.removeCubicStartVert()
   //   this.neighbors.start.removeCubicEndVert()
   // }
-  // removeEndCornerVerts() {
+  // removeEndCornerVerts() {                                                                                    //UNUSED:
   //   this.removeCubicEndVert()
   //   this.neighbors.end.removeCubicStartVert()
   // }
 
-  replaceCubicStartVert(vert) { this.#replaceCubicVert(vert) }
-  replaceCubicEndVert(vert) { this.#replaceCubicVert(vert, false) }
+  // replaceCubicStartVert(vert) { this.#replaceCubicVert(vert, true) }                                          //UNUSED:
+  // replaceCubicEndVert(vert) { this.#replaceCubicVert(vert, false) }                                           //UNUSED:
 
-  // matchStartCorner() {                                                                                   //UNUSED:
+  // matchStartCorner() {                                                                                        //UNUSED:
   //   // const start = this.startNeighbor
   //   // const neighborEnd = start.hasNoCubicVerts ? start.maxCubicStartLength : start.availableStartLength
   //   const startMin = min(this.availableStartLength, this.startNeighbor.availableStartLength)
@@ -1441,23 +1441,19 @@ class ProtoSegment extends Segment {
   // setMinStartCorner() { this.addDistancedStartCornerVerts(this.cellRadius) }                          //UNUSED:
   // setMinCorners() { this.addBothDistancedCornerVerts(this.cellRadius) }                               //UNUSED:
 
+  setEndCurveOrigin(vert) { return this.#setCurveOrigin(vert) }
+  replaceEndCurveOrigin(vert) { return this.#setCurveOrigin(vert, true) }
 
-  // setStartCurveOrigin(vert) { return this.#setCurveOrigin(vert, true) }                               //UNUSED:
-  setEndCurveOrigin(vert) { return this.#setCurveOrigin(vert, false) }
+  setEndRadiantOutWrapsOrigin(vert) { this.#setRadiantOrigin(vert) }
+  replaceEndRadiantOutWrapsOrigin(vert) { this.#setRadiantOrigin(vert, true) }
 
-  // replaceStartCurveOrigin(vert) { return this.#setCurveOrigin(vert, true, true) }                     //UNUSED:
-  replaceEndCurveOrigin(vert) { return this.#setCurveOrigin(vert, false, true) }
-
-  setEndConcOutWrapsOrigin(vert) { this.#setRadiantOrigin(vert, false) }
-  replaceEndConcOutWrapsOrigin(vert) { this.#setRadiantOrigin(vert, false, true) }
-
-  #setRadiantOrigin(vert, start, replace = false, out = true) {
-    if (vert) { this.#setCurveOrigin(vert, start, replace) }
+  #setRadiantOrigin(vert, replace = false, start = false, out = true) {
+    if (vert) { this.#setCurveOrigin(vert, replace, start) }
     const wrappers = out ? this.radiantOutWrappers : this.radiantInWrappers
-    wrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, start, replace))
+    wrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, replace, start))
   }
 
-  #setCurveOrigin(toVert, start, replace = false) {
+  #setCurveOrigin(toVert, replace = false, start = false) {
     const seg = start ? this.startNeighbor : this             // seg/corner to reference
     let report = false                                                                                  //LOGGING:
     // if (this.id.includes('cell013')                                                                     //LOGGING:
@@ -1486,7 +1482,7 @@ class ProtoSegment extends Segment {
     }
   }
   //METH: #addCubicVert()
-  #addCubicVert(vert, start, replace = false) {
+  #addCubicVert(vert, replace = false, start = false) {
     let report = false
     const mode = start ? 'Start' : `End`
     // if (
@@ -1542,9 +1538,9 @@ class ProtoSegment extends Segment {
   //   this.#resetMemoProps()
   // }
   //METH: #replaceCubicVert()
-  #replaceCubicVert(vert, start = true) {
-    this.#addCubicVert(vert, start, true)
-  }
+  // #replaceCubicVert(vert, start) {                                                                             //UNUSED:
+  //   this.#addCubicVert(vert, true, start)
+  // }
   //METH: #resetMemoProps()
   #resetMemoProps(andNeighbors = true) {
     const segs = andNeighbors ? this.andNeighborsArray : [this]
@@ -1615,8 +1611,8 @@ class ProtoSegment extends Segment {
   //   console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
   //   this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
   // }
-  // addMaxStartVert(vert, replace = false) { this.#addCubicVert(vert, true, replace, false) }             //UNUSED:
-  // addMaxEndVert(vert, replace = false) { this.#addCubicVert(vert, false, replace, false) }              //UNUSED:
+  // addMaxStartVert(vert, replace = false) { this.#addCubicVert(vert, replace, true, false) }             //UNUSED:
+  // addMaxEndVert(vert, replace = false) { this.#addCubicVert(vert, replace, false, false) }              //UNUSED:
   // #endregion
   //MARK: Combined Cubic Verts
   // #region Combined Cubic Verts
@@ -2057,14 +2053,27 @@ class ProtoSegment extends Segment {
   hasDiagonalCorner(seg) {
     // console.warn(this, seg)
     const facing = this.hasSameFacingCorner(seg)
-    const collinear = this.maxArcBoundsSeg.isCollinearWith(seg.maxArcBoundsSeg)
-    // console.log(`hasDiagonalCorner`, facing, collinear)                                                      //LOGGING:
+    const colBoundsSeg = this.maxArcBoundsSeg.isCollinearWith(seg.maxArcBoundsSeg)
+    // console.log(`hasDiagonalCorner`, facing, colBoundsSeg)                                                //LOGGING:
     // console.log(`segs:`, this.viableArcOriginsSeg, seg.viableArcOriginsSeg)                               //LOGGING:
-    return facing && collinear
+    return facing && colBoundsSeg
     return this.hasSameFacingCorner(seg) && this.maxArcBoundsSeg.isCollinearWith(seg.maxArcBoundsSeg)
   }
+  //METH: hasCollinearCorner()
+  hasCollinearCorner(seg) {
+    const diagonal = this.hasDiagonalCorner(seg)
+    const collinear = this.isCollinearWith(seg) || this.isCollinearWith(seg.endNeighbor)
+    const sharedCorner = this.end.equals(seg.end, 0)
+    return diagonal && collinear && !sharedCorner
+  }
+  //METH: hasCoincidentCorner()
+  hasCoincidentCorner(seg) {
+    const diagonal = this.hasDiagonalCorner(seg)
+    const sharedCorner = this.end.equals(seg.end, 0)
+    return diagonal && sharedCorner
+  }
 
-  //MARK: COLLINEAR WRAPPING
+  //MARK: TIGHT WRAPPING
   //MEMO: closeWrappers
   get closeWrappers() {
     return memoize(() => {
@@ -2102,8 +2111,8 @@ class ProtoSegment extends Segment {
     if (end) { return end.seg }
     // }
   }
-  //MEMO: collinearWrapper
-  get collinearWrapper() {
+  //MEMO: coincidentWrapper
+  get coincidentWrapper() {
     return memoize(() => {
       // const start = this.closeWrappers.start?.seg
       // const end = this.closeWrappers.end?.seg
@@ -2122,9 +2131,9 @@ class ProtoSegment extends Segment {
       } else if (end) {
         // return end.seg
       }
-    }, `collinearWrapper`).call(this)
+    }, `coincidentWrapper`).call(this)
   }
-  // get collinearWrapper() {
+  // get coincidentWrapper() {
   //   return memoize(() => {
   //     // const turnDir = this.isOutsideCorner ? `isLeft` : `isRight`        // overlap wraps run opposite, UNUSED
   //     const startWraps = this.overlapSegs                                   // start with segs overlapping this seg
@@ -2135,18 +2144,18 @@ class ProtoSegment extends Segment {
   //         && this.endNeighbor.isOverlappingWith({seg:s.startNeighbor})            // neighbors must also overlap
   //       )
   //     if (startWraps.length === 1) { return startWraps[0].startNeighbor }   // startWrap.startNeighbor is the corner seg
-  //   }, `collinearWrapper`).call(this)
+  //   }, `coincidentWrapper`).call(this)
   // }
 
-  get colOutWrapper() {
+  get coinOutWrapper() {
     if (this.isOutsideCorner) {
-      return this.collinearWrapper
+      return this.coincidentWrapper
       // || this.closestWrappper                    //TODO: re-evaluate closestWrapper usage,disabled to fix #372
     }
   }
-  get colInWrapper() {
+  get coinInWrapper() {
     if (!this.isOutsideCorner) {
-      return this.collinearWrapper
+      return this.coincidentWrapper
       // || this.closestWrappper                    //TODO: re-evaluate closestWrapper usage,disabled to fix #372
     }
   }
@@ -2272,8 +2281,8 @@ class ProtoSegment extends Segment {
   get adjInWrapper() { if (this.isOutsideCorner) { return this.adjacentWrapper } }
 
   //MARK: IN/OUT WRAPPING
-  //METH: colWrap() :
-  colWrap(replace = false) {
+  //METH: tightWrap() :
+  tightWrap(replace = false) {
     return this.#wrap(true, replace)
   }
 
@@ -2283,9 +2292,9 @@ class ProtoSegment extends Segment {
   }
 
   //METH: #wrap() :
-  #wrap(collinear, replace = false) {
-    let wrapper = collinear ? this.collinearWrapper : this.adjacentWrapper
-    const wrapType = collinear ? `colWrap()` : `adjWrap()`                                        //LOGGING:
+  #wrap(tight, replace = false) {
+    let wrapper = tight ? this.coincidentWrapper : this.adjacentWrapper
+    const wrapType = tight ? `tightWrap()` : `adjWrap()`                                        //LOGGING:
     let report = false                                                                            //LOGGING:
     // if (this.id.includes('cell119')                                                               //LOGGING:
     //   // || this.id.includes('cell022')                                                              //LOGGING:
@@ -2297,10 +2306,10 @@ class ProtoSegment extends Segment {
 
     if (wrapper
       // && viables
-    ) {                                                    // has a collinear wrapper
+    ) {                                                    // has a tight wrapper
       if (report) { console.log(`wrapper:`, wrapper.id) }                                         //LOGGING:
-      const [inWrapper, outWrapper] = collinear ? this.inOutColWrappers : this.inOutAdjWrappers
-      const viables = collinear ? this.viableColWrapOrigins : this.viableAdjWrapOrigins
+      const [inWrapper, outWrapper] = tight ? this.inOutCoinWrappers : this.inOutAdjWrappers
+      const viables = tight ? this.viableCoinWrapOrigins : this.viableAdjWrapOrigins
 
       if (this.hasArc) {                                                         // this has arc
         if (report) { console.log(`this hasArc`) }                                                //LOGGING:
@@ -2318,7 +2327,7 @@ class ProtoSegment extends Segment {
             console.log(`${wrapType} cubicVerts before`, wrapper.cubicVerts)                      //LOGGING:
           }                                                                                       //LOGGING:
           if (replace                                                            // forced replacement
-            || (collinear ? this.colWrapIsNonEquidistant                          // nonEquidistant wrappers!
+            || (tight ? this.coinWrapIsNonEquidistant                          // nonEquidistant wrappers!
               : this.adjWrapIsNonEquidistant)) {                                    // nonEquidistant wrappers!
             // console.log(`replacing end curve origin`)                                           //LOGGING:
             wrapper.replaceEndCurveOrigin(this.arcOrigin)                        // replace matching wrapper curve
@@ -2361,8 +2370,8 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get outWrapper() { return this.isOutsideCorner ? this.colOutWrapper : this.adjOutWrapper }
-  get inWrapper() { return this.isOutsideCorner ? this.adjInWrapper : this.colInWrapper }
+  get outWrapper() { return this.isOutsideCorner ? this.coinOutWrapper : this.adjOutWrapper }
+  get inWrapper() { return this.isOutsideCorner ? this.adjInWrapper : this.coinInWrapper }
   //MEMO: outWrappers
   get outWrappers() {
     return memoize(() => {
@@ -2494,24 +2503,24 @@ class ProtoSegment extends Segment {
     }, `viableOutWrapOriginBounds`).call(this)
   }
 
-  //MEMO: viableColWrapOriginBounds
-  get viableColWrapOriginBounds() {
+  //MEMO: viableCoinWrapOriginBounds
+  get viableCoinWrapOriginBounds() {
     return memoize(() => {
-      if (this.collinearWrapper) {
-        return boundsOverlap({ geo: [this.viableArcOriginsSeg, this.collinearWrapper.viableArcOriginsSeg] })
+      if (this.coincidentWrapper) {
+        return boundsOverlap({ geo: [this.viableArcOriginsSeg, this.coincidentWrapper.viableArcOriginsSeg] })
       }
-    }, `viableColWrapOriginBounds`).call(this)
+    }, `viableCoinWrapOriginBounds`).call(this)
   }
-  //MEMO: viableColWrapOrigins
-  get viableColWrapOrigins() {
+  //MEMO: viableCoinWrapOrigins
+  get viableCoinWrapOrigins() {
     return memoize(() => {
-      if (this.viableColWrapOriginBounds) {
+      if (this.viableCoinWrapOriginBounds) {
         const origins = this.viableArcOrigins
-          .filter(v => vertIsInsideBounds(v, this.viableColWrapOriginBounds, true, 0))
+          .filter(v => vertIsInsideBounds(v, this.viableCoinWrapOriginBounds, true, 0))
           .sort((a, b) => Vertex.dist(a, this.end) - Vertex.dist(b, this.end))
         if (!origins.isEmpty) { return origins }
       }
-    }, `viableColWrapOrigins`).call(this)
+    }, `viableCoinWrapOrigins`).call(this)
   }
 
   //MEMO: viableAdjWrapOriginBounds
@@ -2588,7 +2597,7 @@ class ProtoSegment extends Segment {
         // const segs = this.radiantOutWrappers
         //   .map(s => s.neighborsArray).flat()
         //   // .map(s => {
-        //   return !s.isOutsideCorner && s.colInWrapper ? s.inWrapper : s
+        //   return !s.isOutsideCorner && s.coinInWrapper ? s.inWrapper : s
         // })
         .filter(s =>
           //NOTE: removing !s.hasMinArcRadius fixes #405
@@ -2597,9 +2606,9 @@ class ProtoSegment extends Segment {
           s.arcNormalDirection.equals(this.arcNormalDirection.opposites)
           && (
             s.isInnerMostRadiantWrapper
-            || s.colInWrapper?.isInnerMostRadiantWrapper
+            || s.coinInWrapper?.isInnerMostRadiantWrapper
             || s.isOuterMostRadiantWrapper
-            || s.colOutWrapper?.isOuterMostRadiantWrapper
+            || s.coinOutWrapper?.isOuterMostRadiantWrapper
           )
           //NOTE: using this fixes #323
           // && (
@@ -2610,10 +2619,10 @@ class ProtoSegment extends Segment {
           // )
         )
         .map(s => {
-          if (s.colInWrapper?.isInnerMostRadiantWrapper) {
-            return s.colInWrapper
-          } else if (s.colOutWrapper?.isOuterMostRadiantWrapper) {
-            return s.colOutWrapper
+          if (s.coinInWrapper?.isInnerMostRadiantWrapper) {
+            return s.coinInWrapper
+          } else if (s.coinOutWrapper?.isOuterMostRadiantWrapper) {
+            return s.coinOutWrapper
           } else {
             return s
           }
@@ -2678,52 +2687,52 @@ class ProtoSegment extends Segment {
     // }, `viableInterferenceOrigins`).call(this)
   }
   //MARK: OLD LOOSE PROPS
-  get hasLooseCorner() {
-    if (this.canCurveMoreAtEnd) {
-      return this.hasWrappers ? this.hasLooseWrapper : true
-    }
-    return false
-  }
+  // get hasLooseCorner() {
+  //   if (this.canCurveMoreAtEnd) {
+  //     return this.hasWrappers ? this.hasLooseWrapper : true
+  //   }
+  //   return false
+  // }
 
-  get hasLooseAdjWrapper() {
-    if (this.intendedArcRadius && this.arcRadius) {
-      return !equalsRoundedDec(this.intendedArcRadius, this.arcRadius, 0)
-      // return roundToDec(this.intendedArcRadius, 0) !== roundToDec(this.arcRadius, 0)
-    }
-    return false
-  }
-  get hasLooseColWrapper() {
-    if (this.closestWrappper) {
-      return !this.arcStartCorner.equals(this.closestWrappper.arcEndCorner, 0)
-        && !this.arcEndCorner.equals(this.closestWrappper.arcStartCorner, 0)
-    }
-    if (this.collinearWrapper) {
-      return !equalsRoundedDec(this.collinearWrapper.arcRadius, this.arcRadius, 0)
-      // return roundToDec(this.collinearWrapper.arcRadius, 0) !== roundToDec(this.arcRadius, 0)
-    }
-    // return false
-    return this.isOutsideCorner ? false : this.canCurveMoreAtEnd
-  }
-  get hasLooseWrapper() { return this.hasLooseColWrapper || this.hasLooseAdjWrapper }
+  // get hasLooseAdjWrapper() {
+  //   if (this.intendedArcRadius && this.arcRadius) {
+  //     return !equalsRoundedDec(this.intendedArcRadius, this.arcRadius, 0)
+  //     // return roundToDec(this.intendedArcRadius, 0) !== roundToDec(this.arcRadius, 0)
+  //   }
+  //   return false
+  // }
+  // get hasLooseColWrapper() {
+  //   if (this.closestWrappper) {
+  //     return !this.arcStartCorner.equals(this.closestWrappper.arcEndCorner, 0)
+  //       && !this.arcEndCorner.equals(this.closestWrappper.arcStartCorner, 0)
+  //   }
+  //   if (this.coincidentWrapper) {
+  //     return !equalsRoundedDec(this.coincidentWrapper.arcRadius, this.arcRadius, 0)
+  //     // return roundToDec(this.coincidentWrapper.arcRadius, 0) !== roundToDec(this.arcRadius, 0)
+  //   }
+  //   // return false
+  //   return this.isOutsideCorner ? false : this.canCurveMoreAtEnd
+  // }
+  // get hasLooseWrapper() { return this.hasLooseColWrapper || this.hasLooseAdjWrapper }
 
-  get hasIntersectingWrapper() {
-    if (this.isOutsideCorner && this.hasLooseAdjWrapper) {
-      return roundToDec(this.intendedArcRadius, 0) < roundToDec(this.arcRadius, 0)
-    } else {
-      // if (this.outWrapper) { return this.outWrapper.hasIntersectingWrapper }
-    }
-    return false
-  }
+  // get hasIntersectingWrapper() {
+  //   if (this.isOutsideCorner && this.hasLooseAdjWrapper) {
+  //     return roundToDec(this.intendedArcRadius, 0) < roundToDec(this.arcRadius, 0)
+  //   } else {
+  //     // if (this.outWrapper) { return this.outWrapper.hasIntersectingWrapper }
+  //   }
+  //   return false
+  // }
 
   //MARK: WRAP STATES
-  get hasCompleteColWrap() { return this.hasArc && this.collinearWrapper?.hasArc }
+  get hasCompleteTightWrap() { return this.hasArc && this.coincidentWrapper?.hasArc }
   get hasCompleteAdjWrap() { return this.hasArc && this.adjacentWrapper?.hasArc }
 
-  //MEMO: inOutColWrappers
-  get inOutColWrappers() {
+  //MEMO: inOutCoinWrappers
+  get inOutCoinWrappers() {
     return memoize(() => {
       return this.#inOutWrappers(true)
-    }, `inOutColWrappers`).call(this)
+    }, `inOutCoinWrappers`).call(this)
   }
   //MEMO: inOutAdjWrappers
   get inOutAdjWrappers() {
@@ -2732,24 +2741,24 @@ class ProtoSegment extends Segment {
     }, `inOutAdjWrappers`).call(this)
   }
 
-  get isColInWrapper() { return !!this.colOutWrapper }
+  get isCoinInWrapper() { return !!this.coinOutWrapper }
   get isAdjInWrapper() { return !!this.adjOutWrapper }
-  get isColOutWrapper() { return !!this.colInWrapper }
+  get isCoinOutWrapper() { return !!this.coinInWrapper }
   get isAdjOutWrapper() { return !!this.adjInWrapper }
 
   //METH: #inOutWrappers()
-  #inOutWrappers(collinear) {
-    // if (collinear ? this.hasCompleteColWrap : this.hasCompleteAdjWrap) {
-    const wrapper = collinear ? this.collinearWrapper : this.adjacentWrapper
-    return this.isOutsideCorner === collinear ? [this, wrapper] : [wrapper, this]
+  #inOutWrappers(tight) {
+    // if (tight ? this.hasCompleteTightWrap : this.hasCompleteAdjWrap) {
+    const wrapper = tight ? this.coincidentWrapper : this.adjacentWrapper
+    return this.isOutsideCorner === tight ? [this, wrapper] : [wrapper, this]
     // }
   }
 
   //METH: #wrapState()
-  wrapState(collinear) {
-    if (collinear) {
-      if (this.hasCompleteColWrap) {
-        const [inRadius, outRadius] = this.inOutColWrappers.map(w => roundToDec(w.arcRadius, 2))  // arcRadius of in and out wrappers
+  wrapState(tight) {
+    if (tight) {
+      if (this.hasCompleteTightWrap) {
+        const [inRadius, outRadius] = this.inOutCoinWrappers.map(w => roundToDec(w.arcRadius, 2))  // arcRadius of in and out wrappers
         if (inRadius === outRadius) { return 0 }                              // EQUIDISTANT: radii are equal
         if (inRadius < outRadius) { return 1 }                                // DIVERGING: inRadius < outRadius
         if (inRadius > outRadius) { return 2 }                                // CONVERGING: inRadius > outRadius
@@ -2767,10 +2776,10 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get colWrapIsEquidistant() { return this.wrapState(true) === 0 }
-  get colWrapIsDiverging() { return this.wrapState(true) === 1 }
-  get colWrapIsConverging() { return this.wrapState(true) === 2 }
-  get colWrapIsNonEquidistant() { return this.colWrapIsDiverging || this.colWrapIsConverging }
+  get coinWrapIsEquidistant() { return this.wrapState(true) === 0 }
+  get coinWrapIsDiverging() { return this.wrapState(true) === 1 }
+  get coinWrapIsConverging() { return this.wrapState(true) === 2 }
+  get coinWrapIsNonEquidistant() { return this.coinWrapIsDiverging || this.coinWrapIsConverging }
   get adjWrapisEquidistant() { return this.wrapState(false) === 0 }
   get adjWrapIsDiverging() { return this.wrapState(false) === 1 }
   get adjWrapIsConverging() { return this.wrapState(false) === 2 }
@@ -2792,11 +2801,11 @@ class ProtoSegment extends Segment {
   }
 
   get isOutWrappedToRadiants() {
-    const min = this.isColInWrapper ? 1 : 0
+    const min = this.isCoinInWrapper ? 1 : 0
     return this.radiantOutWrappers?.filter(w => this.isRadiantWrapped(w)).length > min
   }
   get isInWrappedToRadiants() {
-    const min = this.isColInWrapper ? 0 : 1
+    const min = this.isCoinInWrapper ? 0 : 1
     return this.radiantInWrappers?.filter(w => this.isRadiantWrapped(w)).length > min
   }
 
