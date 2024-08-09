@@ -1809,21 +1809,21 @@ class ProtoSegment extends Segment {
   //   return boundsIsWithinTestBounds(thisBounds, segBounds)
   // }
   //METH: arcIsWithinThisArc()
-  arcIsWithinThisArc(arcSeg) {
-    const thisBounds = this.minArcBoundsSeg
-    const segBounds = arcSeg instanceof ProtoSegment ? arcSeg.maxArcBoundsSeg : arcSeg
-    // console.log(`arcIsWithinThisArc`, this)                                                              //LOGGING:
-    // console.log(`arcIsWithinThisArc`, arcSeg)                                                            //LOGGING:
-    // console.log(`arcIsWithinThisArc thisBounds`, thisBounds)                                             //LOGGING:
-    // console.log(`arcIsWithinThisArc thisBounds`, thisBounds)                                             //LOGGING:
-    const result = boundsIsWithinTestBounds(thisBounds, segBounds)
-    // console.log(`arcIsWithinThisArc result`, result)                                                     //LOGGING:
-    return result
-  }
+  // arcIsWithinThisArc(arcSeg) {                                                                            //UNUSED:
+  //   const thisBounds = this.minArcBoundsSeg
+  //   const segBounds = arcSeg instanceof ProtoSegment ? arcSeg.maxArcBoundsSeg : arcSeg
+  //   // console.log(`arcIsWithinThisArc`, this)                                                              //LOGGING:
+  //   // console.log(`arcIsWithinThisArc`, arcSeg)                                                            //LOGGING:
+  //   // console.log(`arcIsWithinThisArc thisBounds`, thisBounds)                                             //LOGGING:
+  //   // console.log(`arcIsWithinThisArc thisBounds`, thisBounds)                                             //LOGGING:
+  //   const result = boundsIsWithinTestBounds(thisBounds, segBounds)
+  //   // console.log(`arcIsWithinThisArc result`, result)                                                     //LOGGING:
+  //   return result
+  // }
   //METH: arcWrappedWithinThisArc()
-  arcShouldWrapOutToArc(arcSeg) {
-    return this.arcIsWithinThisArc(arcSeg) && this.hasSameFacingCorner(arcSeg)
-  }
+  // arcShouldWrapOutToArc(arcSeg) {                                                                         //UNUSED:
+  //   return this.arcIsWithinThisArc(arcSeg) && this.hasSameFacingCorner(arcSeg)
+  // }
 
 
   //MARK: Max and Min Possible Arcs 
@@ -2047,6 +2047,11 @@ class ProtoSegment extends Segment {
     }, `neighborDiagonalCorners`).call(this)
   }
 
+
+  //METH: minArcIsWithinThatMaxArc()
+  minArcIsWithinThatMaxArc(thatSeg) {
+    return boundsIsWithinTestBounds(this.minArcBounds, thatSeg.maxArcBounds)
+  }
   //METH: hasSameFacingCorner()
   hasSameFacingCorner(seg) { return this.endCorner.equals(seg.endCorner) }
   //METH: isDiagonalCorner()
@@ -2220,9 +2225,7 @@ class ProtoSegment extends Segment {
     const outside = !this.isOutsideCorner             // opposite isOutsideCorner value of this
     //ARROW: canHaveCorrectBounds()
     const canHaveCorrectBounds = (seg) => {
-      return this.isOutsideCorner ?
-        boundsIsWithinTestBounds(seg.minArcBoundsSeg, this.maxArcBoundsSeg) :
-        boundsIsWithinTestBounds(this.minArcBoundsSeg, seg.maxArcBoundsSeg)
+      return this.isOutsideCorner ? seg.minArcIsWithinThatMaxArc(this) : this.minArcIsWithinThatMaxArc(seg)
     }
     //ARROW: canHaveCorrectSize()
     const canHaveCorrectSize = (seg) => {             // this radius should be either larger or smaller than adjWrap
@@ -2234,7 +2237,6 @@ class ProtoSegment extends Segment {
     let adjWraps = this.inShapeSameFacingCorners
       .filter(s =>
         s.isOutsideCorner === outside                                       // is opposite?
-        // && (this.arcIsWithinThisArc(s) || s.arcIsWithinThisArc(this))
         && canHaveCorrectBounds(s)
         && canHaveCorrectSize(s)                                            // canHaveCorrectSize? 
       )
