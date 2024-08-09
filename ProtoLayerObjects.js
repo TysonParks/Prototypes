@@ -735,11 +735,11 @@ class Grid extends ProtoLayer {
   offset
   cellRows
   // cellRowsPref                                                                                      //UNUSED: 
-  interGrid
+  isInterGrid
   // gridCellBounds
   groups = new OpArray
 
-  constructor({ protoParent, gridSize, insetScale = 1, transform, startCoord = vert(), interGrid = false } = {}) {
+  constructor({ protoParent, gridSize, insetScale = 1, transform, startCoord = vert(), isInterGrid = false } = {}) {
     super({
       protoParent: protoParent,
       insetScale: insetScale,
@@ -749,7 +749,7 @@ class Grid extends ProtoLayer {
     })
     this.gridSize = gridSize
     this.startCoord = startCoord
-    this.offset = interGrid ? 0.5 : 0
+    this.offset = isInterGrid ? 0.5 : 0
     this._type = 'Grid'
 
     // this.drawLabel = true
@@ -4226,7 +4226,7 @@ class Island extends ProtoLayer {
           protoParent: this,
           gridSize: gridSize,
           startCoord: startCoord,
-          interGrid: true,
+          isInterGrid: true,
         })
 
 
