@@ -2078,9 +2078,9 @@ class ProtoSegment extends Segment {
     return diagonal && sharedCorner
   }
 
-  //MARK: TIGHT WRAPPING
-  //MEMO: closeWrappers
-  get closeWrappers() {
+  //MARK: FLUSH WRAPPING
+  //MEMO: flushWrappers
+  get flushWrappers() {
     return memoize(() => {
       //ARROW: closest()
       const closest = (segs, start = false) => {
@@ -2097,73 +2097,41 @@ class ProtoSegment extends Segment {
       const endWrap = closest(this.endNeighbor.overlapSegs, true)             // calculate closest obj on corner end
       return { start: startWrap, end: endWrap }                               // return both as obj
       // }
-    }, `closeWrappers`).call(this)
+    }, `flushWrappers`).call(this)
   }
-  get closestWrappper() {
-    // if (!this.isOutsideCorner) {
-    const { start, end } = this.closeWrappers
-    if (start && end) {
-      // if (start.dist === end.dist) { return { start: start.seg, end: end.seg } }
-      if (!start.seg.equals(end.seg)) {
-        if (start.dist <= end.dist) {
-          return start.seg
-        } else {
-          return end.seg
-        }
-      }
-    }
-    if (start) { return start.seg }
-    if (end) { return end.seg }
-    // }
-  }
+
   //MEMO: coincidentWrapper
   get coincidentWrapper() {
     return memoize(() => {
-      // const start = this.closeWrappers.start?.seg
-      // const end = this.closeWrappers.end?.seg
-      const { start, end } = this.closeWrappers
-      if (start && end) {
-        if (start.seg.equals(end.seg) && start.seg.end.equals(this.end, 0)) {
-          return start.seg
-        }
-        // if (start.dist <= end.dist) {
-        //   return start.seg
-        // } else {
-        //   return end.seg
-        // }
-      } else if (start) {
-        // return start.seg
-      } else if (end) {
-        // return end.seg
-      }
+      const { start, end } = this.flushWrappers
+      if (start?.seg.equals(end?.seg)                  // one unique flushWrapper (both start & end were found AND they are the same seg/corner)
+        && start.seg.end.equals(this.end, 0)           // this corner vert coincides with wrapper corner vert 
+      ) { return start.seg }
     }, `coincidentWrapper`).call(this)
   }
-  // get coincidentWrapper() {
-  //   return memoize(() => {
-  //     // const turnDir = this.isOutsideCorner ? `isLeft` : `isRight`        // overlap wraps run opposite, UNUSED
-  //     const startWraps = this.overlapSegs                                   // start with segs overlapping this seg
-  //       .filter(s =>
-  //         s.start.equals(this.end, 0)                                       // overlap wraps share a corner point
-  //         // && s.turns.start[turnDir]                                      // UNUSED, below is simplified equivalent
-  //         && this.hasSameFacingCorner(s.startNeighbor)                  // overlap wraps share corner direction
-  //         && this.endNeighbor.isOverlappingWith({seg:s.startNeighbor})            // neighbors must also overlap
-  //       )
-  //     if (startWraps.length === 1) { return startWraps[0].startNeighbor }   // startWrap.startNeighbor is the corner seg
-  //   }, `coincidentWrapper`).call(this)
-  // }
+  //MEMO: collinearWrapper
+  get collinearWrapper() {
+    return memoize(() => {
+      const { start, end } = this.flushWrappers
+      if (start && end) {
+        // if (start.dist === end.dist) { return { start: start.seg, end: end.seg } }
+        if (!start.seg.equals(end.seg)) {
+          if (start.dist <= end.dist) {
+            return start.seg
+          } else {
+            return end.seg
+          }
+        }
+      }
+      if (start) { return start.seg }
+      if (end) { return end.seg }
+    }, `collinearWrapper`).call(this)
+  }
 
-  get coinOutWrapper() {
-    if (this.isOutsideCorner) {
-      return this.coincidentWrapper
-      // || this.closestWrappper                    //TODO: re-evaluate closestWrapper usage,disabled to fix #372
-    }
-  }
-  get coinInWrapper() {
-    if (!this.isOutsideCorner) {
-      return this.coincidentWrapper
-      // || this.closestWrappper                    //TODO: re-evaluate closestWrapper usage,disabled to fix #372
-    }
-  }
+  get coinOutWrapper() { if (this.isOutsideCorner) { return this.coincidentWrapper } }
+  get coinInWrapper() { if (!this.isOutsideCorner) { return this.coincidentWrapper } }
+  get colOutWrapper() { if (this.isOutsideCorner) { return this.collinearWrapper } }
+  get colInWrapper() { if (!this.isOutsideCorner) { return this.collinearWrapper } }
 
   //MARK: ADJACENT WRAPPING
   //METH: minAdjWrapperDistanceObj()
@@ -2278,6 +2246,9 @@ class ProtoSegment extends Segment {
     return this.finalAdjWrappers[0]
     // }, `adjacentWrapper`).call(this)
   }
+
+  get radiantWrapper() { }
+  get proximalWrapper() { }
 
   get adjOutWrapper() { if (!this.isOutsideCorner) { return this.adjacentWrapper } }
   get adjInWrapper() { if (this.isOutsideCorner) { return this.adjacentWrapper } }
