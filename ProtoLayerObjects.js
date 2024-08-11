@@ -1959,6 +1959,7 @@ class Grid extends ProtoLayer {
       .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
       .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
       .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
+
     const allInterferenceWrappers = allInterferenceWrapped.flat()
       .map(s => Object.values(s.interferenceWrappers)).flat().compacted
     console.log(`allInterferenceWrapped`, allInterferenceWrapped)
@@ -2132,11 +2133,14 @@ class Grid extends ProtoLayer {
       testPool = testPool
         .filter(s =>
           s.isAdjOutWrapper
+          // && s.hasDiagonalCorner(s.inWrapper)                   // 
           && (s.adjWrapIsDiverging || s.adjWrapIsConverging)
         )
         .sort((a, b) => b.arcRadius - a.arcRadius)
       console.log(`badAdjWraps`, testPool)
       // return
+
+      // testPool = testPool.slice(0, 0)
 
       testPool.forEach(s => {
         console.warn(`badAdjWrap in queue:`, s)                                                          //LOGGING:
@@ -2159,11 +2163,12 @@ class Grid extends ProtoLayer {
           s.inWrapper.tightWrap(true)                             // only do a single tightWrap in
         }
 
+
         if (s.isOutWrappedToRadiants) {                      // bail if s is already wrapped to outer radiants
           console.log(`is outWrapped to radiants`)                                                      //LOGGING:
           if ((s.inWrapper.isInWrapped || s.inWrapper.isInWrappedToRadiants)
-            // && s.neighborsArray.every(n => !n.isInWrappedToRadiants)     //FIXME: changing to some fixed #485
-            && s.neighborsArray.some(n => !n.isInWrappedToRadiants)
+            && s.neighborsArray.every(n => !n.isInWrappedToRadiants)
+            // && s.neighborsArray.some(n => !n.isInWrappedToRadiants)
           ) {
             console.log(`inWrapper is inWrapped to radiants`)                                           //LOGGING:
             // console.log(`neighbors`, s.neighborsArray.map(n => n.isInWrappedToRadiants))                //LOGGING:
@@ -2183,20 +2188,19 @@ class Grid extends ProtoLayer {
             console.log(`curve inner more with wrapInFix()`)
             wrapInFix()
           } else {
-            console.log(`no fix: can't use wrapIn`)
+            console.log(`no fix`)
           }
         } else if (s.adjWrapIsDiverging) {                      // curveOuterMore or curveInnerLess to fix
           console.log(`wrap is diverging`)
-          if (s.canCurveTo(s.inWrapper.arcOrigin)) {
+          if (s.canCurveTo(s.inWrapper.arcOrigin, true)) {
             console.log(`curve outer more with wrapOutFix()`)
             wrapOutFix()
-          } else if (canWrapIn
-            && s.inWrapper.canCurveTo(s.arcOrigin)
+          } else if (canWrapIn && s.inWrapper.canCurveTo(s.arcOrigin, true)
           ) {
             console.log(`curve inner less with wrapInFix()`)
             wrapInFix()
           } else {
-            console.log(`no fix: can't use wrapIn`)
+            console.log(`no fix`)
           }
         }
         completeEnds(s.andNeighborsArray)
@@ -2704,9 +2708,9 @@ class Grid extends ProtoLayer {
       console.warn(`fixBadAdjWraps`)
       fixBadAdjWraps()
       console.warn(`fixBadColWraps`)
-      // fixBadColWraps()
+      fixBadColWraps()
       console.warn(`fixLoosies`)
-      // fixLoosies()
+      fixLoosies()
 
       console.warn(`roundQuads`)                                                                //LOGGING:
       // roundQuads()
