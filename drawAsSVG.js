@@ -1966,12 +1966,12 @@ class ProtoSegment extends Segment {
     //FIXME: startBounds and endBounds should stretch to edges
     const startBounds = this.isVertical ? this.startNeighbor.arcBoundsHorizontal : this.startNeighbor.arcBoundsVertical
     const endBounds = this.endNeighbor.isVertical ? this.endNeighbor.arcBoundsHorizontal : this.endNeighbor.arcBoundsVertical
-    console.log(`currentViableArcOrigins startBounds`, startBounds)                                     //LOGGING:
-    console.log(`currentViableArcOrigins endBounds`, endBounds)                                         //LOGGING:
+    // console.log(`currentViableArcOrigins startBounds`, startBounds)                                     //LOGGING:
+    // console.log(`currentViableArcOrigins endBounds`, endBounds)                                         //LOGGING:
     const viables = this.viableArcOrigins.filter(v =>
       !vertIsInsideBounds(v, startBounds, false, 0)
       && !vertIsInsideBounds(v, endBounds, false, 0))
-    console.log(`currentViableArcOrigins viables`, viables)                                             //LOGGING:
+    // console.log(`currentViableArcOrigins viables`, viables)                                             //LOGGING:
     return viables
   }
 
@@ -2103,8 +2103,11 @@ class ProtoSegment extends Segment {
   //MEMO: coincidentWrapper
   get coincidentWrapper() {
     return memoize(() => {
+      // console.log(`coincidentWrapper this`, this)
+      // console.log(`coincidentWrapper flushWrappers`, this.flushWrappers)
       const { start, end } = this.flushWrappers
-      if (start?.seg.equals(end?.seg)                  // one unique flushWrapper (both start & end were found AND they are the same seg/corner)
+      if (start && end
+        && start.seg.equals(end.seg)                  // one unique flushWrapper (both start & end were found AND they are the same seg/corner)
         && start.seg.end.equals(this.end, 0)           // this corner vert coincides with wrapper corner vert 
       ) { return start.seg }
     }, `coincidentWrapper`).call(this)
