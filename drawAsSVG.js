@@ -2047,7 +2047,9 @@ class ProtoSegment extends Segment {
       const closest = (segs, start = false) => {
         const name = start !== this.isOutsideCorner ? `arcStartCorner` : `arcEndCorner` // choose arcCorner that's collinear 
         return segs
-          .filter(s => this.hasSameFacingCorner(s))                     // overlap wraps share corner direction
+          .filter(s => this.hasSameFacingCorner(s)                          // overlap wraps share corner direction
+            // && 
+          )
           .map(s => {
             return { seg: s, dist: roundToDec(this.end.dist(s[name]), 1) }  // map to obj with dist to corner calculated
           })
@@ -2849,7 +2851,7 @@ class ProtoSegment extends Segment {
     return memoize(() => {
       return this.shape.andNeighborSimples
         .exclude(this, `id`)
-        .filter(s => this.isOverlappingWith({ seg: s }))
+        .filter(s => this.isOverlappingWith({ seg: s, includeEnds: false }))
     }, `overlapSegs`).call(this)
   }
   get overlapInsideSegs() {
