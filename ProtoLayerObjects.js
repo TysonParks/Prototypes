@@ -1975,32 +1975,40 @@ class Grid extends ProtoLayer {
       console.warn(`allInterferenceWrappers`, allInterferenceWrapped.map(w => w.interferenceWrappers))   //LOGGING:
       console.warn(`allInterferenceWrappers flat`, allInterferenceWrappers)                              //LOGGING:
 
-      const wrappers = allInterferenceWrappers.map(w => w.innerMostRadiantWrapper)
-      console.log(`wrappers`, wrappers)
-      // testPool = testPool.filter(s => wrappers.every(w => w.id !== s.id))
-      // console.warn(`allInterferenceWrapped refined`, testPool)
+      //ARROW: removeDuplicates()
+      const removeDuplicates = () => {
+        const wrappers = allInterferenceWrappers.map(w => w.innerMostRadiantWrapper)
+        console.log(`wrappers`, wrappers)
+        const dupes = testPool.intersect(wrappers, `id`)
+        console.warn(`dupes`, dupes)
 
-      // const wrappers = () => { return testPool.map(s => Object.values(s.interferenceWrappers)).flat().compacted }
-      const dupes = testPool.intersect(wrappers, `id`)
-      console.warn(`dupes`, dupes)
-      // testPool = testPool.filter(wrapped => !dupes.some(d => d.id === wrapped.id))
-      // console.warn(`refined testPool`, testPool)
+        let reducePool = testPool.copy
+        dupes.forEach(d => {
+          let dupeCount = 0
+          while (reducePool.length > 0) {
+            // console.log(`dupeCount`, dupeCount)
+            const wrap = reducePool.shift()
+            const wrappers = OpArray.fromObjectValues(wrap.interferenceWrappers).compacted
+            // console.log(`wrap`, wrap)
+            // console.log(`wrappers`, wrappers)
+            // console.log(`wrap.id`, wrap.id)
+            // console.log(`dupe.id`, d.id)
+            if (wrap.id === d.id
+              || wrappers.some(i => i.innerMostRadiantWrapper.id === d.id)
+            ) {
+              dupeCount += 1
+              // console.log(`dupeCount`, dupeCount)
+              if (dupeCount > 1) {
+                testPool = testPool.filter(w => w.id !== wrap.id)
+                dupeCount -= 1
+              }
+            }
+          }
+        })
+        console.warn(`reduced Pool`, testPool)
+      }
 
-      //FIXME: complete implementation of reducer that culls out duplicates from allWraps
-      // let reducePool = testPool.reversed
-      // dupes.forEach(d => {
-      //   let dupeCount = 0
-      //   while (reducePool.length > 0) {
-      //     const wrap = reducePool.pop()
-      //     if (wrap.id === d.id) {
-      //       dupeCount += 1
-      //       if (dupeCount > 1) {
-      //         testPool = testPool.filter(w => w.id !== d.id)
-      //         dupeCount -= 1
-      //       }
-      //     }
-      //   }
-      // })
+      removeDuplicates()
       // return
 
       testPool.forEach(s => {
@@ -2024,12 +2032,13 @@ class Grid extends ProtoLayer {
           console.log(`perpSeg`, perpSeg)                                                                 //LOGGING:
           console.log(`projected`, projected)                                                             //LOGGING:
           console.log(`viableArcOrigins`, seg.viableArcOrigins)
-          if (seg.radiantInWrappers) {
+          if (seg.radiantInWrappers && seg.innerMostRadiantWrapper.canCurveTo(projected)) {
             seg = seg.innerMostRadiantWrapper
             console.error(`changed seg`, seg.id)                                                          //LOGGING:
             console.log(seg)                                                                              //LOGGING:
           }
-          if (seg.viableArcOrigins.some(o => o.equals(projected, 1))) {
+          if (seg.viableArcOrigins.some(o => o.equals(projected, 0))) {
+            console.log(`curving ${wrapType}wrapper!`)                                                    //LOGGING:
             seg.setEndRadiantOutWrapsOrigin(projected)
           }
         }
