@@ -2570,15 +2570,7 @@ class ProtoSegment extends Segment {
       // &&
       this.isInnerMostRadiantWrapper && this.radiantOutWrappers.length > 1) {
       const segs = this.outerMostRadiantWrapper.neighborsArray.flat()
-        // const segs = this.radiantOutWrappers
-        //   .map(s => s.neighborsArray).flat()
-        //   // .map(s => {
-        //   return !s.isOutsideCorner && s.coinInWrapper ? s.inWrapper : s
-        // })
         .filter(s =>
-          //NOTE: removing !s.hasMinArcRadius fixes #405
-          // !s.hasMinArcRadius
-          // &&
           s.arcNormalDirection.equals(this.arcNormalDirection.opposites)
           && (
             s.isInnerMostRadiantWrapper
@@ -2633,6 +2625,7 @@ class ProtoSegment extends Segment {
       // console.log(`cornerOrigins`, corner.viableArcOriginsSeg.string)
       // console.log(`corner viables`, corner.viableArcOrigins)
       let bounds = { ...corner.viableArcOriginsSeg.bounds }                 // copy minMax bounds
+      // let bounds = { ...corner.viableRadiantOriginBounds }      //TODO: this fixes #472
       // console.log(`bounds`, bounds)
       const side = isStart === this.isOutsideCorner ? this : this.endNeighbor    // seg to reference direction
       if (side.isVertical) {
@@ -2645,7 +2638,9 @@ class ProtoSegment extends Segment {
       // console.log(`isStart`, isStart)
       // console.log(`side`, side)
       // console.log(`bounds`, bounds)
-      const origins = this.viableArcOrigins.filter(v => vertIsInsideBounds(v, bounds, true, 0))
+      const viables = this.viableRadiantOrigins || this.viableArcOrigins
+      // const origins = this.viableArcOrigins.filter(v => vertIsInsideBounds(v, bounds, true, 0))
+      const origins = viables.filter(v => vertIsInsideBounds(v, bounds, true, 0))
       // console.log(`origins`, origins)
       if (!origins.isEmpty) return origins
     }
