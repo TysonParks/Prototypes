@@ -1982,34 +1982,37 @@ class Grid extends ProtoLayer {
         const dupes = testPool.intersect(wrappers, `id`)
         console.warn(`dupes`, dupes)
 
-        let reducePool = testPool.copy
-        dupes.forEach(d => {
-          let dupeCount = 0
-          while (reducePool.length > 0) {
-            // console.log(`dupeCount`, dupeCount)
-            const wrap = reducePool.shift()
-            const wrappers = OpArray.fromObjectValues(wrap.interferenceWrappers).compacted
-            // console.log(`wrap`, wrap)
-            // console.log(`wrappers`, wrappers)
-            // console.log(`wrap.id`, wrap.id)
-            // console.log(`dupe.id`, d.id)
-            if (wrap.id === d.id
-              || wrappers.some(i => i.innerMostRadiantWrapper.id === d.id)
-            ) {
-              dupeCount += 1
+        if (!dupes.isEmpty) {
+          let reducePool = testPool.copy
+          dupes.forEach(d => {
+            let dupeCount = 0
+            while (reducePool.length > 0) {
               // console.log(`dupeCount`, dupeCount)
-              if (dupeCount > 1) {
-                testPool = testPool.filter(w => w.id !== wrap.id)
-                dupeCount -= 1
+              const wrap = reducePool.shift()
+              const wrappers = OpArray.fromObjectValues(wrap.interferenceWrappers).compacted
+              // console.log(`wrap`, wrap)
+              // console.log(`wrappers`, wrappers)
+              // console.log(`wrap.id`, wrap.id)
+              // console.log(`dupe.id`, d.id)
+              if (wrap.id === d.id
+                || wrappers.some(i => i.innerMostRadiantWrapper.id === d.id)
+              ) {
+                dupeCount += 1
+                // console.log(`dupeCount`, dupeCount)
+                if (dupeCount > 1) {
+                  testPool = testPool.filter(w => w.id !== wrap.id)
+                  dupeCount -= 1
+                }
               }
             }
-          }
-        })
+          })
+        }
         console.warn(`reduced Pool`, testPool)
       }
 
       removeDuplicates()
       // return
+      // testPool = testPool.slice(0, 1)
 
       testPool.forEach(s => {
         //ARROW: setCurve()
@@ -2037,7 +2040,7 @@ class Grid extends ProtoLayer {
             console.error(`changed seg`, seg.id)                                                          //LOGGING:
             console.log(seg)                                                                              //LOGGING:
           }
-          if (seg.viableArcOrigins.some(o => o.equals(projected, 0))) {
+          if (seg.currentViableArcOrigins.some(o => o.equals(projected, 0))) {
             console.log(`curving ${wrapType}wrapper!`)                                                    //LOGGING:
             seg.setEndRadiantOutWrapsOrigin(projected)
           }
@@ -2045,6 +2048,16 @@ class Grid extends ProtoLayer {
 
         console.error(`interferenceWrapped in queue:`, s)
         console.error(`interferenceWrappers:`, s.interferenceWrappers)
+        console.log(`neighbors`, s.neighborsArray)
+        // let viables
+        // const neighbors = OpArray.fromObjectValues(s.interferenceWrappers)
+        //   .compacted
+        //   .map(i => i.neighborsArray).flat()
+
+        // if (neighbors.every(n => !n.hasArc)) {
+        //   viables = s.viableInterferenceOrigins
+        // }
+
 
         const viables = s.viableInterferenceOrigins
         let origin
@@ -2176,8 +2189,8 @@ class Grid extends ProtoLayer {
         if (s.isOutWrappedToRadiants) {                      // bail if s is already wrapped to outer radiants
           console.log(`is outWrapped to radiants`)                                                      //LOGGING:
           if ((s.inWrapper.isInWrapped || s.inWrapper.isInWrappedToRadiants)
-            && s.neighborsArray.every(n => !n.isInWrappedToRadiants)
-            // && s.neighborsArray.some(n => !n.isInWrappedToRadiants)
+            && s.neighborsArray.every(n => !n.isInWrappedToRadiants)            // fixes: #453, #472
+            // && s.neighborsArray.some(n => !n.isInWrappedToRadiants)            // fixes: #493
           ) {
             console.log(`inWrapper is inWrapped to radiants`)                                           //LOGGING:
             // console.log(`neighbors`, s.neighborsArray.map(n => n.isInWrappedToRadiants))                //LOGGING:
