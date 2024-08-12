@@ -1922,11 +1922,11 @@ class Grid extends ProtoLayer {
       s.setMinEndCorner()
       // if (report) { console.log(`this after`, s.cubicVerts) }                                        //LOGGING:
       if (!all) {
-        s.tightWrap()
+        s.flushWrap()
 
         // if (report) {                                                                                //LOGGING:
-        //   console.log(`calling tightWrap:`, s.coincidentWrapper?.id)                                    //LOGGING:
-        //   console.log(`tightWrap:`, s.coincidentWrapper)                                                //LOGGING:
+        //   console.log(`calling flushWrap:`, s.coincidentWrapper?.id)                                    //LOGGING:
+        //   console.log(`flushWrap:`, s.coincidentWrapper)                                                //LOGGING:
         //   console.log(`cubicVerts:`, s.coincidentWrapper?.cubicVerts, s.coincidentWrapper?.endNeighbor.cubicVerts)
         // }                                                                                            //LOGGING:
       }
@@ -1949,7 +1949,7 @@ class Grid extends ProtoLayer {
       console.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
       testPool.forEach(s => {
         s.matchEndCorner()
-        s.tightWrap()
+        s.flushWrap()
       })
     }
 
@@ -2093,7 +2093,7 @@ class Grid extends ProtoLayer {
           // !s.hasInterference                                     // interference wraps should be previously processed
           // &&
           s.isInnerMostRadiantWrapper                               // only wrapping innerMostWrappers
-          && (s.coinOutWrapper ? s.radiantOutWrappers.length > 1 : !!s) // filter out potential tightWrap only
+          && (s.coinOutWrapper ? s.radiantOutWrappers.length > 1 : !!s) // filter out potential flushWrap only
         )
         .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
         .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
@@ -2182,7 +2182,7 @@ class Grid extends ProtoLayer {
             return
           }
           s.adjWrap(true)                                       // adjWrap self to wrap in
-          s.inWrapper.tightWrap(true)                             // only do a single tightWrap in
+          s.inWrapper.flushWrap(true)                             // only do a single flushWrap in
         }
 
 
@@ -2230,9 +2230,9 @@ class Grid extends ProtoLayer {
       })
     }
 
-    //MARK: fixBadColWraps()
-    //ARROW: fixBadColWraps()
-    const fixBadColWraps = (testPool = defaultPool, canWrapIn = true) => {
+    //MARK: fixBadFlushWraps()
+    //ARROW: fixBadFlushWraps()
+    const fixBadFlushWraps = (testPool = defaultPool, canWrapIn = true) => {
       testPool = testPool
         .filter(s =>
           s.isCoinOutWrapper
@@ -2246,7 +2246,7 @@ class Grid extends ProtoLayer {
         //ARROW: wrapOutFix()
         const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
           console.log(`using wrapOutFix`)
-          s.inWrapper.tightWrap()
+          s.inWrapper.flushWrap()
           s.inWrapper.replaceEndRadiantOutWrapsOrigin()
           // s.inWrapper.radiantOutWrappers.forEach(w => {
           //   // if (!w.startNeighbor.isInWrappedToRadiants       // avoid possible off-axis interference wrap
@@ -2360,7 +2360,7 @@ class Grid extends ProtoLayer {
             }
 
             // fixBadAdjWraps(s.segPath)
-            fixBadColWraps(s.segPath)
+            fixBadFlushWraps(s.segPath)
           } else {
             //TODO: Might need to add constraints to this!
             if (s.canCurveMoreAtEnd) {
@@ -2409,7 +2409,7 @@ class Grid extends ProtoLayer {
           if (s.id !== s.outWrapper.inWrapper.id) {  // case: this isn't the inWrapper to this outWrapper
             console.log(`this isn't the inWrapper to this outWrapper`)
             s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
-            s.tightWrap(true)
+            s.flushWrap(true)
             s.radiantOutWrappers?.forEach(o => {
               if (o.canCurveMoreAtEnd) { o.replaceEndCurveOrigin(s.currentMaxArcOrigin) }
             })
@@ -2421,7 +2421,7 @@ class Grid extends ProtoLayer {
             s.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
           }
 
-          const outWrapper = s.inOutCoinWrappers[1]
+          const outWrapper = s.inOutFlushWrappers[1]
           if (s.coinWrapIsEquidistant && outWrapper.radiantOutWrappers) { // case: colWrapped & has rad outWrappers
             console.log(`colWrapped & has rad outWrappers`)
             console.log(`outWrapper`, outWrapper)
@@ -2430,7 +2430,7 @@ class Grid extends ProtoLayer {
               && !outWrapper.isOutWrappedToRadiants                  // outWrapper is not outwrapped to radiants
               && outWrapper.radiantOutWrappers.every(ro => !ro.canCurveMoreAtEnd)) { // radiant outWrappers can't curve more
               outWrapper.replaceEndCurveOrigin(outWrapper.currentMaxArcOrigin)
-              outWrapper.tightWrap(true)
+              outWrapper.flushWrap(true)
             }
           }
         }
@@ -2471,7 +2471,7 @@ class Grid extends ProtoLayer {
       }
       // safeArrayWhile(conditionFunc, action)
       // fixBadAdjWraps()
-      fixBadColWraps()
+      fixBadFlushWraps()
     }
 
     //MARK: QUAD SHAPES
@@ -2563,7 +2563,7 @@ class Grid extends ProtoLayer {
           roundToDec(seg.availableStartLength) <= roundToDec(this.cellRadius)
           && roundToDec(seg.availableEndLength) <= roundToDec(this.cellRadius)
         )) {
-          // quad.forEach(s => s.tightWrap())
+          // quad.forEach(s => s.flushWrap())
           console.log(`NOT using radiant outWrap`)
           // this.outWrapOutsideCorners(quad)
           // this.recursiveOutWrapOutsideCorners(quad)
@@ -2613,16 +2613,16 @@ class Grid extends ProtoLayer {
       console.warn(`changed`, changed)
 
       // fixBadAdjWraps(changed, false)
-      // fixBadColWraps(changed)
+      // fixBadFlushWraps(changed)
       // fixLoosies(changed)
 
       // fixBadAdjWraps(testPool.flat(), false)
-      // fixBadColWraps(testPool.flat())
+      // fixBadFlushWraps(testPool.flat())
       // fixBadAdjWraps(defaultPool, false)
 
       //NOTE: using only these two fixes: #431
       console.warn(`roundQuads fixIssues()`)
-      fixBadColWraps()
+      fixBadFlushWraps()
       fixLoosies()
 
 
@@ -2643,7 +2643,7 @@ class Grid extends ProtoLayer {
       //             console.log(`badWraps`, badWraps)
       //             if (!badWraps.isEmpty) {
       //               console.log(`coinWrapIsNonEquidistant!`)
-      //               badWraps.forEach(b => { b.tightWrap(true) })
+      //               badWraps.forEach(b => { b.flushWrap(true) })
       //             }
       //           }
       //         })
@@ -2655,7 +2655,7 @@ class Grid extends ProtoLayer {
 
       //     } else {
       //       s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
-      //       s.tightWrap(true)
+      //       s.flushWrap(true)
       //     }
 
       //     // completeEnds(s.andNeighborsArray)
@@ -2729,8 +2729,8 @@ class Grid extends ProtoLayer {
 
       console.warn(`fixBadAdjWraps`)
       fixBadAdjWraps()
-      console.warn(`fixBadColWraps`)
-      fixBadColWraps()
+      console.warn(`fixBadFlushWraps`)
+      fixBadFlushWraps()
       console.warn(`fixLoosies`)
       fixLoosies()
 
