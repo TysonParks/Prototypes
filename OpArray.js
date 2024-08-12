@@ -22,6 +22,9 @@ class OpArray extends Array {
     }
     return values
   }
+  static fromObjectValues(obj) {
+    return OpArray.format(Object.values(obj))
+  }
 
   get copy() { return OpArray.from([...this]) }
 
