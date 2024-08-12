@@ -1643,33 +1643,25 @@ class ProtoSegment extends Segment {
   //MEMO: flatAmount
   get flatAmount() {
     return memoize(() => {
-      // if (this.hasBothCompleteCorners) { 
       return this.finalCubicStartVert.dist(this.finalCubicEndVert)
-      //  }
     }, `flatAmount`).call(this)
   }
   //MEMO: hasNoFlatness
   get hasNoFlatness() {
-    // return memoize(() => {
-    return roundToDec(this.flatAmount, 1) === 0
-    // }, `hasNoFlatness`).call(this)
-
+    return memoize(() => {
+      return roundToDec(this.flatAmount, 1) === 0
+    }, `hasNoFlatness`).call(this)
   }
-  get hasFlatness() {
-    // if (this.hasBothCompleteCorners) { 
-    return !this.hasNoFlatness
-    //  }
-  }
+  get hasFlatness() { return !this.hasNoFlatness }
 
-  // get hasNotFlatNeighbor() { return this.startNeighbor.hasNoFlatness || this.endNeighbor.hasNoFlatness }
   get hasFlatStartNeighbor() { return this.startNeighbor.hasFlatness }
   get hasFlatEndNeighbor() { return this.endNeighbor.hasFlatness }
   get hasFlatNeighbor() { return this.hasFlatStartNeighbor || this.hasFlatEndNeighbor }
 
-  get canCurveMore() { return this.hasFlatness && this.hasFlatNeighbor }
+  // get canCurveMore() { return this.hasFlatness && this.hasFlatNeighbor }                                      //UNUSED:
   get canCurveMoreAtEnd() { return this.hasFlatness && this.hasFlatEndNeighbor }
   get canCurveLessAtEnd() { return roundToDec(this.availableEndLength, 1) > roundToDec(this.cellRadius, 1) }
-  get isLooseCorner() { return this.isOutsideCorner && this.canCurveMoreAtEnd }
+  // get isLooseCorner() { return this.isOutsideCorner && this.canCurveMoreAtEnd }                               //UNUSED:
   // #endregion
   //MARK: Corner Arc
   // #region Corner Arc
@@ -1757,16 +1749,6 @@ class ProtoSegment extends Segment {
     if (this.arcBounds) { return { xMin: this.arcBounds.xMin, xMax: this.arcBounds.xMax, yMin: 0, yMax: 200 } }
   }
 
-  //MEMO: arcCenterTangent
-  // get arcCenterTangent() {
-  //   return memoize(() => {
-  //     const dist = this.arcRadius / 2
-  //     const vect = this.arcNormalDirection.toRight.vector.setMag(dist)
-  //     const start = this.arcCenterVert
-  //     const end = Vertex.add(vect, start)
-  //     return segment(start, end)
-  //   }, `arcCenterTangent`).call(this)
-  // }
   //MEMO: arcCenterMidPointTangent
   get arcCenterMidPointTangent() {
     // console.warn(`arcCenterMidPointTangent`, this.hasArc)
@@ -1775,19 +1757,19 @@ class ProtoSegment extends Segment {
     // }, `arcCenterMidPointTangent`).call(this)
   }
   //MEMO: maxArcCenterMidTangent
-  get maxArcCenterMidTangent() {
-    // console.warn(`maxArcCenterMidTangent`, this.hasArc)
-    return memoize(() => {
-      return this.#calcArcCenterMidTangent(false)
-    }, `maxArcCenterMidTangent`).call(this)
-  }
+  // get maxArcCenterMidTangent() {                                                                        //UNUSED:
+  //   // console.warn(`maxArcCenterMidTangent`, this.hasArc)
+  //   return memoize(() => {
+  //     return this.#calcArcCenterMidTangent(false)
+  //   }, `maxArcCenterMidTangent`).call(this)
+  // }
   //MEMO: minArcCenterMidTangent
-  get minArcCenterMidTangent() {
-    // console.warn(`minArcCenterMidTangent`, this.hasArc)
-    return memoize(() => {
-      return this.#calcArcCenterMidTangent(false, false)
-    }, `minArcCenterMidTangent`).call(this)
-  }
+  // get minArcCenterMidTangent() {                                                                        //UNUSED:
+  //   // console.warn(`minArcCenterMidTangent`, this.hasArc)
+  //   return memoize(() => {
+  //     return this.#calcArcCenterMidTangent(false, false)
+  //   }, `minArcCenterMidTangent`).call(this)
+  // }
 
   #calcArcCenterMidTangent(current = true, max = true) {
     let radius, start
@@ -1804,27 +1786,6 @@ class ProtoSegment extends Segment {
   }
 
   get hasMinArcRadius() { return equalsRoundedDec(this.maxArcRadius, this.cellRadius, 0) }
-
-  // arcIsWithinArc(thisArc, thatArc) {
-  //   return boundsIsWithinTestBounds(thisBounds, segBounds)
-  // }
-  //METH: arcIsWithinThisArc()
-  // arcIsWithinThisArc(arcSeg) {                                                                            //UNUSED:
-  //   const thisBounds = this.minArcBoundsSeg
-  //   const segBounds = arcSeg instanceof ProtoSegment ? arcSeg.maxArcBoundsSeg : arcSeg
-  //   // console.log(`arcIsWithinThisArc`, this)                                                              //LOGGING:
-  //   // console.log(`arcIsWithinThisArc`, arcSeg)                                                            //LOGGING:
-  //   // console.log(`arcIsWithinThisArc thisBounds`, thisBounds)                                             //LOGGING:
-  //   // console.log(`arcIsWithinThisArc thisBounds`, thisBounds)                                             //LOGGING:
-  //   const result = boundsIsWithinTestBounds(thisBounds, segBounds)
-  //   // console.log(`arcIsWithinThisArc result`, result)                                                     //LOGGING:
-  //   return result
-  // }
-  //METH: arcWrappedWithinThisArc()
-  // arcShouldWrapOutToArc(arcSeg) {                                                                         //UNUSED:
-  //   return this.arcIsWithinThisArc(arcSeg) && this.hasSameFacingCorner(arcSeg)
-  // }
-
 
   //MARK: Max and Min Possible Arcs 
   get currentMaxArcRadius() {
@@ -2545,10 +2506,10 @@ class ProtoSegment extends Segment {
       }
     }, `viableRadiantOriginBounds`).call(this)
   }
-  //MEMO: viableRadiantOrigins
+
   get viableRadiantOrigins() {
     // console.error(`can has viableRadiantOrigins?`)
-    // return memoize(() => {
+
     if (this.viableRadiantOriginBounds) {
       // console.warn(`yes! viableRadiantOrigins`)
       // console.error(`viableArcOrigins`, this.viableArcOrigins.map(v => v.string))
@@ -2561,14 +2522,11 @@ class ProtoSegment extends Segment {
       if (!origins.isEmpty) { return origins }
 
     }
-    // }, `viableRadiantOrigins`).call(this)
+
   }
   //MARK: INTERFERENCE WRAPPING
   get interferenceWrappers() {
-    if (
-      // !this.hasMinArcRadius
-      // &&
-      this.isInnerMostRadiantWrapper && this.radiantOutWrappers.length > 1) {
+    if (this.isInnerMostRadiantWrapper && this.radiantOutWrappers.length > 1) {
       const segs = this.outerMostRadiantWrapper.neighborsArray.flat()
         .filter(s =>
           s.arcNormalDirection.equals(this.arcNormalDirection.opposites)
@@ -2787,29 +2745,13 @@ class ProtoSegment extends Segment {
     const wrapper = out ? this.outWrapper : this.inWrapper
     return wrapper?.isRadiantWrapped(this, decimal) || wrapper?.isProximalWrapped(this)
   }
-
+  //MEMO: hasNoWrappers
   get hasNoWrappers() {
-    return !this.inWrapper && !this.outWrapper
-
+    return memoize(() => {
+      return !this.inWrapper && !this.outWrapper
+    }, `hasNoWrappers`).call(this)
   }
 
-
-  // //MEMO: sharedOrigins
-  // get sharedOrigins() {
-  //   return memoize(() => {
-  //     return this.grid.allSimpleSubShapes.flat().exclude(this, 'id')
-  //       .filter(s => this.arcOriginCorner.equals(s.arcOriginCorner, 2))
-  //       .sort((a, b) => a.arcRadius - b.arcRadius)    // sorted small to large
-  //   }, `sharedOrigins`).call(this)
-  // }
-
-
-  // //MEMO: outWrapCount
-  // get outWrapCount() { return this.outWrappers.length }
-  // get hasOutWraps() { return this.outWrapCount > 0 }
-
-  // get inWrapCount() { return this.inWrappers.length }
-  // get hasInWraps() { return this.inWrapCount > 0 }
 
   // #endregion
   //MARK: Copy Methods
