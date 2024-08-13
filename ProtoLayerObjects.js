@@ -517,8 +517,20 @@ class SelectionBounds {
     }, `yCellMax`).call(this)
   }
 
-  get xMinMax() { return vert(this.xCellMin, this.xCellMax) }
-  get yMinMax() { return vert(this.yCellMin, this.yCellMax) }
+  // get xMinMax() { return vert(this.xCellMin, this.xCellMax) }                                     //UNUSED:
+  // get yMinMax() { return vert(this.yCellMin, this.yCellMax) }                                     //UNUSED:
+  //MEMO: cellsBoundsSeg
+  get cellsBoundsSeg() {
+    return memoize(() => {
+      return segment(vert(this.xCellMin, this.yCellMin), vert(this.xCellMax, this.yCellMax))
+    }, `cellsBoundsSeg`).call(this)
+  }
+  //MEMO: cellsBounds
+  get cellsBounds() {
+    return memoize(() => {
+      return findBounds(this.cellsBoundsSeg)
+    }, `cellsBounds`).call(this)
+  }
 
   get upRowCells() {
     return memoize(() => {
@@ -774,6 +786,7 @@ class Grid extends ProtoLayer {
       return this.cellBounds()
     }, `gridCellBounds`).call(this)
   }
+  get gridBounds() { return this.gridCellBounds.cellsBounds }
   get columnCount() { return this.gridCellBounds.columnCount }
   get rowCount() { return this.gridCellBounds.rowCount }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
@@ -885,12 +898,11 @@ class Grid extends ProtoLayer {
   coords(index) { return gridCoords(index, this.gridSize.x, this.offset) }
   //METH: 
   coordsAreInBounds(x, y, bounds = this.gridCellBounds) {
+    return vertIsInsideBounds(vert(x, y), bounds.cellsBounds) //TODO: verify this implementation works before deleting 
     return bounds.xCellMin <= x && x <= bounds.xCellMax && bounds.yCellMin <= y && y <= bounds.yCellMax
   }
   //METH: 
-  coordsAreInGrid(x, y) { return x >= 0 && x < this.gridSize.x && y >= 0 && y < this.gridSize.y }
-  //METH: 
-  cellAtCoords(x, y) { if (this.coordsAreInGrid(x, y)) { return this.cellAt(this.index(x, y)) } }
+  cellAtCoords(x, y) { if (this.coordsAreInBounds(x, y)) { return this.cellAt(this.index(x, y)) } }
   //METH: 
   groupNamed(name) { return this.groups.find(e => e.id === name) || null }
   //METH: 
@@ -963,7 +975,7 @@ class Grid extends ProtoLayer {
   //METH: neighbor() : Cell : find neighbor cell by direction
   neighbor(cellIndex, direction) {
     let coords = this.cellAt(cellIndex).neighborCoords(direction)   // get neighbor coords
-    if (this.coordsAreInGrid(coords?.x, coords?.y)) {               // verify coords are inside grid
+    if (this.coordsAreInBounds(coords?.x, coords?.y)) {               // verify coords are inside grid
       return this.cells.find(e => e.coords.equals(coords))
     }
   }
@@ -2584,9 +2596,8 @@ class Grid extends ProtoLayer {
 
       let testPool = this.allSingleSimpleSubShapes
         .map(p => new SegPath(p))
-        .filter(p => p.isQuad                                  // filter for 4-sided shapes
-          && p.isOutsideShape                                  // filter for Outside shapes only (UTurnOut)
-          && !p.hasMinRadii                                   // filter out minRadius shapes
+        .filter(p => p.isOutsideQuad                        // filter for outside Quad shapes
+          && !p.hasMinRadii                          // filter out minRadius shapes
         )
         // .sort((a, b) => a.perimeter - b.perimeter)        // sort largest to smallest
         .sort((a, b) => b.perimeter - a.perimeter)        // sort smallest to largest
@@ -4722,11 +4733,13 @@ class Shape extends ProtoLayer {
   //METH: : create initial SimpleSubShapes with minCorners to be refined by nestleShapes
   createSimpleSubShapes() {
     console.warn(`${this.id}.createSimpleSubShapes called!!!`)
-    this.simpleSubShapes = this.subShapes.map(sub =>
-      new SegPath(sub)
+    this.simpleSubShapes = this.subShapes.map((sub, i) => {
+      let newPath = new SegPath(sub, this, i > 0)
+      newPath = newPath
         .refined(this.id, this.island.perimeterType === 'minCorners', this.grid)
         .path
-    )
+      return newPath
+    })
     // this.drawElement()
     // console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
