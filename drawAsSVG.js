@@ -200,8 +200,13 @@ class SVGPath {
 // SIZE: 117 lines
 class SegPath {
   path
-  constructor(path) {
+  shape
+  isInteriorShape
+
+  constructor(path, shape, isInteriorShape = false) {
     this.path = path
+    this.shape = shape
+    this.isInteriorShape = isInteriorShape
   }
   //MEMO: isComplete()
   get isComplete() {
@@ -227,11 +232,11 @@ class SegPath {
       return this.path.every(s => s.hasMinArcRadius)
     }, `hasMinRadii`).call(this)
   }
-  //MEMO: isOutsideShape()
-  get isOutsideShape() {
+  //MEMO: isOutsideQuad()
+  get isOutsideQuad() {
     return memoize(() => {
-      return this.path.some(s => s.isUTurnOut)
-    }, `isOutsideShape`).call(this)
+      return this.isQuad && this.path.every(s => s.isUTurnOut)
+    }, `isOutsideQuad`).call(this)
   }
   //MEMO: perimeter()
   get perimeter() {
@@ -239,12 +244,12 @@ class SegPath {
       return this.path.map(s => s.length).reduce((a, b) => a + b)
     }, `perimeter`).call(this)
   }
-  //MEMO: shape()
-  get shape() {
-    return memoize(() => {
-      return this.path[0].shape
-    }, `shape`).call(this)
-  }
+  // //MEMO: shape()
+  // get shape() {
+  //   return memoize(() => {
+  //     return this.path[0].shape
+  //   }, `shape`).call(this)
+  // }
 
 
   get hasLoosies() { return this.path.some(s => s.canCurveMoreAtEnd) }
@@ -304,6 +309,7 @@ class SegPath {
     let prevSeg, prevMid, firstID, cells, points, sideDir
     for (let i = 0; i < segPath.length; i++) {
       let seg = segPath.at(i).copy
+      seg.isInteriorShape = this.isInteriorShape
       sideDir = seg.sideDir
       // cells = seg.cells
       // console.log(`cells here`, cells)                                                            //LOGGING:
@@ -358,7 +364,9 @@ class SegPath {
           cells: cells,
           points: points,
           sideDir: sideDir,
-          grid: grid
+          grid: grid,
+          shape: this.shape,
+          isInteriorShape: this.isInteriorShape,
         })
         // add cubicVerts from prevSeg and seg to newSeg
         if (prevSeg.hasSomeCubicVerts) {
@@ -373,8 +381,10 @@ class SegPath {
         newPath.pop()
         seg = newSeg
       } else {
-
+        seg.id = `${parentID}-${length}${seg.direction.name}-${seg.id}`
         seg.parentID = parentID
+        seg.shape = this.shape
+        seg.isInteriorShape = this.isInteriorShape
         length = 1
         sideDir = undefined
         cells = undefined
@@ -1108,8 +1118,8 @@ class Segment {
 
 //MARK: ProtoSegment CLASS
 // SIZE: 356 lines
-function protoSegment({ start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale } = {}) {
-  return new ProtoSegment(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale)
+function protoSegment({ start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape, isInteriorShape } = {}) {
+  return new ProtoSegment(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape, isInteriorShape)
 }
 class ProtoSegment extends Segment {
   id
@@ -1121,12 +1131,14 @@ class ProtoSegment extends Segment {
   taken = false
   grid
   insetScale
+  shape
+  isInteriorShape
 
   cubicVerts = { start: undefined, end: undefined }
   maxCubicVerts = { start: undefined, end: undefined }
   neighbors = { start: undefined, end: undefined }
 
-  constructor(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid = GRID, maxCubicVerts, insetScale = 1) {
+  constructor(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid = GRID, maxCubicVerts, insetScale = 1, shape, isInteriorShape) {
     super(start, end)
     this.parentID = parentID
     this.islandIDs = islandIDs
@@ -1136,6 +1148,8 @@ class ProtoSegment extends Segment {
     this.sideDir = sideDir
     this.grid = grid
     this.insetScale = insetScale
+    this.shape = shape
+    this.isInteriorShape = isInteriorShape
     if (maxCubicVerts) {
       this.maxCubicVerts = maxCubicVerts
     }
@@ -1149,8 +1163,15 @@ class ProtoSegment extends Segment {
   }
   //MARK: computed 
   get cellRadius() { return this.grid.cellRadius }
-  get shape() { return this.grid.shapeNamed(this.parentID) }
+  // get shape() { return this.grid.shapeNamed(this.parentID) }
   get isEdgeOfQuad() { return this.segPath.length === 4 }
+  //MEMO: outsideCells
+  get outsideCells() {
+    return memoize(() => {
+      return this.grid.tempOutlineSelection(this.cells, 1, this.direction.toLeft)
+    }, `outsideCells`).call(this)
+  }
+
   //MEMO: turns
   get turns() {
     return memoize(() => {
@@ -1993,10 +2014,7 @@ class ProtoSegment extends Segment {
         .filter(s => this.hasSameFacingCorner(s))
     }, `andNeighborSameFacingCorners`).call(this)
   }
-  //FIXME: FINISH IMPLEMENTATION!
-  get inMaxArcSameFacingCorners() {
-    return this.grid
-  }
+
   //MEMO: inShapeDiagonalCorners
   get inShapeDiagonalCorners() {
     return memoize(() => {
@@ -2041,6 +2059,26 @@ class ProtoSegment extends Segment {
     const diagonal = this.hasDiagonalCorner(seg)
     const sharedCorner = this.end.equals(seg.end, 0)
     return diagonal && sharedCorner
+  }
+
+
+  //FIXME: FINISH IMPLEMENTATION!
+  get inMaxArcSameFacingCorners() {
+    return this.grid
+  }
+
+  get inMinArcCell() { return this.inArcCells(0) }
+
+  inArcCells(mode = 2) {
+    const cells = this.isOutsideCorner ? this.cells : this.outsideCells
+    switch (mode) {
+      case 0:                     // min
+        return this.cells.last
+      case 1:                     // current
+
+      case 2:                     // max
+
+    }
   }
 
   //MARK: FLUSH WRAPPING
@@ -2778,6 +2816,8 @@ class ProtoSegment extends Segment {
         cells: this.cells,
         points: this.points,
         sideDir: this.sideDir,
+        shape: this.shape,
+        isInteriorShape: this.isInteriorShape,
       })
     }, `copy`).call(this)
   }
@@ -2837,6 +2877,8 @@ class ProtoSegment extends Segment {
       cells: this.cells,
       points: insetPoints,
       sideDir: this.sideDir,
+      shape: this.shape,
+      isInteriorShape: this.isInteriorShape,
     })
 
     return insetCopy
@@ -2852,6 +2894,8 @@ class ProtoSegment extends Segment {
   //MEMO: overlapSegs
   get overlapSegs() {
     // console.log(`this.shape.andNeighborSimples`, this.shape.andNeighborSimples)
+    // console.log(`overlapSegs seg`, this)
+    // console.log(`this.shape`, this.shape)
     return memoize(() => {
       return this.shape.andNeighborSimples
         .exclude(this, `id`)
