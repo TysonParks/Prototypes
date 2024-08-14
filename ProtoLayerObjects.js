@@ -4589,7 +4589,18 @@ class Shape extends ProtoLayer {
   get grid() { return this.island.grid }
   get simpleSegPaths() { return this.simpleSubShapes.map((sub, i) => new SegPath(sub, this, i > 0)) }
   get cells() { return this.island.cells }
-  get cutOutCells() { if (!this.isSingleShape) { return this.simpleSegPaths.slice(1).map(sp => sp.cells) } }
+  //MEMO: cutOutCells
+  get cutOutCells() {
+    return memoize(() => {
+      if (!this.isSingleShape) { return this.simpleSegPaths.slice(1).map(sp => sp.cells).flat() }
+    }, `cutOutCells`).call(this)
+  }
+  //MEMO: enclosedCells
+  get enclosedCells() {
+    return memoize(() => {
+      return this.isSingleShape ? this.cells : this.cells.union(this.cutOutCells, `id`).gridVertSorted
+    }, `enclosedCells`).call(this)
+  }
   get cellRadius() { return this.grid.cellRadius }
   //MEMO: neighborShapes
   get neighborShapes() {
