@@ -311,68 +311,35 @@ class SegPath {
   //MARK: REFINE Methods
   //METH: refine() : remove collinear segments to simplify seg path to single segments connecting corners
   refined() {
-    let report = true // DEBUG
     const parentID = this.shape.id
-    let segPath = this.path
-
+    const segPath = this.path
+    console.log(`segPath`, segPath)
     let newPath = new OpArray
-    let length = 1
-    let prevSeg, prevDir, start, end, firstID, islandIDs, cells, points, sideDir
-    for (let i = 0; i < segPath.length; i++) {
-      let seg = segPath.at(i).copy
-      seg.isCutOutShape = this.isCutOutShape
-      sideDir = seg.sideDir
-      prevDir = seg.direction
-      // cells = seg.cells
-      // console.log(`cells here`, cells)                                                            //LOGGING:
-      if (report) {
-        console.log(``)
-        console.log(`seg`, seg)
-        console.log(`prevSeg`, prevSeg?.id)
-        // if (seg.id.includes(`cell097`)) {                                                         //LOGGING:
-        //   console.error(`seg.hasCubicStartVert`, seg.hasCubicStartVert)                           //LOGGING:
-        //   console.error(`seg.hasCubicEndVert`, seg.hasCubicEndVert)                               //LOGGING:
-        // }                                                                                         //LOGGING:
-        // if (prevSeg?.id.includes(`cell097`)) {                                                    //LOGGING:
-        //   console.error(`prevSeg.hasCubicStartVert`, prevSeg.hasCubicStartVert)                                                                           //LOGGING:
-        //   console.error(`prevSeg.hasCubicEndVert`, prevSeg.hasCubicEndVert)                       //LOGGING:
-        // }                                                                                         //LOGGING:
-      }
-      //FIXME: RECONFIGURE LOOP TO RUN INIT DIRECTION EQUALITY CHECK ON FINAL SEG. 
-      //FIXME: Current bug prevents last->first connection of collinear segments
-      //FIXME: This might also be fixed by repairing the bug that starts interior shapes with left-most segment
-      //FIXME: FIX BOTH!!! As both will create separate edgecases
-      if (!!prevSeg && seg.direction.equals(prevSeg.direction)) { // if two segments are in line/flat
-        if (report) {                                                                                //LOGGING:
-          console.log(`seg in loop`, seg.id)                                                         //LOGGING:
-          console.log(`prevSeg in loop`, prevSeg.id)                                                 //LOGGING:
-          console.log(`cells`, cells)                                                                //LOGGING:
-        }                                                                                            //LOGGING:
+    let length, prevDir, start, end, firstID, lastID, islandIDs, cells, points, sideDir
 
-        if (length === 1) {
-          start = prevSeg.start
-          islandIDs = prevSeg.islandIDs
-          cells = prevSeg.cells
-          points = prevSeg.points
-          sideDir = seg.sideDir
-          firstID = prevSeg.id
-        }
-        length += 1
-        // const prevIDs = OpArray.from(prevSeg.islandIDs)
-        // const segIDs = OpArray.from(seg.islandIDs)
-        // const idArray = prevIDs.union(segIDs)
-        // const islandIDs = new Set(idArray)
-        // const islandIDs = prevSeg.islandIDs.union(seg.islandIDs)
-        // const id = `${firstID}-to-${seg.id}`
-        const id = length > 1 ? `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}` : `${firstID}-to-${seg.id}`
-        console.log(`cells`, cells)                                                                  //LOGGING:
-        islandIDs = islandIDs.union(seg.islandIDs)
-        cells = cells.union(seg.cells, `id`)
-        points = points.union(seg.points, [`x`, `y`])
-        //FIXME: move protoSegment to end (else) section and only create one final segment. currently creating 1 every loop!
+    // for (let i = 0; i < segPath.length; i++) {
+    //   const seg = segPath.at(i)
+    segPath.forEach((seg, i) => {
+      console.log(`seg in loop`, seg.id)                                                                //LOGGING:
+
+      //ARROW: reset()
+      const reset = () => {                                     // set cumulative props from current seg
+        length = 1
+        start = seg.start
+        end = seg.end
+        islandIDs = seg.islandIDs
+        cells = seg.cells
+        points = seg.points
+        sideDir = seg.sideDir
+        firstID = seg.id
+      }
+      //ARROW: assignSeg()
+      const assignSeg = () => {                                 // create and assign seg to newPath
+        const baseID = `${parentID}-${length}${prevDir.name}-${firstID}`
+        const id = length === 1 ? baseID : `${baseID}-to-${lastID}`
         let newSeg = protoSegment({
           start: start,
-          end: seg.end,
+          end: end,
           parentID: parentID,
           id: id,
           islandIDs: islandIDs,
@@ -383,38 +350,32 @@ class SegPath {
           shape: this.shape,
           isCutOutShape: this.isCutOutShape,
         })
-        // add cubicVerts from prevSeg and seg to newSeg             //UNUSED: refined() is called before any cubicVerts assigned!
-        // if (prevSeg.hasSomeCubicVerts) {                          //UNUSED: 
-        //   newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
-        //   newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
-        // }
-        // if (seg.hasSomeCubicVerts) {                              //UNUSED: 
-        //   newSeg.addCubicStartVert(seg.cubicVerts.start)
-        //   newSeg.addCubicEndVert(seg.cubicVerts.end)
-        // }
-        // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
-        newPath.pop()
-        seg = newSeg
-      } else {
-        seg.parentID = parentID
-        //FIXME: this id assignment is still not right!!!
-        seg.id = !seg.id.includes(`shp`) ? `${parentID}-1${seg.direction.name}-${seg.id}` : seg.id
-        seg.shape = this.shape
-        seg.isCutOutShape = this.isCutOutShape
-        length = 1
-        sideDir = undefined
-        cells = undefined
-        points = undefined
-        firstID = undefined
+        console.log(`newSeg`, newSeg)                                                                   //LOGGING:
+        newPath.push(newSeg)
       }
 
-      newPath.push(seg)
-      prevSeg = seg
-    }
+      if (i === 0) { reset() }                                  // first pass: reset
 
+      if (prevDir) {
+        if (prevDir.equals(seg.direction)) {                    // two segments are in line/flat: update cumulative props
+          length += 1
+          lastID = seg.id
+          end = seg.end
+          islandIDs = islandIDs.union(seg.islandIDs)
+          cells = cells.union(seg.cells, `id`)
+          points = points.union(seg.points, [`x`, `y`])
+        } else {                                                // new segment: assign last seg and reset
+          assignSeg()
+          reset()
+        }
+      }
 
-    //assign neighbors
-    newPath.forEach((seg, i) => {
+      if (i === segPath.lastIndex) { assignSeg() }              // last pass: assign last seg
+
+      prevDir = seg.direction                                   // set previous direction
+    })
+
+    newPath.forEach((seg, i) => {                               // loop through newPath to assign neighbors
       const loop = range(0, newPath.lastIndex)
       const prev = newPath[loop.cycle(i - 1)]
       const next = newPath[loop.cycle(i + 1)]
@@ -1173,7 +1134,7 @@ class ProtoSegment extends Segment {
     if (neighbors) { this.neighbors = neighbors }
     if (!this.direction.allAreCardinal) {
       console.error(`this segment is not Cardinal!`)
-      console.log(this)
+      console.error(this)
     }
   }
   //MARK: computed 
