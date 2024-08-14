@@ -201,12 +201,12 @@ class SVGPath {
 class SegPath {
   path
   shape
-  isInteriorShape
+  isCutOutShape
 
-  constructor(path, shape, isInteriorShape = false) {
+  constructor(path, shape, isCutOutShape = false) {
     this.path = path
     this.shape = shape
-    this.isInteriorShape = isInteriorShape
+    this.isCutOutShape = isCutOutShape
   }
   //MEMO: isComplete()
   get isComplete() {
@@ -244,13 +244,24 @@ class SegPath {
       return this.path.map(s => s.length).reduce((a, b) => a + b)
     }, `perimeter`).call(this)
   }
-  // //MEMO: shape()
-  // get shape() {
-  //   return memoize(() => {
-  //     return this.path[0].shape
-  //   }, `shape`).call(this)
-  // }
-
+  //MEMO: grid()
+  get grid() {
+    return memoize(() => {
+      return this.shape.grid
+    }, `grid`).call(this)
+  }
+  //MEMO: bounds()
+  get bounds() {
+    return memoize(() => {
+      return findBounds(this.path)
+    }, `bounds`).call(this)
+  }
+  //MEMO: cells()
+  get cells() {
+    return memoize(() => {
+      return this.isCutOutShape ? this.grid.cellsWithinBounds(this.bounds).exclude(this.shape.cells, `id`) : this.shape.cells
+    }, `cells`).call(this)
+  }
 
   get hasLoosies() { return this.path.some(s => s.canCurveMoreAtEnd) }
 
@@ -299,18 +310,19 @@ class SegPath {
 
   //MARK: REFINE Methods
   //METH: refine() : remove collinear segments to simplify seg path to single segments connecting corners
-  refined(parentID, minCorners = false, grid) {
+  refined() {
     let report = true // DEBUG
-
+    const parentID = this.shape.id
     let segPath = this.path
 
     let newPath = new OpArray
     let length = 1
-    let prevSeg, prevMid, firstID, cells, points, sideDir
+    let prevSeg, prevDir, start, end, firstID, islandIDs, cells, points, sideDir
     for (let i = 0; i < segPath.length; i++) {
       let seg = segPath.at(i).copy
-      seg.isInteriorShape = this.isInteriorShape
+      seg.isCutOutShape = this.isCutOutShape
       sideDir = seg.sideDir
+      prevDir = seg.direction
       // cells = seg.cells
       // console.log(`cells here`, cells)                                                            //LOGGING:
       if (report) {
@@ -338,25 +350,28 @@ class SegPath {
         }                                                                                            //LOGGING:
 
         if (length === 1) {
+          start = prevSeg.start
+          islandIDs = prevSeg.islandIDs
           cells = prevSeg.cells
           points = prevSeg.points
           sideDir = seg.sideDir
           firstID = prevSeg.id
-          if (minCorners) { prevSeg.assignMid() }
         }
         length += 1
-        if (minCorners) { prevMid = seg.mid }
-        const prevIDs = OpArray.from(prevSeg.islandIDs)
-        const segIDs = OpArray.from(seg.islandIDs)
-        const idArray = prevIDs.union(segIDs)
-        const islandIDs = new Set(idArray)
-        const id = `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}`
+        // const prevIDs = OpArray.from(prevSeg.islandIDs)
+        // const segIDs = OpArray.from(seg.islandIDs)
+        // const idArray = prevIDs.union(segIDs)
+        // const islandIDs = new Set(idArray)
+        // const islandIDs = prevSeg.islandIDs.union(seg.islandIDs)
+        // const id = `${firstID}-to-${seg.id}`
+        const id = length > 1 ? `${parentID}-${length}${seg.direction.name}-${firstID}-to-${seg.id}` : `${firstID}-to-${seg.id}`
         console.log(`cells`, cells)                                                                  //LOGGING:
+        islandIDs = islandIDs.union(seg.islandIDs)
         cells = cells.union(seg.cells, `id`)
         points = points.union(seg.points, [`x`, `y`])
         //FIXME: move protoSegment to end (else) section and only create one final segment. currently creating 1 every loop!
         let newSeg = protoSegment({
-          start: prevSeg.start,
+          start: start,
           end: seg.end,
           parentID: parentID,
           id: id,
@@ -364,40 +379,40 @@ class SegPath {
           cells: cells,
           points: points,
           sideDir: sideDir,
-          grid: grid,
+          grid: this.grid,
           shape: this.shape,
-          isInteriorShape: this.isInteriorShape,
+          isCutOutShape: this.isCutOutShape,
         })
-        // add cubicVerts from prevSeg and seg to newSeg
-        if (prevSeg.hasSomeCubicVerts) {
-          newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
-          newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
-        }
-        if (seg.hasSomeCubicVerts) {
-          newSeg.addCubicStartVert(seg.cubicVerts.start)
-          newSeg.addCubicEndVert(seg.cubicVerts.end)
-        }
+        // add cubicVerts from prevSeg and seg to newSeg             //UNUSED: refined() is called before any cubicVerts assigned!
+        // if (prevSeg.hasSomeCubicVerts) {                          //UNUSED: 
+        //   newSeg.addCubicStartVert(prevSeg.cubicVerts.start)
+        //   newSeg.addCubicEndVert(prevSeg.cubicVerts.end)
+        // }
+        // if (seg.hasSomeCubicVerts) {                              //UNUSED: 
+        //   newSeg.addCubicStartVert(seg.cubicVerts.start)
+        //   newSeg.addCubicEndVert(seg.cubicVerts.end)
+        // }
         // console.log(`0000000 newSeg ${newSeg.id}`, newSeg.cubicVerts.length)
         newPath.pop()
         seg = newSeg
       } else {
-        seg.id = `${parentID}-${length}${seg.direction.name}-${seg.id}`
         seg.parentID = parentID
+        //FIXME: this id assignment is still not right!!!
+        seg.id = !seg.id.includes(`shp`) ? `${parentID}-1${seg.direction.name}-${seg.id}` : seg.id
         seg.shape = this.shape
-        seg.isInteriorShape = this.isInteriorShape
+        seg.isCutOutShape = this.isCutOutShape
         length = 1
         sideDir = undefined
         cells = undefined
         points = undefined
         firstID = undefined
-        if (minCorners) {
-          prevSeg.addCubicEndVert(prevMid)
-        }
       }
 
       newPath.push(seg)
       prevSeg = seg
     }
+
+
     //assign neighbors
     newPath.forEach((seg, i) => {
       const loop = range(0, newPath.lastIndex)
@@ -1118,8 +1133,8 @@ class Segment {
 
 //MARK: ProtoSegment CLASS
 // SIZE: 356 lines
-function protoSegment({ start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape, isInteriorShape } = {}) {
-  return new ProtoSegment(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape, isInteriorShape)
+function protoSegment({ start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape, isCutOutShape } = {}) {
+  return new ProtoSegment(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape, isCutOutShape)
 }
 class ProtoSegment extends Segment {
   id
@@ -1132,13 +1147,13 @@ class ProtoSegment extends Segment {
   grid
   insetScale
   shape
-  isInteriorShape
+  isCutOutShape
 
   cubicVerts = { start: undefined, end: undefined }
   maxCubicVerts = { start: undefined, end: undefined }
   neighbors = { start: undefined, end: undefined }
 
-  constructor(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid = GRID, maxCubicVerts, insetScale = 1, shape, isInteriorShape) {
+  constructor(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid = GRID, maxCubicVerts, insetScale = 1, shape, isCutOutShape) {
     super(start, end)
     this.parentID = parentID
     this.islandIDs = islandIDs
@@ -1149,7 +1164,7 @@ class ProtoSegment extends Segment {
     this.grid = grid
     this.insetScale = insetScale
     this.shape = shape
-    this.isInteriorShape = isInteriorShape
+    this.isCutOutShape = isCutOutShape
     if (maxCubicVerts) {
       this.maxCubicVerts = maxCubicVerts
     }
@@ -2061,16 +2076,39 @@ class ProtoSegment extends Segment {
     return diagonal && sharedCorner
   }
 
+  //MEMO: inMaxArcShapes
+  get inMaxArcShapes() {
+    console.log(`inMaxArcShapes`, this)
+    return memoize(() => {
+      return this.grid.perimeterShapes.filter(s => {
+        if (s.id === this.shape.id) { return true }
+        const cells = s.isSingleShape ?                                         // cells to check intersect with
+          this.shape.cells : this.shape.cells.union(this.outsideCells, `id`)
 
-  //FIXME: FINISH IMPLEMENTATION!
-  get inMaxArcSameFacingCorners() {
-    return this.grid
+        if (boundsOverlap({ geo: [this.maxArcBounds, s.bounds] })) {
+          console.log(`cells`, cells)
+          return !cells.intersect(s.cells, `id`).isEmpty
+        }
+      })
+    }, `inMaxArcShapes`).call(this)
   }
+
+  //MEMO: inMaxArcSameFacingCorners
+  get inMaxArcSameFacingCorners() {
+    return memoize(() => {
+      console.log(`inMaxArcSameFacingCorners simpleSubShapes`, this.inMaxArcShapes.map(s => s.simpleSubShapes).flat())
+      return this.inMaxArcShapes
+        .map(s => s.simpleSubShapes).flat(2)
+        .filter(seg => seg.id !== this.id && this.hasSameFacingCorner(seg))
+    }, `inMaxArcSameFacingCorners`).call(this)
+  }
+
+
 
   get inMinArcCell() { return this.inArcCells(0) }
 
   inArcCells(mode = 2) {
-    const cells = this.isOutsideCorner ? this.cells : this.outsideCells
+    const cells = this.isOutsideCorner === this.isCutOutShape ? this.cells : this.outsideCells
     switch (mode) {
       case 0:                     // min
         return this.cells.last
@@ -2817,7 +2855,7 @@ class ProtoSegment extends Segment {
         points: this.points,
         sideDir: this.sideDir,
         shape: this.shape,
-        isInteriorShape: this.isInteriorShape,
+        isCutOutShape: this.isCutOutShape,
       })
     }, `copy`).call(this)
   }
@@ -2878,7 +2916,7 @@ class ProtoSegment extends Segment {
       points: insetPoints,
       sideDir: this.sideDir,
       shape: this.shape,
-      isInteriorShape: this.isInteriorShape,
+      isCutOutShape: this.isCutOutShape,
     })
 
     return insetCopy
@@ -2902,13 +2940,13 @@ class ProtoSegment extends Segment {
         .filter(s => this.isOverlappingWith({ seg: s, includeEnds: false }))
     }, `overlapSegs`).call(this)
   }
-  get overlapInsideSegs() {
-    return memoize(() => {
-      return this.shape.andNeighborSimples
-        .exclude(this, `id`)
-        .filter(s => this.isOverlappingWith({ seg: s, includeEnds: false, mode: 0 }))
-    }, `overlapInsideSegs`).call(this)
-  }
+  // get overlapInsideSegs() {                                                                       //UNUSED:
+  //   return memoize(() => {
+  //     return this.shape.andNeighborSimples
+  //       .exclude(this, `id`)
+  //       .filter(s => this.isOverlappingWith({ seg: s, includeEnds: false, mode: 0 }))
+  //   }, `overlapInsideSegs`).call(this)
+  // }
   get hasCompletePath() { return !!this.segPath }
   //MEMO: isSmallBean
   get isSmallBean() {
