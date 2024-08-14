@@ -917,6 +917,8 @@ class Grid extends ProtoLayer {
   // #region CellIndex Methods
   //METH: 
   cellAt(cellIndex) { return this.cells.find(e => e.index === cellIndex) }
+  //METH:
+  cellsWithinBounds(bounds) { return this.cells.filter(c => vertIsInsideBounds(c.center, bounds)) }
   //METH: 
   // rowContaining(cellIndex) { return this.cellRows[this.coords(cellIndex).y] }                              //UNUSED:
   //METH: 
@@ -4585,7 +4587,9 @@ class Shape extends ProtoLayer {
 
   get group() { return this.island.group }
   get grid() { return this.island.grid }
+  get simpleSegPaths() { return this.simpleSubShapes.map((sub, i) => new SegPath(sub, this, i > 0)) }
   get cells() { return this.island.cells }
+  get cutOutCells() { if (!this.isSingleShape) { return this.simpleSegPaths.slice(1).map(sp => sp.cells) } }
   get cellRadius() { return this.grid.cellRadius }
   //MEMO: neighborShapes
   get neighborShapes() {
@@ -4736,11 +4740,10 @@ class Shape extends ProtoLayer {
     this.simpleSubShapes = this.subShapes.map((sub, i) => {
       let newPath = new SegPath(sub, this, i > 0)
       newPath = newPath
-        .refined(this.id, this.island.perimeterType === 'minCorners', this.grid)
+        .refined()
         .path
       return newPath
     })
-    // this.drawElement()
     // console.log(`${this.id} simpleSubShapes`, this.simpleSubShapes)
   }
   //METH:
