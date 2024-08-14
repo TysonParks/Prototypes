@@ -258,9 +258,9 @@ class SegPath {
   }
   //MEMO: cells()
   get cells() {
-    return memoize(() => {
-      return this.isCutOutShape ? this.grid.cellsWithinBounds(this.bounds).exclude(this.shape.cells, `id`) : this.shape.cells
-    }, `cells`).call(this)
+    // return memoize(() => {
+    return this.isCutOutShape ? this.grid.cellsWithinBounds(this.bounds).exclude(this.shape.cells, `id`) : this.shape.cells
+    // }, `cells`).call(this)
   }
 
   get hasLoosies() { return this.path.some(s => s.canCurveMoreAtEnd) }
@@ -2035,30 +2035,33 @@ class ProtoSegment extends Segment {
     return diagonal && sharedCorner
   }
 
-  //MEMO: inMaxArcShapes
+  //MEMO: inMaxArcShapes : [Shape] : array of Shapes within this.maxArcBounds, including this.shape
   get inMaxArcShapes() {
     console.log(`inMaxArcShapes`, this)
     return memoize(() => {
-      return this.grid.perimeterShapes.filter(s => {
-        if (s.id === this.shape.id) { return true }
-        const cells = s.isSingleShape ?                                         // cells to check intersect with
-          this.shape.cells : this.shape.cells.union(this.outsideCells, `id`)
+      return this.grid.perimeterShapes.filter(shp => {
+        if (shp.id === this.shape.id) { return true }
+        const cells = this.isOutsideCorner ?                                  // cells to check intersect with
+          this.shape.enclosedCells : this.grid.cellsWithinBounds(this.maxArcBounds)
 
-        if (boundsOverlap({ geo: [this.maxArcBounds, s.bounds] })) {
-          console.log(`cells`, cells)
-          return !cells.intersect(s.cells, `id`).isEmpty
+        if (boundsOverlap({ geo: [this.maxArcBounds, shp.bounds] })) {
+          console.log(`cells`, cells.map(c => c.id))
+          return !cells.intersect(shp.cells, `id`).isEmpty
         }
       })
     }, `inMaxArcShapes`).call(this)
   }
-
   //MEMO: inMaxArcSameFacingCorners
   get inMaxArcSameFacingCorners() {
     return memoize(() => {
       console.log(`inMaxArcSameFacingCorners simpleSubShapes`, this.inMaxArcShapes.map(s => s.simpleSubShapes).flat())
       return this.inMaxArcShapes
-        .map(s => s.simpleSubShapes).flat(2)
-        .filter(seg => seg.id !== this.id && this.hasSameFacingCorner(seg))
+        .map(sh => sh.simpleSubShapes).flat(2)
+        .filter(seg => seg.id !== this.id
+          && this.hasSameFacingCorner(seg)
+          && seg.minArcIsWithinThatMaxArc(this)
+        )
+        .sort((a, b) => a.minArcOrigin.dist(this.end) - b.minArcOrigin.dist(this.end))
     }, `inMaxArcSameFacingCorners`).call(this)
   }
 
