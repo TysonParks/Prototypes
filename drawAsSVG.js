@@ -2065,22 +2065,6 @@ class ProtoSegment extends Segment {
     }, `inMaxArcSameFacingCorners`).call(this)
   }
 
-
-
-  get inMinArcCell() { return this.inArcCells(0) }
-
-  inArcCells(mode = 2) {
-    const cells = this.isOutsideCorner === this.isCutOutShape ? this.cells : this.outsideCells
-    switch (mode) {
-      case 0:                     // min
-        return this.cells.last
-      case 1:                     // current
-
-      case 2:                     // max
-
-    }
-  }
-
   //MARK: FLUSH WRAPPING
   //MEMO: flushWrappers
   get flushWrappers() {
@@ -2899,7 +2883,7 @@ class ProtoSegment extends Segment {
     return memoize(() => {
       return this.shape.andNeighborSimples
         .exclude(this, `id`)
-        .filter(s => this.isOverlappingWith({ seg: s, includeEnds: false }))
+        .filter(s => this.isOverlappingWith({ seg: s }))
     }, `overlapSegs`).call(this)
   }
   // get overlapInsideSegs() {                                                                       //UNUSED:
