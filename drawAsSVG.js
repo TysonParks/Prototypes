@@ -1111,7 +1111,7 @@ class ProtoSegment extends Segment {
   isCutOutShape
 
   cubicVerts = { start: undefined, end: undefined }
-  maxCubicVerts = { start: undefined, end: undefined }
+  // maxCubicVerts = { start: undefined, end: undefined }
   neighbors = { start: undefined, end: undefined }
 
   constructor(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid = GRID, maxCubicVerts, insetScale = 1, shape, isCutOutShape) {
@@ -1126,9 +1126,9 @@ class ProtoSegment extends Segment {
     this.insetScale = insetScale
     this.shape = shape
     this.isCutOutShape = isCutOutShape
-    if (maxCubicVerts) {
-      this.maxCubicVerts = maxCubicVerts
-    }
+    // if (maxCubicVerts) {
+    //   this.maxCubicVerts = maxCubicVerts
+    // }
     // else if (grid) { this.#setupMaxCubicVerts() }
     if (cubicVerts) { this.cubicVerts = cubicVerts }
     if (neighbors) { this.neighbors = neighbors }
@@ -1526,7 +1526,7 @@ class ProtoSegment extends Segment {
     }
   }
   //METH: #removeCubicVert()
-  // #removeCubicVert(start = true, max = false) {
+  // #removeCubicVert(start = true, max = false) {                                                          //UNUSED:
   //   if (max === false) {
   //     if (start) { this.cubicVerts.start = undefined } else { this.cubicVerts.end = undefined }
   //   } else {
@@ -1535,7 +1535,7 @@ class ProtoSegment extends Segment {
   //   this.#resetMemoProps()
   // }
   //METH: #replaceCubicVert()
-  // #replaceCubicVert(vert, start) {                                                                             //UNUSED:
+  // #replaceCubicVert(vert, start) {                                                                       //UNUSED:
   //   this.#addCubicVert(vert, true, start)
   // }
   //METH: #resetMemoProps()
@@ -1554,8 +1554,6 @@ class ProtoSegment extends Segment {
         `arcOriginToEnd`,
         `arcOriginToArcCenter`,
         `arcRadius`,
-        // `corners`,
-        // `cornerVerts`,
         `finalAdjWrapperObjs`,
         `flatAmount`,
         `hasNoFlatness`,
@@ -1571,14 +1569,14 @@ class ProtoSegment extends Segment {
   // #endregion
   //MARK: Max Verts
   // #region Max Verts
-  get hasMaxStartVert() { return !!this.maxCubicVerts.start }
-  get hasMaxEndVert() { return !!this.maxCubicVerts.end }
-  get hasSomeMaxVerts() { return this.hasMaxStartVert || this.hasMaxEndVert }
-  get hasNoMaxVerts() { return !this.hasSomeMaxVerts }
-  get hasOnlyOneMaxVert() {
-    return (this.hasMaxStartVert || this.hasMaxEndVert) && !(this.hasBothMaxVerts)
-  }
-  get hasBothMaxVerts() { return this.hasMaxStartVert && this.hasMaxEndVert }
+  // get hasMaxStartVert() { return !!this.maxCubicVerts.start }                                           //UNUSED:
+  // get hasMaxEndVert() { return !!this.maxCubicVerts.end }                                               //UNUSED:
+  // get hasSomeMaxVerts() { return this.hasMaxStartVert || this.hasMaxEndVert }                           //UNUSED:
+  // get hasNoMaxVerts() { return !this.hasSomeMaxVerts }                                                  //UNUSED:
+  // get hasOnlyOneMaxVert() {                                                                             //UNUSED:
+  //   return (this.hasMaxStartVert || this.hasMaxEndVert) && !(this.hasBothMaxVerts)
+  // }
+  // get hasBothMaxVerts() { return this.hasMaxStartVert && this.hasMaxEndVert }                           //UNUSED:
 
   get maxCubicStartLength() {
     // if (this.hasCubicEndVert) { return this.start.dist(this.cubicVerts.end) }
@@ -1594,16 +1592,16 @@ class ProtoSegment extends Segment {
 
   get maxCubicLength() { return this.length - this.cellRadius * this.insetScale }
 
-  get finalMaxStartVert() {
-    const length = min(this.maxCubicStartLength, this.startNeighbor.maxCubicEndLength)
-    return this.distancedStartPoint(length)
-  }
-  get finalMaxEndVert() {
-    const length = min(this.maxCubicEndLength, this.endNeighbor.maxCubicStartLength)
-    return this.distancedEndPoint(length)
-  }
+  // get finalMaxStartVert() {                                                                             //UNUSED:
+  //   const length = min(this.maxCubicStartLength, this.startNeighbor.maxCubicEndLength)
+  //   return this.distancedStartPoint(length)
+  // }
+  // get finalMaxEndVert() {                                                                               //UNUSED:
+  //   const length = min(this.maxCubicEndLength, this.endNeighbor.maxCubicStartLength)
+  //   return this.distancedEndPoint(length)
+  // }
 
-  // #setupMaxCubicVerts() {
+  // #setupMaxCubicVerts() {                                                                               //UNUSED:
   //   const max = this.length - this.cellRadius
   //   console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
   //   this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
@@ -1616,8 +1614,8 @@ class ProtoSegment extends Segment {
   get hasAStartVert() { return this.hasMaxStartVert || this.hasCubicStartVert }
   get hasAnEndVert() { return this.hasMaxEndVert || this.hasCubicEndVert }
   get hasArc() { return this.hasAnEndVert && this.endNeighbor.hasAStartVert }
-  get startVert() { return this.cubicVerts.start || this.maxCubicVerts.start }
-  get endVert() { return this.cubicVerts.end || this.maxCubicVerts.end }
+  // get startVert() { return this.cubicVerts.start || this.maxCubicVerts.start }                           //UNUSED:
+  // get endVert() { return this.cubicVerts.end || this.maxCubicVerts.end }                                 //UNUSED:
   //MEMO: hasCompleteStartCorner
   get hasCompleteStartCorner() {
     return memoize(() => {
@@ -1939,11 +1937,11 @@ class ProtoSegment extends Segment {
   }
 
   //MARK: Edges
-  get adjFrameEdge() {
-    const dir = this.normals.cubic
-    const arcDir = this.isOutsideCorner ? dir : dir.opposites
-    return FRAME.sides[arcDir.name]
-  }
+  // get adjFrameEdge() {                                                                                    //UNUSED:
+  //   const dir = this.normals.cubic
+  //   const arcDir = this.isOutsideCorner ? dir : dir.opposites
+  //   return FRAME.sides[arcDir.name]
+  // }
   get adjStartShapeBoundsEdge() {
     const dir = this.normals.cubic
     const arcDir = this.startNeighbor.isOutsideCorner ? dir : dir.opposites
@@ -1992,19 +1990,19 @@ class ProtoSegment extends Segment {
   }
 
   //MEMO: inShapeDiagonalCorners
-  get inShapeDiagonalCorners() {
-    return memoize(() => {
-      return this.shape.simpleSubShapes.flat().exclude(this, 'id')
-        .filter(s => this.hasDiagonalCorner(s))
-    }, `inShapeDiagonalCorners`).call(this)
-  }
+  // get inShapeDiagonalCorners() {                                                                        //UNUSED:
+  //   return memoize(() => {
+  //     return this.shape.simpleSubShapes.flat().exclude(this, 'id')
+  //       .filter(s => this.hasDiagonalCorner(s))
+  //   }, `inShapeDiagonalCorners`).call(this)
+  // }
   //MEMO: neighborDiagonalCorners
-  get neighborDiagonalCorners() {
-    return memoize(() => {
-      return this.shape.andNeighborSimples.exclude(this, 'id')
-        .filter(s => this.hasDiagonalCorner(s))
-    }, `neighborDiagonalCorners`).call(this)
-  }
+  // get neighborDiagonalCorners() {                                                                        //UNUSED:
+  //   return memoize(() => {
+  //     return this.shape.andNeighborSimples.exclude(this, 'id')
+  //       .filter(s => this.hasDiagonalCorner(s))
+  //   }, `neighborDiagonalCorners`).call(this)
+  // }
 
 
   //METH: minArcIsWithinThatMaxArc()
@@ -2250,9 +2248,9 @@ class ProtoSegment extends Segment {
     // }, `finalAdjWrapperObjs`).call(this)
   }
   get finalAdjWrappers() { return this.finalAdjWrapperObjs.map(obj => obj.seg) }
-  get intendedArcRadius() {
-    if (this.isOutsideCorner && this.adjInWrapper) { return this.adjInWrapper.finalAdjWrapperObjs.map(obj => obj.dist)[0] }
-  }
+  // get intendedArcRadius() {                                                                            //UNUSED:
+  //   if (this.isOutsideCorner && this.adjInWrapper) { return this.adjInWrapper.finalAdjWrapperObjs.map(obj => obj.dist)[0] }
+  // }
   //MEMO: adjacentWrapper
   get adjacentWrapper() {
     // return memoize(() => {
@@ -2848,12 +2846,12 @@ class ProtoSegment extends Segment {
       insetCubicVerts.end = insetCubicEnd
     }
 
-    let insetMaxVerts = { start: undefined, end: undefined }
-    if (this.maxCubicVerts.start && this.maxCubicVerts.end) {
-      const insetMaxStart = Vertex.add(this.finalMaxStartVert, cubicMove)
-      const insetMaxEnd = Vertex.add(this.finalMaxEndVert, cubicMove)
-      insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
-    }
+    // let insetMaxVerts = { start: undefined, end: undefined }
+    // if (this.maxCubicVerts.start && this.maxCubicVerts.end) {
+    //   const insetMaxStart = Vertex.add(this.finalMaxStartVert, cubicMove)
+    //   const insetMaxEnd = Vertex.add(this.finalMaxEndVert, cubicMove)
+    //   insetMaxVerts = { start: insetMaxStart, end: insetMaxEnd } // assign new inset cubicVerts
+    // }
 
     let insetPoints
     if (this.points) {
@@ -2871,7 +2869,7 @@ class ProtoSegment extends Segment {
       id: `${this.id}-inset(${roundToDec(insetScale.x, 2)})`,
       islandIDs: this.islandIDs,
       cubicVerts: insetCubicVerts,
-      maxCubicVerts: insetMaxVerts,
+      // maxCubicVerts: insetMaxVerts,
       insetScale: insetScale,
       cells: this.cells,
       points: insetPoints,
