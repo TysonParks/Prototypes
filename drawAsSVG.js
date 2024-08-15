@@ -2040,13 +2040,14 @@ class ProtoSegment extends Segment {
     console.log(`inMaxArcShapes`, this)
     return memoize(() => {
       return this.grid.perimeterShapes.filter(shp => {
-        if (shp.id === this.shape.id) { return true }
-        const cells = this.isOutsideCorner ?                                  // cells to check intersect with
-          this.shape.enclosedCells : this.grid.cellsWithinBounds(this.maxArcBounds)
+        if (shp.id === this.shape.id) { return true }                   // always true for this.shape
+        const cells = this.isOutsideCorner ?                            // cells to check intersect with
+          this.shape.enclosedCells                                      // outside: enclosedCells to capture inner shapes
+          : this.grid.cellsWithinBounds(this.maxArcBounds)              // inside: check cells within maxArcBounds
 
-        if (boundsOverlap({ geo: [this.maxArcBounds, shp.bounds] })) {
-          console.log(`cells`, cells.map(c => c.id))
-          return !cells.intersect(shp.cells, `id`).isEmpty
+        if (boundsOverlap({ geo: [this.maxArcBounds, shp.bounds] })) {  // 1. test bounds overlap
+          // console.log(`cells`, cells.map(c => c.id))                                                //LOGGING:
+          return !cells.intersect(shp.cells, `id`).isEmpty              // 2. test cells intersection
         }
       })
     }, `inMaxArcShapes`).call(this)
@@ -2073,8 +2074,8 @@ class ProtoSegment extends Segment {
       const closest = (segs, start = false) => {
         const name = start !== this.isOutsideCorner ? `arcStartCorner` : `arcEndCorner` // choose arcCorner that's collinear 
         return segs
-          .filter(s => this.hasSameFacingCorner(s)                          // overlap wraps share corner direction
-            // && 
+          .filter(s => this.hasCollinearCorner(s)                          // overlap wraps share corner direction
+            || this.hasCoincidentCorner(s)
           )
           .map(s => {
             return { seg: s, dist: roundToDec(this.end.dist(s[name]), 1) }  // map to obj with dist to corner calculated
@@ -2292,7 +2293,7 @@ class ProtoSegment extends Segment {
             console.log(`${wrapType} cubicVerts before`, wrapper.cubicVerts)                      //LOGGING:
           }                                                                                       //LOGGING:
           if (replace                                                            // forced replacement
-            || (flush ? this.coinWrapIsNonEquidistant                          // nonEquidistant wrappers!
+            || (flush ? this.flushWrapIsNonEquidistant                          // nonEquidistant wrappers!
               : this.adjWrapIsNonEquidistant)) {                                    // nonEquidistant wrappers!
             // console.log(`replacing end curve origin`)                                           //LOGGING:
             wrapper.replaceEndCurveOrigin(this.arcOrigin)                        // replace matching wrapper curve
@@ -2335,8 +2336,8 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get outWrapper() { return this.isOutsideCorner ? this.coinOutWrapper : this.adjOutWrapper }
-  get inWrapper() { return this.isOutsideCorner ? this.adjInWrapper : this.coinInWrapper }
+  get outWrapper() { return this.isOutsideCorner ? this.flushOutWrapper : this.adjOutWrapper }
+  get inWrapper() { return this.isOutsideCorner ? this.adjInWrapper : this.flushInWrapper }
   //MEMO: outWrappers
   get outWrappers() {
     return memoize(() => {
@@ -2699,44 +2700,60 @@ class ProtoSegment extends Segment {
   }
 
   get isCoinInWrapper() { return !!this.coinOutWrapper }
-  get isAdjInWrapper() { return !!this.adjOutWrapper }
+  get isFlushInWrapper() { return !!this.flushOutWrapper }
+  get isAdjInWrapper() { return !!this.adjOutWrapper } flush
   get isCoinOutWrapper() { return !!this.coinInWrapper }
+  get isFlushOutWrapper() { return !!this.flushInWrapper }
   get isAdjOutWrapper() { return !!this.adjInWrapper }
 
   //METH: #inOutWrappers()
   #inOutWrappers(flush) {
     // if (flush ? this.hasCompleteFlushWrap : this.hasCompleteAdjWrap) {
-    const wrapper = flush ? this.coincidentWrapper : this.adjacentWrapper
+    const wrapper = flush ? this.flushWrapper : this.adjacentWrapper
     return this.isOutsideCorner === flush ? [this, wrapper] : [wrapper, this]
     // }
   }
 
   //METH: #wrapState()
   wrapState(flush) {
-    if (flush) {
-      if (this.hasCompleteFlushWrap) {
-        const [inRadius, outRadius] = this.inOutFlushWrappers.map(w => roundToDec(w.arcRadius, 2))  // arcRadius of in and out wrappers
-        if (inRadius === outRadius) { return 0 }                              // EQUIDISTANT: radii are equal
-        if (inRadius < outRadius) { return 1 }                                // DIVERGING: inRadius < outRadius
-        if (inRadius > outRadius) { return 2 }                                // CONVERGING: inRadius > outRadius
-      }
-    } else {
-      if (this.hasCompleteAdjWrap) {
-        const inOuts = this.inOutAdjWrappers
-        const outCorner = inOuts[1].end
-        const [inDist, outDist] = inOuts.map(w => roundToDec(w.arcOrigin.dist(outCorner), 2))
+    const inOuts = flush ? this.inOutFlushWrappers : this.inOutAdjWrappers
+    const hasCompleteWrap = flush ? this.hasCompleteFlushWrap : this.hasCompleteAdjWrap
+    if (hasCompleteWrap) {
+      const outCorner = inOuts[1].end
+      const [inDist, outDist] = inOuts.map(w => roundToDec(w.arcOrigin.dist(outCorner), 2))
 
-        if (inDist === outDist) { return 0 }                                  // EQUIDISTANT: dists to corner are equal
-        if (inDist > outDist) { return 1 }                                    // DIVERGING: inDist > outDist
-        if (inDist < outDist) { return 2 }                                    // CONVERGING: inDist < outDist
-      }
+      if (inDist === outDist) { return 0 }                                  // EQUIDISTANT: dists to corner are equal
+      if (inDist > outDist) { return 1 }                                    // DIVERGING: inDist > outDist
+      if (inDist < outDist) { return 2 }                                    // CONVERGING: inDist < outDist
     }
+
+
+    // if (flush) {
+    //   if (this.hasCompleteFlushWrap) {
+    //     const inOuts = this.inOutFlushWrappers
+    //     const outCorner = inOuts[1].end
+    //     const [inRadius, outRadius] = this.inOutFlushWrappers.map(w => roundToDec(w.arcRadius, 2))  // arcRadius of in and out wrappers
+    //     if (inRadius === outRadius) { return 0 }                              // EQUIDISTANT: radii are equal
+    //     if (inRadius < outRadius) { return 1 }                                // DIVERGING: inRadius < outRadius
+    //     if (inRadius > outRadius) { return 2 }                                // CONVERGING: inRadius > outRadius
+    //   }
+    // } else {
+    //   if (this.hasCompleteAdjWrap) {
+    //     const inOuts = this.inOutAdjWrappers
+    //     const outCorner = inOuts[1].end
+    //     const [inDist, outDist] = inOuts.map(w => roundToDec(w.arcOrigin.dist(outCorner), 2))
+
+    //     if (inDist === outDist) { return 0 }                                  // EQUIDISTANT: dists to corner are equal
+    //     if (inDist > outDist) { return 1 }                                    // DIVERGING: inDist > outDist
+    //     if (inDist < outDist) { return 2 }                                    // CONVERGING: inDist < outDist
+    //   }
+    // }
   }
 
-  get coinWrapIsEquidistant() { return this.wrapState(true) === 0 }
-  get coinWrapIsDiverging() { return this.wrapState(true) === 1 }
-  get coinWrapIsConverging() { return this.wrapState(true) === 2 }
-  get coinWrapIsNonEquidistant() { return this.coinWrapIsDiverging || this.coinWrapIsConverging }
+  get flushWrapIsEquidistant() { return this.wrapState(true) === 0 }
+  get flushWrapIsDiverging() { return this.wrapState(true) === 1 }
+  get flushWrapIsConverging() { return this.wrapState(true) === 2 }
+  get flushWrapIsNonEquidistant() { return this.flushWrapIsDiverging || this.flushWrapIsConverging }
   get adjWrapisEquidistant() { return this.wrapState(false) === 0 }
   get adjWrapIsDiverging() { return this.wrapState(false) === 1 }
   get adjWrapIsConverging() { return this.wrapState(false) === 2 }
@@ -2883,7 +2900,14 @@ class ProtoSegment extends Segment {
     return memoize(() => {
       return this.shape.andNeighborSimples
         .exclude(this, `id`)
-        .filter(s => this.isOverlappingWith({ seg: s }))
+        .filter(s =>
+          this.isOverlappingWith({ seg: s })
+          // && !this.start.equals(s.end, 0)
+          // && !this.end.equals(s.start, 0)
+          //NOTE: below fixes (allInterferenceWrapped bug): #511, 506, 503, 502,  
+          // this.isOverlappingWith({ seg: s, includeEnds: false })
+
+        )
     }, `overlapSegs`).call(this)
   }
   // get overlapInsideSegs() {                                                                       //UNUSED:
