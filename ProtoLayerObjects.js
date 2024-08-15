@@ -2249,9 +2249,9 @@ class Grid extends ProtoLayer {
     const fixBadFlushWraps = (testPool = defaultPool, canWrapIn = true) => {
       testPool = testPool
         .filter(s =>
-          s.isCoinOutWrapper
+          s.isFlushOutWrapper
           && !s.hasMinArcRadius
-          && s.coinWrapIsNonEquidistant
+          && s.flushWrapIsNonEquidistant
         )
       console.log(`badColWraps`, testPool)
       // return
@@ -2278,13 +2278,13 @@ class Grid extends ProtoLayer {
           }
         }
 
-        if (s.coinWrapIsConverging) {
+        if (s.flushWrapIsConverging) {
           if (s.canCurveLessAtEnd) {
             wrapOutFix()
           } else if (canWrapIn && s.inWrapper.canCurveMoreAtEnd) {
             wrapInFix()
           }
-        } else if (s.coinWrapIsDiverging) {                      // curveOuterMore or curveInnerLess to fix
+        } else if (s.flushWrapIsDiverging) {                      // curveOuterMore or curveInnerLess to fix
           if (s.canCurveMoreAtEnd) {
             wrapOutFix()
           } else if (canWrapIn && s.inWrapper.canCurveLessAtEnd) {
@@ -2436,7 +2436,7 @@ class Grid extends ProtoLayer {
           }
 
           const outWrapper = s.inOutFlushWrappers[1]
-          if (s.coinWrapIsEquidistant && outWrapper.radiantOutWrappers) { // case: colWrapped & has rad outWrappers
+          if (s.flushWrapIsEquidistant && outWrapper.radiantOutWrappers) { // case: colWrapped & has rad outWrappers
             console.log(`colWrapped & has rad outWrappers`)
             console.log(`outWrapper`, outWrapper)
 
@@ -2652,10 +2652,10 @@ class Grid extends ProtoLayer {
       //             console.log(`seg in segPath`, seg)
       //             seg.replaceEndRadiantOutWrapsOrigin(s.middleArcOrigin)
       //             let badWraps = seg.radiantOutWrappers?.slice(1)
-      //               .filter(o => o.coinWrapIsNonEquidistant)
+      //               .filter(o => o.flushWrapIsNonEquidistant)
       //             console.log(`badWraps`, badWraps)
       //             if (!badWraps.isEmpty) {
-      //               console.log(`coinWrapIsNonEquidistant!`)
+      //               console.log(`flushWrapIsNonEquidistant!`)
       //               badWraps.forEach(b => { b.flushWrap(true) })
       //             }
       //           }
