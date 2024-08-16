@@ -2253,14 +2253,14 @@ class Grid extends ProtoLayer {
           && !s.hasMinArcRadius
           && s.flushWrapIsNonEquidistant
         )
-      console.log(`badColWraps`, testPool)
+      console.log(`badFlushWraps`, testPool)
       // return
       testPool.forEach(s => {
 
         //ARROW: wrapOutFix()
         const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
-          console.log(`using wrapOutFix`)
-          s.inWrapper.flushWrap()
+          console.log(`using wrapOutFix on:`, s.inWrapper)
+          s.inWrapper.flushWrap(true)                           // adding true fixes collinear convergences #304
           s.inWrapper.replaceEndRadiantOutWrapsOrigin()
           // s.inWrapper.radiantOutWrappers.forEach(w => {
           //   // if (!w.startNeighbor.isInWrappedToRadiants       // avoid possible off-axis interference wrap
@@ -2277,7 +2277,7 @@ class Grid extends ProtoLayer {
             s.inWrapper.replaceEndRadiantOutWrapsOrigin()
           }
         }
-
+        console.error(`current badFlushWrap: `, s)
         if (s.flushWrapIsConverging) {
           if (s.canCurveLessAtEnd) {
             wrapOutFix()
@@ -2319,6 +2319,7 @@ class Grid extends ProtoLayer {
       testPool = filterPool(testPool)
 
       console.log(`loosies`, testPool.map(s => s.id))
+      console.log(`loosies`, testPool)
       console.log(`loosies outWrappers`, testPool.map(s => s.outWrappers?.length))
       // return
 
@@ -2338,10 +2339,11 @@ class Grid extends ProtoLayer {
         //ARROW: minRadFix()
         const minRadFix = () => {
           console.log(`minRadFix()`)
-          if (s.neighborsArray.some(n =>
-            n.canCurveMoreAtEnd
-            && n.coincidentWrapper.canCurveMoreAtEnd
-          )) {          // check and curve neighbor fully
+          if (s.neighborsArray.some(n => {
+            console.log(`${s.id} neighbor`, n)
+            return n.canCurveMoreAtEnd
+              && n.coincidentWrapper?.canCurveMoreAtEnd           // optional fixes #504
+          })) {          // check and curve neighbor fully
             if (balanced) {
               console.log(`balanced fix`)
               if (s.canCurveToMiddleOrigin) {
@@ -2471,6 +2473,8 @@ class Grid extends ProtoLayer {
               // console.log(`case2 currentMaxArcOrigin`, s.currentMaxArcOrigin)
               s.innerMostRadiantWrapper.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
             }
+          } else if (s.isAdjOutWrapper) {                    // case: NO radiantInWrappers
+            s.inWrapper.adjWrap()                            // fixes #499, #512
           }
         }
 
@@ -2745,7 +2749,7 @@ class Grid extends ProtoLayer {
       console.warn(`fixBadFlushWraps`)
       fixBadFlushWraps()
       console.warn(`fixLoosies`)
-      fixLoosies()
+      // fixLoosies()
 
       console.warn(`roundQuads`)                                                                //LOGGING:
       // roundQuads()
