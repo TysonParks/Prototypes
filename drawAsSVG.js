@@ -315,7 +315,7 @@ class SegPath {
     const segPath = this.path
     console.log(`segPath`, segPath)
     let newPath = new OpArray
-    let length, prevDir, start, end, firstID, lastID, islandIDs, cells, points, sideDir
+    let length, prevDir, dir, start, end, firstID, lastID, islandIDs, cells, points, sideDir
 
     // for (let i = 0; i < segPath.length; i++) {
     //   const seg = segPath.at(i)
@@ -324,6 +324,7 @@ class SegPath {
 
       //ARROW: reset()
       const reset = () => {                                     // set cumulative props from current seg
+        dir = seg.direction.name
         length = 1
         start = seg.start
         end = seg.end
@@ -335,7 +336,7 @@ class SegPath {
       }
       //ARROW: assignSeg()
       const assignSeg = () => {                                 // create and assign seg to newPath
-        const baseID = `${parentID}-${length}${prevDir.name}-${firstID}`
+        const baseID = `${parentID}-${length}${dir}-${firstID}`
         const id = length === 1 ? baseID : `${baseID}-to-${lastID}`
         let newSeg = protoSegment({
           start: start,
@@ -1543,7 +1544,7 @@ class ProtoSegment extends Segment {
     const segs = andNeighbors ? this.andNeighborsArray : [this]
     segs.forEach(s => {
       resetMemoized(s,
-        `adjacentDistanceObjs`,
+        `adjDistanceObjs`,
         `arcCenterTangent`,
         `arcCenterMidPointTangent`,
         `arcCenterVert`,
@@ -2035,6 +2036,22 @@ class ProtoSegment extends Segment {
     const sharedCorner = this.end.equals(seg.end, 0)
     return diagonal && collinear && sharedCorner
   }
+  //METH: couldInWrap(seg) : BOOL : doesn't check bounds overlap
+  couldInWrap(seg) {
+    const inShape = this.shape.id === seg.shape.id
+    return inShape === this.isOutsideCorner
+  }
+  //METH: inOutWrapObjWith(seg)
+  inOutWrapObjWith(seg) {
+    const inOuts = this.couldInWrap(seg) ? [seg, this] : [this, seg]
+    return { inWrapper: inOuts[0], outWrapper: inOuts[1] }
+  }
+  //METH: horVertInOutsSideObjWith(seg)
+  horVertInOutsSideObjWith(seg) {
+    const { inWrapper, outWrapper } = this.inOutWrapObjWith(seg)
+    const [[horInSide, vertInSide], [horOutSide, vertOutSide]] = [inWrapper.horVertSides, outWrapper.horVertSides]
+    return { horInSide: horInSide, vertInSide: vertInSide, horOutSide: horOutSide, vertOutSide: vertOutSide }
+  }
 
   //MEMO: shapesWithinThisMaxArcBounds : [Shape] : array of Shapes within this.maxArcBounds, including this.shape
   get shapesWithinThisMaxArcBounds() {
@@ -2054,10 +2071,10 @@ class ProtoSegment extends Segment {
     }, `shapesWithinThisMaxArcBounds`).call(this)
   }
 
-  //MEMO: sameFacingCornersWithinThisMaxArcBounds
-  get sameFacingCornersWithinThisMaxArcBounds() {
+  //MEMO: viableInWrappers :          sameFacingCornersWithinThisMaxArcBounds
+  get viableInWrappers() {         // sameFacingCornersWithinThisMaxArcBounds
     return memoize(() => {
-      // console.log(`sameFacingCornersWithinThisMaxArcBounds simpleSubShapes`, this.shapesWithinThisMaxArcBounds.map(s => s.simpleSubShapes).flat())
+      // console.log(`viableInWrappers simpleSubShapes`, this.shapesWithinThisMaxArcBounds.map(s => s.simpleSubShapes).flat())
       return this.shapesWithinThisMaxArcBounds
         .map(sh => sh.simpleSubShapes).flat(2)
         .filter(seg => seg.id !== this.id
@@ -2065,20 +2082,26 @@ class ProtoSegment extends Segment {
           && seg.minArcIsWithinThatMaxArc(this)
         )
         .sort((a, b) => a.minArcOrigin.dist(this.end) - b.minArcOrigin.dist(this.end))
-    }, `sameFacingCornersWithinThisMaxArcBounds`).call(this)
+    }, `viableInWrappers`).call(this)
   }
 
-  get arcsContainingThisArc() {
-    return this.andNeighborSameFacingCorners.filter(s => {
-      if (boundsOverlap({ geo: [this.maxArcBounds, s.maxArcBounds] })) {  // 1. test bounds overlap
-        return true
-      }
-    })
+  //MEMO: viableOutWrappers :                            arcsContainingThisArc
+  get viableOutWrappers() {                           // arcsContainingThisArc
+    return memoize(() => {
+      return this.andNeighborSameFacingCorners.filter(s => {
+        if (boundsOverlap({ geo: [this.maxArcBounds, s.maxArcBounds] })) {  // 1. test bounds overlap
+          return true
+        }
+      })
+    }, `viableOutWrappers`).call(this)
   }
 
-  // get possibleInWrappers() { return this.sameFacingCornersWithinThisMaxArcBounds }
-  // get possibleOutWrappers() { return this.arcsContainingThisArc }
-  get possibleFlushWrappers() { return this.arcsContainingThisArc.union(this.sameFacingCornersWithinThisMaxArcBounds, `id`) }
+  //MEMO: viableWrappers :                           all possible wrappers
+  get viableWrappers() {
+    return memoize(() => {
+      return this.viableOutWrappers.union(this.viableInWrappers, `id`)
+    }, `viableWrappers`).call(this)
+  }
 
   //MARK: FLUSH WRAPPING
   //MEMO: flushDistanceObjs
@@ -2099,8 +2122,8 @@ class ProtoSegment extends Segment {
         })
         .sort((a, b) => a.dist - b.dist)[0]                               // sort and take closest
     }
-    const startWrap = closest(this.possibleFlushWrappers)                 // calculate closest obj on corner start
-    const endWrap = closest(this.possibleFlushWrappers, true)             // calculate closest obj on corner end
+    const startWrap = closest(this.viableWrappers)                 // calculate closest obj on corner start
+    const endWrap = closest(this.viableWrappers, true)             // calculate closest obj on corner end
 
     // return closest()
 
@@ -2159,56 +2182,70 @@ class ProtoSegment extends Segment {
   //MARK: ADJACENT WRAPPING
   //METH: minAdjWrapperDistanceObj()
   minAdjWrapperDistanceObj(seg) {
-    const [inWrap, outWrap] = this.isOutsideCorner ? [seg, this] : [this, seg]
-    const tangent = inWrap.arcCenterMidPointTangent
+    const { inWrapper, outWrapper } = this.inOutWrapObjWith(seg)                   // calc inOutWraps
+    const { horInSide, vertInSide, horOutSide, vertOutSide } = this.horVertInOutsSideObjWith(seg) // horVertInOuts
+    const vertDist = vertInSide.x - vertOutSide.x                                  // calc dist between vertSides
+    const horDist = horInSide.y - horOutSide.y                                     // calc dist between horSides
+    let dists = inWrapper.isVertical ? [vertDist, horDist] : [horDist, vertDist]   // organize into [start,end]
+    const [startDist, endDist] = dists.map(d => abs(roundToDec(d), 1))             // simplify for later comparison
 
-    const tangentIntersect = tangent.intersectionWith(outWrap, true)
-    const tangDist = roundToDec(tangentIntersect.dist(outWrap.end), 2)
+    const tangent = inWrapper.arcCenterMidPointTangent                             // calc arcCenterMidPointTangent
+    const tangentIntersect = tangent.intersectionWith(outWrapper, true)            // calc intersection
+    const tangDist = roundToDec(tangentIntersect.dist(outWrapper.end), 2)          // calc dist from intersect to corner
 
-    let startDist = inWrap.direction.allAreVertical ?
-      inWrap.start.x - outWrap.endNeighbor.start.x
-      : inWrap.start.y - outWrap.endNeighbor.start.y
-    startDist = abs(roundToDec(startDist), 1)
-    let endDist = inWrap.endNeighbor.direction.allAreVertical ?
-      inWrap.endNeighbor.start.x - outWrap.start.x
-      : inWrap.endNeighbor.start.y - outWrap.start.y
-    endDist = abs(roundToDec(endDist), 1)
+    const [startObj, endObj] = dists.map(d => abs(roundToDec(d), 1))               // map to objects
+      .map((d, i) => {
+        return { seg: seg, tang: tangent, tangX: tangentIntersect, tangDist: tangDist, dist: d, isStart: i === 0 }
+      })
 
-    const startObj = {
-      seg: seg, tang: tangent, tangX: tangentIntersect, tangDist: tangDist, dist: startDist, isStart: true
-    }
-    const endObj = {
-      seg: seg, tang: tangent, tangX: tangentIntersect, tangDist: tangDist, dist: endDist, isStart: false
-    }
+    //NOTE: original, just in case this breaks!
+    // let startDist = inWrapper.isVertical ?
+    //   inWrapper.x - outWrapper.endNeighbor.x : inWrapper.y - outWrapper.endNeighbor.y
+    // startDist = abs(roundToDec(startDist), 1)
 
-    if (startDist === endDist) { return [startObj, endObj] }
-    if (startDist < endDist) {
+    // let endDist = inWrapper.endNeighbor.isVertical ?
+    //   inWrapper.endNeighbor.x - outWrapper.x : inWrapper.endNeighbor.y - outWrapper.y
+    // endDist = abs(roundToDec(endDist), 1)
+
+    // const startObj = {
+    //   seg: seg, tang: tangent, tangX: tangentIntersect, tangDist: tangDist, dist: startDist, isStart: true
+    // }
+    // const endObj = {
+    //   seg: seg, tang: tangent, tangX: tangentIntersect, tangDist: tangDist, dist: endDist, isStart: false
+    // }
+
+    // console.error(`minAdjWrapperDistanceObj startObj`, startObj)
+    // console.error(`minAdjWrapperDistanceObj endObj`, endObj)
+
+    if (startDist === endDist) { return [startObj, endObj] }                        // return closest object(s) 
+    else if (startDist < endDist) {
       return startObj
     } else {
       return endObj
     }
   }
   //METH: adjWrapperIntersectObj()
-  adjWrapperIntersectObj(wrapDistObj) {
-    const { seg, dist, isStart } = wrapDistObj
-    const [inWrap, outWrap] = this.isOutsideCorner ? [seg, this] : [this, seg]
-    // console.warn(`adjWrapperIntersectObj`)
-    // console.log(`seg`, seg)
-    // console.log(`dist`, dist)
-    // console.log(`isStart`, isStart)
-    // console.log(`outWrap`, outWrap)
-    // console.log(`inWrap`, inWrap)
-    const intersect = isStart ?
-      inWrap.arcStartToShapeBoundsEdgeSeg.intersectionWith(outWrap.endNeighbor, true)
-      : inWrap.arcEndToShapeBoundsEdgeSeg.intersectionWith(outWrap, true)
-    const distToCorner = roundToDec(intersect.dist(outWrap.arcNormalCorner))
+  adjWrapperIntersectObj(seg, isStart) {
+    const { inWrapper, outWrapper } = this.inOutWrapObjWith(seg)                    // calc inOutWraps
+    const side = isStart ? outWrapper.endNeighbor : outWrapper  //FIXME: seems opposite? // calc side     
+    //FIXME: test this works with flush (collinear) wraps    
+    // console.log(`adjWrapperIntersectObj inOut`, [inWrapper.id, outWrapper.id])
+    // console.log(`adjWrapperIntersectObj this`, this)
+    // console.log(`adjWrapperIntersectObj seg`, seg)
+    // console.log(`adjWrapperIntersectObj side`, side)
+    // console.log(`adjWrapperIntersectObj inWrapper.arcOrigin`, inWrapper.arcOrigin)
+    // const origin = inWrapper.hasArc ? inWrapper.arcOrigin : inWrapper.minArcOrigin
+    const intersect = side.perpendicularIntersectionWith(inWrapper.arcOrigin)
+      || side.perpendicularIntersectionWith(inWrapper.minArcOrigin)             // calc intersection
 
-    // console.log(`intersect`, intersect)
-    // console.log(`distToCorner`, distToCorner)
+    // const intersect = isStart ?
+    //   inWrapper.arcStartToShapeBoundsEdgeSeg.intersectionWith(outWrapper.endNeighbor, true)
+    //   : inWrapper.arcEndToShapeBoundsEdgeSeg.intersectionWith(outWrapper, true)
+    const distToCorner = roundToDec(intersect.dist(outWrapper.end))                 // calc distance
     return { seg: seg, dist: distToCorner, intersect: intersect, isStart: isStart }
   }
-  //MEMO: adjacentDistanceObjs
-  get adjacentDistanceObjs() {
+  //MEMO: adjDistanceObjs
+  get adjDistanceObjs() {
     // if (this.id.includes('cell019')) {
     //   console.warn(`processing cell199`)
     // }
@@ -2226,7 +2263,7 @@ class ProtoSegment extends Segment {
     }
 
     let adjWraps = this.inShapeSameFacingCorners
-      // let adjWraps = this.andNeighborSameFacingCorners
+      // let adjWraps = this.viableInWrappers
       .filter(s =>
         s.isOutsideCorner === outside                                       // is opposite?
         && canHaveCorrectBounds(s)
@@ -2237,24 +2274,24 @@ class ProtoSegment extends Segment {
       .sort((a, b) => a.tangDist - b.tangDist)
     // console.log(`adjWraps`, adjWraps)
     return adjWraps
-    // }, `adjacentDistanceObjs`).call(this)
+    // }, `adjDistanceObjs`).call(this)
   }
 
-  get adjacentIntersectObjs() {
-    const adjWraps = this.adjacentDistanceObjs
+  get adjIntersectObjs() {
+    const adjWraps = this.adjDistanceObjs
     return adjWraps
       .filter(obj =>
         obj.tangDist === adjWraps[0].tangDist
         && obj.dist === adjWraps[0].dist
         // && (equalsRoundedDec(obj.seg.maxArcRadius, obj.dist, 1) || obj.seg.maxArcRadius > obj.dist)
       )
-      .map(obj => this.adjWrapperIntersectObj(obj))
+      .map(obj => this.adjWrapperIntersectObj(obj.seg, obj.isStart))
       .sort((a, b) => a.dist - b.dist)
   }
 
   get finalAdjWrapperObjs() {
     // return memoize(() => {
-    const intersectWraps = this.adjacentIntersectObjs
+    const intersectWraps = this.adjIntersectObjs
     return intersectWraps
       .filter(obj => obj.dist === intersectWraps[0].dist)
       .sort((a, b) => b.isStart - a.isStart)
@@ -2348,20 +2385,44 @@ class ProtoSegment extends Segment {
 
 
           } else {                                              // wraps are PROXIMAL 
-            const obj = wrapper.adjacentIntersectObjs[0]
+            const obj = wrapper.adjIntersectObjs[0]
             if (report) {                                                                         //LOGGING:
               console.log(`wraps are PROXIMAL `)                                                  //LOGGING:
               // console.log(`wrapper`, wrapper)                                                  //LOGGING:
-              // console.log(`wrapper int obj`, wrapper.adjacentIntersectObjs[0])                 //LOGGING:
+              // console.log(`wrapper int obj`, wrapper.adjIntersectObjs[0])                 //LOGGING:
               console.log(`intersectObject`, obj)                                                 //LOGGING:
             }
             if (obj) {
               if (obj.dist < wrapper.maxArcRadius) {
                 wrapper.addDistancedEndCornerVerts(obj.dist, true, true)
+                // wrapper.replaceEndCurveOrigin(wrapper.currentMaxArcOrigin)
               } else {
                 wrapper.replaceEndCurveOrigin(wrapper.currentMaxArcOrigin)
               }
-              // wrapper.addDistancedEndCornerVerts(obj.dist, true, true) 
+              // if (this.isAdjOutWrapper) {
+              //   if (obj.dist >= wrapper.maxArcRadius) {
+              //     wrapper.replaceEndCurveOrigin(wrapper.currentMaxArcOrigin)
+              //   } else {
+              //     wrapper.addDistancedEndCornerVerts(obj.dist, true, true)
+              //   }
+              // } else {
+              //   if (obj.dist < wrapper.maxArcRadius) {
+              //     wrapper.addDistancedEndCornerVerts(obj.dist, true, true)
+              //   } else {
+              //     wrapper.replaceEndCurveOrigin(wrapper.currentMaxArcOrigin)
+              //   }
+              // }
+
+
+              // const wrapToMax = this.isAdjOutWrapper === obj.dist < wrapper.maxArcRadius
+              // if (wrapToMax) {
+              //   wrapper.addDistancedEndCornerVerts(obj.dist, true, true)
+              // } else {
+              //   wrapper.replaceEndCurveOrigin(wrapper.currentMaxArcOrigin)
+              // }
+
+
+              // wrapper.addDistancedEndCornerVerts(obj.dist, true, true)
 
             }
             // if (obj?.dist < wrapper.maxArcRadius) { wrapper.addDistancedEndCornerVerts(obj.dist, true, true) }
@@ -2386,7 +2447,7 @@ class ProtoSegment extends Segment {
     return memoize(() => {
       // console.log(`this`, this)                                                                     //LOGGING:
       // console.log(`outWrapper`, this.outWrapper)                                                    //LOGGING:
-      // console.log(this.outWrapper.outWrappers)                                                      //LOGGING:
+      // console.log(this.outWrapper?.outWrappers)                                                      //LOGGING:
       if (this.outWrapper) { return OpArray.format(this.outWrapper).union(this.outWrapper.outWrappers, `id`) }
     }, `outWrappers`).call(this)
   }
