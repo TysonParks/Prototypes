@@ -308,7 +308,7 @@ function gridTests2() {
 
 
   // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  group0 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  group0 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
   // group0 = GRID.randGroup({ amount: 0.4 })
   // GRID.squares(16 / GRID.cellCount)
   // GRID.squares(0.2)
@@ -333,8 +333,8 @@ function gridTests2() {
 
   group1 = GRID.outlineGroup({
     groupID: GRID.lastGroup.id,
-    // direction: Direction.All,
-    direction: grp1Dir,
+    direction: Direction.All,
+    // direction: grp1Dir,
     newGroup: true,
     amount: grp1Amount
   })
@@ -610,7 +610,7 @@ function gridTests2() {
 
   // console.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
-  GRID.showCellsDebug()
+  // GRID.showCellsDebug()
 
   // console.log(`multi-island simpleSubshapes`, GRID.allSimpleSubShapes.flat().map(s => s.parentID))
   let interCells01 = GRID.perimeterIslands[3]?.interCells
