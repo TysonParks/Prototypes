@@ -1954,7 +1954,7 @@ class Grid extends ProtoLayer {
     console.log(`defaultPool`, defaultPool)
     //MARK: completeEnds()
     //ARROW: completeEnds()
-    const completeEnds = (testPool = defaultPool) => {
+    const completeEnds = (testPool = defaultPool, wrap = true) => {
       testPool = testPool
         .filter(s => !s.hasCompleteEndCorner)
         .sort((a, b) => a.arcRadius - b.arcRadius)
@@ -1963,7 +1963,7 @@ class Grid extends ProtoLayer {
       console.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
       testPool.forEach(s => {
         s.matchEndCorner()
-        s.flushWrap()
+        if (wrap) { s.flushWrap() }
       })
     }
 
@@ -2026,7 +2026,7 @@ class Grid extends ProtoLayer {
 
       removeDuplicates()
       // return
-      // testPool = testPool.slice(0, 1)
+      // testPool = testPool.slice(0, 3)
 
       testPool.forEach(s => {
         //ARROW: setCurve()
@@ -2056,7 +2056,9 @@ class Grid extends ProtoLayer {
           }
           if (seg.currentViableArcOrigins.some(o => o.equals(projected, 0))) {
             console.log(`curving ${wrapType}wrapper!`)                                                    //LOGGING:
+
             seg.setEndRadiantOutWrapsOrigin(projected)
+            seg.flushWrap()                             //TODO: this improves interferenceWrapping on #516
           }
         }
 
@@ -2076,11 +2078,12 @@ class Grid extends ProtoLayer {
         const viables = s.viableInterferenceOrigins
         let origin
         if (viables) {
+          // console.log(`viables`, viables)
           if (preserveQuads && s.isEdgeOfQuad && viables.some(v => v.equals(s.shape?.center, 1))) {
             origin = s.shape.center
-            // origin = viables.middle
           } else {
-            origin = viables.middle
+            // origin = viables.middle
+            origin = viables.last
           }
         } else {
           console.log(`NO viableInterferenceOrigins found!`)
@@ -2176,10 +2179,10 @@ class Grid extends ProtoLayer {
       console.log(`badAdjWraps`, testPool)
       // return
 
-      // testPool = testPool.slice(0, 0)
+      // testPool = testPool.slice(0, 1)
 
       testPool.forEach(s => {
-        console.warn(`badAdjWrap in queue:`, s)                                                          //LOGGING:
+        console.error(`badAdjWrap in queue:`, s)                                                          //LOGGING:
         // console.groupCollapsed(`badAdjWrap in queue:`, s)                                                //LOGGING:
 
         //ARROW: wrapOutFix()
@@ -2474,6 +2477,7 @@ class Grid extends ProtoLayer {
               s.innerMostRadiantWrapper.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
             }
           } else if (s.isAdjOutWrapper) {                    // case: NO radiantInWrappers
+            console.log(`s.isAdjOutWrapper`)
             s.inWrapper.adjWrap()                            // fixes #499, #512
           }
         }
@@ -2747,7 +2751,7 @@ class Grid extends ProtoLayer {
       console.warn(`fixBadAdjWraps`)
       fixBadAdjWraps()
       console.warn(`fixBadFlushWraps`)
-      fixBadFlushWraps()
+      // fixBadFlushWraps()
       console.warn(`fixLoosies`)
       // fixLoosies()
 
