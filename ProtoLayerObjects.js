@@ -1950,7 +1950,12 @@ class Grid extends ProtoLayer {
   //MARK: maximizeCuddles()
 
   //METH: maximizeCuddles()
-  maximizeCuddles(nestleMode = 0, defaultPool = this.allSimpleSubShapesSegs, preserveQs = false, interGrid = false) {
+  maximizeCuddles(nestleMode = 0,
+    defaultPool = this.allSimpleSubShapesSegs,
+    preserveQs = false,
+    balance = true,
+    respectAdjacents = true,
+    interGrid = false) {
     console.log(`defaultPool`, defaultPool)
     //MARK: completeEnds()
     //ARROW: completeEnds()
@@ -2102,14 +2107,16 @@ class Grid extends ProtoLayer {
 
     //MARK: wrapInnerMost()
     //ARROW: wrapInnerMost()
-    const wrapInnerMost = (testPool = defaultPool, preserveQuads = preserveQs) => {
+    const wrapInnerMost = (testPool = defaultPool, preserveQuads = preserveQs, balanced = balance) => {
       console.warn(`wrapInnerMost testPool`, testPool)
       testPool = testPool
         .filter(s =>
           //FIXME: removed !s.hasInterference to fix #469    
           // !s.hasInterference                                     // interference wraps should be previously processed
           // &&
+
           s.isInnerMostRadiantWrapper                               // only wrapping innerMostWrappers
+          && !s.hasArc                                              // prevent from re-wrapping
           && (s.coinOutWrapper ? s.radiantOutWrappers.length > 1 : !!s) // filter out potential flushWrap only
         )
         .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
@@ -2119,17 +2126,11 @@ class Grid extends ProtoLayer {
       console.warn(`allInnerMostWrappers outWrappers`, testPool.map(s => s.radiantOutWrappers.length))
       // console.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableRadiantOrigins))
       // return
+      // testPool = testPool.slice(0, 2)
 
       testPool.forEach(s => {
 
-        //ARROW: needsMiddle()
-        const needsMiddle = (seg) => {
-          return !seg.hasInterference
-            && seg.isinnerMostRadiantWrapper
-            && seg.radiantOutWrappers.length > 1
-        }
-
-        console.warn(`innerMost in queue`, s)                                                                 //LOGGING:
+        console.error(`innerMost in queue`, s)                                                                 //LOGGING:
         // console.groupCollapsed(`innerMost in queue`, s)                                                       //LOGGING:
         const viables = s.viableRadiantOrigins
         console.log(`viableArcOrigins`, s.viableArcOrigins)                                                   //LOGGING:
@@ -2150,8 +2151,17 @@ class Grid extends ProtoLayer {
             s.endNeighbor.assignMid()                                                   // make circular/pill
             s.setEndRadiantOutWrapsOrigin()
             return
+          } else if (balanced
+            // && !s.interference
+            && testPool.some(seg => seg.id === s.endNeighbor.id)
+          ) {
+            s.setArcToMiddle()
+            s.setEndRadiantOutWrapsOrigin()
+            s.endNeighbor.setArcToMiddle()
+            s.endNeighbor.setEndRadiantOutWrapsOrigin()
           } else {
-            const origin = needsMiddle(s.startNeighbor) || needsMiddle(s.endNeighbor) ? viables.middle : viables.last
+            // const origin = needsMiddle(s.endNeighbor) ? viables.middle : viables.last
+            const origin = viables.last
             console.log(`radiant wrapping to ${origin.string}`)
             s.setEndRadiantOutWrapsOrigin(origin)
             if (s.outerMostRadiantWrapper.outWrapper) {
@@ -2305,7 +2315,7 @@ class Grid extends ProtoLayer {
 
     //MARK: fixLoosies()
     //ARROW: fixLoosies()
-    const fixLoosies = (testPool = defaultPool, balanced = true, respectAdjacents = true, loners = true, ignoreMinRadius = true) => {
+    const fixLoosies = (testPool = defaultPool, balanced = balance, loners = true, ignoreMinRadius = true) => {
 
       //ARROW: filterPool()
       const filterPool = (pool) => {
@@ -2394,6 +2404,7 @@ class Grid extends ProtoLayer {
           }
         }
 
+
         // case: s.hasNoWrappers
         if (s.hasNoWrappers && loners) {
           console.log(`loners fix`)
@@ -2456,6 +2467,26 @@ class Grid extends ProtoLayer {
               && outWrapper.radiantOutWrappers.every(ro => !ro.canCurveMoreAtEnd)) { // radiant outWrappers can't curve more
               outWrapper.replaceEndCurveOrigin(outWrapper.currentMaxArcOrigin)
               outWrapper.flushWrap(true)
+            }
+
+            if (!respectAdjacents                                         // case: only s & flushWrapper can curve more
+              && outWrapper.canCurveTo(s.currentMaxArcOrigin)
+              && !outWrapper.outWrapper.canCurveTo(s.currentMaxArcOrigin)
+            ) {
+              const neighbor = s.endNeighbor
+              if (balanced
+                && neighbor.outWrapper?.canCurveTo(neighbor.currentMaxArcOrigin)
+                && !neighbor.outWrapper?.outWrapper.canCurveTo(neighbor.currentMaxArcOrigin)
+              ) {
+                s.setArcToMiddle()
+                s.flushWrap(true)
+                neighbor.setArcToMiddle()
+                neighbor.flushWrap(true)
+              } else {
+                s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+                s.flushWrap(true)
+              }
+
             }
           }
         }
@@ -2759,7 +2790,7 @@ class Grid extends ProtoLayer {
       console.warn(`fixBadFlushWraps`)
       fixBadFlushWraps()
       console.warn(`fixLoosies`)
-      // fixLoosies()
+      fixLoosies()
 
       console.warn(`roundQuads`)                                                                //LOGGING:
       // roundQuads()
