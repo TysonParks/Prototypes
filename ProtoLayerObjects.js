@@ -2258,13 +2258,16 @@ class Grid extends ProtoLayer {
         )
       console.log(`badFlushWraps`, testPool)
       // return
-      testPool.forEach(s => {
+      // testPool = testPool.slice(0, 1)
 
+      testPool.forEach(s => {
         //ARROW: wrapOutFix()
         const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
           console.log(`using wrapOutFix on:`, s.inWrapper)
           s.inWrapper.flushWrap(true)                           // adding true fixes collinear convergences #304
           s.inWrapper.replaceEndRadiantOutWrapsOrigin()
+          // s.adjWrap(true)
+          s.replaceEndRadiantOutWrapsOrigin()
           // s.inWrapper.radiantOutWrappers.forEach(w => {
           //   // if (!w.startNeighbor.isInWrappedToRadiants       // avoid possible off-axis interference wrap
           //   //   && !w.endNeighbor.isInWrappedToRadiants) {     // avoid possible off-axis interference wrap
@@ -2281,13 +2284,16 @@ class Grid extends ProtoLayer {
           }
         }
         console.error(`current badFlushWrap: `, s)
+        console.error(`inWrapper: `, s.inWrapper)
         if (s.flushWrapIsConverging) {
+          console.log(`flushWrapIsConverging`)
           if (s.canCurveLessAtEnd) {
             wrapOutFix()
           } else if (canWrapIn && s.inWrapper.canCurveMoreAtEnd) {
             wrapInFix()
           }
         } else if (s.flushWrapIsDiverging) {                      // curveOuterMore or curveInnerLess to fix
+          console.log(`flushWrapIsDiverging`)
           if (s.canCurveMoreAtEnd) {
             wrapOutFix()
           } else if (canWrapIn && s.inWrapper.canCurveLessAtEnd) {
@@ -2751,7 +2757,7 @@ class Grid extends ProtoLayer {
       console.warn(`fixBadAdjWraps`)
       fixBadAdjWraps()
       console.warn(`fixBadFlushWraps`)
-      // fixBadFlushWraps()
+      fixBadFlushWraps()
       console.warn(`fixLoosies`)
       // fixLoosies()
 
