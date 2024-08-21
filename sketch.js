@@ -308,7 +308,7 @@ function gridTests2() {
 
 
   // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  group0 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
+  group0 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
   // group0 = GRID.randGroup({ amount: 0.4 })
   // GRID.squares(16 / GRID.cellCount)
   // GRID.squares(0.2)
@@ -333,8 +333,8 @@ function gridTests2() {
 
   group1 = GRID.outlineGroup({
     groupID: GRID.lastGroup.id,
-    direction: Direction.All,
-    // direction: grp1Dir,
+    // direction: Direction.All,
+    direction: grp1Dir,
     newGroup: true,
     amount: grp1Amount
   })
@@ -493,6 +493,15 @@ function gridTests2() {
   // })
 
   //MARK: group3
+  // group3?.cutIslands({
+  //   profile: Profile.jIn,
+  //   layerStart: 1.2,
+  //   layerEnd: 1,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  // })
+
   group3?.cutIslands({
     profile: Profile.jIn,
     layerStart: 1,
