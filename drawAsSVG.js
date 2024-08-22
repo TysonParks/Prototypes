@@ -1454,10 +1454,10 @@ class ProtoSegment extends Segment {
   #setCurveOrigin(toVert, replace = false, start = false) {
     const seg = start ? this.startNeighbor : this             // seg/corner to reference
     let report = false                                                                                  //LOGGING:
-    // if (this.id.includes('cell013')                                                                     //LOGGING:
-    //   // || s.id.includes('cell008')                                                                       //LOGGING:
-    //   // || s.id.includes('cell001')                                                                       //LOGGING:
-    // ) { report = true }                                                                                 //LOGGING:
+    if (this.id.includes('cell141')                                                                     //LOGGING:
+      || this.id.includes('cell185')                                                                       //LOGGING:
+      // || s.id.includes('cell001')                                                                       //LOGGING:
+    ) { report = true }                                                                                 //LOGGING:
     if (report) {                                                                                       //LOGGING:
       console.error(`setCurveOrigin this`, this.id)                                                     //LOGGING:
       console.log(`setCurveOrigin seg`, seg)                                                          //LOGGING:
@@ -1483,11 +1483,11 @@ class ProtoSegment extends Segment {
   #addCubicVert(vert, replace = false, start = false, usePoints = false) {
     let report = false
     const mode = start ? 'Start' : `End`
-    // if (
-    //   this.id.includes('cell002')                                                                       //LOGGING:
-    //   // || this.id.includes('cell008')                                                                    //LOGGING:
-    //   // || this.id.includes('cell001')                                                                    //LOGGING:
-    // ) { report = true }                                                                                 //LOGGING:
+    if (
+      this.id.includes('cell141')                                                                       //LOGGING:
+      || this.id.includes('cell185')                                                                    //LOGGING:
+      // || this.id.includes('cell001')                                                                    //LOGGING:
+    ) { report = true }                                                                                 //LOGGING:
     if (report) {                                                                                       //LOGGING:
       console.warn(`addCubic${mode}Vert: ${vert?.string}`, this)                                        //LOGGING:
       console.log(`hasCubicStartVert: ${this.hasCubicStartVert}`)                                       //LOGGING:
