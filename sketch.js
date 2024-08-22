@@ -263,12 +263,15 @@ function gridTests2() {
   let gridX = R.random_int(3, 10)
   // gridX = R.random_int(10, 20)
   // gridX = 2
+  const gridSize = vert(gridX, round(gridX * 2))
+  const gridInsetScale = 8 / 9
 
   GRID = new Grid({
     protoParent: FRAME,
-    gridSize: vert(gridX, round(gridX * 2)),
-    insetScale: 8 / 9
+    gridSize: gridSize,
+    insetScale: gridInsetScale,
   })
+  FRAME.setGrid(GRID)
   // GRID = new Grid(FRAME, { x: 10, y: 17 })
   let gridInset = R.random_num(0.75, 0.95)
 
@@ -281,7 +284,7 @@ function gridTests2() {
   console.log('minCellSWidth', minCellSWidth)
 
 
-  let group0, group1, group2, group3, group4
+  let groupBack, group0, group1, group2, group3, group4
   // GRID.randGroup({amount:1 / GRID.cellCount})
   // group0 = GRID.randomComb({
   //   selection: (GRID.cellRows
@@ -305,7 +308,9 @@ function gridTests2() {
   // GRID.outlineTaken({ direction: Direction.Right, newGroup: false })
   // GRID.outlineTaken({ direction: Direction.Up, newGroup: false })
   // GRID.outlineTaken({ direction: Direction.All, amount: 1, newGroup: false })
-
+  // groupBack = GRID.groupAvail(false)
+  // groupBack = GRID.randGroup({ amount: 0.8 })
+  // groupBack.createPerimiters('maxCorners', Direction.Cardinal)
 
   // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
   group0 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
@@ -403,6 +408,7 @@ function gridTests2() {
   console.log(`group3`, group3)
   console.log(`group4`, group4)
 
+  // groupBack?.createPerimiters('maxCorners', Direction.Cardinal)
   group0?.createPerimiters('maxCorners', Direction.Cardinal)
   group1?.createPerimiters('maxCorners', Direction.Cardinal)
   group2?.createPerimiters('maxCorners', Direction.Cardinal)
@@ -419,6 +425,17 @@ function gridTests2() {
 
   console.error(`  ######################   `)
   console.log(``)
+
+  //MARK: groupBack
+  // groupBack?.cutIslands({
+  //   profile: Profile.rIn,
+  //   layerStart: .7,
+  //   layerEnd: .2,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  // })
+
 
   //MARK: group0
   group0?.cutIslands({
@@ -616,10 +633,13 @@ function gridTests2() {
   // })
 
   // FRAME.setFilter(shader0)
+  console.log(`takenCells`, GRID.takenCells.map(c => c.index))
+  // FRAME.setBackGridGroup(GRID.takenCells.map(c => c.index))
 
   // console.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
   // GRID.showCellsDebug()
+  // GRID.showShapesDebug()
 
   // console.log(`multi-island simpleSubshapes`, GRID.allSimpleSubShapes.flat().map(s => s.parentID))
   let interCells01 = GRID.perimeterIslands[3]?.interCells
