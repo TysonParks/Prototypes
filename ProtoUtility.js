@@ -1,3 +1,31 @@
+//MARK: Memoization
+//NOTE: Created with ChatGPT4 on April 17, 2024
+const memoCache = new WeakMap()           // WeakMap to hold private cache data across instances
+// FUNC: memoize() : helper that defines memoized getters with integrated reset
+function memoize(getter, key) {
+  const symbolKey = Symbol.for(key)
+  return function () {
+    let cache = memoCache.get(this)
+    if (!cache) {
+      cache = {}
+      memoCache.set(this, cache)
+    }
+    if (!(symbolKey in cache)) { cache[symbolKey] = getter.call(this) }
+    return cache[symbolKey]
+  }
+}
+// FUNC: resetMemoized() : resets memoized property values on instances using keys
+function resetMemoized(instance, ...keys) {
+  const cache = memoCache.get(instance)
+  if (cache) {
+    keys.forEach(key => {
+      const symbolKey = Symbol.for(key)
+      if (symbolKey in cache) { delete cache[symbolKey] }
+    })
+  }
+}
+
+//MARK: Aspect
 // ENUM: Aspect
 // SIZE: 30 lines
 class Aspect {
@@ -32,40 +60,7 @@ class Aspect {
   ]
 }
 
-// ENUM: Corner
-// SIZE: 27 lines
-class Corner {
-  static UpLeft = new Corner(0)
-  static UpRight = new Corner(1)
-  static DownRight = new Corner(2)
-  static DownLeft = new Corner(3)
-
-  constructor(number) {
-    this.value = number
-  }
-
-  get name() { return this.#descriptions[this.value] }
-  get isUpLeft() { return this.value === 0 }
-  get isUpRight() { return this.value === 1 }
-  get isDownRight() { return this.value === 2 }
-  get isDownLeft() { return this.value === 3 }
-
-  get isUp() { return this.value < 2 }
-  get isRight() { return this.isUpRight || this.isDownRight }
-  get isDown() { return !this.isUp }
-  get isLeft() { return !this.isRight }
-
-  //METH: equals()
-  equals(corner) { return this.value === corner.value }
-
-  #descriptions = [
-    'upLeft',  // 0
-    'upRight', // 1
-    'downRight', // 2
-    'downLeft',  // 3
-  ]
-}
-
+//MARK: Direction
 // ENUM: Direction
 // SIZE: 231 lines
 class Direction {
@@ -324,7 +319,69 @@ class Direction {
   }
 
 }
+//MARK: Corner
+// ENUM: Corner
+// SIZE: 27 lines
+class Corner {
+  static UpLeft = new Corner(0)
+  static UpRight = new Corner(1)
+  static DownRight = new Corner(2)
+  static DownLeft = new Corner(3)
 
+  constructor(number) {
+    this.value = number
+  }
+
+  get name() { return this.#descriptions[this.value] }
+  get isUpLeft() { return this.value === 0 }
+  get isUpRight() { return this.value === 1 }
+  get isDownRight() { return this.value === 2 }
+  get isDownLeft() { return this.value === 3 }
+
+  get isUp() { return this.value < 2 }
+  get isRight() { return this.isUpRight || this.isDownRight }
+  get isDown() { return !this.isUp }
+  get isLeft() { return !this.isRight }
+
+  //METH: equals()
+  equals(corner) { return this.value === corner.value }
+
+  #descriptions = [
+    'upLeft',  // 0
+    'upRight', // 1
+    'downRight', // 2
+    'downLeft',  // 3
+  ]
+}
+
+// //MARK: Corners
+// // // ENUM: Corners
+class Corners {
+  static Directions = new Corners(Direction.Ordinal.directions)
+
+  values
+
+  constructor(values) {
+    if (values instanceof Array) {
+      this.values = values
+    } else if (isCornerObj(values)) {
+      values = [values.upLeft, values.upRight, values.downRight, values.downLeft]
+    } else {
+      console.error(`Corners require an array to initialize`)
+    }
+
+    if (this.values.length !== 4) {
+      console.error(`Corners expects 4 values: expect problems!`)
+    }
+  }
+
+  get upLeft() { return this.values[0] }
+  get upRight() { return this.values[1] }
+  get downRight() { return this.values[2] }
+  get downLeft() { return this.values[3] }
+}
+
+//MARK: Turn
 // ENUM: Turn
 // SIZE: 58 lines
 class Turn {
@@ -386,7 +443,7 @@ class Turn {
     '1': 'R',
   }
 }
-
+//MARK: EdgePart
 // ENUM: EdgePart
 // SIZE: 102 lines
 class EdgePart {
@@ -500,6 +557,8 @@ class EdgePart {
 function isBoundsObj(obj) { return hasProperties(obj, [`xMin`, `xMax`, `yMin`, `yMax`]) }
 // FUNC: isCoordsObj()
 function isCoordsObj(obj) { return hasProperties(obj, [`x`, `y`]) }
+// FUNC: isCornerObj()
+function isCornerObj(obj) { return hasProperties(obj, [`upLeft`, `upRight`, `downRight`, `downLeft`]) }
 // FUNC: findBounds() : {BoundsObject} : get bounds for combos of [segments, verts] or objects that contain bounds props
 function findBounds(...geo) {
   // console.log(`geo`, geo)
@@ -715,10 +774,12 @@ function reduce(initial, reducer) {
 function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
 }
+//FUNC: isObject() : checks to see if obj is really an object
+function isObject(obj) { return obj !== null && typeof obj === 'object' }
 //FUNC: hasProperties() : checks to see if obj is really an object and has certain named properties
 function hasProperties(obj, props) {
-  if (typeof obj !== 'object' || obj === null) return false
-  return props.every(prop => prop in obj)
+  // if (typeof obj !== 'object' || obj === null) return false
+  return isObject(obj) ? props.every(prop => prop in obj) : false
 }
 
 //MARK: Math Utilities
@@ -821,32 +882,7 @@ class Range {
   cycle(x) { return ((x - this.start) % this.cycleSize + this.cycleSize) % this.cycleSize + this.start }
 }
 
-//MARK: Memoization
-//NOTE: Created with ChatGPT4 on April 17, 2024
-const memoCache = new WeakMap()           // WeakMap to hold private cache data across instances
-// FUNC: memoize() : helper that defines memoized getters with integrated reset
-function memoize(getter, key) {
-  const symbolKey = Symbol.for(key)
-  return function () {
-    let cache = memoCache.get(this)
-    if (!cache) {
-      cache = {}
-      memoCache.set(this, cache)
-    }
-    if (!(symbolKey in cache)) { cache[symbolKey] = getter.call(this) }
-    return cache[symbolKey]
-  }
-}
-// FUNC: resetMemoized() : resets memoized property values on instances using keys
-function resetMemoized(instance, ...keys) {
-  const cache = memoCache.get(instance)
-  if (cache) {
-    keys.forEach(key => {
-      const symbolKey = Symbol.for(key)
-      if (symbolKey in cache) { delete cache[symbolKey] }
-    })
-  }
-}
+
 
 
 // Sequence generator function (commonly referred to as "range", e.g. Clojure, PHP etc)
