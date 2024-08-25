@@ -58,6 +58,18 @@ class OpArray extends Array {
     return vert(this[0].length, this.length)
   }
 
+  get cornerElements() {
+    const sorted = this.gridVertSorted
+    const counterSorted = this.counterGridVertSorted
+    return {
+      upLeft: sorted.first,
+      upRight: counterSorted.first,
+      downRight: sorted.last,
+      downLeft: counterSorted.last
+    }
+
+  }
+
   coords2D(value) {
     if (!this.is2D) { return -1 }
     const flat = this.flat()
