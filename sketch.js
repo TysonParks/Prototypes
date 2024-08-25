@@ -28,7 +28,7 @@ let boxShadowStyle
 // let container, clone, fpsDisplay, timeDisplay
 let squircle, squircleWrapper
 let curvedShape, curvedShapeWrapper
-let GRID
+let BGRID, GRID
 
 //Graphics constants
 const expSeries = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
@@ -262,15 +262,40 @@ function gridTests2() {
 
   let gridX = R.random_int(3, 10)
   // gridX = R.random_int(10, 20)
-  // gridX = 2
+  // gridX = 12
   const gridSize = vert(gridX, round(gridX * 2))
-  const gridInsetScale = 8 / 9
+  let insetMultiplier = 3
+
+  //ARROW: calcInset()
+  const calcInset = (x) => {
+    let ratio
+    if (x === 1) { ratio = 9 }
+    if (x === 2) { ratio = 4.5 }
+    if (x === 3) { ratio = 3 }
+    if (x > 3) { ratio = 2 }
+    if (x > 8) { ratio = 1 }
+    if (x > 15) { ratio = 0.5 }
+    insetMultiplier = min(gridX + 1, insetMultiplier)
+    ratio = ratio / insetMultiplier
+    return (100 - (100 / (x * ratio + 1))) / 100
+  }
+
+
+  const gridInsetScale = calcInset(gridX)
+
+  // BGRID = new Grid({
+  //   protoParent: FRAME,
+  //   gridSize: gridSize,
+  //   insetScale: gridInsetScale,
+  // })
 
   GRID = new Grid({
     protoParent: FRAME,
     gridSize: gridSize,
     insetScale: gridInsetScale,
   })
+
+  // FRAME.setBackGrid(BGRID)
   FRAME.setGrid(GRID)
   // GRID = new Grid(FRAME, { x: 10, y: 17 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -634,7 +659,7 @@ function gridTests2() {
 
   // FRAME.setFilter(shader0)
   console.log(`takenCells`, GRID.takenCells.map(c => c.index))
-  // FRAME.setBackGridGroup(GRID.takenCells.map(c => c.index))
+  FRAME.setBackGridGroup(GRID.takenCells.map(c => c.index))
 
   // console.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
 
