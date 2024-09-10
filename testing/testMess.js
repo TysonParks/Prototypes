@@ -124,7 +124,7 @@ function functionTestPrint() {
   // console.log(`vert10OrientToSeg01`, vert10OrientToSeg01.name)
 
   //NOTE: OpArray Tests
-  console.log(`OpArray Tests`)
+  // console.log(`OpArray Tests`)
 
   // let array = [`a`, `b`, `c`, `d`]
   // let opArray01 = OpArray.format(array)
@@ -139,14 +139,14 @@ function functionTestPrint() {
 
   // let union = opArray01.union(opArray02)
   // console.log(`union`, union)
-  let idBoy1 = { name: `bro`, id: `b01` }
-  let idBoy2 = { name: `dude`, id: `b02` }
-  let idBoy3 = { name: `bruh`, id: `b03` }
-  let idBoy4 = { name: `boieee`, id: `b04` }
+  // let idBoy1 = { name: `bro`, id: `b01` }
+  // let idBoy2 = { name: `dude`, id: `b02` }
+  // let idBoy3 = { name: `bruh`, id: `b03` }
+  // let idBoy4 = { name: `boieee`, id: `b04` }
 
 
-  const idBoy1Values = Object.values(idBoy1).join('-')
-  console.log(`idBoy1Values`, idBoy1Values)
+  // const idBoy1Values = Object.values(idBoy1).join('-')
+  // console.log(`idBoy1Values`, idBoy1Values)
   // console.log(`idBoy1.values.string`, idBoy1Values.join('-'))
 
   // let boyToy1 = { start: idBoy1, end: idBoy2 }
@@ -162,32 +162,32 @@ function functionTestPrint() {
   // let boyColxn5 = boyColxn1.union(boyColxn3, `start`)
   // console.log(`boyColxn5`, boyColxn5)
 
-  const boysWithNoRepeats = OpArray.format([idBoy1, idBoy2, idBoy3, idBoy4])
-  console.log(`boysWithNoRepeats`, boysWithNoRepeats)
-  const boysWithRepeats = OpArray.format([idBoy1, idBoy2, idBoy3, idBoy4, idBoy2])
-  console.log(`boysWithRepeats`, boysWithRepeats)
-  console.log(`boysWithRepeats.kvArray`, boysWithRepeats.kvArray([`name`, 'id']))
-  console.log(`boysWithRepeats.kvArray2`, boysWithRepeats.kvArray())
-  console.log(`boysWithRepeats.kvMap`, boysWithRepeats.kvMap([`name`, 'id']))
-  console.log(`boysWithRepeats.vcMap`, boysWithRepeats.valueCountMap([`name`, 'id']))
+  // const boysWithNoRepeats = OpArray.format([idBoy1, idBoy2, idBoy3, idBoy4])
+  // console.log(`boysWithNoRepeats`, boysWithNoRepeats)
+  // const boysWithRepeats = OpArray.format([idBoy1, idBoy2, idBoy3, idBoy4, idBoy2])
+  // console.log(`boysWithRepeats`, boysWithRepeats)
+  // console.log(`boysWithRepeats.kvArray`, boysWithRepeats.kvArray([`name`, 'id']))
+  // console.log(`boysWithRepeats.kvArray2`, boysWithRepeats.kvArray())
+  // console.log(`boysWithRepeats.kvMap`, boysWithRepeats.kvMap([`name`, 'id']))
+  // console.log(`boysWithRepeats.vcMap`, boysWithRepeats.valueCountMap([`name`, 'id']))
 
-  console.log(`findDuplicateObjs01`, boysWithNoRepeats.duplicates(`id`)) // expect: []
-  console.log(`findDuplicateObjs02`, boysWithRepeats.duplicates(`id`)) // expect: [idBoy2]
-  console.log(`findDuplicateObjs03`, boysWithRepeats.duplicates([`name`, 'id'])) // expect: [idBoy2]
+  // console.log(`findDuplicateObjs01`, boysWithNoRepeats.duplicates(`id`)) // expect: []
+  // console.log(`findDuplicateObjs02`, boysWithRepeats.duplicates(`id`)) // expect: [idBoy2]
+  // console.log(`findDuplicateObjs03`, boysWithRepeats.duplicates([`name`, 'id'])) // expect: [idBoy2]
 
-  const numberArray01 = OpArray.format([3, 7, 4, 2, 6])
-  console.log(`numberArray01`, numberArray01)
-  console.log(`findDuplicateNumbers01`, numberArray01.duplicates()) // expect: []
-  const numberArray02 = OpArray.format([3, 7, 4, 2, 6, 7])
-  console.log(`numberArray02`, numberArray02)
-  console.log(`findDuplicateNumbers01`, numberArray02.duplicates()) // expect: [7]
+  // const numberArray01 = OpArray.format([3, 7, 4, 2, 6])
+  // console.log(`numberArray01`, numberArray01)
+  // console.log(`findDuplicateNumbers01`, numberArray01.duplicates()) // expect: []
+  // const numberArray02 = OpArray.format([3, 7, 4, 2, 6, 7])
+  // console.log(`numberArray02`, numberArray02)
+  // console.log(`findDuplicateNumbers01`, numberArray02.duplicates()) // expect: [7]
 
-  const stringsArray01 = OpArray.format(['cow', 'dog', 'pig'])
-  console.log(`stringsArray01`, stringsArray01)
-  console.log(`findDuplicateStringss01`, stringsArray01.duplicates()) // expect: []
-  const stringsArray02 = OpArray.format(['cow', 'dog', 'pig', 'cow'])
-  console.log(`stringsArray02`, stringsArray02)
-  console.log(`findDuplicateStringss02`, stringsArray02.duplicates()) // expect: ['cow']
+  // const stringsArray01 = OpArray.format(['cow', 'dog', 'pig'])
+  // console.log(`stringsArray01`, stringsArray01)
+  // console.log(`findDuplicateStringss01`, stringsArray01.duplicates()) // expect: []
+  // const stringsArray02 = OpArray.format(['cow', 'dog', 'pig', 'cow'])
+  // console.log(`stringsArray02`, stringsArray02)
+  // console.log(`findDuplicateStringss02`, stringsArray02.duplicates()) // expect: ['cow']
 
 
   // NOTE: ProtoSegment Tests
@@ -330,7 +330,7 @@ function functionTestPrint() {
   ]
 
   // NOTE: 2DArray Tests
-  // print('2DArray Tests')
+  print('2DArray Tests')
   // const upRad = -PI / 2
   // print(upRad)
   // let deg = radianToDegree(upRad)
@@ -338,6 +338,151 @@ function functionTestPrint() {
   // deg = normalizeDegree(deg)
   // print(deg)
   // print(normRadToDeg(upRad))
+
+  // const pi = PI
+  // console.log(`pi`, pi)
+  // const sinCosPi = [sin(pi), cos(pi)]
+  // console.log(`sinCosPi`, sinCosPi)
+
+  // const upRightAngle = PI * -1 / 4
+  // console.log(`upRightAngle`, upRightAngle)
+  // const sinCosUpRightAngle = [sin(upRightAngle), cos(upRightAngle)]
+  // console.log(`sinCosUpRightAngle`, sinCosUpRightAngle)
+
+  // const upToUpRightAngle = PI * -3 / 8
+  // console.log(`upToUpRightAngle`, upToUpRightAngle)
+  // const sinCosUpToUpRightAngle = [sin(upToUpRightAngle), cos(upToUpRightAngle)]
+  // console.log(`sinCosUpToUpRightAngle`, sinCosUpToUpRightAngle)
+
+
+  const up = Direction.Up
+  console.warn(`up`, up)
+  const upRadian = up.angle
+  console.warn(`upRadian`, upRadian)
+  const upRadToValue = Direction.angleToValue(upRadian)
+  console.log(`upRadToValue`, upRadToValue)
+  const upRadMovCoord = Direction.moveCoordFromAngle(upRadian)
+  console.log(`upRadMovCoord`, upRadMovCoord)
+  console.error(`upRadInternalMovCoord`, up.moveCoord)
+
+  const upRight = Direction.UpRight
+  console.warn(`upRight`, upRight)
+  const upRightRadian = upRight.angle
+  console.warn(`upRightRadian`, upRightRadian)
+  const upRightRadToValue = Direction.angleToValue(upRightRadian)
+  console.log(`upRightRadToValue`, upRightRadToValue)
+  const upRightRadMovCoord = Direction.moveCoordFromAngle(upRightRadian)
+  console.log(`upRightRadMovCoord`, upRightRadMovCoord)
+  console.error(`upRightRadInternalMovCoord`, upRight.moveCoord)
+
+  const right = Direction.Right
+  console.warn(`right`, right)
+  const rightRadian = right.angle
+  console.warn(`rightRadian`, rightRadian)
+  const rightRadToValue = Direction.angleToValue(rightRadian)
+  console.log(`rightRadToValue`, rightRadToValue)
+  const rightRadMovCoord = Direction.moveCoordFromAngle(rightRadian)
+  console.log(`rightRadMovCoord`, rightRadMovCoord)
+  console.error(`rightRadInternalMovCoord`, right.moveCoord)
+
+  const downRight = Direction.DownRight
+  console.warn(`downRight`, downRight)
+  const downRightRadian = downRight.angle
+  console.warn(`downRightRadian`, downRightRadian)
+  const downRightRadToValue = Direction.angleToValue(downRightRadian)
+  console.log(`downRightRadToValue`, downRightRadToValue)
+  const downRightRadMovCoord = Direction.moveCoordFromAngle(downRightRadian)
+  console.log(`downRightRadMovCoord`, downRightRadMovCoord)
+  console.error(`downRightRadInternalMovCoord`, downRight.moveCoord)
+
+  const downRadian = Direction.Down.angle
+  console.warn(`downRadian`, downRadian)
+  const downRadToValue = Direction.angleToValue(downRadian)
+  console.log(`downRadToValue`, downRadToValue)
+  const downRadMovCoord = Direction.moveCoordFromAngle(downRadian)
+  console.log(`downRadMovCoord`, downRadMovCoord)
+
+  const downLeftRadian = Direction.DownLeft.angle
+  console.warn(`downLeftRadian`, downLeftRadian)
+  const downLeftRadToValue = Direction.angleToValue(downLeftRadian)
+  console.log(`downLeftRadToValue`, downLeftRadToValue)
+  const downLeftRadMovCoord = Direction.moveCoordFromAngle(downLeftRadian)
+  console.log(`downLeftRadMovCoord`, downLeftRadMovCoord)
+
+  const leftRadian = Direction.Left.angle
+  console.warn(`leftRadian`, leftRadian)
+  const leftRadToValue = Direction.angleToValue(leftRadian)
+  console.log(`leftRadToValue`, leftRadToValue)
+  const leftRadMovCoord = Direction.moveCoordFromAngle(leftRadian)
+  console.log(`leftRadMovCoord`, leftRadMovCoord)
+
+  const upLeftRadian = Direction.UpLeft.angle
+  console.warn(`upLeftRadian`, upLeftRadian)
+  const upLeftRadToValue = Direction.angleToValue(upLeftRadian)
+  console.log(`upLeftRadToValue`, upLeftRadToValue)
+  const upLeftRadMovCoord = Direction.moveCoordFromAngle(upLeftRadian)
+  console.log(`upLeftRadMovCoord`, upLeftRadMovCoord)
+
+  //Inter-Axial
+  const upToUpRight = new Direction(0.25)
+  console.warn(`upToUpRight`, upToUpRight)
+  const upToUpRightRadian = -3 / 8 * PI
+  console.warn(`upToUpRightRadian`, upToUpRightRadian)
+  const upToUpRightRadToValue = Direction.angleToValue(upToUpRightRadian)
+  console.log(`upToUpRightRadToValue`, upToUpRightRadToValue)
+  const upToUpRightRadMovCoord = Direction.moveCoordFromAngle(upToUpRightRadian)
+  console.log(`upToUpRightRadMovCoord`, upToUpRightRadMovCoord)
+  console.error(`upRadInternalMovCoord`, upToUpRight.moveCoord)
+
+  const upRightToRight = new Direction(0.75)
+  console.warn(`upRightToRight`, upRightToRight)
+  const upRightToRightRadian = upRightToRight.angle
+  // const upRightToRightRadian = -1 / 8 * PI
+  console.warn(`upRightToRightRadian`, upRightToRightRadian)
+  const upRightToRightRadToValue = Direction.angleToValue(upRightToRightRadian)
+  console.log(`upRightToRightRadToValue`, upRightToRightRadToValue)
+  const upRightToRightRadMovCoord = Direction.moveCoordFromAngle(upRightToRightRadian)
+  console.log(`upRightToRightRadMovCoord`, upRightToRightRadMovCoord)
+  console.error(`upRadInternalMovCoord`, upRightToRight.moveCoord)
+
+  // const rightToDownRightRadian = 1 / 8 * PI
+  // console.warn(`rightToDownRightRadian`, rightToDownRightRadian)
+  // const rightToDownRightRadToValue = Direction.angleToValue(rightToDownRightRadian)
+  // console.log(`rightToDownRightRadToValue`, rightToDownRightRadToValue)
+
+  // const downRightToDownRadian = 3 / 8 * PI
+  // console.warn(`downRightToDownRadian`, downRightToDownRadian)
+  // const downRightToDownRadToValue = Direction.angleToValue(downRightToDownRadian)
+  // console.log(`downRightToDownRadToValue`, downRightToDownRadToValue)
+
+  // const downToDownLeftRadian = 5 / 8 * PI
+  // console.warn(`downToDownLeftRadian`, downToDownLeftRadian)
+  // const downToDownLeftRadToValue = Direction.angleToValue(downToDownLeftRadian)
+  // console.log(`downToDownLeftRadToValue`, downToDownLeftRadToValue)
+
+  // const downLeftToLeftRadian = 7 / 8 * PI
+  // console.warn(`downLeftToLeftRadian`, downLeftToLeftRadian)
+  // const downLeftToLeftRadToValue = Direction.angleToValue(downLeftToLeftRadian)
+  // console.log(`downLeftToLeftRadToValue`, downLeftToLeftRadToValue)
+
+  // const leftToUpLeftRadian = -7 / 8 * PI
+  // console.warn(`leftToUpLeftRadian`, leftToUpLeftRadian)
+  // const leftToUpLeftRadToValue = Direction.angleToValue(leftToUpLeftRadian)
+  // console.log(`leftToUpLeftRadToValue`, leftToUpLeftRadToValue)
+
+  // const upLeftToUpRadian = -5 / 8 * PI
+  // console.warn(`upLeftToUpRadian`, upLeftToUpRadian)
+  // const upLeftToUpRadToValue = Direction.angleToValue(upLeftToUpRadian)
+  // console.log(`upLeftToUpRadToValue`, upLeftToUpRadToValue)
+
+  // const allDir = Direction.All
+  // console.log(`allDir`, allDir)
+  // const allDirections = allDir.directions
+  // console.log(`allDirections`, allDirections)
+  // const allAngles = allDir.angle
+  // console.log(`allAngles`, allAngles)
+  // const allAnglesDeg = allDir.angleDegrees
+  // console.log(`allAnglesDeg`, allAnglesDeg)
 
   // const simpleGrid = OpArray.from([
   //   OpArray.from(['a', 'b', 'c']),
