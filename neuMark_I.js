@@ -104,7 +104,7 @@ class ProtoCut {
     const r2 = curve === `r2` ? 1 : -1
     const angle = curve === `r` ? this.angleOffset + 180 : this.angleOffset
     mag = mag * cutIn * r * r2
-    // console.log({ curve: curve, mag: mag, rotOffset: angle })
+    console.warn({ curve: curve, cut: this.profile.cutIn ? `in` : `out`, mag: mag, rotOffset: angle })
     const stack = Shade.neuShadeSVGFactory({ curve: curve, cutIn: this.profile.cutIn, mag: mag, rotOffset: angle })
     const filter = createFilter().dropShadow(stack)
     this.filters.push(filter)
@@ -126,7 +126,7 @@ Object.assign(ProtoCut.prototype, IdentifiableStored)
 class Shade {
   //METH:
   //shadowVector: create vector from Angle + Offset
-  static shadVect(angle = globalControls.shadAngle) { return createVector(1, 0).rotate(angle) }
+  static shadVect(angle = globalControls.shadAngle) { return createVector(1, 0).rotate(radians(angle)) }
   //METH:
   //Drop-Shadow 
   static dropShadSVG({ lighten = true, x, y, blurRad = 0, spreadRad = 0, col = frameColor, inset = false } = {}) {
@@ -156,6 +156,8 @@ class Shade {
       col: shadCol,
       inset: inset
     })
+
+    return [shadow, highlight]
     // console.log('nsSVG shadow', shadow)
     if (curve === 'j') {
       return [shadow, highlight]
@@ -192,10 +194,12 @@ class Shade {
     count = 3,                              // used to calculate 'multiAlpha' type layer density/alpha, always 3
     sort = false,                           // end sorts all highlights over shadows (or opposite), always false
   } = {}) {
+    vector = Vertex.cleanRotate(vector, 0)
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
 
+    console.warn(`vector`, vector)
     // //MARK: "I" Cut
     // if (curve === 'i') {
     //   mag = mag / pixToUserUnits * 0.85           // convert pixelUnit to userUnit magnitude
@@ -311,9 +315,12 @@ class Shade {
             const shadCol2 = achromic(shadColLuma1).setAlpha(.25)
 
             let shades = new OpArray
-            const shadeVector = Vertex.cleanRotate(vector, rotOffset).setMag(mag)
-            // console.log(`shadeVector`, shadeVector)
+            const shadeVector = Vertex.cleanRotate(vector, radians(rotOffset)).setMag(mag)
+            console.log(`angleMode`, _angleMode)
+            console.log(`shadeVector`, shadeVector)
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
+            console.log(`rotOffset`, rotOffset)
+
             const shades1 = this.neuShadeSVG(shadeVector, blurRadius, highCol, shadCol1, inset, blur, curve)
             shades.push(shades1)
 
@@ -328,7 +335,7 @@ class Shade {
       if (curve === 'j' || curve === 'r') {
         let reflLightRange
         if (curve === 'r') {                            // "R" cut
-          // rotOffset = rotOffset + 180
+          // rotOffset = rotOffset + PI
           const rangeSize = mag                         // shadow range
           reflLightRange = rangeSize / 2.2                // visual observation shows relfLight to be about 1/5 the shadow
           // console.log(`reflLightRange`, reflLightRange)
@@ -390,7 +397,13 @@ class Shade {
             // console.log(`calculation`, Vertex.rotate(vector, PI))
 
             const shadeVector = Vertex.cleanRotate(vector, rotOffset).setMag(mag)
-            // console.log(`shadeVector`, shadeVector)
+
+            console.log(`angleMode`, _angleMode)
+            console.log(`shadeVector`, shadeVector)
+            // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
+            console.log(`rotOffset`, rotOffset)
+            // const shadeVector = vector.setMag(mag)
+            console.log(`shadeVector`, shadeVector)
             let shades = this.neuShadeSVG(shadeVector, blurRadius, highCol, shadCol, inset, blur, curve)
             return shades
           })
@@ -416,7 +429,13 @@ class Shade {
           const mag = o / pixToUserUnits
           const blurRadius = mag / sqrt(2)
           const shades = this.neuShadeSVG(
-            vector.setMag(mag).rotate(rotOffset), blurRadius, color1, color2, inset, blur, curve
+            vector.setMag(mag).rotate(radians(rotOffset)),
+            blurRadius,
+            color1,
+            color2,
+            inset,
+            blur,
+            curve
           )
           return shades
         })
