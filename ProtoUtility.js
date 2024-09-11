@@ -118,12 +118,32 @@ class Direction {
 
   get moveCoord() {
     return memoize(() => {
-      return this.directOp(a => this.#moveCoords[a.name])
+      // console.group(`moveCoord`)
+      // console.log(this.name)
+      // console.log(this.angle)
+      // console.log(this.angleDegrees)
+      // console.groupEnd()
+      return this.directOp(a => {
+        // if (a.value % 0.5 === 0) {
+        //   return this.#moveCoords[a.name]
+        // } else {
+        return Direction.moveCoordFromAngle(a.angle)
+        // }
+
+
+      })
+      // return this.directOp(a => this.#moveCoords[a.name])
     }, `moveCoord`).call(this)
   }
+
+
   // get angle() { return this.valOp(a => ((((a * -1) - 1) % 4) + 2) * PI / 2) }
-  get angle() { return this.directOp(a => this.#angles[a.name]) }
-  get angleDegrees() { return radianToDegree(this.angle) }
+  get angle() { return this.directOp(a => Direction.valueToAngle(a.value)) }
+  // get angle() { return this.directOp(a => this.#angles[a.name]) }
+
+  get angleDegrees() { return this.directOp(a => degrees(a.angle)) }
+  // get angleDegrees() { return degrees(this.angle) }
+
   get lineVector() { if (this.isSingle) { return this.moveCoord.normalize() } }
 
   get adjacents() {
@@ -220,10 +240,12 @@ class Direction {
     if (this.isSingle && direction.isSingle) {
       // print('valid candidates')
       if (direction.equals(this.toLeft)) { return Turn.L }
+      if (direction.equals(this.previous())) { return Turn.SL }
       if (direction.equals(this)) { return Turn.S }
+      if (direction.equals(this.next())) { return Turn.SR }
       if (direction.equals(this.toRight)) { return Turn.R }
     } else {
-      throw new Error("Invalid turn. Can only turn from a single direction.")
+      throw new Error("Invalid turn. Can only turn to/from a single direction.")
     }
   }
 
@@ -232,7 +254,11 @@ class Direction {
     const direction = Direction.None
     const name = direction.angleKeys.find(key => equalsRoundedDec(direction.#angles[key], angle, decimal))
     if (!name) {
-      console.error(`no Direction found at this angle: ${angle}`)
+      console.error(`This angle is Non-Axial!: ${angle}`)
+      // console.log(this)
+      const value = Direction.angleToValue(angle)
+      return new Direction(value)
+
       return Direction.None
     }
     const index = direction.#descriptions.findIndex(e => e === name)
@@ -241,6 +267,39 @@ class Direction {
     // console.log(`name`, name)
     // console.log(`index`, index)
     return new Direction(index / 2)
+  }
+
+  static angleToValue(angle) { return (((2 * (roundToDec(angle / PI, 4)) + 1) % 4) + 4) % 4 }
+
+  static valueToAngle(value) { return PI * (((value + 0.5) % 4) - 1.5) / 2 }
+
+  static moveCoordFromAngle(angle) {
+    let [x, y] = [cos(angle), sin(angle)]
+    let [absX, absY] = [abs(x), abs(y)]
+    // console.group(`moveCoordFromAngle`)
+    // console.warn(`angle`, angle)
+    // console.warn(`degrees`, degrees(angle))
+    // console.warn(`cos,sin`, [x, y])
+    // console.groupEnd()
+
+    // const epsilon = 0.0001 // Small threshold for floating-point comparison
+
+    // // Normalize values: if close enough to 1 or -1, round it off
+    // if (abs(x - 1) < epsilon) { x = 1 }
+    // if (abs(x + 1) < epsilon) { x = -1 }
+    // if (abs(y - 1) < epsilon) { y = 1 }
+    // if (abs(y + 1) < epsilon) { y = -1 }
+
+    if (absX > absY) {
+      x = x >= 0 ? 1 : -1
+      y = y / absX
+    } else {
+      y = y >= 0 ? 1 : -1
+      x = x / absY
+    }
+    // if (x - round(x) < .03) { x = round(x) }
+    // if (y - round(y) < .03) { y = round(y) }
+    return vert(roundToDec(x, 4), roundToDec(y, 4))
   }
 
   valOp(fn) {
@@ -381,6 +440,37 @@ class Corners {
   get downLeft() { return this.values[3] }
 }
 
+//MARK: Sides
+// ENUM: Sides
+class Sides {
+  static Directions = new Sides(Direction.Cardinal.directions)
+
+  values
+
+  constructor(values) {
+    if (values instanceof Array) {
+      this.values = values
+    } else if (isCornerObj(values)) {
+      values = [values.up, values.right, values.down, values.left]
+    } else {
+      console.error(`Sides require an array to initialize`)
+    }
+
+    if (this.values.length !== 4) {
+      console.error(`Sides expects 4 values: expect problems!`)
+    }
+  }
+
+  get up() { return this.values[0] }
+  get right() { return this.values[1] }
+  get down() { return this.values[2] }
+  get left() { return this.values[3] }
+
+  get verticals() { return [this.up, this.down] }
+  get horizontals() { return [this.right, this.left] }
+  get all() { return this.values }
+}
+
 //MARK: Turn
 // ENUM: Turn
 // SIZE: 58 lines
@@ -394,8 +484,8 @@ class Turn {
 
   // static UL = new Turn(-2)     // U-Turn Left 
   // static HL = new Turn(-1.5)   // Hard Left 
-  // static SL = new Turn(-0.5)   // Soft Left 
-  // static SR = new Turn(0.5)    // Soft Right
+  static SL = new Turn(-0.5)   // Soft Left 
+  static SR = new Turn(0.5)    // Soft Right
   // static HR = new Turn(1.5)    // Hard Right
   // static UR = new Turn(2)      // U-Turn Right
 
@@ -418,28 +508,40 @@ class Turn {
   get isLeft() { return this.value === -1 }
   get isStraight() { return this.value === 0 }
   get isRight() { return this.value === 1 }
+  get isSoftLeft() { return this.value === -0.5 }
+  get isSoftRight() { return this.value === 0.5 }
 
-  get normalRotAngle() {
+  get direction() {
     switch (this.value) {
-      case -1: // Left
-        return PI * 3 / 4
-      case 0: // Straight
-        return PI / 2
-      case 1: // Right
-        return PI / 4
+      case -1:                        // Left
+        return Direction.Left
+      case -0.5:                      // Soft Left
+        return Direction.UpLeft
+      case 0:                         // Straight
+        return Direction.Up
+      case 0.5:                       // Soft Right
+        return Direction.UpRight
+      case 1:                         // Right
+        return Direction.Right
+
     }
   }
+  get normalRotAngle() { return PI * (0.5 - this.value / 4) }
 
   #getName(value) { return this.#name[`${this.value}`] }
 
   #name = {
     '-1': 'Left',
+    '-0.5': 'Soft Left',
     '0': 'Straight',
+    '0.5': 'Soft Right',
     '1': 'Right',
   }
   #letterName = {
     '-1': 'L',
+    '-0.5': 'SL',
     '0': 'S',
+    '0.5': 'SR',
     '1': 'R',
   }
 }
@@ -559,6 +661,8 @@ function isBoundsObj(obj) { return hasProperties(obj, [`xMin`, `xMax`, `yMin`, `
 function isCoordsObj(obj) { return hasProperties(obj, [`x`, `y`]) }
 // FUNC: isCornerObj()
 function isCornerObj(obj) { return hasProperties(obj, [`upLeft`, `upRight`, `downRight`, `downLeft`]) }
+// FUNC: isSideObj()
+function isSideObj(obj) { return hasProperties(obj, [`up`, `right`, `down`, `left`]) }
 // FUNC: findBounds() : {BoundsObject} : get bounds for combos of [segments, verts] or objects that contain bounds props
 function findBounds(...geo) {
   // console.log(`geo`, geo)
@@ -753,6 +857,14 @@ function normalizeDegree(degree) {
 function normRadToDeg(radians) {
   const radPipe = pipe(degrees, normalizeDegree)
   return radPipe(radians)
+}
+//FUNC: cosDeg()
+function cosDeg(deg) {
+  return cos(deg * PI / 180)
+}
+//FUNC: sinDeg()
+function sinDeg(deg) {
+  return sin(deg * PI / 180)
 }
 
 //MARK: Function Composition
