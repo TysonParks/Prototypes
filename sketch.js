@@ -68,17 +68,19 @@ function draw() {
 // MARK: SETUP FUNCS
 // FUNC: sizeFrame()
 function sizeFrame() {
-  const width = min(windowWidth, windowHeight / 2) * 1.1
-  const height = width * 1.8
-  // const height = 2 * floor(windowHeight / 2)
-  // const width = 2 * floor(height / 4)
+  let width = min(windowWidth, windowHeight / 2) * 1.1
+  let height = width * 1.8
+
+  // width = min(windowWidth, windowHeight / 2) * 1.8
+  // height = width * 1.8
+
   frameSize = vert(width, height)
   console.log('frameSize', frameSize)
 }
 
 // FUNC: setupPrefs()
 function setupPrefs() {
-  angleMode(DEGREES)
+  // angleMode(DEGREES)
   R = new Random()
   S = new Store()
   RuID = new Random()
@@ -262,9 +264,11 @@ function gridTests2() {
 
   let gridX = R.random_int(3, 10)
   // gridX = R.random_int(10, 20)
-  // gridX = 12
-  const gridSize = vert(gridX, round(gridX * 2))
-  let insetMultiplier = 3
+  // gridX = 2
+  let gridSize = vert(gridX, round(gridX * 2))
+  // gridSize = vert(3, 7)
+  let insetMultiplier = 4
+  let gridRatio
 
   //ARROW: calcInset()
   const calcInset = (x) => {
@@ -275,8 +279,11 @@ function gridTests2() {
     if (x > 3) { ratio = 2 }
     if (x > 8) { ratio = 1 }
     if (x > 15) { ratio = 0.5 }
-    insetMultiplier = min(gridX + 1, insetMultiplier)
+    // insetMultiplier = min(gridX + 1, insetMultiplier)
     ratio = ratio / insetMultiplier
+    // ratio = 1 / 3
+    gridRatio = 1 / ratio
+    console.warn(`GRID Ratio: ${gridRatio}:1`)
     return (100 - (100 / (x * ratio + 1))) / 100
   }
 
@@ -309,15 +316,15 @@ function gridTests2() {
   console.log('minCellSWidth', minCellSWidth)
 
 
-  let groupBack, group0, group1, group2, group3, group4
+  let group0, group1, group2, group3, group4
   // GRID.randGroup({amount:1 / GRID.cellCount})
   // group0 = GRID.randomComb({
   //   selection: (GRID.cellRows
-  //     .rotated2D(90)
+  //     // .rotated2D(90)
   //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
   //     .flat()),
-  //   keepRange: range(1, gridX / 1),
-  //   dropRange: range(gridX * 1, gridX * 2),
+  //   keepRange: range(1, round(gridX / .5)),
+  //   dropRange: range(round(gridX * .5), gridX * 2),
   //   start: 0
   // })
 
@@ -326,7 +333,7 @@ function gridTests2() {
   //     .rotated2D(R.random_int(0, 3) * 90)
   //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
   //     .flat()),
-  //   keep: R.random_int(1, 4), drop: R.random_int(3, 16), start: 0
+  //   keep: R.random_int(1, 3), drop: R.random_int(12, 16), start: 0
   // })
   // GRID.randGroup({amount:0.2})
 
@@ -339,10 +346,11 @@ function gridTests2() {
 
   // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
   group0 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
-  // group0 = GRID.randGroup({ amount: 0.4 })
+  // group1 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+  // group1 = GRID.randGroup({ amount: 0.1 })
   // GRID.squares(16 / GRID.cellCount)
   // GRID.squares(0.2)
-  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, directioqn: Direction.All.random(R.random_int(1, 4)), newGroup: false, amount: R.random_int(0, 1) })
+  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, directioqn: Direction.All.random(R.random_int(1, 1)), newGroup: false, amount: R.random_int(1, 1) })
   // const outlineDir = Direction.Cardinal.random(2)
   // console.log('outlineDir', outlineDir)
   // const outlineDir2 = new Direction([1, 3])
@@ -360,6 +368,8 @@ function gridTests2() {
   const grp1Amount = R.random_int(1, 2)
   console.log(`grp1Dir`, grp1Dir.name)
   console.log(`grp1Amount`, grp1Amount)
+
+  console.log(GRID)
 
   group1 = GRID.outlineGroup({
     groupID: GRID.lastGroup.id,
@@ -662,7 +672,8 @@ function gridTests2() {
   FRAME.setBackGridGroup(GRID.takenCells.map(c => c.index))
 
   // console.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
-
+  // FRAME.backGrid.showCellsDebug()
+  // FRAME.backGrid.showShapesDebug()
   // GRID.showCellsDebug()
   // GRID.showShapesDebug()
 
@@ -693,6 +704,13 @@ function gridTests2() {
 
   console.log('all layers', S.allLayers)
   console.log(`GRID`, GRID)
+  console.warn(`GRID cells`, gridSize)
+  console.warn(`GRID Ratio: ${gridRatio}:1`)
+  console.warn(`gridInsetScale:`, gridInsetScale)
+  console.warn(`GRID.insetAmount.x:`, GRID.insetAmount.x)
+  console.warn(`GRID size:`, GRID.insetSize)
+
+  console.warn(`FRAME.backGroup.padding:`, FRAME.backGroup.padding)
   // console.log(GRID.cellRows.flat().map(cell => cell.center))
 }
 
