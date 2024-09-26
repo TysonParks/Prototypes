@@ -317,14 +317,55 @@ class OpArray extends Array {
   }
 
   // TODO: complete implementation
-  combReduce({ keep, drop, start = 0 } = {}) {
-    let remove
-    if (drop) { remove = drop } else { remove = keep }
-    let period = keep + remove
-    let offset = this.length % period - start
-    for (let i = this.lastIndex; i > 0; i--) {
+  // combReduce( dashArray, start = 0 ) {
+  //   let remove
+  //   if (drop) { remove = drop } else { remove = keep }
+  //   let period = keep + remove
+  //   let offset = this.length % period - start
+  //   for (let i = this.lastIndex; i > 0; i--) {
+  //   }
+  // }
+  //NOTE: Implemented with ChatGPT o1-preview on Sept 16, 2024
+  combReduce(dashArray) {
+    // console.log()
+    // Step 1: Normalize the dashArray
+    if (dashArray.length % 2 !== 0) {
+      dashArray = dashArray.concat(dashArray)                // normalize the dashArray
     }
+
+    const reduced = new OpArray
+
+    let dashIndex = 0 // Index in the dashArray
+    let isOn = true // Current state: true for "on", false for "off"
+    let lengthRemaining = dashArray[0] // Length remaining in the current dash/gap
+
+    // Check for zero-length segments and adjust accordingly
+    while (lengthRemaining === 0) {
+      dashIndex = (dashIndex + 1) % dashArray.length
+      isOn = !isOn
+      lengthRemaining = dashArray[dashIndex]
+    }
+
+    // Iterate over elements
+    for (let i = 0; i < this.length; i++) {
+      if (isOn) { reduced.push(this[i]) }                    // If the current state is "on", include the element
+      lengthRemaining -= 1                                   // Update the length remaining in the current segment
+
+      while (lengthRemaining <= 0) {                         // If lengthRemaining is zero or less, switch to the next segment
+        dashIndex = (dashIndex + 1) % dashArray.length       // Move to the next segment in dashArray
+        isOn = !isOn
+        lengthRemaining = dashArray[dashIndex]
+
+        while (lengthRemaining === 0) {                      // Skip zero-length segments
+          dashIndex = (dashIndex + 1) % dashArray.length
+          isOn = !isOn
+          lengthRemaining = dashArray[dashIndex]
+        }
+      }
+    }
+    return reduced
   }
+
 
   randCombReduce({ keepRange, dropRange, start = 0 }) {
     let thisArray = this.copy
@@ -350,6 +391,13 @@ class OpArray extends Array {
     let filtered = thisArray.filter(e => e !== null)
     thisArray.splice(0, thisArray.length, ...filtered)
     return thisArray
+  }
+
+  static randomIntArray(length, range) {
+    console.log(`length`, length)
+    let array = OpArray.format(new Array(length))
+    array.forEach((n, i) => array[i] = R.random_int(range.start, range.end))
+    return array
   }
 }
 
