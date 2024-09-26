@@ -1,6 +1,21 @@
 //-------------------------------------------------------------------------
 //FUNC: FUNCTION TESTS
 function functionTestPrint() {
+  console.log('hash', tokenData.hash)
+
+  console.groupCollapsed(`TestMess`)
+
+
+  //NOTE: p5.js vector tests
+  // const vert1 = vert(1, 0)
+  // const vert2 = vert(0, 1)
+  // const vert1Vert2angle = vert1.angleBetween(vert2)
+  // console.log(`vert1Vert2angle`, vert1Vert2angle)
+
+  //NOTE: modulo tests
+  // console.log(1.4 % 1)
+  // console.log(1.69 % 1)
+
   //NOTE: primeDivisors() test
   // console.log('prime divisors 8', getDivisors(8))
   // console.log('prime divisors 18', getDivisors(18))
@@ -22,23 +37,6 @@ function functionTestPrint() {
 
   // print(values16x16bit)
   // print(values21x12bit)
-
-  console.log('hash', tokenData.hash)
-
-  // print(values32x8bit)
-  // print(values64x4bit)
-
-  // print(calculateFeatures(tokenData))
-  // print(sortedGridIndex(4, 8))
-  // print(gridRowIndices(4, 8))
-  // print(gridColumnIndices(4, 8))
-  // print(similarNeighborsIndices(8))
-  // print(similarNeighborsIndices(16))
-  // print(similarNeighborsIndices(32))
-  // similarSlicedNeighborsIndices(16)
-  // similarGridNeighbors(16)
-  console.groupCollapsed(`TestMess`)
-
 
   //NOTE: Bounds Tests
   // console.log(`Bounds Tests`)
@@ -330,7 +328,7 @@ function functionTestPrint() {
   ]
 
   // NOTE: 2DArray Tests
-  print('2DArray Tests')
+  // print('2DArray Tests')
   // const upRad = -PI / 2
   // print(upRad)
   // let deg = radianToDegree(upRad)
@@ -355,95 +353,95 @@ function functionTestPrint() {
   // console.log(`sinCosUpToUpRightAngle`, sinCosUpToUpRightAngle)
 
 
-  const up = Direction.Up
-  console.warn(`up`, up)
-  const upRadian = up.angle
-  console.warn(`upRadian`, upRadian)
-  const upRadToValue = Direction.angleToValue(upRadian)
-  console.log(`upRadToValue`, upRadToValue)
-  const upRadMovCoord = Direction.moveCoordFromAngle(upRadian)
-  console.log(`upRadMovCoord`, upRadMovCoord)
-  console.error(`upRadInternalMovCoord`, up.moveCoord)
+  // const up = Direction.Up
+  // console.warn(`up`, up)
+  // const upRadian = up.angle
+  // console.warn(`upRadian`, upRadian)
+  // const upRadToValue = Direction.angleToValue(upRadian)
+  // console.log(`upRadToValue`, upRadToValue)
+  // const upRadMovCoord = Direction.moveCoordFromAngle(upRadian)
+  // console.log(`upRadMovCoord`, upRadMovCoord)
+  // console.error(`upRadInternalMovCoord`, up.moveCoord)
 
-  const upRight = Direction.UpRight
-  console.warn(`upRight`, upRight)
-  const upRightRadian = upRight.angle
-  console.warn(`upRightRadian`, upRightRadian)
-  const upRightRadToValue = Direction.angleToValue(upRightRadian)
-  console.log(`upRightRadToValue`, upRightRadToValue)
-  const upRightRadMovCoord = Direction.moveCoordFromAngle(upRightRadian)
-  console.log(`upRightRadMovCoord`, upRightRadMovCoord)
-  console.error(`upRightRadInternalMovCoord`, upRight.moveCoord)
+  // const upRight = Direction.UpRight
+  // console.warn(`upRight`, upRight)
+  // const upRightRadian = upRight.angle
+  // console.warn(`upRightRadian`, upRightRadian)
+  // const upRightRadToValue = Direction.angleToValue(upRightRadian)
+  // console.log(`upRightRadToValue`, upRightRadToValue)
+  // const upRightRadMovCoord = Direction.moveCoordFromAngle(upRightRadian)
+  // console.log(`upRightRadMovCoord`, upRightRadMovCoord)
+  // console.error(`upRightRadInternalMovCoord`, upRight.moveCoord)
 
-  const right = Direction.Right
-  console.warn(`right`, right)
-  const rightRadian = right.angle
-  console.warn(`rightRadian`, rightRadian)
-  const rightRadToValue = Direction.angleToValue(rightRadian)
-  console.log(`rightRadToValue`, rightRadToValue)
-  const rightRadMovCoord = Direction.moveCoordFromAngle(rightRadian)
-  console.log(`rightRadMovCoord`, rightRadMovCoord)
-  console.error(`rightRadInternalMovCoord`, right.moveCoord)
+  // const right = Direction.Right
+  // console.warn(`right`, right)
+  // const rightRadian = right.angle
+  // console.warn(`rightRadian`, rightRadian)
+  // const rightRadToValue = Direction.angleToValue(rightRadian)
+  // console.log(`rightRadToValue`, rightRadToValue)
+  // const rightRadMovCoord = Direction.moveCoordFromAngle(rightRadian)
+  // console.log(`rightRadMovCoord`, rightRadMovCoord)
+  // console.error(`rightRadInternalMovCoord`, right.moveCoord)
 
-  const downRight = Direction.DownRight
-  console.warn(`downRight`, downRight)
-  const downRightRadian = downRight.angle
-  console.warn(`downRightRadian`, downRightRadian)
-  const downRightRadToValue = Direction.angleToValue(downRightRadian)
-  console.log(`downRightRadToValue`, downRightRadToValue)
-  const downRightRadMovCoord = Direction.moveCoordFromAngle(downRightRadian)
-  console.log(`downRightRadMovCoord`, downRightRadMovCoord)
-  console.error(`downRightRadInternalMovCoord`, downRight.moveCoord)
+  // const downRight = Direction.DownRight
+  // console.warn(`downRight`, downRight)
+  // const downRightRadian = downRight.angle
+  // console.warn(`downRightRadian`, downRightRadian)
+  // const downRightRadToValue = Direction.angleToValue(downRightRadian)
+  // console.log(`downRightRadToValue`, downRightRadToValue)
+  // const downRightRadMovCoord = Direction.moveCoordFromAngle(downRightRadian)
+  // console.log(`downRightRadMovCoord`, downRightRadMovCoord)
+  // console.error(`downRightRadInternalMovCoord`, downRight.moveCoord)
 
-  const downRadian = Direction.Down.angle
-  console.warn(`downRadian`, downRadian)
-  const downRadToValue = Direction.angleToValue(downRadian)
-  console.log(`downRadToValue`, downRadToValue)
-  const downRadMovCoord = Direction.moveCoordFromAngle(downRadian)
-  console.log(`downRadMovCoord`, downRadMovCoord)
+  // const downRadian = Direction.Down.angle
+  // console.warn(`downRadian`, downRadian)
+  // const downRadToValue = Direction.angleToValue(downRadian)
+  // console.log(`downRadToValue`, downRadToValue)
+  // const downRadMovCoord = Direction.moveCoordFromAngle(downRadian)
+  // console.log(`downRadMovCoord`, downRadMovCoord)
 
-  const downLeftRadian = Direction.DownLeft.angle
-  console.warn(`downLeftRadian`, downLeftRadian)
-  const downLeftRadToValue = Direction.angleToValue(downLeftRadian)
-  console.log(`downLeftRadToValue`, downLeftRadToValue)
-  const downLeftRadMovCoord = Direction.moveCoordFromAngle(downLeftRadian)
-  console.log(`downLeftRadMovCoord`, downLeftRadMovCoord)
+  // const downLeftRadian = Direction.DownLeft.angle
+  // console.warn(`downLeftRadian`, downLeftRadian)
+  // const downLeftRadToValue = Direction.angleToValue(downLeftRadian)
+  // console.log(`downLeftRadToValue`, downLeftRadToValue)
+  // const downLeftRadMovCoord = Direction.moveCoordFromAngle(downLeftRadian)
+  // console.log(`downLeftRadMovCoord`, downLeftRadMovCoord)
 
-  const leftRadian = Direction.Left.angle
-  console.warn(`leftRadian`, leftRadian)
-  const leftRadToValue = Direction.angleToValue(leftRadian)
-  console.log(`leftRadToValue`, leftRadToValue)
-  const leftRadMovCoord = Direction.moveCoordFromAngle(leftRadian)
-  console.log(`leftRadMovCoord`, leftRadMovCoord)
+  // const leftRadian = Direction.Left.angle
+  // console.warn(`leftRadian`, leftRadian)
+  // const leftRadToValue = Direction.angleToValue(leftRadian)
+  // console.log(`leftRadToValue`, leftRadToValue)
+  // const leftRadMovCoord = Direction.moveCoordFromAngle(leftRadian)
+  // console.log(`leftRadMovCoord`, leftRadMovCoord)
 
-  const upLeftRadian = Direction.UpLeft.angle
-  console.warn(`upLeftRadian`, upLeftRadian)
-  const upLeftRadToValue = Direction.angleToValue(upLeftRadian)
-  console.log(`upLeftRadToValue`, upLeftRadToValue)
-  const upLeftRadMovCoord = Direction.moveCoordFromAngle(upLeftRadian)
-  console.log(`upLeftRadMovCoord`, upLeftRadMovCoord)
+  // const upLeftRadian = Direction.UpLeft.angle
+  // console.warn(`upLeftRadian`, upLeftRadian)
+  // const upLeftRadToValue = Direction.angleToValue(upLeftRadian)
+  // console.log(`upLeftRadToValue`, upLeftRadToValue)
+  // const upLeftRadMovCoord = Direction.moveCoordFromAngle(upLeftRadian)
+  // console.log(`upLeftRadMovCoord`, upLeftRadMovCoord)
 
-  //Inter-Axial
-  const upToUpRight = new Direction(0.25)
-  console.warn(`upToUpRight`, upToUpRight)
-  const upToUpRightRadian = -3 / 8 * PI
-  console.warn(`upToUpRightRadian`, upToUpRightRadian)
-  const upToUpRightRadToValue = Direction.angleToValue(upToUpRightRadian)
-  console.log(`upToUpRightRadToValue`, upToUpRightRadToValue)
-  const upToUpRightRadMovCoord = Direction.moveCoordFromAngle(upToUpRightRadian)
-  console.log(`upToUpRightRadMovCoord`, upToUpRightRadMovCoord)
-  console.error(`upRadInternalMovCoord`, upToUpRight.moveCoord)
+  // //Inter-Axial
+  // const upToUpRight = new Direction(0.25)
+  // console.warn(`upToUpRight`, upToUpRight)
+  // const upToUpRightRadian = -3 / 8 * PI
+  // console.warn(`upToUpRightRadian`, upToUpRightRadian)
+  // const upToUpRightRadToValue = Direction.angleToValue(upToUpRightRadian)
+  // console.log(`upToUpRightRadToValue`, upToUpRightRadToValue)
+  // const upToUpRightRadMovCoord = Direction.moveCoordFromAngle(upToUpRightRadian)
+  // console.log(`upToUpRightRadMovCoord`, upToUpRightRadMovCoord)
+  // console.error(`upRadInternalMovCoord`, upToUpRight.moveCoord)
 
-  const upRightToRight = new Direction(0.75)
-  console.warn(`upRightToRight`, upRightToRight)
-  const upRightToRightRadian = upRightToRight.angle
-  // const upRightToRightRadian = -1 / 8 * PI
-  console.warn(`upRightToRightRadian`, upRightToRightRadian)
-  const upRightToRightRadToValue = Direction.angleToValue(upRightToRightRadian)
-  console.log(`upRightToRightRadToValue`, upRightToRightRadToValue)
-  const upRightToRightRadMovCoord = Direction.moveCoordFromAngle(upRightToRightRadian)
-  console.log(`upRightToRightRadMovCoord`, upRightToRightRadMovCoord)
-  console.error(`upRadInternalMovCoord`, upRightToRight.moveCoord)
+  // const upRightToRight = new Direction(0.75)
+  // console.warn(`upRightToRight`, upRightToRight)
+  // const upRightToRightRadian = upRightToRight.angle
+  // // const upRightToRightRadian = -1 / 8 * PI
+  // console.warn(`upRightToRightRadian`, upRightToRightRadian)
+  // const upRightToRightRadToValue = Direction.angleToValue(upRightToRightRadian)
+  // console.log(`upRightToRightRadToValue`, upRightToRightRadToValue)
+  // const upRightToRightRadMovCoord = Direction.moveCoordFromAngle(upRightToRightRadian)
+  // console.log(`upRightToRightRadMovCoord`, upRightToRightRadMovCoord)
+  // console.error(`upRadInternalMovCoord`, upRightToRight.moveCoord)
 
   // const rightToDownRightRadian = 1 / 8 * PI
   // console.warn(`rightToDownRightRadian`, rightToDownRightRadian)
