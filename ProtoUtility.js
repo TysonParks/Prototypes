@@ -697,11 +697,11 @@ function findBounds(...geo) {
 }
 // FUNC: vertIsInsideBounds() : BOOL : finds if vert is within bounds of boundsVerts
 //NOTE: boundsVerts can be any number of verts above zero, the bounds of those points is calculated with min/max
-function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3) {
+function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3, deviation) {
   if (!vert || !bounds) { return false }
-  const x = roundToDec(vert.x, accuracy)
-  const y = roundToDec(vert.y, accuracy)
-  bounds = { ...bounds }.map(val => roundToDec(val, accuracy))
+  const x = approxToDec(vert.x, accuracy, 0)
+  const y = approxToDec(vert.y, accuracy, 0)
+  bounds = { ...bounds }.map(val => approxToDec(val, accuracy, 0))
   // console.log(`x: ${x}, y: ${y}`)
   // console.log(`bounds`, bounds)
   const { xMin, xMax, yMin, yMax } = bounds
@@ -716,6 +716,12 @@ function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3) {
       && x < xMax
       && y > yMin
       && y < yMax
+  }
+  if (deviation) {
+    result = abs(x - xMin) < deviation
+      && abs(x - xMax) < deviation
+      && abs(y - yMin) < deviation
+      && abs(y - yMax) < deviation
   }
   // console.error(`result`, result)
   return result
@@ -733,7 +739,7 @@ function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, just
 }
 // FUNC: boundsOverlap() : BOUNDS : finds overlap of two pieces of GEO
 function boundsOverlap({ geo, accuracy = 3 } = {}) {
-  // console.log(`boundsOverlap geo`, geo)                                                                          //LOGGING:
+  // console.log(`boundsOverlap geo`, geo)                                                                  //LOGGING:
   let boundsArray
 
   if (Array.isArray(geo[0])) {
@@ -742,8 +748,10 @@ function boundsOverlap({ geo, accuracy = 3 } = {}) {
   } else {
     boundsArray = geo
   }
+  // console.log(`boundsOverlap boundsArray`, boundsArray.map(s => [s.start?.string, s.end?.string]))                     //LOGGING:
   //ARROW: overlap(geo1, geo2)
   const overlap = (geo1, geo2) => {
+    // console.log()
     const bounds1 = findBounds(geo1).map(v => roundToDec(v, accuracy))
     const bounds2 = findBounds(geo2).map(v => roundToDec(v, accuracy))
     // console.log(`overlap() bounds1`, bounds1)
@@ -939,11 +947,12 @@ function approxToDec(number, decimalPlaces = 2, mode = 0) {
   }
 }
 // FUNC: swapLets() swap values of `let` variables
-function swapVals(a, b) {
-  const temp = a
-  a = b
-  b = temp
-}
+//FIXME: this won't work, only possible with arrays or objects. ask chat for implementation
+// function swapVals(a, b) {
+//   const temp = a
+//   a = b
+//   b = temp
+// }
 // FUNC: equalsRoundedDec() round to number of decimal places
 function equalsRoundedDec(num1, num2, accuracy) {
   num1 = roundToDec(num1, accuracy)
