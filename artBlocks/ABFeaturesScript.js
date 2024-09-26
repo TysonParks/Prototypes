@@ -65,7 +65,7 @@ function calculateFeatures(token = tokenData) {
     // groups
     // shape dependencies
     shapeInterpreter
-    shrinkwrap
+    blockStyle
 
     // underlying storage (could be private?)
     r
@@ -125,12 +125,12 @@ function calculateFeatures(token = tokenData) {
       // this.gridTraversalDirection = this.enums.gridTraversalDirection.feature(r)
       this.modifierStyle = this.enums.modifierStyle.feature(r)
       // this.groups = this.#calcGroups(r)
-      this.symmetryStyle = this.#calcSymmetry(r)
+      // this.symmetryStyle = this.#calcSymmetry(r)                                           //UNUSED:
       this.insetVariability = this.enums.insetVariability.feature(r)
       this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
       // shape dependencies
       this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
-      this.shrinkwrap = this.enums.shrinkWrap.feature(r) === 'True'
+      this.blockStyle = this.enums.blockStyle.feature(r)
 
       console.groupEnd()
     }
@@ -142,20 +142,20 @@ function calculateFeatures(token = tokenData) {
     #calcX(r) {
       //FIXME: had a crash here with hash = "0xd86c78f27b1f09427e6822f299e686e9f4a1290577fef2452863588801cb774d"
       const x = parseInt(this.enums.gridX.feature(r))
-      if (x < 5) {
-        this.enums.seedStyle.removeOptions(['Rectangles', 'Squares', 'Triangles'])// only 5-10 can pack more than 3 rects, squares, or triangles
-      }
+      // if (x < 5) {
+      //   this.enums.seedStyle.removeOptions(['Rectangles', 'Squares', 'Triangles'])// only 5-10 can pack more than 3 rects, squares, or triangles
+      // }
       if (x < 4) {
         this.enums.extraLayers.removeOptions(['2', '3'])// not enough cells to support extra layers
         this.enums.pyramidal.replaceOptions([['True', 0.5], ['False', 0.5]])
-        this.enums.seedStyle.reduceOptions(['Noise', 'Thin Random Comb']) // not enough cells to support other styles
-        this.enums.symmetryStyle.replaceOptions([['None', 1.2]])
+        // this.enums.seedStyle.reduceOptions(['Noise', 'Thin Random Comb']) // not enough cells to support other styles
+        // this.enums.symmetryStyle.replaceOptions([['None', 1.2]])
       }
       if (x > 7) {
         this.enums.density.replaceOptions([['So Lonely', 0.2], ['Some Availability', 0.4], ['At Capacity', 0.4],])
         this.enums.insetRatio.removeOptions(['3:2', '2:1'])
         this.enums.pyramidal.replaceOptions([['True', 0.2], ['False', 0.8]])
-        this.enums.symmetryStyle.replaceOptions([['None', 0.4], ['Quadrant Reflection', .1], ['Quadrant Rotation', .1]])
+        // this.enums.symmetryStyle.replaceOptions([['None', 0.4], ['Quadrant Reflection', .1], ['Quadrant Rotation', .1]])
       }
       return x
     }
@@ -183,16 +183,16 @@ function calculateFeatures(token = tokenData) {
     #calcBaseLayer(r) {
       const base = this.enums.baseLayer.feature(r)
       const inset = roundToDec(r.random_num(0.8, 0.95))
-      const noShrinkWrap = () => this.enums.shrinkWrap.removeOptions(['True'])
+      // const noShrinkWrap = () => this.enums.blockStyle.removeOptions(['True'])
       switch (base) {
         case 'None':
           return 'None'
         case 'Additive':
-          noShrinkWrap()
+          // noShrinkWrap()
           //TODO: If these value remain the same, just make a property instead of arrow function
           return this.#calcLayer(r, true, undefined, inset)
         case 'Subtractive':
-          noShrinkWrap()
+          // noShrinkWrap()
           //TODO: If these value remain the same, just make a property instead of arrow function
           return this.#calcLayer(r, false, undefined, inset)
       }
@@ -225,8 +225,8 @@ function calculateFeatures(token = tokenData) {
         }
       }
       const layerWeight = adds + subs
-      if (layerWeight < 3) { this.enums.symmetryUse.removeOptions(['Some Layers']) }
-      if (layerWeight < 2) { this.enums.symmetryUse.removeOptions(['One Layer']) }
+      // if (layerWeight < 3) { this.enums.symmetryUse.removeOptions(['Some Layers']) }
+      // if (layerWeight < 2) { this.enums.symmetryUse.removeOptions(['One Layer']) }
       if (this.x > 3) {
         switch (layerWeight) {
           case 5:
@@ -343,7 +343,7 @@ function calculateFeatures(token = tokenData) {
       const density = this.enums.density.feature(r)
       if (density !== 'At Capacity') {
         this.enums.modifierStyle.removeOptions(['Triple Concentric'])
-        this.enums.symmetryUse.removeOptions(['All', 'Empty Layers'])
+        // this.enums.symmetryUse.removeOptions(['All', 'Empty Layers'])
       }
       return density
     }
@@ -412,24 +412,24 @@ function calculateFeatures(token = tokenData) {
 
     //   return { methods: methods, coverage: coverage }
     // }
-    //METH:
-    #calcSymmetry(r) {
-      const style = this.enums.symmetryStyle.feature(r)
-      let use = 'None'
-      let start = 'None'
-      if (style !== 'None') {
-        if (this.density === 'At Capacity') { this.enums.symmetryUse.removeOptions(['Available']) }
-        if (this.layerWeight < 3) {
-          this.enums.symmetryUse.removeOptions(['Some Layers'])
-          if (this.layerWeight === 1) { this.enums.symmetryUse.removeOptions(['One Layer']) }
-        }
-        use = this.enums.symmetryUse.feature(r)
-        start = this.enums.startQuad.feature(r)
-      }
-      this.symmetryUse = use
-      this.symmetryStart = start
-      return style
-    }
+    //METH: calcSymmetry()
+    // #calcSymmetry(r) {                                                                                //UNUSED:
+    //   const style = this.enums.symmetryStyle.feature(r)
+    //   let use = 'None'
+    //   let start = 'None'
+    //   if (style !== 'None') {
+    //     if (this.density === 'At Capacity') { this.enums.symmetryUse.removeOptions(['Available']) }
+    //     if (this.layerWeight < 3) {
+    //       this.enums.symmetryUse.removeOptions(['Some Layers'])
+    //       if (this.layerWeight === 1) { this.enums.symmetryUse.removeOptions(['One Layer']) }
+    //     }
+    //     use = this.enums.symmetryUse.feature(r)
+    //     start = this.enums.startQuad.feature(r)
+    //   }
+    //   this.symmetryUse = use
+    //   this.symmetryStart = start
+    //   return style
+    // }
     // #endregion
     // MARK: Init Methods
     // #region Init Methods
@@ -465,25 +465,25 @@ function calculateFeatures(token = tokenData) {
           ['4', 0.2],
           ['3', 0.075],
           ['2', 0.05],
-          ['1', 0.025],
+          // ['1', 0.025],
         ]
       },
       // Public: y cell height of grid
       cellAspect: {
         name: 'Cell Aspect',
         options: [
-          ['Square', 0.8],
-          ['Tall', 0.1],
-          ['Wide', 0.1],
+          ['Square', 0.6],
+          ['Tall', 0.2],
+          ['Wide', 0.2],
         ]
       },
       // Public: (TRANSLATED) base is layer framing the grid
       baseLayer: {
         name: 'Base Layer',
         options: [
-          ['None', 0.4],
-          ['Additive', 0.35],
-          ['Subtractive', 0.25],
+          ['None', 0.2],
+          ['Additive', 0.4],
+          ['Subtractive', 0.4],
         ]
       },
       // Public: style of Base Layer
@@ -491,7 +491,7 @@ function calculateFeatures(token = tokenData) {
         name: 'Base Layer Style',
         options: [
           ['j', 0.3],
-          ['v', 0.3],
+          // ['v', 0.3],
           ['r', 0.4],
         ]
       },
@@ -502,17 +502,17 @@ function calculateFeatures(token = tokenData) {
       layerTypes: {
         name: 'Layer Types',
         options: [
-          ['Additive', 0.15],
-          ['Subtractive', 0.35],
-          ['Additive and Subtractive', 0.5],
+          ['Additive', 0.2],
+          ['Subtractive', 0.25],
+          ['Additive and Subtractive', 0.55],
         ]
       },
       // Public: layering options
       variableLayerStyles: {
         name: 'Variable Layer Styles',
         options: [
-          ['True', 0.4],
-          ['False', 0.6],
+          ['True', 0.7],
+          ['False', 0.3],
         ]
       },
       // Public: layering options
@@ -590,13 +590,13 @@ function calculateFeatures(token = tokenData) {
           ['Noise', 0.2],
           ['Thick Random Comb', 0.1],
           ['Thin Random Comb', 0.1],
-          ['Rectangles', 0.1],
-          ['Squares', 0.1],
-          ['Triangles', 0.1],
-          ['Vertical Pattern', 0.1],
-          ['Horizontal Pattern', 0.1],
-          ['Ordinal Pattern', 0.1],
-          ['Snake', 0.1],
+          // ['Rectangles', 0.1],
+          ['Squares', 0.2],
+          // ['Triangles', 0.1],
+          ['Pattern Simple', 0.1],
+          ['Pattern Complex', 0.1],
+          // ['Ordinal Pattern', 0.1],
+          // ['Snake', 0.1],
         ]
       },
       // Public: style of modifier
@@ -606,41 +606,41 @@ function calculateFeatures(token = tokenData) {
           ['Inflate', 0.1],
           ['Inflate Horizontal', 0.1],
           ['Inflate Vertical', 0.1],
-          // ['Concentric', 0.15], 
-          // ['Thick Concentric', 0.15],
-          // ['Double Concentric', 0.1],
-          // ['Triple Concentric', 0.05],
+          ['Concentric', 0.15],
+          ['Thick Concentric', 0.15],
+          ['Double Concentric', 0.1],
+          ['Triple Concentric', 0.05],
 
         ]
       },
       // Public: style of symmetry to apply to groups
-      symmetryStyle: {
-        name: 'Symmetry Style',
-        options: [
-          ['None', 0.6],
-          ['Horizontal Reflection', .1],
-          ['Vertical Reflection', .1],
-          ['Quadrant Reflection', .08],
-          ['Horizontal Rotation', .04],
-          ['Vertical Rotation', .04],
-          ['Quadrant Rotation', .04],
-          // ['Positive Ordinal Reflection', .02],
-          // ['Negative Ordinal Reflection', .02],
-          // ['Positive Ordinal Rotation', .02],
-          // ['Negative Ordinal Rotation', .02],
-        ]
-      },
+      // symmetryStyle: {                                                                 //UNUSED:
+      //   name: 'Symmetry Style',
+      //   options: [
+      //     ['None', 0.6],
+      //     ['Horizontal Reflection', .1],
+      //     ['Vertical Reflection', .1],
+      //     ['Quadrant Reflection', .08],
+      //     ['Horizontal Rotation', .04],
+      //     ['Vertical Rotation', .04],
+      //     ['Quadrant Rotation', .04],
+      //     // ['Positive Ordinal Reflection', .02],
+      //     // ['Negative Ordinal Reflection', .02],
+      //     // ['Positive Ordinal Rotation', .02],
+      //     // ['Negative Ordinal Rotation', .02],
+      //   ]
+      // },
       // Public: the way symmetry is used
-      symmetryUse: {
-        name: 'Symmetry Use',
-        options: [
-          ['All', 0.5],
-          ['Empty Layers', .1], // removed if (Density === 'At Capacity') in #calcDensity()
-          ['Assigned Layers', .2],// removed if (Density === 'At Capacity') in #calcDensity()
-          ['One Layer', .1], // removed if (layersCount < 2) in #calcLayerCounts()
-          ['Some Layers', .1], // removed if (layersCount < 3) in #calcLayerCounts()
-        ]
-      },
+      // symmetryUse: {
+      //   name: 'Symmetry Use',
+      //   options: [
+      //     ['All', 0.5],
+      //     ['Empty Layers', .1], // removed if (Density === 'At Capacity') in #calcDensity()
+      //     ['Assigned Layers', .2],// removed if (Density === 'At Capacity') in #calcDensity()
+      //     ['One Layer', .1], // removed if (layersCount < 2) in #calcLayerCounts()
+      //     ['Some Layers', .1], // removed if (layersCount < 3) in #calcLayerCounts()
+      //   ]
+      // },
       // #endregion
       // MARK: Shape Dependencies
       // #region Shape Dependencies
@@ -654,11 +654,13 @@ function calculateFeatures(token = tokenData) {
         ]
       },
       // Public: block wraps to design
-      shrinkWrap: {
-        name: 'Shrink Wrap',
+      blockStyle: {
+        name: 'Block Style',
         options: [
-          ['True', 0.2],
-          ['False', 0.8],
+          ['v0', 0.2],    // early iPhone style, maintains 2:1 aspect using top and bottom bezels
+          ['v1', 0.8],    // modern 'shrinkwrap' style that conforms to corner shape curves
+          // ['v2', 0.0],    // enhanced 'shrinkWrap' style that has cutouts for uninhabited cells
+          // ['v3', 0.0],    // further enhanced uses diagonal and tangent cuts on uninhabited cells
         ]
       },
       // #endregion
@@ -688,7 +690,7 @@ function calculateFeatures(token = tokenData) {
         options: [
           ['j', 0.2],
           ['i', 0.2],
-          ['v', 0.3],
+          // ['v', 0.3],
           ['r', 0.3],
         ]
       },
@@ -698,7 +700,7 @@ function calculateFeatures(token = tokenData) {
         options: [
           ['j', 0.7],
           ['i', 0.1],
-          ['v', 0.175],
+          // ['v', 0.175],
           ['r', 0.025],
         ]
       },
