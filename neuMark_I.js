@@ -2,10 +2,14 @@
 class Profile {
   type
   cutIn
+  halfCurve
+  frameEdge
 
-  constructor(type, cutIn = true) {
+  constructor(type, cutIn = true, frameEdge = false, halfCurve = false) {
     this.type = type
     this.cutIn = cutIn
+    this.frameEdge = frameEdge
+    this.halfCurve = halfCurve
   }
 
   //MARK: Static 
@@ -31,18 +35,32 @@ class Profile {
   get isF() { return this.type === `f` }                    // is `f` type
   get isV() { return this.type === `v` }                    // is `v` type
 
-  get isIn() { return this.cutIn }
-  get isOut() { return !this.cutIn }
+  get isIIn() { return this.isI && this.isCutIn }
+  get isIOut() { return this.isI && this.isCutOut }
+  get isJIn() { return this.isJ && this.isCutIn }
+  get isJOut() { return this.isJ && this.isCutOut }
+  get isRIn() { return this.isR && this.isCutIn }
+  get isROut() { return this.isR && this.isCutOut }
+
+  get isCutIn() { return this.cutIn }
+  get isCutOut() { return !this.cutIn }
+
+  get hasInsetShade() { return this.isIIn || this.isJIn || this.isROut }
+  get hasOutsetShade() { return this.isIOut || this.isJOut || this.isRIn }
 
   get isCurve() { return this.CurveTypes.includes(this.type) } // is in CurveTypes
   get isFlat() { return this.FlatTypes.includes(this.type) }   // is in FlatTypes
-  get isSingleDepth() { return this.isI || this.isJ }    // only requires single filter / offsets in single direction
-
+  get isSingleDepth() {                                        // only requires single filter / offsets in single direction
+    return this.isI || this.isJ || this.frameEdge || this.halfCurve
+  }
   get isInset() { return this.isRType ? !this.cutIn : this.cutIn }       // filter insets from shape border (use cutRange.start)
 
   get insetDepth() {
-    if (this.isR) { return this.cutIn ? 0.35 : 0.45 }
-    else { return 1 }
+    if (this.isR) {
+      return this.cutIn ? 0.35 : 0.45
+    } else {
+      return 1
+    }
   }
   get outsetDepth() {
     if (isSingleDepth) { return 0 }
@@ -50,27 +68,43 @@ class Profile {
   }
 }
 
-// CLASS: ProtoCut
+//MARK: PROTOCUT CLASS
 class ProtoCut {
+  breed
   profile           // Profile: cut profile: [i,j,r,f,v] combined with [in, out]
   depth             // (end) depth
+  start
   angleOffset = 0   // offset angle from global vector
   filters = new OpArray
 
   constructor({
     profile,
     depth,
+    start,
     angleOffset = 0,
   }) {
     this.profile = profile
     this.depth = depth
+    this.start = start
     this.angleOffset = angleOffset
+    this.breed = this.description
     this.#createFilters()
     this.storeObject(S.Cuts)
   }
 
   //MARK: Computed
   get spread() { return this.profile.isSingleDepth ? this.depth : this.depth + this.depth2 }
+  get padding() { return vert(this.depth * 2) }
+  get description() {
+    const p = this.profile
+    const inOut = p.cutIn ? `In` : `Out`
+    const prime = `${p.type}${inOut}`
+    const half = p.halfCurve ? `-half` : ``
+    const edge = p.frameEdge ? `-frameEdge` : ``
+    const dep = roundToDec(this.depth / GRID.cellRadius, 4)
+    const start = roundToDec(this.start, 4)
+    return `${prime}${half}${edge}-${dep}xCellRadius-${start}start`
+  }
 
   //MARK: Public Methods
   curve(layer) {
@@ -83,12 +117,19 @@ class ProtoCut {
 
   //METH: createSingleShader()
   #createFilters() {
-    if (abs(this.depth) < 0.25 / FRAME.pixToUserUnits) { return }
-    if (this.profile.isSingleDepth) { this.#createShader() }
+    if (abs(this.depth) < 0.25 / FRAME.pixToUserUnits) { return }     // don't create filters for 1/4 pixel depth or less
+    if (this.profile.isSingleDepth) {
+      this.#createShader()
+      // if (this.profile.isJ) {
+      //   this.#createShader(`r`, this.depth)
+      // } else {
+      //   this.#createShader()
+      // }
+    }
+
     if (this.profile.isR) {
       this.#createShader(`r`, this.depth)
       this.#createShader(`r2`, -this.depth)
-      // this.#createShader(`r`, this.depth)
     }
     if (this.profile.isF) {
       this.#createShader(`j`, this.depth)
@@ -147,7 +188,7 @@ class Shade {
       inset: inset
     })
 
-    const r2CutMagMult = curve === `r2` ? .75 : 1
+    const r2CutMagMult = curve === `r2` ? .5 : 1
     const shadow = this.dropShadSVG({
       lighten: false,
       x: jCutMagMult * r2CutMagMult * vector.x,
@@ -199,7 +240,7 @@ class Shade {
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
 
-    console.warn(`vector`, vector)
+    console.groupCollapsed(`vector`, vector)
     // //MARK: "I" Cut
     // if (curve === 'i') {
     //   mag = mag / pixToUserUnits * 0.85           // convert pixelUnit to userUnit magnitude
@@ -268,7 +309,8 @@ class Shade {
       mag / 256,    //
       mag / 512,    //
     ])
-      .slice(start, keep())       // reduce layers based upon start and keep()
+      // .slice(start, keep())       // reduce layers based upon start and keep()
+      .slice(start, 7)       // reduce layers based upon start and keep()
       .map(e => { return rounding(e) }) // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
       .numSorted                  // sort small-large
@@ -296,13 +338,15 @@ class Shade {
         const shadColSpread = curve === 'r2' ? 0.25 : 0.25  // spread down from base (0.9) to min shadow luma (0.7)
         const maxHighlight = 0.9 + highColSpread             // 0.9 + 0.04 = 0.94
         const minShadow = (0.9 - shadColSpread)              // 0.9 - 0.25 = 0.65
-        const perceptualDivisor = 16                     // compensates for blur, etc to get visually correct result
+        const perceptualDivisor = curve === 'i' ? 4 : 16                   // compensates for blur, etc to get visually correct result
+        const highOffsetRatio = curve === 'i' ? 1 : 1 / 8
 
         // blur = true
         neuShades = offsets
           .map((offset, i) => {
             mag = offset / pixToUserUnits * 1         // convert pixelUnit to userUnit magnitude
-            const iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6  //
+            mag = curve === 'i' ? mag * 1 : mag * 1
+            const iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 5  //
             const r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 4  //
             const blurRadius = curve === 'i' ? iBlurRadius : r2BlurRadius
             const highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset, 2) / perceptualDivisor)
@@ -316,12 +360,12 @@ class Shade {
 
             let shades = new OpArray
             const shadeVector = Vertex.cleanRotate(vector, radians(rotOffset)).setMag(mag)
-            console.log(`angleMode`, _angleMode)
-            console.log(`shadeVector`, shadeVector)
+            // console.log(`angleMode`, _angleMode)
+            // console.log(`shadeVector`, shadeVector)
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
-            console.log(`rotOffset`, rotOffset)
+            // console.log(`rotOffset`, rotOffset)
 
-            const shades1 = this.neuShadeSVG(shadeVector, blurRadius, highCol, shadCol1, inset, blur, curve)
+            const shades1 = this.neuShadeSVG(shadeVector, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
             shades.push(shades1)
 
             if (i === offsets.length - 1) {
@@ -336,7 +380,7 @@ class Shade {
         let reflLightRange
         if (curve === 'r') {                            // "R" cut
           // rotOffset = rotOffset + PI
-          const rangeSize = mag                         // shadow range
+          const rangeSize = mag                       // shadow range
           reflLightRange = rangeSize / 2.2                // visual observation shows relfLight to be about 1/5 the shadow
           // console.log(`reflLightRange`, reflLightRange)
           if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
@@ -357,7 +401,8 @@ class Shade {
         const perceptualDivisor = 8                        // compensates for blur, etc to get visually correct result
         neuShades = offsets
           .map(offset => {
-            const mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
+            let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
+            mag = curve === 'j' ? mag : mag * .95
             let blurRadius = mag
             blurRadius = mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
             let highColLuma, shadColLuma
@@ -398,10 +443,10 @@ class Shade {
 
             const shadeVector = Vertex.cleanRotate(vector, rotOffset).setMag(mag)
 
-            console.log(`angleMode`, _angleMode)
+            // console.log(`angleMode`, _angleMode)
             console.log(`shadeVector`, shadeVector)
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
-            console.log(`rotOffset`, rotOffset)
+            // console.log(`rotOffset`, rotOffset)
             // const shadeVector = vector.setMag(mag)
             console.log(`shadeVector`, shadeVector)
             let shades = this.neuShadeSVG(shadeVector, blurRadius, highCol, shadCol, inset, blur, curve)
@@ -452,6 +497,7 @@ class Shade {
     // console.error(`vect`, neuShades.map(ns => [ns.dx, ns.dy]))
     // console.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
     // console.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
+    console.groupEnd()
     return neuShades
   }
 
