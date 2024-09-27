@@ -141,7 +141,12 @@ class ProtoMill {
   }
   //METH: 
   mkGrid() {
-    this.grid = new Grid(FRAME, { x: FTS.x, y: FTS.y })
+
+    this.grid = new Grid({
+      protoParent: FRAME,
+      gridSize: vert(FTS.x, FTS.y),
+      insetScale: gridInsetScale,
+    })
     this.minCellSize = min(this.grid.cellSize.x, this.grid.cellSize.y)
     console.log('Grid Cells', FTS.x, FTS.y)
   }
@@ -261,12 +266,14 @@ class ProtoMill {
 // MARK: Testing Functions
 // FUNC: gridTests2()
 function gridTests2() {
-
-  let gridX = R.random_int(3, 10)
+  //                                                                  //NOTE: 1. Calculate GridX
+  let gridX = R.random_int(1, 10)
   // gridX = R.random_int(10, 20)
-  // gridX = 2
+  // gridX = 10
+  //                                                                  //NOTE: 2. Calculate GridY
   let gridSize = vert(gridX, round(gridX * 2))
   // gridSize = vert(3, 7)
+  //                                                                  //NOTE: 3. Calculate inset (bezel size)
   let insetMultiplier = 4
   let gridRatio
 
@@ -289,20 +296,14 @@ function gridTests2() {
 
 
   const gridInsetScale = calcInset(gridX)
-
-  // BGRID = new Grid({
-  //   protoParent: FRAME,
-  //   gridSize: gridSize,
-  //   insetScale: gridInsetScale,
-  // })
-
+  //                                                                  //NOTE: 4. Create Grid
   GRID = new Grid({
     protoParent: FRAME,
     gridSize: gridSize,
     insetScale: gridInsetScale,
   })
 
-  // FRAME.setBackGrid(BGRID)
+  //                                                                  //NOTE: 5. Set Grid to Frame
   FRAME.setGrid(GRID)
   // GRID = new Grid(FRAME, { x: 10, y: 17 })
   let gridInset = R.random_num(0.75, 0.95)
@@ -315,112 +316,138 @@ function gridTests2() {
   console.log('minCellSize', minCellSize)
   console.log('minCellSWidth', minCellSWidth)
 
-
+  //                                                                    //NOTE: 6. (Calculate Group Count)   
+  //                                                                    //NOTE: 7. Initialize Groups     
   let group0, group1, group2, group3, group4
-  // GRID.randGroup({amount:1 / GRID.cellCount})
-  // group0 = GRID.randomComb({
-  //   selection: (GRID.cellRows
-  //     // .rotated2D(90)
-  //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
-  //     .flat()),
-  //   keepRange: range(1, round(gridX / .5)),
-  //   dropRange: range(round(gridX * .5), gridX * 2),
-  //   start: 0
-  // })
+  //                                                                    //NOTE: 8. Calculate Each Group (Populate Cells) 
 
-  // group0 = GRID.comb({
-  //   selection: (GRID.cellRows
-  //     .rotated2D(R.random_int(0, 3) * 90)
-  //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
-  //     .flat()),
-  //   keep: R.random_int(1, 3), drop: R.random_int(12, 16), start: 0
-  // })
-  // GRID.randGroup({amount:0.2})
 
-  // GRID.outlineTaken({ direction: Direction.Right, newGroup: false })
-  // GRID.outlineTaken({ direction: Direction.Up, newGroup: false })
-  // GRID.outlineTaken({ direction: Direction.All, amount: 1, newGroup: false })
-  // groupBack = GRID.groupAvail(false)
-  // groupBack = GRID.randGroup({ amount: 0.8 })
-  // groupBack.createPerimiters('maxCorners', Direction.Cardinal)
 
-  // GRID.squares({ coverage: 32 / GRID.cellCount, minSize: 1, uniform: false, overlapping: 'never' })
-  group0 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
-  // group1 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
-  // group1 = GRID.randGroup({ amount: 0.1 })
-  // GRID.squares(16 / GRID.cellCount)
-  // GRID.squares(0.2)
-  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, directioqn: Direction.All.random(R.random_int(1, 1)), newGroup: false, amount: R.random_int(1, 1) })
-  // const outlineDir = Direction.Cardinal.random(2)
-  // console.log('outlineDir', outlineDir)
-  // const outlineDir2 = new Direction([1, 3])
-  // console.log('outlineDir2', outlineDir2)
-  // GRID.randGroup({amount:0.1})
-  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(0, 2), newGroup: false })
-  // GRID.randGroup({ amount: 0.05 })
-  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
-  // const randDir = Direction.All.random(3)
-  // console.log('randDirection', randDir)
-  // group1 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 2) })
-  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
+  if (GRID.cellCount === 1) {
+    group0 = GRID.groupFromIndices(0)
+  } else {
+    const initialCoverage = 0.3
+    // group0 = GRID.randomComb({
+    //   selection: (GRID.cellRows
+    //     .rotated2D(90)
+    //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
+    //     .flat()),
+    //   keepRange: range(1, round(gridX / .5)),
+    //   dropRange: range(round(gridX * .5), gridX * 2),
+    //   start: 0
+    // })
 
-  const grp1Dir = Direction.All.random(R.random_int(1, 8))
-  const grp1Amount = R.random_int(1, 2)
-  console.log(`grp1Dir`, grp1Dir.name)
-  console.log(`grp1Amount`, grp1Amount)
+    // group0 = GRID.comb({
+    //   selection: (GRID.cellRows
+    //     .rotated2D(R.random_int(0, 3) * 90)
+    //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
+    //     .flat()),
+    //   keep: R.random_int(1, 3), drop: R.random_int(12, 16), start: 0
+    // })
 
-  console.log(GRID)
+    // group0 = GRID.comb2({
+    //   selection: (GRID.cellRows
+    //     .rotated2D(R.random_int(0, 3) * 90)
+    //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
+    //     .flat()),
+    //   dashArray: OpArray.randomIntArray(R.random_int(3, 6), range(4, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
+    // })
 
-  group1 = GRID.outlineGroup({
-    groupID: GRID.lastGroup.id,
-    // direction: Direction.All,
-    direction: grp1Dir,
-    newGroup: true,
-    amount: grp1Amount
-  })
+    if (gridX < 4) {
+      // group0 = GRID.groupFromIndices([1, 2])
+      // group0 = GRID.groupFromIndices([1])
+      // group1 = GRID.groupFromIndices([1])
+      group0 = GRID.groupFromIndices(
+        OpArray.randomIntArray(
+          ceil((GRID.cellCount - 1) * initialCoverage),
+          range(0, GRID.cellCount - 1)
+        ).unique()
+      )
+    } else {
+      group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+    }
 
-  // console.log(group1.cells.map(c => c.available))
 
-  group2 = GRID.outlineGroup({
-    groupID: GRID.lastGroup.id,
-    //  direction: Direction.All.random(R.random_int(1, 4)), 
-    newGroup: true,
-    amount: R.random_int(1, 1)
-  })
+    // group1 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+    // group1 = GRID.randGroup({ amount: 0.3 })
+    // GRID.squares(16 / GRID.cellCount)
+    // GRID.squares(0.2)
+    // GRID.outlineGroup({ groupID: GRID.lastGroup.id, directioqn: Direction.All.random(R.random_int(1, 1)), newGroup: false, amount: R.random_int(1, 1) })
+    // const outlineDir = Direction.Cardinal.random(2)
+    // console.log('outlineDir', outlineDir)
+    // const outlineDir2 = new Direction([1, 3])
+    // console.log('outlineDir2', outlineDir2)
+    // GRID.randGroup({amount:0.1})
+    // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.Cardinal.random(R.random_int(1, 1)), amount: R.random_int(0, 2), newGroup: false })
+    // GRID.randGroup({ amount: 0.05 })
+    // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All, newGroup: false, amount: R.random_int(1, 1) })
+    // const randDir = Direction.All.random(3)
+    // console.log('randDirection', randDir)
+    // group1 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: true, amount: R.random_int(1, 2) })
+    // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
+    if (!group0) { group0 = GRID.squares({ coverage: 0.25, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' }) }
 
-  const grp3Dir = R.random_int(1, 2)
-  console.log(`grp3Dir`, grp1Dir.name)
+    const grp1Dir = Direction.All.random(R.random_int(1, 8))
+    const grp1Amount = R.random_int(1, 1)
+    console.log(`grp1Dir`, grp1Dir.name)
+    console.log(`grp1Amount`, grp1Amount)
 
-  group3 = GRID.outlineGroup({
-    groupID: GRID.lastGroup.id,
-    // direction: Direction.All.random(R.random_int(1, 4)), 
-    newGroup: true,
-    amount: grp3Dir
-  })
-  // console.log('right adj', Direction.Right.adjacents)
-  // console.log('right and adj', Direction.Right.andAdjacents)
-  // console.log('right opposite', Direction.Right.opposites)
+    console.log(GRID)
 
-  group4 = GRID.randGroup({ amount: 0.5 })
+    group1 = GRID.outlineGroup({
+      groupID: GRID.lastGroup.id,
+      // direction: Direction.All,
+      direction: grp1Dir,
+      newGroup: true,
+      amount: grp1Amount
+    })
 
-  // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
-  // console.log(group3)
-  // console.log(group4)
+    // group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
 
-  // GRID.randGroup({ amount: 1 / GRID.cellCount })
-  // GRID.outlineTaken({ direction: Direction.All, newGroup: true })
-  // GRID.outlineTaken({ direction: Direction.Right, newGroup: false })
+    // console.log(group1.cells.map(c => c.available))
 
-  // GRID.outlineGroup('grp000', Direction.All, false)
-  // GRID.outline({ groupID: 'grp000', direction: Direction.All, newGroup: true })
-  // GRID.outlineTaken(Direction.All, 'grp001')
+    group2 = GRID.outlineGroup({
+      groupID: GRID.lastGroup.id,
+      //  direction: Direction.All.random(R.random_int(1, 4)), 
+      newGroup: true,
+      amount: R.random_int(1, 1)
+    })
 
-  // GRID.outlineTaken(Direction.Down, true)
-  // GRID.outlineTaken(Direction.All, true)
-  // GRID.outlineTaken(Direction.Horizontal, true)
-  // GRID.groupNamed('grp001')?.setFilter(shader2)
+    const grp3Dir = R.random_int(1, 3)
+    console.log(`grp3Dir`, grp1Dir.name)
 
-  // group4 = GRID.groupAvail()
+    group3 = GRID.outlineGroup({
+      groupID: GRID.lastGroup.id,
+      // direction: Direction.All.random(R.random_int(1, 4)), 
+      newGroup: true,
+      amount: grp3Dir
+    })
+    // console.log('right adj', Direction.Right.adjacents)
+    // console.log('right and adj', Direction.Right.andAdjacents)
+    // console.log('right opposite', Direction.Right.opposites)
+
+    // group4 = GRID.randGroup({ amount: 0.75 })
+    group4 = GRID.groupAvail()
+
+    // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
+    // console.log(group3)
+    // console.log(group4)
+
+    // GRID.randGroup({ amount: 1 / GRID.cellCount })
+    // GRID.outlineTaken({ direction: Direction.All, newGroup: true })
+    // GRID.outlineTaken({ direction: Direction.Right, newGroup: false })
+
+    // GRID.outlineGroup('grp000', Direction.All, false)
+    // GRID.outline({ groupID: 'grp000', direction: Direction.All, newGroup: true })
+    // GRID.outlineTaken(Direction.All, 'grp001')
+
+    // GRID.outlineTaken(Direction.Down, true)
+    // GRID.outlineTaken(Direction.All, true)
+    // GRID.outlineTaken(Direction.Horizontal, true)
+    // GRID.groupNamed('grp001')?.setFilter(shader2)
+  }
+
+
   // group1 = GRID.groupAvail() // will need to create check to make sure something is available at end and all groups are used. I suppose group instance array will be compacted before a forEach run
 
   //MARK: SYMMETRY
@@ -434,242 +461,127 @@ function gridTests2() {
   // })
   // console.log('post-symmetrized cellRows', GRID.cellRows)
 
-  let insetScale = R.random_num(0.9, 0.97)
-  insetScale = .8
+  // let insetScale = R.random_num(0.9, 0.97)
+  // insetScale = .8
 
   console.log(`group0`, group0)
+  // console.log(`group0 cells`, group0.cells.map(c => c.id))
   console.log(`group1`, group1)
   console.log(`group2`, group2)
   console.log(`group3`, group3)
   console.log(`group4`, group4)
-
-  // groupBack?.createPerimiters('maxCorners', Direction.Cardinal)
+  //                                                                     //NOTE: 9. (Calculate Each Group's Direction)  
+  //NOTE: calc per group: possibleOrdinalConnections, current hor/vert islands, etc...
+  //                                                                     //NOTE: 10. Create Perimeters for Each Group
   group0?.createPerimiters('maxCorners', Direction.Cardinal)
-  group1?.createPerimiters('maxCorners', Direction.Cardinal)
+  group1?.createPerimiters('maxCorners', Direction.All)
   group2?.createPerimiters('maxCorners', Direction.Cardinal)
   group3?.createPerimiters('maxCorners', Direction.Cardinal)
-  group4?.createPerimiters('maxCorners', Direction.All)
+  group4?.createPerimiters('maxCorners', Direction.Cardinal)
   // will need to create check to make sure all groups used
   // console.log(`groups`, GRID.groups)
 
   console.error(`  ######################   `)
   // console.groupCollapsed(`nestleShapes`)
-  console.group(`nestleShapes`)
+  console.groupCollapsed(`nestleShapes`)
+  //                                                                     //NOTE: 11. Nestle Shapes 
   GRID.nestleShapes(4)
   console.groupEnd()
 
   console.error(`  ######################   `)
   console.log(``)
 
-  //MARK: groupBack
-  // groupBack?.cutIslands({
-  //   profile: Profile.rIn,
-  //   layerStart: .7,
-  //   layerEnd: .2,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  // })
+  //                                                                     //NOTE: 12. (Calc Each Group's Height)  
+  //NOTE: reorder cutIsland calls based on heights in order to optimize shadow layering, avoid more complex layering
 
-
+  //                                                                     //NOTE: 13. Cut Islands
   //MARK: group0
   group0?.cutIslands({
     profile: Profile.rOut,
-    layerStart: 2.5,
-    layerEnd: .75,
-    amount: 2,
-    loftScale: 1 / 1,
-    // direction: Direction.Horizontal
+    layerStart: .4,
+    // layerEnd: .5,
+    amount: 1,
+    loftScale: 1,
+    // direction: Direction.All
+    // backing: true,
   })
-
-  // group0?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: .95,
-  //   layerEnd: 1 / 32,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  // })
-
-  // group0?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: 1 / 16,
-  //   layerEnd: .00001,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  // })
 
   //MARK: group1
   group1?.cutIslands({
     profile: Profile.jIn,
-    layerStart: .9,
-    layerEnd: .6,
+    // layerStart: 0,
+    layerEnd: 1.4,
+    // dilationEnd: 1,
     amount: 1,
-    loftScale: 1 / 1,
-    // direction: Direction.All
+    loftScale: 1,
+    // direction: Direction.Horizontal,
+    // backing: true,
   })
 
-  // group1?.cutIslands({
-  //   profile: Profile.rOut,
-  //   layerStart: 1.25,
-  //   layerEnd: 1,
-  //   amount: 1,
-  //   loftScale: 4 / 4,
-  // })
-
-  // group1?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: 1 / 16,
-  //   layerEnd: .00001,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   direction: Direction.None,
-  // })
 
   //MARK: group2
   group2?.cutIslands({
-    profile: Profile.jIn,
-    layerStart: .9,
-    layerEnd: .001,
+    profile: Profile.iOut,
+    layerStart: .0,
+    layerEnd: .2,
     amount: 1,
-    loftScale: 1 / 1,
-    // direction: Direction.All
+    loftScale: 1,
+    // direction: Direction.Horizontal
+    // backing: true,
   })
 
-  // group2?.cutIslands({
-  //   profile: Profile.rOut,
-  //   layerStart: .5,
-  //   layerEnd: .0001,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  // })
 
   //MARK: group3
-  // group3?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: 1.2,
-  //   layerEnd: 1,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  // })
-
-  group3?.cutIslands({
-    profile: Profile.jIn,
-    layerStart: 1,
-    layerEnd: .8,
-    amount: 1,
-    loftScale: 1 / 1,
-    // direction: Direction.All
-  })
-  // group3?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: .9,
-  //   layerEnd: .8,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  // })
-  group3?.cutIslands({
-    profile: Profile.jIn,
-    layerStart: .8,
-    layerEnd: .65,
-    amount: 1,
-    loftScale: 1 / 1,
-    // direction: Direction.All
-  })
-  // group3?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: .7,
-  //   layerEnd: .6,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  // })
-  group3?.cutIslands({
-    profile: Profile.jIn,
-    layerStart: .6,
-    layerEnd: .45,
-    amount: 1,
-    loftScale: 1 / 1,
-    // direction: Direction.All
-  })
-  // group3?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: .5,
-  //   layerEnd: .4,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  // })
   group3?.cutIslands({
     profile: Profile.jIn,
     layerStart: .4,
-    layerEnd: .25,
+    // layerEnd: .0,
     amount: 1,
-    loftScale: 1 / 1,
+    loftScale: 1,
     // direction: Direction.All
+    // backing: true,
   })
   // group3?.cutIslands({
   //   profile: Profile.jIn,
-  //   layerStart: .3,
-  //   layerEnd: .2,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
+  //   layerStart: 1.1,
+  //   // layerEnd: .0,
+  //   amount: .1,
+  //   loftScale: 1,
   //   // direction: Direction.All
-  // })
-  group3?.cutIslands({
-    profile: Profile.jIn,
-    layerStart: .2,
-    layerEnd: .05,
-    amount: 1,
-    loftScale: 1 / 1,
-    // direction: Direction.All
-  })
-
-  // group3?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: .1,
-  //   layerEnd: .0,
-  //   loftScale: 1 / 1,
-  //   amount: 1,
-  //   // direction: Direction.Horizontal
-  // })
-
-  // group3?.cutIslands({
-  //   profile: Profile.rOut,
-  //   layerStart: 1 / 16,
-  //   layerEnd: .00001,
-  //   loftScale: 1 / 1,
-  //   direction: Direction.None,
+  //   backing: true,
   // })
 
   //MARK: group4
   group4?.cutIslands({
-    profile: Profile.rOut,
-    layerStart: 1.35,
-    layerEnd: .85,
+    profile: Profile.jIn,
+    layerStart: .4,
+    // layerEnd: .9,
     amount: 1,
     loftScale: 1 / 1,
-    direction: Direction.All
+    // direction: Direction.All
   })
   // group4?.cutIslands({
-  //   profile: Profile.jOut,
-  //   layerStart: 1 / 2,
-  //   layerEnd: 1 / 4,
+  //   profile: Profile.jIn,
+  //   layerStart: 3,
+  //   // layerEnd: .9,
   //   amount: 1,
   //   loftScale: 1 / 1,
-  //   // direction: Direction.Horizontal
+  //   // direction: Direction.All
+  //   backing: true,
   // })
-  // group4.createSubIslands({
-  //   // direction: Direction.All,
-  //   filter: shader5,
-  //   insetScale: .9,
+  // group4?.cutIslands({
+  //   profile: Profile.rIn,
+  //   layerStart: 1,
+  //   layerEnd: 1,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  //   backing: true,
   // })
 
-  // FRAME.setFilter(shader0)
-  console.log(`takenCells`, GRID.takenCells.map(c => c.index))
-  FRAME.setBackGridGroup(GRID.takenCells.map(c => c.index))
+  // console.log(`takenCells`, GRID.takenCells.map(c => c.index))
+  //                                                                        //NOTE: 14. set backGridGroup
+  FRAME.setBackGridGroup()
 
   // console.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
   // FRAME.backGrid.showCellsDebug()
@@ -701,14 +613,16 @@ function gridTests2() {
   // GRID.maxCuddle()
 
   console.log(`  ######################   `)
-
+  console.log(`Features`, FTS)
   console.log('all layers', S.allLayers)
   console.log(`GRID`, GRID)
+  console.warn(`cellSize`, GRID.cellSize)
   console.warn(`GRID cells`, gridSize)
-  console.warn(`GRID Ratio: ${gridRatio}:1`)
+  console.warn(`GRID Ratio: ${gridRatio / 2}:1`)
   console.warn(`gridInsetScale:`, gridInsetScale)
   console.warn(`GRID.insetAmount.x:`, GRID.insetAmount.x)
   console.warn(`GRID size:`, GRID.insetSize)
+  console.warn(`Groups OrdinalConnects`, GRID.groups.map(g => g.ordinalConnections))
 
   console.warn(`FRAME.backGroup.padding:`, FRAME.backGroup.padding)
   // console.log(GRID.cellRows.flat().map(cell => cell.center))
