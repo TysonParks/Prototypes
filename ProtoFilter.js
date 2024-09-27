@@ -101,12 +101,13 @@ class ProtoFilter {
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
 
-    createSVGElt('feMorphology')
-      .attribute('in', 'SourceAlpha')
-      .attribute(`operator`, `erode`)
-      .attribute('radius', 0.1 / FRAME.pixToUserUnits)
-      .attribute('result', 'erodedAlpha')
-      .parent(this.filter)
+
+    // createSVGElt('feMorphology')
+    //   .attribute('in', 'SourceAlpha')
+    //   .attribute(`operator`, `erode`)
+    //   .attribute('radius', 0.1 / FRAME.pixToUserUnits)
+    //   .attribute('result', 'erodedAlpha')
+    //   .parent(this.filter)
 
     createSVGElt('feGaussianBlur')
       .attribute('in', 'SourceGraphic')
@@ -302,9 +303,15 @@ class ProtoFilter {
       previousResult = 'finalResult'
     }
 
+
+
+    // createSVGElt('feMerge')
+    // .child(
     createSVGElt('feMergeNode')
       .attribute('in', previousResult)
       .parent(this.filter)
+    // )
+
 
     this.defs.child(this.filter)
 
@@ -312,7 +319,7 @@ class ProtoFilter {
   }
 
   //MARK: Utility methods
-  applyFilterToElement({ element, size, padding = 40, time = 0 } = {}) {
+  applyFilterToElement({ element, size, padding = vert(40), time = 0, applyToGroup = true } = {}) {
     if (!this.type) { return this }
     // console.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
     // console.warn(`applyFilter paddingX: ${padding.x}, paddingY: ${padding.y}`)
@@ -323,18 +330,25 @@ class ProtoFilter {
 
 
     // console.log(`final padding: x:${padding.x}, y:${padding.y} `)
-    const x = ceil(-padding.x / size.x * 100) || 0
-    const y = ceil(-padding.y / size.y * 100) || 0
+    const x = -padding.x / size.x * 100
+    const y = -padding.y / size.y * 100
 
-    const width = ceil(200 * padding.x / size.x + 100) || 100
-    const height = ceil(200 * padding.y / size.y + 100) || 100
+    const width = 200 * padding.x / size.x + 100
+    const height = 200 * padding.y / size.y + 100
 
     this.filter
+      .attribute("x", `${x}%`)
+      .attribute("y", `${y}%`)
+      .attribute("width", `${width}%`)
+      .attribute("height", `${height}%`)
 
-      .attribute("x", `${x}% `)
-      .attribute("y", `${y}% `)
-      .attribute("width", `${width}% `)
-      .attribute("height", `${height}% `)
+    // .attribute("filterUnits", "userSpaceOnUse")
+    // .attribute("x", `-10%`)
+    // .attribute("y", `-10%`)
+    // .attribute("width", `120%`)
+    // .attribute("height", `120%`)
+
+
 
     // console.warn(`this.filter x`, this.filter.attribute("x"))
     // console.warn(`this.filter y`, this.filter.attribute("y"))
@@ -344,11 +358,13 @@ class ProtoFilter {
     const parentSVG = element.elt.ownerSVGElement
     const filterUrl = `url(#${this.id})`
 
+    // if (applyToGroup) {
     let newGroup = parentSVG.querySelector(`g[filter = "${filterUrl}"][id ^= "${this.id}-"]`)
     if (!newGroup) {
       newGroup = createSVGElt("g")
         .id(`${this.id} -${element.id()}`)
         .attribute("filter", filterUrl)
+        .attribute('overflow', 'visible')
         .parent(parentSVG)
         .child(this.defs)
     }
@@ -370,6 +386,17 @@ class ProtoFilter {
         oldGroup.remove()
       }
     }
+    // } else {
+    //   element.attribute(`filter`, filterUrl)
+    //   let parentGroup = parentSVG.querySelector(`g[id^="${this.id}-elements"]`)
+    //   if (!parentGroup) {
+    //     parentGroup = createSVGElt("g")
+    //       .id(`${this.id}-elements`)
+    //       .attribute('overflow', 'visible')
+    //       .parent(parentSVG)
+    //   }
+    //   element.parent(parentGroup)
+    // }
   }
 
   updateFilter(shadows, clearInset = true) {
@@ -533,7 +560,7 @@ p5.Element.prototype.addToClassList = function (newClass) {
 }
 
 //PROTOTYPE: p5.Element extension layout(x, y, width, height)
-p5.Element.prototype.layout = function (x, y, width, height, padding = 0) {
+p5.Element.prototype.layout = function (x, y, width, height, padding = vert(0)) {
   // console.log(`layout arguments`, arguments)
   const args = OpArray.from(arguments)
   // single object input
@@ -553,14 +580,14 @@ p5.Element.prototype.layout = function (x, y, width, height, padding = 0) {
     if (args[2]) { padding = args[2] }
   }
   this
-    .attribute('x', x - padding)
-    .attribute('y', y - padding)
-    .attribute('width', width + padding * 2)
-    .attribute('height', height + padding * 2)
+    .attribute('x', x - padding.x)
+    .attribute('y', y - padding.y)
+    .attribute('width', width + padding.x * 2)
+    .attribute('height', height + padding.y * 2)
   return this
 }
 //PROTOTYPE: p5.Element extension viewBox(x, y, width, height)
-p5.Element.prototype.viewBox = function (x, y, width, height, padding = 0) {
+p5.Element.prototype.viewBox = function (x, y, width, height, padding = vert(0)) {
   const args = OpArray.from(arguments)
   // single object input
   if (args.length === 1) {
@@ -578,7 +605,7 @@ p5.Element.prototype.viewBox = function (x, y, width, height, padding = 0) {
     height = args[1].y
     if (args[2]) { padding = args[2] }
   }
-  this.attribute('viewBox', `${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`)
+  this.attribute('viewBox', `${x - padding.x} ${y - padding.y} ${width + padding.x * 2} ${height + padding.y * 2}`)
   return this
 }
 
@@ -629,31 +656,31 @@ p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
 
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
 //PROTOTYPE: p5.Element extension blur(radius)
-p5.Element.prototype.blur = function (radius) {
-  const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
-  const [x, y, width, height] = viewBox
-  const padding = Math.ceil(radius * 3)
-  const newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' ')
-  const filterID = 'blur-' + Math.floor(Math.random() * 100000)
+// p5.Element.prototype.blur = function (radius) {
+//   const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
+//   const [x, y, width, height] = viewBox
+//   const padding = Math.ceil(radius * 3)
+//   const newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' ')
+//   const filterID = 'blur-' + Math.floor(Math.random() * 100000)
 
-  const filter = createSVGElt('filter')
-    .attribute('id', filterID)
-    .attribute('x', '-50%')
-    .attribute('y', '-50%')
-    .attribute('width', '200%')
-    .attribute('height', '200%')
-    .parent(this.parent())
+//   const filter = createSVGElt('filter')
+//     .attribute('id', filterID)
+//     .attribute('x', '-50%')
+//     .attribute('y', '-50%')
+//     .attribute('width', '200%')
+//     .attribute('height', '200%')
+//     .parent(this.parent())
 
-  createSVGElt('feGaussianBlur')
-    .attribute('in', 'SourceGraphic')
-    .attribute('stdDeviation', radius)
-    .parent(filter)
+//   createSVGElt('feGaussianBlur')
+//     .attribute('in', 'SourceGraphic')
+//     .attribute('stdDeviation', radius)
+//     .parent(filter)
 
-  this.attribute('filter', `url(#${filterID})`)
-    .attribute('viewBox', newViewBox)
+//   this.attribute('filter', `url(#${filterID})`)
+//     .attribute('viewBox', newViewBox)
 
-  return this
-}
+//   return this
+// }
 
 //PROTOTYPE: p5.Element extension applyFilter(filter, scale = 1)
 p5.Element.prototype.applyFilter = function ({ filter, size, padding, time = 0 } = {}) {
