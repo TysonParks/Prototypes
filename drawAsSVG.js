@@ -1022,7 +1022,8 @@ class Vertex extends p5.Vector {
   widthTo(vert) { return abs(this.x - vert.x) }
   heightTo(vert) { return abs(this.y - vert.y) }
   slopeTo(vert) { return (this.y - vert.y) / (this.x - vert.x) }
-  directionTo(vert) {
+  directionTo(vert) { return segment(this, vert).direction }
+  biDirectionTo(vert) {
     // const indices = [this, vert].sort((a, b) => a.y - b.y || a.x - b.x)
     // const a = indices[0]
     // const a = indices[0]
@@ -1041,20 +1042,20 @@ class Vertex extends p5.Vector {
     this.y = roundToDec(this.y, dec)
   }
 
-  equals(vert, accuracy = 3) {
+  equals(vert, accuracy = 3, deviation) {
     let ax, ay, bx, by
     if (arguments.length === 2) {
-      ax = roundToDec(this.x, accuracy)
-      ay = roundToDec(this.y, accuracy)
-      bx = roundToDec(vert.x, accuracy)
-      by = roundToDec(vert.y, accuracy)
+      ax = approxToDec(this.x, accuracy, 0)
+      ay = approxToDec(this.y, accuracy, 0)
+      bx = approxToDec(vert.x, accuracy, 0)
+      by = approxToDec(vert.y, accuracy, 0)
     } else {
       ax = this.x
       ay = this.y
       bx = vert.x
       by = vert.y
     }
-    return ax === bx && ay === by
+    return deviation ? abs(ax - bx) < deviation && abs(ay - by) < deviation : ax === bx && ay === by
   }
 
   //TODO: If we run into Vertex arithemtic errors, test this
@@ -1223,10 +1224,10 @@ class Segment {
 
   //MARK: methods
   //METH: vertIsInBounds()
-  vertIsInBounds(vert, accuracy = 4) { return vertIsInsideBounds(vert, this.bounds, true, accuracy) }
+  vertIsInBounds(vert, accuracy = 4, deviation) { return vertIsInsideBounds(vert, this.bounds, true, accuracy, deviation) }
   //METH: vertIsOnLine()
   //NOTE: made with ChatGPT4.0 on Jan14, 2024
-  vertIsOnLine(vert, includeEnds = true, decimal = 0) {
+  vertIsOnLine(vert, includeEnds = true, decimal = 1, deviation = 0.1) {
     let report = false
     // if (equalsRoundedDec(vert.x, 54.444)) { report = true }                                        //LOGGING:
     // if (
@@ -1240,7 +1241,7 @@ class Segment {
       return false                                                // point is on a terminus
     }
 
-    if (!this.vertIsInBounds(vert, 0)) {                           // point is outside seg's bounding box
+    if (!this.vertIsInBounds(vert, decimal)) {                           // point is outside seg's bounding box
       if (report) { console.error(`vertIsOnLine fail: vert is outside bounds`, vert, this.bounds) }
       return false
     }
@@ -1261,11 +1262,11 @@ class Segment {
     // Calculate the projected point on the line
     const projectedPoint = Vertex.add(this.start, Vertex.mult(this.lineVector, t))
     // Check if the vert is close enough to the projected point (considering a small threshold for precision issues)
-    const threshold = 0.1 // Adjust this threshold based on your precision needs
+    // const threshold = 0.1 // Adjust this threshold based on your precision needs
     // console.log(`vertIsInBounds projectedPoint`, projectedPoint)
     const diff = vert.dist(projectedPoint)
     // console.log(`vertIsInBounds diff`, diff)
-    const result = diff < threshold
+    const result = diff < deviation
     if (report && !result) {
       console.error(`vertIsOnLine fail: threshold`, vert)
       console.error(projectedPoint, diff)
@@ -1311,7 +1312,7 @@ class Segment {
       const connectiveVector = Vertex.sub(seg.start, this.start)
       const cross = abs(roundToDec(Vertex.cross(connectiveVector, this.lineVector).z, 1))
       // console.warn(`isOverlappingWith ${seg.id}, crossProduct: ${cross}`)                          //LOGGING:
-      if (accuracy > 0) { return cross < accuracy && cross > -accuracy }
+      if (accuracy > 0) { return abs(cross) < accuracy }
       return cross === 0
     }
 
@@ -1812,7 +1813,7 @@ class ProtoSegment extends Segment {
   #setCurveOrigin(toVert, replace = false, start = false) {
     const seg = start ? this.startNeighbor : this             // seg/corner to reference
     let report = false                                                                                  //LOGGING:
-    if (this.id.includes('cell141')                                                                     //LOGGING:
+    if (this.id.includes('cell222')                                                                     //LOGGING:
       || this.id.includes('cell185')                                                                       //LOGGING:
       // || s.id.includes('cell001')                                                                       //LOGGING:
     ) { report = true }                                                                                 //LOGGING:
@@ -1823,7 +1824,7 @@ class ProtoSegment extends Segment {
       console.log(`seg.viableArcOrigins`, seg.viableArcOrigins)                                         //LOGGING:
       console.log(`toVert`, toVert)                                                                     //LOGGING:
     }
-    if (seg.viableArcOrigins.some(v => toVert.equals(v, 1))) {
+    if (seg.viableArcOrigins.some(v => toVert.equals(v, 1, 0.1))) {
       const intersect = seg.perpendicularIntersectionWith(toVert)
       if (report) {                                                                                     //LOGGING:
         console.log(`intersect`, intersect)                                                             //LOGGING:
@@ -1867,10 +1868,12 @@ class ProtoSegment extends Segment {
 
       const matchingPoint = this.points.find(p => p.equals(vert, 1))
       if (!matchingPoint) {
-        console.error(`trying to assign a cubicVert that is not a functional point on this segment`)
-        console.log(`bad vert`, vert)
-        console.log(`this.points`, this.points)
-        if (usePoints) { return }
+        if (usePoints) {
+          console.error(`trying to assign a cubicVert that is not a functional point on this segment`)
+          console.log(`bad vert`, vert)
+          console.log(`this.points`, this.points)
+          return
+        }
       }
       if (start) {
         this.cubicVerts.start = usePoints ? matchingPoint : vert
@@ -2283,13 +2286,15 @@ class ProtoSegment extends Segment {
     // console.log(`currentViableArcOrigins viableArcOrigins`, this.viableArcOrigins)                      //LOGGING:
     if (this.viableArcOrigins.length === 1) { return this.viableArcOrigins }
     //FIXME: startBounds and endBounds should stretch to edges
-    const startBounds = this.isVertical ? this.startNeighbor.arcBoundsHorizontal : this.startNeighbor.arcBoundsVertical
-    const endBounds = this.endNeighbor.isVertical ? this.endNeighbor.arcBoundsHorizontal : this.endNeighbor.arcBoundsVertical
+    const startBounds = this.isVertical ?
+      this.startNeighbor.arcBoundsHorizontal : this.startNeighbor.arcBoundsVertical
+    const endBounds = this.endNeighbor.isVertical ?
+      this.endNeighbor.arcBoundsHorizontal : this.endNeighbor.arcBoundsVertical
     // console.log(`currentViableArcOrigins startBounds`, startBounds)                                     //LOGGING:
     // console.log(`currentViableArcOrigins endBounds`, endBounds)                                         //LOGGING:
     const viables = this.viableArcOrigins.filter(v =>
-      !vertIsInsideBounds(v, startBounds, false, 0)
-      && !vertIsInsideBounds(v, endBounds, false, 0))
+      !vertIsInsideBounds(v, startBounds, false, 2)
+      && !vertIsInsideBounds(v, endBounds, false, 2))
     // console.log(`currentViableArcOrigins viables`, viables)                                             //LOGGING:
     return viables
   }
@@ -2353,19 +2358,19 @@ class ProtoSegment extends Segment {
   }
 
   //MEMO: inShapeDiagonalCorners
-  // get inShapeDiagonalCorners() {                                                                        //UNUSED:
-  //   return memoize(() => {
-  //     return this.shape.simpleSubShapes.flat().exclude(this, 'id')
-  //       .filter(s => this.hasDiagonalCorner(s))
-  //   }, `inShapeDiagonalCorners`).call(this)
-  // }
+  get diagonalCornersInShape() {                                                                        //UNUSED:
+    return memoize(() => {
+      return this.shape.simpleSubShapes.flat().exclude(this, 'id')
+        .filter(s => this.hasDiagonalCorner(s))
+    }, `inShapeDiagonalCorners`).call(this)
+  }
   //MEMO: neighborDiagonalCorners
-  // get neighborDiagonalCorners() {                                                                        //UNUSED:
-  //   return memoize(() => {
-  //     return this.shape.andNeighborSimples.exclude(this, 'id')
-  //       .filter(s => this.hasDiagonalCorner(s))
-  //   }, `neighborDiagonalCorners`).call(this)
-  // }
+  get diagonalCornersInNeighborShapes() {                                                                        //UNUSED:
+    return memoize(() => {
+      return this.shape.andNeighborSimples.exclude(this, 'id')
+        .filter(s => this.hasDiagonalCorner(s))
+    }, `neighborDiagonalCorners`).call(this)
+  }
 
 
   //METH: minArcIsWithinThatMaxArc()
@@ -2412,7 +2417,7 @@ class ProtoSegment extends Segment {
     const diagonal = this.hasDiagonalCorner(seg)
     const collinear = this.isCollinearWith(seg) || this.isCollinearWith(seg.endNeighbor)
       || this.endNeighbor.isCollinearWith(seg) || this.endNeighbor.isCollinearWith(seg.endNeighbor)
-    const sharedCorner = this.end.equals(seg.end, 0)
+    const sharedCorner = this.end.equals(seg.end, 1, 0.1)
     return diagonal && collinear && sharedCorner
   }
   //METH: couldInWrap(seg) : BOOL : doesn't check bounds overlap
@@ -2740,7 +2745,7 @@ class ProtoSegment extends Segment {
     let wrapper = flush ? this.flushWrapper : this.adjacentWrapper
     const wrapType = flush ? `flushWrap()` : `adjWrap()`                                        //LOGGING:
     let report = false                                                                            //LOGGING:
-    if (this.id.includes('cell180')                                                               //LOGGING:
+    if (this.id.includes('cell309')                                                               //LOGGING:
       // || this.id.includes('cell022')                                                              //LOGGING:
     ) {                                                                                           //LOGGING:
       report = true                                                                               //LOGGING:
@@ -2773,7 +2778,7 @@ class ProtoSegment extends Segment {
           if (replace                                                            // forced replacement
             || (flush ? this.flushWrapIsNonEquidistant                          // nonEquidistant wrappers!
               : this.adjWrapIsNonEquidistant)) {                                    // nonEquidistant wrappers!
-            // console.log(`replacing end curve origin`)                                          //LOGGING:
+            if (report) { console.log(`replacing end curve origin`) }                                       //LOGGING:
             wrapper.replaceEndCurveOrigin(this.arcOrigin)                        // replace matching wrapper curve
           } else {
             // console.log(`setting end curve origin`)                                            //LOGGING:
@@ -3048,6 +3053,7 @@ class ProtoSegment extends Segment {
     // return memoize(() => {
     if (this.isInnerMostRadiantWrapper) {
       // console.log(`viableRadOutWrappersOriginBounds radiantOutWrappers`, this.radiantOutWrappers)
+      // console.log(`viableRadOutWrappersOriginBounds radiantOutWrappers`, this.radiantOutWrappers.map(s => [s.start.string, s.end.string]))
       let viables = this.radiantOutWrappers
         .map(s => s.currentViableArcOriginsSeg)
       // console.log(`viableRadOutWrappersOriginBounds viables`, viables)                                  //LOGGING:
