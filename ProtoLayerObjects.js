@@ -521,7 +521,7 @@ class Frame extends ProtoLayer {
       profile: Profile.jIn,
       layerStart: 1.75 * padWidth,
       layerEnd: 1.25 * padWidth,
-      // outsetCut: false,
+      // outsetLoft: false,
       amount: 1,
       loftScale: 1 / 1,
     })
@@ -3910,12 +3910,13 @@ class CellGroup extends ProtoLayer {
   //METH: cutIslands()
   cutIslands({
     profile,
+    isOutsetCut = false,    // is the single cut to outset using globalOutset, false subtracts globalOutset
     layerStart,           // layerStart should be greater than layerEnd, swapped if not!
     layerEnd,             // if unassigned, layerEnd = cutEnd
     dilationStart,        // overrides layerStart and crops into the dilationRadius
     dilationEnd,          // overrides layerEnd and stretches to the minOutsideCorner radius
     loftScale = 1,
-    outsetCut = true,
+    outsetLoft = true,
     angleOffset,
     amount = 1,
     perimeter = false,    // setting for making channels/walls
@@ -3926,6 +3927,15 @@ class CellGroup extends ProtoLayer {
     loftOp = 1 / 1,       // ratio of lofts, start to end
     selOps = []
   } = {}) {
+    console.groupCollapsed(`${this.id}.cutIslands`)
+    console.log(`layer start/end`, layerStart, layerEnd)
+    if (layerStart < layerEnd || !layerStart) {                         // layerStart should be larger, outside fx radius
+      [layerStart, layerEnd] = [layerEnd, layerStart]                   // swap if needed
+    }
+    console.log(`layer swap start/end`, layerStart, layerEnd)
+    layerStart = isOutsetCut ? layerStart + globalOutset : max(layerStart - globalOutset, 0)
+    if (layerEnd) { layerEnd = isOutsetCut ? layerEnd + globalOutset : max(layerEnd - globalOutset, 0) }
+
     if (backing) {
       const insetScale = profile?.hasOutsetShade ? 1 : max(layerStart || 0, layerEnd || 0)
       // const insetScale = 1
@@ -3933,18 +3943,23 @@ class CellGroup extends ProtoLayer {
       if (!newIslands.flat().isEmpty) { this.islandsToShapeGroups(newIslands, undefined, direction) }
     }
 
+    console.log(`useDilation elements:`, layerEnd, dilationStart, dilationEnd)
+    const useDilation = layerEnd === undefined || !!dilationStart || !!dilationEnd //  4 cases => useDilation
+    console.log(`useDilation:`, useDilation)
 
     //calculate maxLofts per shape
+
     console.log(`cutIslands perimeterShapes:`, this.perimeterShapes)
     let shapeGroups = new OpArray
     this.perimeterShapes.forEach(sh => {                                  // create shapeGroups from common shape minRads
       console.error(`current shape in queue`, sh)
-      const minRad = roundToDec(sh.minOutsideCornerRadius, 4)
+      let minRad = useDilation ? sh.minOutsideCornerRadius : (layerStart - layerEnd) * this.grid.minCellWidth
+      minRad = roundToDec(minRad, 4)
       const neighbors = sh.neighborShapesCardinal
       console.warn(`minRad`, minRad)
       console.warn(`neighbors`, neighbors)
       let group = shapeGroups.find(g =>
-        g.minRad === minRad
+        equalsRoundedDec(g.minRad, minRad, 1)
         && g.shapes.every(s => neighbors.every(n => n.id !== s.id))
       )
       if (!group) {
@@ -3968,33 +3983,23 @@ class CellGroup extends ProtoLayer {
     shapeGroups.forEach(grp => {
       console.error(`current shapegroup`, grp)
       console.error(`layerEnd`, 1 - grp.minRad / this.grid.cellRadius)
-      let useDilation, maxDilationRadius, dilationAmount, dilationStartRadius, dilationEndRadius
+      let maxDilationRadius, dilationAmount, dilationStartRadius, dilationEndRadius
       let cut, insetScale
 
-      console.log(`layer start/end`, layerStart, layerEnd)
-      if (layerStart < layerEnd || !layerStart) {                         // layerStart should be larger, outside fx radius
-        [layerStart, layerEnd] = [layerEnd, layerStart]                   // swap if needed
-      }
-      console.log(`layer swap start/end`, layerStart, layerEnd)
-
-      if (layerEnd === undefined || dilationStart || dilationEnd) {       //  3 cases     => useDilation
-        useDilation = true
-      }
-
-      if (useDilation) {                        // extend cutRad into shape based upon grp.minRad
+      if (useDilation) {                                        // extend cutRad into shape based upon grp.minRad
         console.warn(`using Dilation!`)
-        if (!dilationStart) { dilationStart = 0 }                         // !dilationStart => dilationStart = 0
-        if (!dilationEnd) { dilationEnd = 1 }                             // !dilationEnd   => dilationEnd = 1
+        if (!dilationStart) { dilationStart = 0 }                          // !dilationStart => dilationStart = 0
+        if (!dilationEnd) { dilationEnd = 1 }                              // !dilationEnd   => dilationEnd = 1
         if (profile?.hasInsetShade) {
           maxDilationRadius = 1 - grp.minRad / this.grid.cellRadius
-
+          // maxDilationRadius = isOutsetCut ? maxDilationRadius + globalOutset : maxDilationRadius - globalOutset
           dilationAmount = dilationStart - dilationEnd
           dilationStartRadius = dilationStart * maxDilationRadius
           dilationEndRadius = dilationEnd * maxDilationRadius
           // layerStart = dilationStartRadius                               // set max layer end from grp.minRad
           layerEnd = dilationEndRadius                                      // set max layer end from grp.minRad
         } else {
-          // layerEnd = 1
+          layerEnd = isOutsetCut ? 1 + globalOutset : 1 - globalOutset
         }
 
         console.log(`maxDilationRadius`, maxDilationRadius)
@@ -4004,8 +4009,8 @@ class CellGroup extends ProtoLayer {
 
       console.log(`after dilation`, layerStart, layerEnd)
 
-      const topLayerRange = range(layerStart, layerEnd)                   // create range
-      const topStepWidth = topLayerRange.size / amount                    // equal step division    
+      const topLayerRange = range(layerStart, layerEnd)                     // create range
+      const topStepWidth = topLayerRange.size / amount                      // equal step division    
       const maxLayer = profile?.hasOutsetShade ? layerStart : layerEnd
       const minLayer = profile?.hasOutsetShade ? layerEnd : layerStart
       const maxStart = amount < 2 ? (amount + 1) * maxLayer : (amount + 2) * maxLayer
@@ -4016,16 +4021,16 @@ class CellGroup extends ProtoLayer {
       if (profile?.hasOutsetShade && minLayer > maxStart) { layerStart = maxStart }
 
       // if(profile?.isCutIn) {}
-      const subLayerRange = range(layerStart, layerEnd)                   // create range
-      const subStepWidth = subLayerRange.size / amount                    // equal step division     
+      const subLayerRange = range(layerStart, layerEnd)                     // create range
+      const subStepWidth = subLayerRange.size / amount                      // equal step division     
       console.log(`topLayerRange`, topLayerRange)
       console.log(`subLayerRange`, subLayerRange)
 
       let cutStart, cutEnd
-      for (let i = 0; i < amount; i++) {                                  // if amount>1, calc cutStart/End for each step
+      for (let i = 0; i < amount; i++) {                                    // if amount>1, calc cutStart/End for each step
         const layerRange = i === 0 ? topLayerRange : subLayerRange
         const stepWidth = i === 0 ? topStepWidth : subStepWidth
-        let loft = layerRange.size * loftScale / amount                   // calc loft
+        let loft = layerRange.size * loftScale / amount                     // calc loft
 
 
         // cutStart = profile.hasInsetShade ? layerStart - i * stepWidth : layerStart - i * stepWidth
@@ -4033,8 +4038,8 @@ class CellGroup extends ProtoLayer {
         cutStart = layerStart - i * stepWidth
         cutEnd = cutStart - stepWidth
         if (loftScale < 1) {
-          if (outsetCut) {
-            console.log(`using outsetCut`)
+          if (outsetLoft) {
+            console.log(`using outsetLoft`)
             cutEnd = cutStart - loft
           } else {
             console.log(`using insetCut`)
@@ -4080,6 +4085,7 @@ class CellGroup extends ProtoLayer {
 
       // }
     })
+    console.groupEnd()
     // else if (layerEnd === `max`) {
     //   const squareIslands = newIslands.filter(i => i.isSquare)
     // }
@@ -4296,9 +4302,13 @@ class ShapeGroup extends ProtoLayer {
       // .attribute('fill', protoColor(230))
       // .attribute('fill', lchcol02)
       // .attribute('fill', achromic(0.7))
-      // .attribute('stroke', 'red')
-      // .attribute('stroke-width', `.125`)
+      // .attribute('stroke', frameColor)
+
       .attribute('fill-opacity', 1)
+
+    // .attribute('stroke-width', this.cellGroup.isBackGroup ? 0 : this.grid.cellRadius * 1.4)
+    // .attribute('stroke-opacity', this.cellGroup.isBackGroup ? 0 : 1)
+    // .attribute('fill-opacity', this.cellGroup.isBackGroup ? 1 : 0)
 
     if (this.drawFilter) {
       console.error(`shapeGroup.drawFilter`, this.filter)
