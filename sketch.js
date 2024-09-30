@@ -503,10 +503,10 @@ function gridTests2() {
   console.groupCollapsed(`cutIslands`)
   //MARK: group0
   group0?.cutIslands({
-    profile: Profile.rOut,
+    profile: Profile.jOut,
     // isOutsetCut: true,
     layerStart: .9,
-    // layerEnd: -.1,
+    layerEnd: .1,
     amount: 1,
     loftScale: 1,
     // direction: Direction.All
@@ -526,7 +526,7 @@ function gridTests2() {
 
   //MARK: group1
   group1?.cutIslands({
-    profile: Profile.rOut,
+    profile: Profile.jIn,
     isOutsetCut: true,
     // layerStart: 0,
     layerEnd: .9,
