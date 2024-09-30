@@ -3391,8 +3391,8 @@ class ProtoSegment extends Segment {
   insetCopy(insetScale) {
     // if (insetScale <= 0) { return }
     // if (insetScale > 2) { insetScale = 2 }
-    console.log(`insetCopy`, this)
-    console.log(`normals`, this.normals)
+    // console.log(`insetCopy`, this)
+    // console.log(`normals`, this.normals)
 
     const scaleToOffset = Vertex.sub(insetScale, vert(1))  // create scaleToOffset 
     const offset = Vertex.mult(scaleToOffset, this.cellRadius)
