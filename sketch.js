@@ -21,14 +21,9 @@ let bgCol, acCol, hiCol, shCol
 //Variables
 let TestMode, frameSize
 let FTS = {}// Feature Set
-let BG, FRAME // Background, Frame
+let BG, FRAME, BGRID, GRID // Background, Frame, Background Grid, Grid
 let R, S, RuID // Random, Store, Random UID
-
-let boxShadowStyle
-// let container, clone, fpsDisplay, timeDisplay
-let squircle, squircleWrapper
-let curvedShape, curvedShapeWrapper
-let BGRID, GRID
+let globalOutset
 
 //Graphics constants
 const expSeries = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
@@ -269,7 +264,7 @@ function gridTests2() {
   //                                                                  //NOTE: 1. Calculate GridX
   let gridX = R.random_int(1, 10)
   // gridX = R.random_int(10, 20)
-  // gridX = 10
+  // gridX = 3
   //                                                                  //NOTE: 2. Calculate GridY
   let gridSize = vert(gridX, round(gridX * 2))
   // gridSize = vert(3, 7)
@@ -315,14 +310,13 @@ function gridTests2() {
   const minCellSize = min(GRID.cellSize.x, GRID.cellSize.y)
   console.log('minCellSize', minCellSize)
   console.log('minCellSWidth', minCellSWidth)
+  console.log(``)
 
   //                                                                    //NOTE: 6. (Calculate Group Count)   
   //                                                                    //NOTE: 7. Initialize Groups     
   let group0, group1, group2, group3, group4
   //                                                                    //NOTE: 8. Calculate Each Group (Populate Cells) 
-
-
-
+  console.groupCollapsed(`Populate Groups`)
   if (GRID.cellCount === 1) {
     group0 = GRID.groupFromIndices(0)
   } else {
@@ -387,6 +381,8 @@ function gridTests2() {
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 3)), newGroup: false, amount: R.random_int(1, 2) })
     if (!group0) { group0 = GRID.squares({ coverage: 0.25, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' }) }
 
+    // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.Cardinal.random(1), newGroup: false, amount: R.random_int(0, 2) })
+
     const grp1Dir = Direction.All.random(R.random_int(1, 8))
     const grp1Amount = R.random_int(1, 1)
     console.log(`grp1Dir`, grp1Dir.name)
@@ -404,7 +400,9 @@ function gridTests2() {
 
     // group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
 
-    // console.log(group1.cells.map(c => c.available))
+
+
+
 
     group2 = GRID.outlineGroup({
       groupID: GRID.lastGroup.id,
@@ -413,14 +411,14 @@ function gridTests2() {
       amount: R.random_int(1, 1)
     })
 
-    const grp3Dir = R.random_int(1, 3)
-    console.log(`grp3Dir`, grp1Dir.name)
+    const grp3Amount = R.random_int(1, 3)
+
 
     group3 = GRID.outlineGroup({
       groupID: GRID.lastGroup.id,
       // direction: Direction.All.random(R.random_int(1, 4)), 
       newGroup: true,
-      amount: grp3Dir
+      amount: grp3Amount
     })
     // console.log('right adj', Direction.Right.adjacents)
     // console.log('right and adj', Direction.Right.andAdjacents)
@@ -470,16 +468,23 @@ function gridTests2() {
   console.log(`group2`, group2)
   console.log(`group3`, group3)
   console.log(`group4`, group4)
+  console.groupEnd()
+  console.log(``)
+
+  globalOutset = .5
   //                                                                     //NOTE: 9. (Calculate Each Group's Direction)  
   //NOTE: calc per group: possibleOrdinalConnections, current hor/vert islands, etc...
   //                                                                     //NOTE: 10. Create Perimeters for Each Group
+  console.groupCollapsed(`createPerimiters`)
   group0?.createPerimiters('maxCorners', Direction.Cardinal)
-  group1?.createPerimiters('maxCorners', Direction.All)
+  group1?.createPerimiters('maxCorners', Direction.Cardinal)
   group2?.createPerimiters('maxCorners', Direction.Cardinal)
   group3?.createPerimiters('maxCorners', Direction.Cardinal)
   group4?.createPerimiters('maxCorners', Direction.Cardinal)
   // will need to create check to make sure all groups used
   // console.log(`groups`, GRID.groups)
+  console.groupEnd()
+  console.log(``)
 
   console.error(`  ######################   `)
   // console.groupCollapsed(`nestleShapes`)
@@ -495,35 +500,51 @@ function gridTests2() {
   //NOTE: reorder cutIsland calls based on heights in order to optimize shadow layering, avoid more complex layering
 
   //                                                                     //NOTE: 13. Cut Islands
+  console.groupCollapsed(`cutIslands`)
   //MARK: group0
   group0?.cutIslands({
     profile: Profile.rOut,
-    layerStart: .4,
-    // layerEnd: .5,
+    // isOutsetCut: true,
+    layerStart: .9,
+    // layerEnd: -.1,
     amount: 1,
     loftScale: 1,
     // direction: Direction.All
     // backing: true,
+
   })
+  // group0?.cutIslands({
+  //   profile: Profile.rIn,
+  //   layerStart: -.5,
+  //   layerEnd: -1,
+  //   amount: 1,
+  //   loftScale: 1,
+  //   // direction: Direction.All
+  //   // backing: true,
+
+  // })
 
   //MARK: group1
   group1?.cutIslands({
-    profile: Profile.jIn,
+    profile: Profile.rOut,
+    isOutsetCut: true,
     // layerStart: 0,
-    layerEnd: 1.4,
+    layerEnd: .9,
     // dilationEnd: 1,
     amount: 1,
     loftScale: 1,
     // direction: Direction.Horizontal,
     // backing: true,
+
   })
 
 
   //MARK: group2
   group2?.cutIslands({
-    profile: Profile.iOut,
-    layerStart: .0,
-    layerEnd: .2,
+    profile: Profile.jIn,
+    // isOutsetCut: true,
+    layerStart: 0,
+    layerEnd: .9,
     amount: 1,
     loftScale: 1,
     // direction: Direction.Horizontal
@@ -533,9 +554,10 @@ function gridTests2() {
 
   //MARK: group3
   group3?.cutIslands({
-    profile: Profile.jIn,
-    layerStart: .4,
-    // layerEnd: .0,
+    profile: Profile.rOut,
+    // isOutsetCut: true,
+    layerStart: .9,
+    layerEnd: .0,
     amount: 1,
     loftScale: 1,
     // direction: Direction.All
@@ -543,7 +565,7 @@ function gridTests2() {
   })
   // group3?.cutIslands({
   //   profile: Profile.jIn,
-  //   layerStart: 1.1,
+  //   layerStart: .9,
   //   // layerEnd: .0,
   //   amount: .1,
   //   loftScale: 1,
@@ -554,7 +576,8 @@ function gridTests2() {
   //MARK: group4
   group4?.cutIslands({
     profile: Profile.jIn,
-    layerStart: .4,
+    // isOutsetCut: true,
+    layerStart: .9,
     // layerEnd: .9,
     amount: 1,
     loftScale: 1 / 1,
@@ -580,8 +603,13 @@ function gridTests2() {
   // })
 
   // console.log(`takenCells`, GRID.takenCells.map(c => c.index))
+  console.groupEnd()
+  console.log(``)
   //                                                                        //NOTE: 14. set backGridGroup
+  console.groupCollapsed(`setBackGridGroup`)
   FRAME.setBackGridGroup()
+  console.groupEnd()
+  console.log(``)
 
   // console.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
   // FRAME.backGrid.showCellsDebug()
@@ -643,11 +671,7 @@ function globalAnimation() {
 // FUNC: drawObjects()
 function drawObjects() {
   redrawAll()
-  // drawContainer()
-  // drawClone()
-  // drawSquircle()
 }
-
 
 // MARK: GLOBAL FUNCS
 
