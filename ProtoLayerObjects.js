@@ -510,6 +510,7 @@ class Frame extends ProtoLayer {
     //NOTE: cut flat backing island (no cut, just fill actually)
     this.backGroup.cutIslands({
       // profile: Profile.jIn,
+      isFrame: true,
       layerStart: 2 * padWidth,
       // layerEnd: 1. * padWidth,
       amount: 1,
@@ -519,6 +520,7 @@ class Frame extends ProtoLayer {
     //NOTE: make real cuts
     this.backGroup.cutIslands({
       profile: Profile.jIn,
+      isFrame: true,
       layerStart: 1.75 * padWidth,
       layerEnd: 1.25 * padWidth,
       // outsetLoft: false,
@@ -527,6 +529,7 @@ class Frame extends ProtoLayer {
     })
     // this.backGroup.cutIslands({
     //   profile: Profile.jOut,
+    // isFrame: true,
     //   layerStart: 1.7 * padWidth,
     //   layerEnd: 1. * padWidth,
     //   amount: 1,
@@ -534,6 +537,7 @@ class Frame extends ProtoLayer {
     // })
     // this.backGroup.cutIslands({
     //   profile: Profile.rOut,
+    // isFrame: true,
     //   layerStart: 1.75 * padWidth,
     //   layerEnd: 1.5 * padWidth,
     //   amount: 1,
@@ -541,6 +545,7 @@ class Frame extends ProtoLayer {
     // })
     // this.backGroup.cutIslands({
     //   profile: Profile.rIn,
+    // isFrame: true,
     //   layerStart: 1.25 * padWidth,
     //   layerEnd: 1. * padWidth,
     //   amount: 1,
@@ -3910,6 +3915,7 @@ class CellGroup extends ProtoLayer {
   //METH: cutIslands()
   cutIslands({
     profile,
+    direction = this.direction,
     isOutsetCut = false,    // is the single cut to outset using globalOutset, false subtracts globalOutset
     layerStart,           // layerStart should be greater than layerEnd, swapped if not!
     layerEnd,             // if unassigned, layerEnd = cutEnd
@@ -3920,7 +3926,7 @@ class CellGroup extends ProtoLayer {
     angleOffset,
     amount = 1,
     perimeter = false,    // setting for making channels/walls
-    direction = this.direction,
+    isFrame = false,
     backing = false,
     backingColor = frameColor,
     spanOp = 1 / 1,       // ratio of widths, start to end
@@ -3933,8 +3939,10 @@ class CellGroup extends ProtoLayer {
       [layerStart, layerEnd] = [layerEnd, layerStart]                   // swap if needed
     }
     console.log(`layer swap start/end`, layerStart, layerEnd)
-    layerStart = isOutsetCut ? layerStart + globalOutset : max(layerStart - globalOutset, 0)
-    if (layerEnd) { layerEnd = isOutsetCut ? layerEnd + globalOutset : max(layerEnd - globalOutset, 0) }
+    if (!isFrame) {
+      layerStart = isOutsetCut ? layerStart + globalOutset : max(layerStart - globalOutset, 0)
+      if (layerEnd) { layerEnd = isOutsetCut ? layerEnd + globalOutset : max(layerEnd - globalOutset, 0) }
+    }
 
     if (backing) {
       const insetScale = profile?.hasOutsetShade ? 1 : max(layerStart || 0, layerEnd || 0)
@@ -3992,14 +4000,13 @@ class CellGroup extends ProtoLayer {
         if (!dilationEnd) { dilationEnd = 1 }                              // !dilationEnd   => dilationEnd = 1
         if (profile?.hasInsetShade) {
           maxDilationRadius = 1 - grp.minRad / this.grid.cellRadius
-          // maxDilationRadius = isOutsetCut ? maxDilationRadius + globalOutset : maxDilationRadius - globalOutset
           dilationAmount = dilationStart - dilationEnd
           dilationStartRadius = dilationStart * maxDilationRadius
           dilationEndRadius = dilationEnd * maxDilationRadius
           // layerStart = dilationStartRadius                               // set max layer end from grp.minRad
           layerEnd = dilationEndRadius                                      // set max layer end from grp.minRad
         } else {
-          layerEnd = isOutsetCut ? 1 + globalOutset : 1 - globalOutset
+          if (!isFrame) { layerEnd = isOutsetCut ? 1 + globalOutset : 1 - globalOutset }
         }
 
         console.log(`maxDilationRadius`, maxDilationRadius)
