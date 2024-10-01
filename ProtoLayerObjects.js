@@ -40,7 +40,7 @@ class ProtoLayer {
     else if (protoParent instanceof p5.Element) { this.svgParent = protoParent }
     else { console.error('protoParent is not valid') }
     if (svgParent) { this.svgParent = svgParent }
-    if (insetScale) { this._insetScale = insetScale instanceof Vertex ? insetScale : vert(insetScale) }
+    if (insetScale !== undefined) { this._insetScale = insetScale instanceof Vertex ? insetScale : vert(insetScale) }
     this._filter = filter
     this.drawSVG = drawSVG
     this.drawRect = drawRect
@@ -3774,7 +3774,7 @@ class Grid extends ProtoLayer {
   showShapesDebug() {
     this.perimeterShapes.forEach(sh => {
       sh.drawSVG = true
-      sh.drawLabel = true
+      // sh.drawLabel = true
       sh.drawDeBugRect = true
       sh.assignElement()
       sh.showDeBug()
@@ -3935,7 +3935,7 @@ class CellGroup extends ProtoLayer {
   } = {}) {
     console.groupCollapsed(`${this.id}.cutIslands`)
     console.log(`layer start/end`, layerStart, layerEnd)
-    if (layerStart < layerEnd || !layerStart) {                         // layerStart should be larger, outside fx radius
+    if (layerStart < layerEnd || layerStart === undefined) {            // layerStart should be larger, outside fx radius
       [layerStart, layerEnd] = [layerEnd, layerStart]                   // swap if needed
     }
     console.log(`layer swap start/end`, layerStart, layerEnd)
@@ -3989,9 +3989,11 @@ class CellGroup extends ProtoLayer {
 
     // shapeGroups = shapeGroups.slice(0, 1)
     shapeGroups.forEach(grp => {
+      console.log(``)
       console.error(`current shapegroup`, grp)
       console.error(`layerEnd`, 1 - grp.minRad / this.grid.cellRadius)
-      let maxDilationRadius, dilationAmount, dilationStartRadius, dilationEndRadius
+      const maxDilationRadius = roundToDec(1 - (grp.minRad / this.grid.cellRadius), 4)
+      let dilationAmount, dilationStartRadius, dilationEndRadius
       let cut, insetScale
 
       if (useDilation) {                                        // extend cutRad into shape based upon grp.minRad
@@ -3999,33 +4001,51 @@ class CellGroup extends ProtoLayer {
         if (!dilationStart) { dilationStart = 0 }                          // !dilationStart => dilationStart = 0
         if (!dilationEnd) { dilationEnd = 1 }                              // !dilationEnd   => dilationEnd = 1
         if (profile?.hasInsetShade) {
-          maxDilationRadius = 1 - grp.minRad / this.grid.cellRadius
-          dilationAmount = dilationStart - dilationEnd
-          dilationStartRadius = dilationStart * maxDilationRadius
-          dilationEndRadius = dilationEnd * maxDilationRadius
+          console.error(`this hasInsetShade`)
+          // maxDilationRadius = 1 - (grp.minRad / this.grid.cellRadius)
+          // dilationAmount = dilationStart - dilationEnd
+          if (layerStart * amount > maxDilationRadius) {
+            dilationStartRadius = dilationStart * maxDilationRadius
+            dilationEndRadius = dilationEnd * maxDilationRadius
+          } else {
+
+          }
           // layerStart = dilationStartRadius                               // set max layer end from grp.minRad
           layerEnd = dilationEndRadius                                      // set max layer end from grp.minRad
         } else {
-          if (!isFrame) { layerEnd = isOutsetCut ? 1 + globalOutset : 1 - globalOutset }
+          console.error(`this hasOutsetShade`)
+          // maxDilationRadius = grp.minRad / this.grid.cellRadius
+
+
+          if (!isFrame) {
+            layerEnd = isOutsetCut ? 1 + globalOutset : 1 - globalOutset
+
+          }
+
         }
 
-        console.log(`maxDilationRadius`, maxDilationRadius)
+
         console.log(`dilationStartRadius`, dilationStartRadius)
         console.log(`dilationEndRadius`, dilationEndRadius)
       }
-
+      console.log(`maxDilationRadius`, maxDilationRadius)
       console.log(`after dilation`, layerStart, layerEnd)
 
       const topLayerRange = range(layerStart, layerEnd)                     // create range
       const topStepWidth = topLayerRange.size / amount                      // equal step division    
-      const maxLayer = profile?.hasOutsetShade ? layerStart : layerEnd
-      const minLayer = profile?.hasOutsetShade ? layerEnd : layerStart
-      const maxStart = amount < 2 ? (amount + 1) * maxLayer : (amount + 2) * maxLayer
-      console.log(`profile`, profile)
-      console.log(`maxLayer`, maxLayer)
-      console.log(`minLayer`, minLayer)
-      console.log(`maxStart`, maxStart)
-      if (profile?.hasOutsetShade && minLayer > maxStart) { layerStart = maxStart }
+
+      if (profile?.hasOutsetShade) {
+        const maxLayer = layerStart - maxDilationRadius
+        // const maxLayer = layerStart
+        const minLayer = layerEnd - layerStart
+        const maxStart = amount < 2 ? (amount + 1) * maxLayer : (amount + 2) * maxLayer
+        console.log(`profile`, profile)
+        console.log(`maxLayer`, maxLayer)
+        console.log(`minLayer`, minLayer)
+        console.log(`maxStart`, maxStart)
+        if (minLayer > maxStart) { layerEnd = maxStart }
+      }
+      console.log(`after hasOutsetShade handling`, layerStart, layerEnd)
 
       // if(profile?.isCutIn) {}
       const subLayerRange = range(layerStart, layerEnd)                     // create range
@@ -4084,9 +4104,13 @@ class CellGroup extends ProtoLayer {
         // FIXME: currently createSubIslands requires cut input? Need to remove this and assign cut after!
         const islands = grp.shapes.map(sh => sh.island)
         // const islands = undefined
+        console.groupCollapsed(`createSubIslands`)
         let newIslands = this.createSubIslands({ cut: cut, islands: islands, direction: direction, insetScale: insetScale })
-
+        console.groupEnd()
+        console.groupCollapsed(`islandsToShapeGroups`)
         if (!newIslands.flat().isEmpty) { this.islandsToShapeGroups(newIslands, cut, direction) }
+        console.groupEnd()
+        console.log(``)
       }
 
 
