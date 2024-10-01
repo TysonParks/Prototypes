@@ -264,12 +264,12 @@ function gridTests2() {
   //                                                                  //NOTE: 1. Calculate GridX
   let gridX = R.random_int(1, 10)
   // gridX = R.random_int(10, 20)
-  // gridX = 3
+  gridX = 10
   //                                                                  //NOTE: 2. Calculate GridY
   let gridSize = vert(gridX, round(gridX * 2))
   // gridSize = vert(3, 7)
   //                                                                  //NOTE: 3. Calculate inset (bezel size)
-  let insetMultiplier = 4
+  let insetMultiplier = 1
   let gridRatio
 
   //ARROW: calcInset()
@@ -390,15 +390,15 @@ function gridTests2() {
 
     console.log(GRID)
 
-    group1 = GRID.outlineGroup({
-      groupID: GRID.lastGroup.id,
-      // direction: Direction.All,
-      direction: grp1Dir,
-      newGroup: true,
-      amount: grp1Amount
-    })
+    // group1 = GRID.outlineGroup({
+    //   groupID: GRID.lastGroup.id,
+    //   // direction: Direction.All,
+    //   direction: grp1Dir,
+    //   newGroup: true,
+    //   amount: grp1Amount
+    // })
 
-    // group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+    group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
 
 
 
@@ -408,7 +408,7 @@ function gridTests2() {
       groupID: GRID.lastGroup.id,
       //  direction: Direction.All.random(R.random_int(1, 4)), 
       newGroup: true,
-      amount: R.random_int(1, 1)
+      amount: R.random_int(2, 2)
     })
 
     const grp3Amount = R.random_int(1, 3)
@@ -471,7 +471,7 @@ function gridTests2() {
   console.groupEnd()
   console.log(``)
 
-  globalOutset = .5
+  globalOutset = .0
   //                                                                     //NOTE: 9. (Calculate Each Group's Direction)  
   //NOTE: calc per group: possibleOrdinalConnections, current hor/vert islands, etc...
   //                                                                     //NOTE: 10. Create Perimeters for Each Group
@@ -503,10 +503,10 @@ function gridTests2() {
   console.groupCollapsed(`cutIslands`)
   //MARK: group0
   group0?.cutIslands({
-    profile: Profile.jOut,
-    // isOutsetCut: true,
-    layerStart: .9,
-    layerEnd: .1,
+    profile: Profile.jIn,
+    isOutsetCut: true,
+    layerStart: .2,
+    layerEnd: .0,
     amount: 1,
     loftScale: 1,
     // direction: Direction.All
@@ -526,13 +526,13 @@ function gridTests2() {
 
   //MARK: group1
   group1?.cutIslands({
-    profile: Profile.jIn,
-    isOutsetCut: true,
+    profile: Profile.rOut,
+    // isOutsetCut: true,
     // layerStart: 0,
-    layerEnd: .9,
+    layerEnd: .5,
     // dilationEnd: 1,
     amount: 1,
-    loftScale: 1,
+    // loftScale: 5 / 8,
     // direction: Direction.Horizontal,
     // backing: true,
 
@@ -543,9 +543,9 @@ function gridTests2() {
   group2?.cutIslands({
     profile: Profile.jIn,
     // isOutsetCut: true,
-    layerStart: 0,
-    layerEnd: .9,
-    amount: 1,
+    // layerStart: 0,
+    layerEnd: .95,
+    amount: 5,
     loftScale: 1,
     // direction: Direction.Horizontal
     // backing: true,
@@ -554,9 +554,9 @@ function gridTests2() {
 
   //MARK: group3
   group3?.cutIslands({
-    profile: Profile.rOut,
+    profile: Profile.jIn,
     // isOutsetCut: true,
-    layerStart: .9,
+    layerStart: .2,
     layerEnd: .0,
     amount: 1,
     loftScale: 1,
@@ -564,7 +564,7 @@ function gridTests2() {
     // backing: true,
   })
   // group3?.cutIslands({
-  //   profile: Profile.jIn,
+  //   profile: Profile.jOut,
   //   layerStart: .9,
   //   // layerEnd: .0,
   //   amount: .1,
@@ -577,8 +577,8 @@ function gridTests2() {
   group4?.cutIslands({
     profile: Profile.jIn,
     // isOutsetCut: true,
-    layerStart: .9,
-    // layerEnd: .9,
+    layerStart: .2,
+    layerEnd: .0,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
