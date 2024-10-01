@@ -402,7 +402,8 @@ class Shade {
         neuShades = offsets
           .map(offset => {
             let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
-            mag = curve === 'j' ? mag : mag * .95
+            mag = curve === 'j' ? mag : mag * (cutIn ? .6 : .95)
+            // mag = curve === 'j' ? mag : mag * mag * .4
             let blurRadius = mag
             blurRadius = mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
             let highColLuma, shadColLuma
