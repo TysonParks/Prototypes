@@ -378,16 +378,16 @@ class Shade {
 
       if (curve === 'j' || curve === 'r') {
         let reflLightRange
-        if (curve === 'r') {                            // "R" cut
-          // rotOffset = rotOffset + PI
-          const rangeSize = mag                       // shadow range
-          reflLightRange = rangeSize / 2.2                // visual observation shows relfLight to be about 1/5 the shadow
-          // console.log(`reflLightRange`, reflLightRange)
-          if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
-            offsets.push(reflLightRange)
-            offsets = offsets.numSorted
-          }
+        // if (curve === 'r') {                            // "R" cut
+        // rotOffset = rotOffset + PI
+        const rangeSize = mag                       // shadow range
+        reflLightRange = rangeSize / 2.2                // visual observation shows relfLight to be about 1/5 the shadow
+        // console.log(`reflLightRange`, reflLightRange)
+        if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
+          offsets.push(reflLightRange)
+          offsets = offsets.numSorted
         }
+        // }
         // console.log('bonus offsets', offsets)
 
         const highColSpread = 0.1                           // spread up from base (0.9) to max highlight luma (1!)
@@ -395,9 +395,13 @@ class Shade {
         const reflHighMult = 0.7                            // 
         const reflShadMult = 1                           //
         const reflHighSpread = reflHighMult * shadColSpread // spread down from base (0.9) to min shadow luma (0.65)
-        const maxHighlight = 1                                            // 0.9 + 0.1 = 1!
-        const minShadow = (1 - highColSpread - shadColSpread)             // 0.9 -0.1 - 0.25 = .65
-        const reflHighlight = (1 - highColSpread - reflHighSpread)        // 0.9 -0.1 - 0.2  = .7
+        let shadowReducer = curve === 'r' ? min(0.2, (20 / (mag * mag * pixToUserUnits))) : 0
+        // shadowReducer = curve === 'r' ? (1 / (mag * pixToUserUnits) * 5) : 0
+        // shadowReducer = 0
+        const maxHighlight = 1                                                      // 0.9 + 0.1 = 1!
+        const minShadow = (1 - highColSpread - shadColSpread) + shadowReducer       // 0.9 -0.1 - 0.25 = .65
+        const reflHighlight = (1 - highColSpread - reflHighSpread)                  // 0.9 -0.1 - 0.2  = .7
+        // const reflHighlight = (1 - highColSpread - reflHighSpread) - shadowReducer  // 0.9 -0.1 - 0.2  = .7
         const perceptualDivisor = 8                        // compensates for blur, etc to get visually correct result
         neuShades = offsets
           .map(offset => {
