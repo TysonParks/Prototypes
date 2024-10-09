@@ -62,6 +62,7 @@ function addElement(elt, pInst, media) {
 // SIZE: 355 lines
 function createFilter() { return new ProtoFilter() }
 class ProtoFilter {
+  id
   filter
   defs
   type
