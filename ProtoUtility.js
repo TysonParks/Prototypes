@@ -421,14 +421,21 @@ class Corners {
   values
 
   constructor(values) {
+    // console.log(`values`, values)
+    if (values instanceof Segment) { values = [values.start, values.end] }
     if (values instanceof Array) {
-      this.values = values
+      if (values.length === 2 && values.every(v => v instanceof Vertex)) {
+        // console.log(`values`, values)
+        values = this.#valuesFromBoundsVerts(values[0], values[1])
+      }
+      // console.log(`after valuesFromBoundsVerts`, values)
+      if (values.length === 4) { this.values = values }
     } else if (isCornerObj(values)) {
       values = [values.upLeft, values.upRight, values.downRight, values.downLeft]
     } else {
-      console.error(`Corners require an array to initialize`)
+      console.error(`Corners failed to initialize`)
     }
-
+    this.values = values
     if (this.values.length !== 4) {
       console.error(`Corners expects 4 values: expect problems!`)
     }
@@ -438,6 +445,47 @@ class Corners {
   get upRight() { return this.values[1] }
   get downRight() { return this.values[2] }
   get downLeft() { return this.values[3] }
+
+  get bounds() { return findBounds(this.upLeft, this.downRight) }
+
+  get obj() {
+    return {
+      upLeft: this.upLeft,
+      upRight: this.upRight,
+      downRight: this.downRight,
+      downLeft: this.downLeft
+    }
+  }
+
+  get sides() {
+    let sideVals
+    if (this.values.every(v => v instanceof Vertex)) {
+      sideVals = [
+        segment(this.upLeft, this.upRight),
+        segment(this.upRight, this.downRight),
+        segment(this.downRight, this.downLeft),
+        segment(this.downLeft, this.upLeft)
+      ]
+    } else {
+      sideVals = [
+        [this.upLeft, this.upRight],
+        [this.upRight, this.downRight],
+        [this.downRight, this.downLeft],
+        [this.downLeft, this.upLeft]
+      ]
+    }
+    return new Sides(sideVals)
+  }
+
+  #valuesFromBoundsVerts(vert1, vert2) {
+    const verts = OpArray.format([vert1, vert2]).gridVertSorted
+    return [
+      verts[0],
+      vert(verts[1].x, verts[0].y),
+      verts[1],
+      vert(verts[0].x, verts[1].y)
+    ]
+  }
 }
 
 //MARK: Sides
@@ -448,12 +496,14 @@ class Sides {
   values
 
   constructor(values) {
+    // console.log(`Sides values`, values)
     if (values instanceof Array) {
       this.values = values
-    } else if (isCornerObj(values)) {
-      values = [values.up, values.right, values.down, values.left]
+    } else if (isSideObj(values)) {
+      // console.log(`values is isSideObj`, values)
+      this.values = [values.up, values.right, values.down, values.left]
     } else {
-      console.error(`Sides require an array to initialize`)
+      console.error(`Sides require an array to initialize`, values)
     }
 
     if (this.values.length !== 4) {
@@ -469,6 +519,15 @@ class Sides {
   get verticals() { return [this.up, this.down] }
   get horizontals() { return [this.right, this.left] }
   get all() { return this.values }
+
+  get obj() {
+    return {
+      up: this.up,
+      right: this.right,
+      down: this.down,
+      left: this.left
+    }
+  }
 }
 
 //MARK: Turn
@@ -695,9 +754,9 @@ function findBounds(...geo) {
   yMax = max(yVals)
   return bounds()
 }
-// FUNC: vertIsInsideBounds() : BOOL : finds if vert is within bounds of boundsVerts
+// FUNC: vertIsWithinBounds() : BOOL : finds if vert is within bounds of boundsVerts
 //NOTE: boundsVerts can be any number of verts above zero, the bounds of those points is calculated with min/max
-function vertIsInsideBounds(vert, bounds, includeBorder = true, accuracy = 3, deviation) {
+function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, deviation) {
   if (!vert || !bounds) { return false }
   const x = approxToDec(vert.x, accuracy, 0)
   const y = approxToDec(vert.y, accuracy, 0)
@@ -732,9 +791,9 @@ function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, just
   const boundsVerts = [vert(bounds.xMin, bounds.yMin), vert(bounds.xMax, bounds.yMax)]
   testBounds = findBounds(testBounds)
   if (justOverlaps) {
-    return boundsVerts.some(v => vertIsInsideBounds(v, testBounds, includeBorder, accuracy))
+    return boundsVerts.some(v => vertIsWithinBounds(v, testBounds, includeBorder, accuracy))
   } else {
-    return boundsVerts.every(v => vertIsInsideBounds(v, testBounds, includeBorder, accuracy))
+    return boundsVerts.every(v => vertIsWithinBounds(v, testBounds, includeBorder, accuracy))
   }
 }
 // FUNC: boundsOverlap() : BOUNDS : finds overlap of two pieces of GEO
