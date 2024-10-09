@@ -264,7 +264,7 @@ function gridTests2() {
   //                                                                  //NOTE: 1. Calculate GridX
   let gridX = R.random_int(1, 10)
   // gridX = R.random_int(10, 20)
-  gridX = 10
+  // gridX = 4
   //                                                                  //NOTE: 2. Calculate GridY
   let gridSize = vert(gridX, round(gridX * 2))
   // gridSize = vert(3, 7)
@@ -321,6 +321,7 @@ function gridTests2() {
     group0 = GRID.groupFromIndices(0)
   } else {
     const initialCoverage = 0.3
+
     // group0 = GRID.randomComb({
     //   selection: (GRID.cellRows
     //     .rotated2D(90)
@@ -339,27 +340,27 @@ function gridTests2() {
     //   keep: R.random_int(1, 3), drop: R.random_int(12, 16), start: 0
     // })
 
-    // group0 = GRID.comb2({
-    //   selection: (GRID.cellRows
-    //     .rotated2D(R.random_int(0, 3) * 90)
-    //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
-    //     .flat()),
-    //   dashArray: OpArray.randomIntArray(R.random_int(3, 6), range(4, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
-    // })
+    group0 = GRID.comb2({
+      selection: (GRID.cellRows
+        .rotated2D(R.random_int(0, 3) * 90)
+        .flipped2D(Direction.Cardinal.random(1).andOpposites)
+        .flat()),
+      dashArray: OpArray.randomIntArray(R.random_int(3, 6), range(4, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
+    })
 
-    if (gridX < 4) {
-      // group0 = GRID.groupFromIndices([1, 2])
-      // group0 = GRID.groupFromIndices([1])
-      // group1 = GRID.groupFromIndices([1])
-      group0 = GRID.groupFromIndices(
-        OpArray.randomIntArray(
-          ceil((GRID.cellCount - 1) * initialCoverage),
-          range(0, GRID.cellCount - 1)
-        ).unique()
-      )
-    } else {
-      group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
-    }
+    // if (gridX < 4) {
+    //   // group0 = GRID.groupFromIndices([1, 2])
+    //   // group0 = GRID.groupFromIndices([1])
+    //   // group1 = GRID.groupFromIndices([1])
+    //   group0 = GRID.groupFromIndices(
+    //     OpArray.randomIntArray(
+    //       ceil((GRID.cellCount - 1) * initialCoverage),
+    //       range(0, GRID.cellCount - 1)
+    //     ).unique()
+    //   )
+    // } else {
+    //   group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+    // }
 
 
     // group1 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
@@ -390,42 +391,43 @@ function gridTests2() {
 
     console.log(GRID)
 
-    // group1 = GRID.outlineGroup({
-    //   groupID: GRID.lastGroup.id,
-    //   // direction: Direction.All,
-    //   direction: grp1Dir,
-    //   newGroup: true,
-    //   amount: grp1Amount
-    // })
-
-    group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
-
-
-
-
-
-    group2 = GRID.outlineGroup({
+    group1 = GRID.outlineGroup({
       groupID: GRID.lastGroup.id,
-      //  direction: Direction.All.random(R.random_int(1, 4)), 
+      // direction: Direction.All,
+      direction: grp1Dir,
       newGroup: true,
-      amount: R.random_int(2, 2)
+      amount: grp1Amount
     })
+
+    // group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+
+
+
+
+
+    // group2 = GRID.outlineGroup({
+    //   groupID: GRID.lastGroup.id,
+    //   //  direction: Direction.All.random(R.random_int(1, 4)), 
+    //   newGroup: true,
+    //   amount: R.random_int(2, 2)
+    // })
 
     const grp3Amount = R.random_int(1, 3)
 
 
-    group3 = GRID.outlineGroup({
-      groupID: GRID.lastGroup.id,
-      // direction: Direction.All.random(R.random_int(1, 4)), 
-      newGroup: true,
-      amount: grp3Amount
-    })
+    // group3 = GRID.outlineGroup({
+    //   groupID: GRID.lastGroup.id,
+    //   // direction: Direction.All.random(R.random_int(1, 4)), 
+    //   newGroup: true,
+    //   amount: grp3Amount
+    // })
+
     // console.log('right adj', Direction.Right.adjacents)
     // console.log('right and adj', Direction.Right.andAdjacents)
     // console.log('right opposite', Direction.Right.opposites)
 
-    // group4 = GRID.randGroup({ amount: 0.75 })
-    group4 = GRID.groupAvail()
+    // group4 = GRID.randGroup({ amount: 0.5 })
+    // group4 = GRID.groupAvail()
 
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
     // console.log(group3)
@@ -477,10 +479,10 @@ function gridTests2() {
   //                                                                     //NOTE: 10. Create Perimeters for Each Group
   console.groupCollapsed(`createPerimiters`)
   group0?.createPerimiters('maxCorners', Direction.Cardinal)
-  group1?.createPerimiters('maxCorners', Direction.Cardinal)
+  group1?.createPerimiters('maxCorners', Direction.All)
   group2?.createPerimiters('maxCorners', Direction.Cardinal)
   group3?.createPerimiters('maxCorners', Direction.Cardinal)
-  group4?.createPerimiters('maxCorners', Direction.Cardinal)
+  group4?.createPerimiters('maxCorners', Direction.Horizontal)
   // will need to create check to make sure all groups used
   // console.log(`groups`, GRID.groups)
   console.groupEnd()
@@ -490,7 +492,7 @@ function gridTests2() {
   // console.groupCollapsed(`nestleShapes`)
   console.groupCollapsed(`nestleShapes`)
   //                                                                     //NOTE: 11. Nestle Shapes 
-  GRID.nestleShapes(4)
+  GRID.nestleShapes(0)
   console.groupEnd()
 
   console.error(`  ######################   `)
@@ -503,36 +505,27 @@ function gridTests2() {
   console.groupCollapsed(`cutIslands`)
   //MARK: group0
   group0?.cutIslands({
-    profile: Profile.jIn,
-    isOutsetCut: true,
-    layerStart: .2,
-    layerEnd: .0,
+    profile: Profile.rOut,
+    // isOutsetCut: true,
+    layerStart: 19 / 20,
+    // layerEnd: .0,
     amount: 1,
     loftScale: 1,
     // direction: Direction.All
     // backing: true,
 
   })
-  // group0?.cutIslands({
-  //   profile: Profile.rIn,
-  //   layerStart: -.5,
-  //   layerEnd: -1,
-  //   amount: 1,
-  //   loftScale: 1,
-  //   // direction: Direction.All
-  //   // backing: true,
 
-  // })
 
   //MARK: group1
   group1?.cutIslands({
-    profile: Profile.rOut,
-    // isOutsetCut: true,
+    profile: Profile.jIn,
+    isOutsetCut: true,
     // layerStart: 0,
-    layerEnd: .5,
+    layerEnd: 19 / 20,
     // dilationEnd: 1,
     amount: 1,
-    // loftScale: 5 / 8,
+    loftScale: 8 / 8,
     // direction: Direction.Horizontal,
     // backing: true,
 
@@ -543,64 +536,51 @@ function gridTests2() {
   group2?.cutIslands({
     profile: Profile.jIn,
     // isOutsetCut: true,
-    // layerStart: 0,
-    layerEnd: .95,
-    amount: 5,
+    // layerStart: .5,
+    layerEnd: 19 / 20,
+    amount: 1,
     loftScale: 1,
     // direction: Direction.Horizontal
     // backing: true,
   })
+
+  // group2?.cutIslands({
+  //   profile: Profile.rOut,
+  //   // isOutsetCut: true,
+  //   // layerStart: 0,
+  //   layerEnd: 18 / 20,
+  //   amount: 1,
+  //   loftScale: 1,
+  //   // direction: Direction.Horizontal
+  //   // backing: true,
+  // })
+
+
 
 
   //MARK: group3
   group3?.cutIslands({
     profile: Profile.jIn,
     // isOutsetCut: true,
-    layerStart: .2,
-    layerEnd: .0,
+    layerStart: 19 / 20,
+    // layerEnd: .0,
     amount: 1,
     loftScale: 1,
     // direction: Direction.All
     // backing: true,
   })
-  // group3?.cutIslands({
-  //   profile: Profile.jOut,
-  //   layerStart: .9,
-  //   // layerEnd: .0,
-  //   amount: .1,
-  //   loftScale: 1,
-  //   // direction: Direction.All
-  //   backing: true,
-  // })
+
 
   //MARK: group4
   group4?.cutIslands({
     profile: Profile.jIn,
     // isOutsetCut: true,
-    layerStart: .2,
-    layerEnd: .0,
+    layerStart: 19 / 20,
+    // layerEnd: .0,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
   })
-  // group4?.cutIslands({
-  //   profile: Profile.jIn,
-  //   layerStart: 3,
-  //   // layerEnd: .9,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  //   backing: true,
-  // })
-  // group4?.cutIslands({
-  //   profile: Profile.rIn,
-  //   layerStart: 1,
-  //   layerEnd: 1,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  //   backing: true,
-  // })
 
   // console.log(`takenCells`, GRID.takenCells.map(c => c.index))
   console.groupEnd()
@@ -646,11 +626,13 @@ function gridTests2() {
   console.log(`GRID`, GRID)
   console.warn(`cellSize`, GRID.cellSize)
   console.warn(`GRID cells`, gridSize)
+  console.warn(`BGRID`, BGRID)
   console.warn(`GRID Ratio: ${gridRatio / 2}:1`)
   console.warn(`gridInsetScale:`, gridInsetScale)
   console.warn(`GRID.insetAmount.x:`, GRID.insetAmount.x)
   console.warn(`GRID size:`, GRID.insetSize)
   console.warn(`Groups OrdinalConnects`, GRID.groups.map(g => g.ordinalConnections))
+  // console.error(`cellSpansBetween`, GRID.cellSpanBetween(0, 161))
 
   console.warn(`FRAME.backGroup.padding:`, FRAME.backGroup.padding)
   // console.log(GRID.cellRows.flat().map(cell => cell.center))
