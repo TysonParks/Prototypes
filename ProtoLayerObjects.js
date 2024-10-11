@@ -469,7 +469,7 @@ class Frame extends ProtoLayer {
       const inner = grid
         .shrunkSelection(this.cells, 1, Direction.All)
         .map(c => c.index)
-      indices = indices.union(inner)                             //
+      // indices = indices.union(inner)                             //
       this.backGroup = backGrid.groupFromIndices(indices)
     }
 
@@ -524,8 +524,18 @@ class Frame extends ProtoLayer {
           console.log(`has adj, adjWrapping!`, s.adjInWrapper)
           s.adjWrap(true, false)
         }
+        if (!s.inWrapper) {
+          if (!s.endNeighbor.inwrapper) {
+            s.setArcToMiddle()
+            s.endNeighbor.setArcToMiddle()
+          } else {
+            s.replaceEndCurveOrigin(s.maxArcOrigin)
+          }
+        }
       }
     })
+
+
 
 
     // looseCorners.forEach(bSeg => {
@@ -592,9 +602,9 @@ class Frame extends ProtoLayer {
     // })
     // this.backGroup.cutIslands({
     //   profile: Profile.jOut,
-    // isFrame: true,
-    //   layerStart: 1.7 * padWidth,
-    //   layerEnd: 1. * padWidth,
+    //   isFrame: true,
+    //   layerStart: 1.5 * padWidth,
+    //   layerEnd: .75 * padWidth,
     //   amount: 1,
     //   loftScale: 1 / 1,
     // })
@@ -610,7 +620,7 @@ class Frame extends ProtoLayer {
     //   profile: Profile.rIn,
     //   isFrame: true,
     //   layerStart: 1.5 * padWidth,
-    //   layerEnd: 1. * padWidth,
+    //   layerEnd: 1.25 * padWidth,
     //   amount: 1,
     //   loftScale: 1 / 1,
     // })
@@ -746,6 +756,9 @@ class Frame extends ProtoLayer {
     // .applyFilter({ filter: this.filter, size: this.size, padding: vert(20) })
 
     // this.testElementsDraw()
+    this.svgElt
+      .touchEnded(shadeAnimation)
+      .mouseReleased(shadeAnimation)
   }
   // #endregion
 }
@@ -2597,7 +2610,7 @@ class Grid extends ProtoLayer {
       // console.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableRadiantOrigins))
 
       // return
-      // testPool = testPool.slice(0, 10)
+      // testPool = testPool.slice(0, 5)
 
       testPool.forEach(s => {
         console.error(`innerMost in queue`, s)                                                                //LOGGING:
