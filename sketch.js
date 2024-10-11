@@ -54,6 +54,7 @@ function setup() {
 
 // FUNC: draw()
 function draw() {
+  // console.log(`drawing`)
   if (globalControls.animated) {
     globalAnimation()
   }
@@ -80,6 +81,7 @@ function setupPrefs() {
   S = new Store()
   RuID = new Random()
   TestMode = true
+  frameRate(15)
 }
 
 // FUNC: setupFeatures()
@@ -264,12 +266,12 @@ function gridTests2() {
   //                                                                  //NOTE: 1. Calculate GridX
   let gridX = R.random_int(1, 10)
   // gridX = R.random_int(10, 20)
-  // gridX = 4
+  // gridX = 6
   //                                                                  //NOTE: 2. Calculate GridY
   let gridSize = vert(gridX, round(gridX * 2))
   // gridSize = vert(3, 7)
   //                                                                  //NOTE: 3. Calculate inset (bezel size)
-  let insetMultiplier = 1
+  let insetMultiplier = 2
   let gridRatio
 
   //ARROW: calcInset()
@@ -324,7 +326,7 @@ function gridTests2() {
 
     // group0 = GRID.randomComb({
     //   selection: (GRID.cellRows
-    //     .rotated2D(90)
+    //     // .rotated2D(90)
     //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
     //     .flat()),
     //   keepRange: range(1, round(gridX / .5)),
@@ -340,27 +342,27 @@ function gridTests2() {
     //   keep: R.random_int(1, 3), drop: R.random_int(12, 16), start: 0
     // })
 
-    group0 = GRID.comb2({
-      selection: (GRID.cellRows
-        .rotated2D(R.random_int(0, 3) * 90)
-        .flipped2D(Direction.Cardinal.random(1).andOpposites)
-        .flat()),
-      dashArray: OpArray.randomIntArray(R.random_int(3, 6), range(4, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
-    })
+    // group0 = GRID.comb2({
+    //   selection: (GRID.cellRows
+    //     .rotated2D(R.random_int(0, 3) * 90)
+    //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
+    //     .flat()),
+    //   dashArray: OpArray.randomIntArray(R.random_int(3, 6), range(4, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
+    // })
 
-    // if (gridX < 4) {
-    //   // group0 = GRID.groupFromIndices([1, 2])
-    //   // group0 = GRID.groupFromIndices([1])
-    //   // group1 = GRID.groupFromIndices([1])
-    //   group0 = GRID.groupFromIndices(
-    //     OpArray.randomIntArray(
-    //       ceil((GRID.cellCount - 1) * initialCoverage),
-    //       range(0, GRID.cellCount - 1)
-    //     ).unique()
-    //   )
-    // } else {
-    //   group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
-    // }
+    if (gridX < 4) {
+      // group0 = GRID.groupFromIndices([1, 2])
+      // group0 = GRID.groupFromIndices([1])
+      // group1 = GRID.groupFromIndices([1])
+      group0 = GRID.groupFromIndices(
+        OpArray.randomIntArray(
+          ceil((GRID.cellCount - 1) * initialCoverage),
+          range(0, GRID.cellCount - 1)
+        ).unique()
+      )
+    } else {
+      group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+    }
 
 
     // group1 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
@@ -405,12 +407,12 @@ function gridTests2() {
 
 
 
-    // group2 = GRID.outlineGroup({
-    //   groupID: GRID.lastGroup.id,
-    //   //  direction: Direction.All.random(R.random_int(1, 4)), 
-    //   newGroup: true,
-    //   amount: R.random_int(2, 2)
-    // })
+    group2 = GRID.outlineGroup({
+      groupID: GRID.lastGroup.id,
+      direction: Direction.All.random(R.random_int(2, 4)),
+      newGroup: true,
+      amount: R.random_int(1, 2)
+    })
 
     const grp3Amount = R.random_int(1, 3)
 
@@ -478,8 +480,8 @@ function gridTests2() {
   //NOTE: calc per group: possibleOrdinalConnections, current hor/vert islands, etc...
   //                                                                     //NOTE: 10. Create Perimeters for Each Group
   console.groupCollapsed(`createPerimiters`)
-  group0?.createPerimiters('maxCorners', Direction.Cardinal)
-  group1?.createPerimiters('maxCorners', Direction.All)
+  group0?.createPerimiters('maxCorners', Direction.All)
+  group1?.createPerimiters('maxCorners', Direction.Cardinal)
   group2?.createPerimiters('maxCorners', Direction.Cardinal)
   group3?.createPerimiters('maxCorners', Direction.Cardinal)
   group4?.createPerimiters('maxCorners', Direction.Horizontal)
@@ -505,55 +507,62 @@ function gridTests2() {
   console.groupCollapsed(`cutIslands`)
   //MARK: group0
   group0?.cutIslands({
-    profile: Profile.rOut,
-    // isOutsetCut: true,
-    layerStart: 19 / 20,
-    // layerEnd: .0,
+    profile: Profile.jIn,
+    isOutsetCut: true,
+    layerStart: 18 / 20,
+    layerEnd: 9 / 20,
     amount: 1,
     loftScale: 1,
     // direction: Direction.All
     // backing: true,
 
   })
-
+  group0?.cutIslands({
+    profile: Profile.rOut,
+    // isOutsetCut: true,
+    layerStart: 9 / 20,
+    // layerEnd: 19 / 20,
+    // dilationEnd: 1,
+    amount: 1,
+    loftScale: 8 / 8,
+    // direction: Direction.Horizontal,
+  })
 
   //MARK: group1
   group1?.cutIslands({
     profile: Profile.jIn,
-    isOutsetCut: true,
-    // layerStart: 0,
+    // isOutsetCut: true,
+    // layerStart: 12 / 20,
     layerEnd: 19 / 20,
     // dilationEnd: 1,
     amount: 1,
     loftScale: 8 / 8,
     // direction: Direction.Horizontal,
-    // backing: true,
-
   })
 
 
   //MARK: group2
   group2?.cutIslands({
-    profile: Profile.jIn,
+    profile: Profile.rOut,
     // isOutsetCut: true,
-    // layerStart: .5,
-    layerEnd: 19 / 20,
+    layerStart: 9 / 20,
+    layerEnd: 18 / 20,
     amount: 1,
     loftScale: 1,
     // direction: Direction.Horizontal
     // backing: true,
   })
 
-  // group2?.cutIslands({
-  //   profile: Profile.rOut,
-  //   // isOutsetCut: true,
-  //   // layerStart: 0,
-  //   layerEnd: 18 / 20,
-  //   amount: 1,
-  //   loftScale: 1,
-  //   // direction: Direction.Horizontal
-  //   // backing: true,
-  // })
+  group2?.cutIslands({
+    profile: Profile.jIn,
+    // isOutsetCut: true,
+    // layerStart: 0,
+    layerEnd: 9 / 20,
+    amount: 1,
+    loftScale: 1,
+    // direction: Direction.Horizontal
+    // backing: true,
+  })
 
 
 
@@ -633,6 +642,7 @@ function gridTests2() {
   console.warn(`GRID size:`, GRID.insetSize)
   console.warn(`Groups OrdinalConnects`, GRID.groups.map(g => g.ordinalConnections))
   // console.error(`cellSpansBetween`, GRID.cellSpanBetween(0, 161))
+  console.error(`filters`, S.Effects.db)
 
   console.warn(`FRAME.backGroup.padding:`, FRAME.backGroup.padding)
   // console.log(GRID.cellRows.flat().map(cell => cell.center))
@@ -641,13 +651,39 @@ function gridTests2() {
 // MARK: DRAWING FUNCS
 // FUNC: globalAnimation()
 function globalAnimation() {
-  globalControls.shadAngle = (millis() / (1000 * 8)) * 360 % 360
+  // let desiredFrameRate = 10
+  // let frameDuration = 1000 / desiredFrameRate
+  // let previousTime = 0
+
+  // //ARROW:animate()
+  // function animate(currentTime){
+  //   if (currentTime - previousTime >= frameDuration) {
+  //     // Update animation logic here
+  //     console.log('Animating frame', currentTime)
+
+  //     previousTime = currentTime
+  //   }
+  //   requestAnimationFrame(animate)
+  // }
+
+  // requestAnimationFrame(animate)
+
+
+
+  globalControls.shadAngle = (millis() / (1000 * 60)) * 360 % 360
+  const shadeVect = createVector(1, 0).rotate(radians(globalControls.shadAngle))
+
+  S.Effects.db.forEach((filter) => {
+    filter = filter[1]
+    filter.updateOffsets(shadeVect)
+  })
+
   //create new shadows for every filter
   // update every filter with new shadows
   // updateDisplay for every shapeGroup
 
-  // displayTime()
-  drawObjects()
+
+  // drawObjects()
 }
 
 // FUNC: drawObjects()
@@ -671,13 +707,6 @@ function redrawAll() {
   S.ShapeGroups.db.forEach(sg => sg[1].updateDisplay())
   // S.allLayers.forEach(e => e.resize())
 }
-
-// FUNC: wix() : returns pixel value of a wixel count
-// NOTE: 'wixel' is the fundamental measure unit of Prototypes, its the percent of frameSize.x
-// NOTE: i.e. every Prototype is 100 wixels wide x 200 wixels high
-// NOTE: 0.5 wix should be minimum Element size (~3px on 4K Landscape, ~6px on iphone Portrait)
-function wix(count) { return count / 100 * frameSize.x }
-function wixPx(count) { return `${wix(count)}px` }
 
 // FUNC: globalShadowVector()
 function globalShadowVector() {
