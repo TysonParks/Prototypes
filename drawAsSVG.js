@@ -2639,7 +2639,15 @@ class ProtoSegment extends Segment {
     // return [startObj, endObj]
     if (startDist === endDist) { return [startObj, endObj] }                        // return closest object(s) 
     //FIXME: Determine correct sign below, should be less than, right?
-    else if (startDist > endDist) {
+    else if (
+      (inWrapper.isOutsideCorner !== outWrapper.isOutsideCorner
+        &&
+        startDist < endDist)
+      ||
+      (inWrapper.isOutsideCorner === outWrapper.isOutsideCorner
+        &&
+        startDist > endDist)
+    ) {
       return startObj
     } else {
       return endObj
@@ -2701,6 +2709,7 @@ class ProtoSegment extends Segment {
       .map(s => this.minAdjWrapperDistanceObj(s)).flat()
       .sort((a, b) => a.dist - b.dist)
       .sort((a, b) => a.tangDist - b.tangDist)
+      .sort((a, b) => a.seg.couldHaveInWrapper(b.seg) - b.seg.couldHaveInWrapper(a.seg))
     // console.log(`adjWraps`, adjWraps)
     return adjWraps
     // }, `adjDistanceObjs`).call(this)
@@ -2886,8 +2895,8 @@ class ProtoSegment extends Segment {
     }
   }
 
-  get outWrapper() { return this.isOutsideCorner ? this.flushOutWrapper : this.adjOutWrapper }
-  get inWrapper() { return this.isOutsideCorner ? this.adjInWrapper : this.flushInWrapper }
+  get outWrapper() { return this.flushOutWrapper || this.adjOutWrapper }
+  get inWrapper() { return this.flushInWrapper || this.adjInWrapper }
   //MEMO: outWrappers
   get outWrappers() {
     // console.log(`outWrappers.this`, this)                                                                     //LOGGING:
