@@ -2,7 +2,7 @@ let gui
 
 let testingControls = {
   hashNumber: 625,
-  lastHash: false,
+  lastHash: true,
   labels: true,
   borders: false,
   testColors: false,
@@ -102,6 +102,11 @@ function createGUI() {
   curveShapeGUI.add(testCurveShapeControls, 'drawPoints').onChange(drawObjects)
 }
 
+// MARK: Artwork UI
+function shadeAnimation() {
+  globalControls.animated = !globalControls.animated
+}
+
 // MARK: Keyboard UI
 //NOTE: Create with GPT-4 on April 15,2023
 //FUNC: keyPressed() p5js overload for PNG saving
@@ -128,6 +133,12 @@ function keyPressed() {
     const name = `Prototype-${date}-${rezString}-${hash}.png`
 
     ProtoSVG.exportPNG(FRAME.svgMarkup, name, rez.x, rez.y, scale)
+  }
+  if (key === 'l') {
+    // use for cornerScale animation
+  }
+  if (key === 'o') {
+    // use for shade blurScale animation
   }
 }
 //NOTE: Create with GPT-4 on April 15,2023
@@ -157,3 +168,4 @@ function getCurrentTime(format24Hr = false) {
 
   return `${hours}.${minutes}.${seconds}${amPm ? '' + amPm : ''}`;
 }
+
