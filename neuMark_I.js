@@ -165,58 +165,80 @@ Object.assign(ProtoCut.prototype, IdentifiableStored)
 // CLASS: Shade
 // SIZE: 163 lines
 class Shade {
-  //METH:
-  //shadowVector: create vector from Angle + Offset
+  //METH: shadVect( ): create vector from Angle + Offset
   static shadVect(angle = globalControls.shadAngle) { return createVector(1, 0).rotate(radians(angle)) }
-  //METH:
-  //Drop-Shadow 
-  static dropShadSVG({ lighten = true, x, y, blurRad = 0, spreadRad = 0, col = frameColor, inset = false } = {}) {
-    return { lighten: lighten, dx: x, dy: y, blur: blurRad, color: col, inset: inset }
+
+  //METH: dropShadSVG()
+  // static dropShadSVG({ lighten = true, x, y, blurRad = 0, spreadRad = 0, col = frameColor, inset = false } = {}) {
+  //   return { lighten: lighten, dx: x, dy: y, blur: blurRad, color: col, inset: inset }
+  // }
+  //METH: dropShadeSVG()
+  static dropShadeSVG({ lighten = true, vector, mag, blurRad = 0, col = frameColor, inset = false } = {}) {
+    return { lighten: lighten, vector: vector, mag: mag, blur: blurRad, color: col, inset: inset }
   }
-  //METH:
+  //METH: neuShadeSVG()
   static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
+    let angleOffset = 0
     // console.log('components', vector.x, vector.y, blurRad)
-    const iCutHighMagMult = curve === `i` ? -.75 : -1
+    const iCutHighMagMult = curve === `i` ? .75 : 1
     const r2CutHighMagMult = curve === `r2` ? .5 : 1
     const jCutMagMult = curve === `j` ? .75 : 1
     const highMag = iCutHighMagMult * r2CutHighMagMult * jCutMagMult * highOffsetRatio
-    const highlight = this.dropShadSVG({
-      x: highMag * vector.x,
-      y: highMag * vector.y,
+    const shadeHighlight = this.dropShadeSVG({
+      angleOffset: angleOffset,
+      vector: vector,
+      mag: highMag,
       blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
       col: highCol,
       inset: inset
     })
+    // const highlight = this.dropShadSVG({
+    //   x: highMag * vector.x,
+    //   y: highMag * vector.y,
+    //   blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
+    //   col: highCol,
+    //   inset: inset
+    // })
 
     const r2CutMagMult = curve === `r2` ? .5 : 1
-    const shadow = this.dropShadSVG({
+    const shadeShadow = this.dropShadeSVG({
       lighten: false,
-      x: jCutMagMult * r2CutMagMult * vector.x,
-      y: jCutMagMult * r2CutMagMult * vector.y,
+      angleOffset: angleOffset,
+      vector: vector,
+      mag: jCutMagMult * r2CutMagMult,
       blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
       col: shadCol,
       inset: inset
     })
+    // const shadow = this.dropShadSVG({
+    //   lighten: false,
+    //   x: jCutMagMult * r2CutMagMult * vector.x,
+    //   y: jCutMagMult * r2CutMagMult * vector.y,
+    //   blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
+    //   col: shadCol,
+    //   inset: inset
+    // })
 
-    return [shadow, highlight]
-    // console.log('nsSVG shadow', shadow)
-    if (curve === 'j') {
-      return [shadow, highlight]
-      // return [highlight, shadow]
+    return [shadeShadow, shadeHighlight]
+    // return [shadow, highlight]
+    // // console.log('nsSVG shadow', shadow)
+    // if (curve === 'j') {
+    //   return [shadow, highlight]
+    //   // return [highlight, shadow]
 
-    }
-    if (curve === 'r') {
-      return [shadow, highlight]
-      // return [highlight, shadow]
-    }
-    if (curve === 'r2') {
-      return [shadow, highlight]
-      // return [highlight, shadow]
-    }
-    if (curve === 'i') {
-      return [shadow, highlight]
-      // return [highlight, shadow]
-    }
+    // }
+    // if (curve === 'r') {
+    //   return [shadow, highlight]
+    //   // return [highlight, shadow]
+    // }
+    // if (curve === 'r2') {
+    //   return [shadow, highlight]
+    //   // return [highlight, shadow]
+    // }
+    // if (curve === 'i') {
+    //   return [shadow, highlight]
+    //   // return [highlight, shadow]
+    // }
 
   }
   //METH:
@@ -239,8 +261,8 @@ class Shade {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
-
-    console.groupCollapsed(`vector`, vector)
+    console.log(``)
+    console.groupCollapsed(`neuShadeSVGFactory`, vector)
     // //MARK: "I" Cut
     // if (curve === 'i') {
     //   mag = mag / pixToUserUnits * 0.85           // convert pixelUnit to userUnit magnitude
@@ -359,7 +381,12 @@ class Shade {
             const shadCol2 = achromic(shadColLuma1).setAlpha(.25)
 
             let shades = new OpArray
+            console.log(`mag`, mag)
+            console.log(`vector`, vector)
+            console.log(`rotOffset`, rotOffset)
             const shadeVector = Vertex.cleanRotate(vector, radians(rotOffset)).setMag(mag)
+            // const shadeVector = vector.setMag(mag)
+
             // console.log(`angleMode`, _angleMode)
             // console.log(`shadeVector`, shadeVector)
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
@@ -372,6 +399,7 @@ class Shade {
               // const shades2 = this.neuShadeSVG(vector.setMag(mag * 1).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
               // shades.push(shades2)
             }
+            console.log(`${curve} shades`, shades)
             return shades.flat()
           }).flat()
       }
@@ -403,6 +431,8 @@ class Shade {
         const reflHighlight = (1 - highColSpread - reflHighSpread)                  // 0.9 -0.1 - 0.2  = .7
         // const reflHighlight = (1 - highColSpread - reflHighSpread) - shadowReducer  // 0.9 -0.1 - 0.2  = .7
         const perceptualDivisor = 8                        // compensates for blur, etc to get visually correct result
+        console.log(``)
+        console.warn(`offsets`, offsets)
         neuShades = offsets
           .map(offset => {
             let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
@@ -445,51 +475,54 @@ class Shade {
             // console.log(`rotOffset`, rotOffset)
             // console.log(`calculation`, Vertex.rotate(vector, radians(rotOffset)))
             // console.log(`calculation`, Vertex.rotate(vector, PI))
-
+            console.log(`mag`, mag)
+            console.log(`vector`, vector)
+            console.log(`rotOffset`, rotOffset)
             const shadeVector = Vertex.cleanRotate(vector, rotOffset).setMag(mag)
+            // const shadeVector = vector.setMag(mag)
 
             // console.log(`angleMode`, _angleMode)
             console.log(`shadeVector`, shadeVector)
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
             // console.log(`rotOffset`, rotOffset)
             // const shadeVector = vector.setMag(mag)
-            console.log(`shadeVector`, shadeVector)
             let shades = this.neuShadeSVG(shadeVector, blurRadius, highCol, shadCol, inset, blur, curve)
+            console.log(`${curve} shades`, shades)
             return shades
           })
           .flat()
       }
       //NOTE: These other options unused except for FAIL/Error outputs
     } else {
-      let color1, color2
-      //NOTE: AVOID - 'multiAlpha' causes extreme banding artifacts in my implementation
-      if (type === 'multiAlpha') {
-        color1 = protoColor(255, 256 / count)
-        color2 = protoColor(0, 256 / count)
-      }
-      //NOTE: AVOID - 'flat' isn't quite convincing and loses the crisp outlines of 'multishade'
-      if (type === 'flat') {
-        const cols = baseCol.highShadComplementSpread(colSpread)
-        color1 = cols[0]
-        color2 = cols[1]
-      }
+      // let color1, color2
+      // //NOTE: AVOID - 'multiAlpha' causes extreme banding artifacts in my implementation
+      // if (type === 'multiAlpha') {
+      //   color1 = protoColor(255, 256 / count)
+      //   color2 = protoColor(0, 256 / count)
+      // }
+      // //NOTE: AVOID - 'flat' isn't quite convincing and loses the crisp outlines of 'multishade'
+      // if (type === 'flat') {
+      //   const cols = baseCol.highShadComplementSpread(colSpread)
+      //   color1 = cols[0]
+      //   color2 = cols[1]
+      // }
 
-      neuShades = offsets
-        .map(o => {
-          const mag = o / pixToUserUnits
-          const blurRadius = mag / sqrt(2)
-          const shades = this.neuShadeSVG(
-            vector.setMag(mag).rotate(radians(rotOffset)),
-            blurRadius,
-            color1,
-            color2,
-            inset,
-            blur,
-            curve
-          )
-          return shades
-        })
-        .flat()
+      // neuShades = offsets
+      //   .map(o => {
+      //     const mag = o / pixToUserUnits
+      //     const blurRadius = mag / sqrt(2)
+      //     const shades = this.neuShadeSVG(
+      //       vector.setMag(mag).rotate(radians(rotOffset)),
+      //       blurRadius,
+      //       color1,
+      //       color2,
+      //       inset,
+      //       blur,
+      //       curve
+      //     )
+      //     return shades
+      //   })
+      //   .flat()
     }
 
     if (sort) {
@@ -498,7 +531,7 @@ class Shade {
       neuShades = OpArray.from([...lighten, ...darken])
       // neuShades = OpArray.from([...darken, ...lighten])
     }
-    // console.error(`neuShades`, neuShades)
+    console.error(`neuShades`, neuShades)
     // console.error(`vect`, neuShades.map(ns => [ns.dx, ns.dy]))
     // console.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
     // console.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
