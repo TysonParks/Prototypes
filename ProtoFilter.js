@@ -66,36 +66,38 @@ class ProtoFilter {
   filter
   defs
   type
+  offsetElts = new OpArray
 
   constructor() {
     this.needsPadding = false
     this.storeObject(S.Effects)
+    this.offsetElts = new OpArray
     // console.log('filter init', this)
   }
 
   //MARK: Drop Shadow method
-  dropShadow(shadows, clearInset = true) {
-    shadows = OpArray.format(shadows)
+  dropShadow(shades, clearInset = true) {
+    shades = OpArray.format(shades)
 
-    const batchlayering = false             // always use false
-    const normalBlending = true             // always use true
-    const insetShadows = shadows.filter(shadow => shadow.inset)
-    const outsetShadows = shadows.filter(shadow => !shadow.inset)
-    // const insetLightShads = shadows.filter(shad => shad.inset && shad.lighten)
-    // const insetDarkShads = shadows.filter(shad => shad.inset && !shad.lighten)
-    // const outsetLightShads = shadows.filter(shad => !shad.inset && shad.lighten)
-    // const outsetDarkShads = shadows.filter(shad => !shad.inset && !shad.lighten)
+    // const batchlayering = false             // always use false //TODO: remove from code!
+    const normalBlending = true             // always use true (use false for special one offs!)
+    const insetShadows = shades.filter(shade => shade.inset)
+    const outsetShadows = shades.filter(shade => !shade.inset)
+    // const insetLightShads = shades.filter(shad => shad.inset && shad.lighten)
+    // const insetDarkShads = shades.filter(shad => shad.inset && !shad.lighten)
+    // const outsetLightShads = shades.filter(shad => !shad.inset && shad.lighten)
+    // const outsetDarkShads = shades.filter(shad => !shad.inset && !shad.lighten)
     // let insetShadows = OpArray.from([...insetLightShads, ...insetDarkShads])
     // let outsetShadows = OpArray.from([...outsetLightShads, ...outsetDarkShads])
     // insetShadows = OpArray.from([...insetDarkShads, ...insetLightShads])
     // outsetShadows = OpArray.from([...outsetDarkShads, ...outsetLightShads])
-    // insetShadows = shadows.filter(shadow => shadow.inset)
-    // outsetShadows = shadows.filter(shadow => !shadow.inset)
+    // insetShadows = shades.filter(shade => shade.inset)
+    // outsetShadows = shades.filter(shade => !shade.inset)
     //TODO: need to build light and dark stacks separately within buildFilter()
     //TODO: then merge the two outside 
-    //TODO: but then this will likely break the filter for creating r-curve shadows because of the internal bounce highlight
+    //TODO: but then this will likely break the filter for creating r-curve shades because of the internal bounce highlight
 
-    this.shadows = outsetShadows
+    this.shades = outsetShadows
 
     // this.clearInset = clearInset
     this.type = 'dropShadow'
@@ -110,29 +112,34 @@ class ProtoFilter {
     //   .attribute('result', 'erodedAlpha')
     //   .parent(this.filter)
 
-    createSVGElt('feGaussianBlur')
-      .attribute('in', 'SourceGraphic')
-      .attribute('stdDeviation', 0 / FRAME.pixToUserUnits)
-      .attribute('result', 'blurredAlpha')
-      .parent(this.filter)
+    // createSVGElt('feGaussianBlur')
+    //   .attribute('in', 'SourceGraphic')
+    //   .attribute('stdDeviation', 0 / FRAME.pixToUserUnits)
+    //   .attribute('result', 'blurredAlpha')
+    //   .parent(this.filter)
 
-    createSVGElt("feFlood")
-      .attribute("flood-color", "transparent")
-      .attribute("flood-opacity", 0)
-      .attribute("result", "transparentInput")
-      .parent(this.filter)
+    // createSVGElt("feFlood")
+    //   .attribute("flood-color", "transparent")
+    //   .attribute("flood-opacity", 0)
+    //   .attribute("result", "transparentInput")
+    //   .parent(this.filter)
 
     let previousResult = 'SourceGraphic'
     let insetResult = clearInset ? 'transparentInput' : 'SourceGraphic'
     let outsetResult = 'SourceGraphic'
 
 
-    // FUNC: buildFilter()
-    function buildFilter(shadows, filter, inset, clearInset) {
+    //ARROW: buildFilter()
+    const buildFilter = (shades, filter, inset, clearInset) => {
       let prevMode = 'normal'
-      for (const shadow of shadows) {
-        const { dx, dy, blur, color, lighten } = shadow
-        const resultId = `shadow-${inset ? "inset" : "outset"}-${random()
+      for (const shade of shades) {
+        // const { dx, dy, blur, color, lighten } = shade
+        const { vector, blur, color, lighten } = shade
+        let mag = shade.mag
+        mag = lighten ? mag * -1 : mag
+        const [dx, dy] = [vector.x * mag, vector.y * mag]
+
+        const resultId = `shade-${inset ? "inset" : "outset"}-${random()
           .toString(36)
           .substring(7)}`
         const blendMode = () => {
@@ -147,17 +154,57 @@ class ProtoFilter {
           createSVGElt('feGaussianBlur')
             .attribute('in', `SourceAlpha`)
             .attribute('stdDeviation', blur)
-            .attribute('result', 'current')
+            .attribute('result', 'blurred')
             .parent(filter)
         }
+        //NOTE: NEW BLOCK START-------------------------------------------
+        //NEW 2 feFlood: flood the offset result with the input color
+        // createSVGElt('feFlood')
+        //   .attribute(`in`, useBlur ? 'blurred' : 'SourceAlpha')
+        //   .attribute('flood-color', color)
+        //   .attribute('flood-opacity', 1)
+        //   .attribute('result', 'flooded')
+        //   .parent(filter)
+
+        //   if (inset) {
+        //     //NEW 2B feComposite - MASK IN: if this is an inset shade, mask 
+        //     createSVGElt('feComposite')
+        //       .attribute('operator', 'out')
+        //       .attribute('in', clearInset ? 'SourceAlpha' : insetResult) // might need to option insetResult here
+        //       // .attribute('in2', insetResult)
+        //       // .attribute('in', insetResult)
+        //       .attribute('in2', 'flooded')
+        //       .attribute('result', 'mask')
+        //       .parent(filter)
+        //   }
+
+        //   //NEW 3 feComposite - 'composite'
+        //   createSVGElt('feComposite')
+        //     .attribute('operator', 'in')
+        //     .attribute('in', `flooded`)
+        //     .attribute('in2', inset ? 'mask' : `flooded`)
+        //     .attribute('result', `composite`)
+        //     .parent(filter)
+
+        // //NEW 4 feOffset: offset the blurred result
+        // const feOffset = createSVGElt('feOffset')
+        //   .attribute('in', 'flooded')
+        //   .attribute('dx', dx)
+        //   .attribute('dy', dy)
+        //   .attribute('result', 'offset-blurred')
+        //   .parent(filter)
+        //NOTE: NEW BLOCK END-------------------------------------------
 
         //2 feOffset: offset the blurred result
-        createSVGElt('feOffset')
-          .attribute('in', useBlur ? 'current' : 'SourceAlpha')
+        const feOffset = createSVGElt('feOffset')
+          .attribute('in', useBlur ? 'blurred' : 'SourceAlpha')
           .attribute('dx', dx)
           .attribute('dy', dy)
           .attribute('result', 'offset-blurred')
           .parent(filter)
+
+        console.log(`this.offsetElts`, this.offsetElts)
+        this.offsetElts.push({ elt: feOffset, mag: mag, })
 
         //3 feFlood: flood the offset result with the input color
         createSVGElt('feFlood')
@@ -168,7 +215,7 @@ class ProtoFilter {
           .parent(filter)
 
         if (inset) {
-          //3B feComposite - MASK IN: if this is an inset shadow, mask 
+          //3B feComposite - MASK IN: if this is an inset shade, mask 
           createSVGElt('feComposite')
             .attribute('operator', 'out')
             .attribute('in', clearInset ? 'SourceAlpha' : insetResult) // might need to option insetResult here
@@ -221,67 +268,65 @@ class ProtoFilter {
     }
 
     //ARROW: processBatches() : 
-    const processBatches = (shadows, inset = true) => {
-      const batches = shadows.reduce((result, shadow) => {
-        // console.log('result', result)
-        const lastBatch = result[result.length - 1]
-        if (lastBatch && lastBatch[0].lighten === shadow.lighten) {
-          lastBatch.push(shadow)
-        } else {
-          result.push(OpArray.from([shadow]))
-        }
-        return result
-      }, new OpArray)
-      console.log('batches', batches)
+    // const processBatches = (shades, inset = true) => {
+    //   const batches = shades.reduce((result, shade) => {
+    //     // console.log('result', result)
+    //     const lastBatch = result[result.length - 1]
+    //     if (lastBatch && lastBatch[0].lighten === shade.lighten) {
+    //       lastBatch.push(shade)
+    //     } else {
+    //       result.push(OpArray.from([shade]))
+    //     }
+    //     return result
+    //   }, new OpArray)
+    //   console.log('batches', batches)
 
-      const processed = batches.map(batch => {
-        buildFilter(batch, this.filter, inset, clearInset)
-        return inset ? insetResult : outsetResult
-      })
-      console.log('processed', processed)
-      // return processed
+    //   const processed = batches.map(batch => {
+    //     buildFilter(batch, this.filter, inset, clearInset)
+    //     return inset ? insetResult : outsetResult
+    //   })
+    //   console.log('processed', processed)
+    //   // return processed
 
-      for (let i = 1; i < processed.length; i++) {
-        createSVGElt('feBlend')
-          .attribute('mode', 'normal')
-          .attribute('in', processed[i - 1])
-          .attribute('in2', processed[i])
-          .attribute('result', processed[i])
-          .parent(this.filter)
-      }
+    //   for (let i = 1; i < processed.length; i++) {
+    //     createSVGElt('feBlend')
+    //       .attribute('mode', 'normal')
+    //       .attribute('in', processed[i - 1])
+    //       .attribute('in2', processed[i])
+    //       .attribute('result', processed[i])
+    //       .parent(this.filter)
+    //   }
 
-      // let feMerge = createSVGElt('feMerge')
-      //   .attribute('result', inset ? insetResult : outsetResult)
-      //   .parent(this.filter)
+    //   // let feMerge = createSVGElt('feMerge')
+    //   //   .attribute('result', inset ? insetResult : outsetResult)
+    //   //   .parent(this.filter)
 
-      // processed.forEach(resultID => {
-      //   createSVGElt('feMergeNode')
-      //     .attribute('in', resultID)
-      //     .parent(feMerge)
-      // })
-
-
-    }
+    //   // processed.forEach(resultID => {
+    //   //   createSVGElt('feMergeNode')
+    //   //     .attribute('in', resultID)
+    //   //     .parent(feMerge)
+    //   // })
+    // }
 
     if (insetShadows.length > 0) {
-      if (batchlayering) {
-        const insetBatches = processBatches(insetShadows, true)
-        console.log('insetBatches', insetBatches)
-      } else {
-        buildFilter(insetShadows, this.filter, true, clearInset)
-      }
+      // if (batchlayering) {
+      //   const insetBatches = processBatches(insetShadows, true)
+      //   console.log('insetBatches', insetBatches)
+      // } else {
+      buildFilter(insetShadows, this.filter, true, clearInset)
+      // }
     }
     else {
       if (clearInset) { insetResult = 'SourceAlpha' }
     }
 
     if (outsetShadows.length > 0) {
-      if (batchlayering) {
-        const outsetBatches = processBatches(outsetShadows, false)
-        console.log('outsetBatches', outsetBatches)
-      } else {
-        buildFilter(outsetShadows, this.filter, false, clearInset)
-      }
+      // if (batchlayering) {
+      //   const outsetBatches = processBatches(outsetShadows, false)
+      //   console.log('outsetBatches', outsetBatches)
+      // } else {
+      buildFilter(outsetShadows, this.filter, false, clearInset)
+      // }
 
       if (clearInset) {
         createSVGElt('feComposite')
@@ -398,6 +443,14 @@ class ProtoFilter {
     //   }
     //   element.parent(parentGroup)
     // }
+  }
+
+  //METH: updateOffsets()
+  updateOffsets(shadVect) {
+    this.offsetElts.forEach(({ elt, mag }) => {
+      elt.attribute(`dx`, shadVect.x * mag)
+      elt.attribute(`dy`, shadVect.y * mag)
+    })
   }
 
   updateFilter(shadows, clearInset = true) {
