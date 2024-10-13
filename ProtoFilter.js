@@ -79,23 +79,13 @@ class ProtoFilter {
   dropShadow(shades, clearInset = true) {
     shades = OpArray.format(shades)
 
-    // const batchlayering = false             // always use false //TODO: remove from code!
-    const normalBlending = true             // always use true (use false for special one offs!)
+    const normalBlending = true            // always use true (use false for special one offs!)
     const insetShadows = shades.filter(shade => shade.inset)
     const outsetShadows = shades.filter(shade => !shade.inset)
-    // const insetLightShads = shades.filter(shad => shad.inset && shad.lighten)
-    // const insetDarkShads = shades.filter(shad => shad.inset && !shad.lighten)
-    // const outsetLightShads = shades.filter(shad => !shad.inset && shad.lighten)
-    // const outsetDarkShads = shades.filter(shad => !shad.inset && !shad.lighten)
-    // let insetShadows = OpArray.from([...insetLightShads, ...insetDarkShads])
-    // let outsetShadows = OpArray.from([...outsetLightShads, ...outsetDarkShads])
-    // insetShadows = OpArray.from([...insetDarkShads, ...insetLightShads])
-    // outsetShadows = OpArray.from([...outsetDarkShads, ...outsetLightShads])
-    // insetShadows = shades.filter(shade => shade.inset)
-    // outsetShadows = shades.filter(shade => !shade.inset)
-    //TODO: need to build light and dark stacks separately within buildFilter()
-    //TODO: then merge the two outside 
-    //TODO: but then this will likely break the filter for creating r-curve shades because of the internal bounce highlight
+    // const insetHighlights = shades.filter(shad => shad.inset && shad.lighten)
+    // const insetShadows = shades.filter(shad => shad.inset && !shad.lighten)
+    // const outsetHighlights = shades.filter(shad => !shad.inset && shad.lighten)
+    // const outsetShadows = shades.filter(shad => !shad.inset && !shad.lighten)
 
     this.shades = outsetShadows
 
@@ -103,26 +93,6 @@ class ProtoFilter {
     this.type = 'dropShadow'
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
-
-
-    // createSVGElt('feMorphology')
-    //   .attribute('in', 'SourceAlpha')
-    //   .attribute(`operator`, `erode`)
-    //   .attribute('radius', 0.1 / FRAME.pixToUserUnits)
-    //   .attribute('result', 'erodedAlpha')
-    //   .parent(this.filter)
-
-    // createSVGElt('feGaussianBlur')
-    //   .attribute('in', 'SourceGraphic')
-    //   .attribute('stdDeviation', 0 / FRAME.pixToUserUnits)
-    //   .attribute('result', 'blurredAlpha')
-    //   .parent(this.filter)
-
-    // createSVGElt("feFlood")
-    //   .attribute("flood-color", "transparent")
-    //   .attribute("flood-opacity", 0)
-    //   .attribute("result", "transparentInput")
-    //   .parent(this.filter)
 
     let previousResult = 'SourceGraphic'
     let insetResult = clearInset ? 'transparentInput' : 'SourceGraphic'
@@ -134,9 +104,11 @@ class ProtoFilter {
       let prevMode = 'normal'
       for (const shade of shades) {
         // const { dx, dy, blur, color, lighten } = shade
-        const { vector, blur, color, lighten } = shade
+        let { invert, blur, color, lighten } = shade
+        const vector = Shade.shadVect()
         let mag = shade.mag
         mag = lighten ? mag * -1 : mag
+        mag = invert ? mag * -1 : mag
         const [dx, dy] = [vector.x * mag, vector.y * mag]
 
         const resultId = `shade-${inset ? "inset" : "outset"}-${random()
@@ -267,67 +239,15 @@ class ProtoFilter {
       }
     }
 
-    //ARROW: processBatches() : 
-    // const processBatches = (shades, inset = true) => {
-    //   const batches = shades.reduce((result, shade) => {
-    //     // console.log('result', result)
-    //     const lastBatch = result[result.length - 1]
-    //     if (lastBatch && lastBatch[0].lighten === shade.lighten) {
-    //       lastBatch.push(shade)
-    //     } else {
-    //       result.push(OpArray.from([shade]))
-    //     }
-    //     return result
-    //   }, new OpArray)
-    //   console.log('batches', batches)
-
-    //   const processed = batches.map(batch => {
-    //     buildFilter(batch, this.filter, inset, clearInset)
-    //     return inset ? insetResult : outsetResult
-    //   })
-    //   console.log('processed', processed)
-    //   // return processed
-
-    //   for (let i = 1; i < processed.length; i++) {
-    //     createSVGElt('feBlend')
-    //       .attribute('mode', 'normal')
-    //       .attribute('in', processed[i - 1])
-    //       .attribute('in2', processed[i])
-    //       .attribute('result', processed[i])
-    //       .parent(this.filter)
-    //   }
-
-    //   // let feMerge = createSVGElt('feMerge')
-    //   //   .attribute('result', inset ? insetResult : outsetResult)
-    //   //   .parent(this.filter)
-
-    //   // processed.forEach(resultID => {
-    //   //   createSVGElt('feMergeNode')
-    //   //     .attribute('in', resultID)
-    //   //     .parent(feMerge)
-    //   // })
-    // }
-
     if (insetShadows.length > 0) {
-      // if (batchlayering) {
-      //   const insetBatches = processBatches(insetShadows, true)
-      //   console.log('insetBatches', insetBatches)
-      // } else {
       buildFilter(insetShadows, this.filter, true, clearInset)
-      // }
     }
     else {
       if (clearInset) { insetResult = 'SourceAlpha' }
     }
 
     if (outsetShadows.length > 0) {
-      // if (batchlayering) {
-      //   const outsetBatches = processBatches(outsetShadows, false)
-      //   console.log('outsetBatches', outsetBatches)
-      // } else {
       buildFilter(outsetShadows, this.filter, false, clearInset)
-      // }
-
       if (clearInset) {
         createSVGElt('feComposite')
           .attribute('operator', 'out')
@@ -343,12 +263,8 @@ class ProtoFilter {
           .attribute('result', 'finalResult')
           .parent(this.filter)
       }
-
-
-
       previousResult = 'finalResult'
     }
-
 
 
     // createSVGElt('feMerge')
@@ -453,9 +369,6 @@ class ProtoFilter {
     })
   }
 
-  updateFilter(shadows, clearInset = true) {
-    this.dropShadow(shadows, clearInset = true)
-  }
 
 
   //MARK: Setup methods
