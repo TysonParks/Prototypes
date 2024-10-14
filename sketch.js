@@ -22,6 +22,7 @@ let bgCol, acCol, hiCol, shCol
 let TestMode, frameSize
 let FTS = {}// Feature Set
 let BG, FRAME, BGRID, GRID // Background, Frame, Background Grid, Grid
+let ROT
 let R, S, RuID // Random, Store, Random UID
 let globalOutset
 
@@ -60,7 +61,6 @@ function draw() {
   }
 }
 
-
 // MARK: SETUP FUNCS
 // FUNC: sizeFrame()
 function sizeFrame() {
@@ -81,7 +81,8 @@ function setupPrefs() {
   S = new Store()
   RuID = new Random()
   TestMode = true
-  frameRate(15)
+  frameRate(12)
+  ROT = 20 * PI
 }
 
 // FUNC: setupFeatures()
@@ -266,9 +267,9 @@ function gridTests2() {
   //                                                                  //NOTE: 1. Calculate GridX
   let gridX = R.random_int(1, 10)
   // gridX = R.random_int(10, 20)
-  // gridX = 6
+  // gridX = 7
   //                                                                  //NOTE: 2. Calculate GridY
-  let gridSize = vert(gridX, round(gridX * 2))
+  let gridSize = vert(gridX, round(gridX * 4))
   // gridSize = vert(3, 7)
   //                                                                  //NOTE: 3. Calculate inset (bezel size)
   let insetMultiplier = 2
@@ -417,12 +418,12 @@ function gridTests2() {
     const grp3Amount = R.random_int(1, 3)
 
 
-    // group3 = GRID.outlineGroup({
-    //   groupID: GRID.lastGroup.id,
-    //   // direction: Direction.All.random(R.random_int(1, 4)), 
-    //   newGroup: true,
-    //   amount: grp3Amount
-    // })
+    group3 = GRID.outlineGroup({
+      groupID: GRID.lastGroup.id,
+      // direction: Direction.All.random(R.random_int(1, 4)), 
+      newGroup: true,
+      amount: grp3Amount
+    })
 
     // console.log('right adj', Direction.Right.adjacents)
     // console.log('right and adj', Direction.Right.andAdjacents)
@@ -530,7 +531,7 @@ function gridTests2() {
 
   //MARK: group1
   group1?.cutIslands({
-    profile: Profile.jIn,
+    profile: Profile.rOut,
     // isOutsetCut: true,
     // layerStart: 12 / 20,
     layerEnd: 19 / 20,
@@ -545,7 +546,7 @@ function gridTests2() {
   group2?.cutIslands({
     profile: Profile.rOut,
     // isOutsetCut: true,
-    layerStart: 9 / 20,
+    // layerStart: 9 / 20,
     layerEnd: 18 / 20,
     amount: 1,
     loftScale: 1,
@@ -553,16 +554,16 @@ function gridTests2() {
     // backing: true,
   })
 
-  group2?.cutIslands({
-    profile: Profile.jIn,
-    // isOutsetCut: true,
-    // layerStart: 0,
-    layerEnd: 9 / 20,
-    amount: 1,
-    loftScale: 1,
-    // direction: Direction.Horizontal
-    // backing: true,
-  })
+  // group2?.cutIslands({
+  //   profile: Profile.jIn,
+  //   // isOutsetCut: true,
+  //   // layerStart: 0,
+  //   layerEnd: 9 / 20,
+  //   amount: 1,
+  //   loftScale: 1,
+  //   // direction: Direction.Horizontal
+  //   // backing: true,
+  // })
 
 
 
@@ -670,7 +671,7 @@ function globalAnimation() {
 
 
 
-  globalControls.shadAngle = (millis() / (1000 * 60)) * 360 % 360
+  globalControls.shadAngle = (millis() / (1000 * ROT)) * 360 % 360
   const shadeVect = createVector(1, 0).rotate(radians(globalControls.shadAngle))
 
   S.Effects.db.forEach((filter) => {
