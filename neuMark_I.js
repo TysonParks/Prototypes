@@ -173,19 +173,19 @@ class Shade {
   //   return { lighten: lighten, dx: x, dy: y, blur: blurRad, color: col, inset: inset }
   // }
   //METH: dropShadeSVG()
-  static dropShadeSVG({ lighten = true, vector, mag, blurRad = 0, col = frameColor, inset = false } = {}) {
-    return { lighten: lighten, vector: vector, mag: mag, blur: blurRad, color: col, inset: inset }
+  static dropShadeSVG({ lighten = true, invert = false, vector, mag, blurRad = 0, col = frameColor, inset = false } = {}) {
+    return { lighten: lighten, invert: invert, vector: vector, mag: mag, blur: blurRad, color: col, inset: inset }
   }
   //METH: neuShadeSVG()
-  static neuShadeSVG(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
-    let angleOffset = 0
+  static neuShadeSVG(vector = this.shadVect(), mag, blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
+    const invert = curve === `r`
     // console.log('components', vector.x, vector.y, blurRad)
     const iCutHighMagMult = curve === `i` ? .75 : 1
     const r2CutHighMagMult = curve === `r2` ? .5 : 1
     const jCutMagMult = curve === `j` ? .75 : 1
-    const highMag = iCutHighMagMult * r2CutHighMagMult * jCutMagMult * highOffsetRatio
+    const highMag = iCutHighMagMult * r2CutHighMagMult * jCutMagMult * highOffsetRatio * mag
     const shadeHighlight = this.dropShadeSVG({
-      angleOffset: angleOffset,
+      invert: invert,
       vector: vector,
       mag: highMag,
       blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
@@ -203,9 +203,9 @@ class Shade {
     const r2CutMagMult = curve === `r2` ? .5 : 1
     const shadeShadow = this.dropShadeSVG({
       lighten: false,
-      angleOffset: angleOffset,
+      invert: invert,
       vector: vector,
-      mag: jCutMagMult * r2CutMagMult,
+      mag: jCutMagMult * r2CutMagMult * mag,
       blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
       col: shadCol,
       inset: inset
@@ -392,7 +392,7 @@ class Shade {
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
             // console.log(`rotOffset`, rotOffset)
 
-            const shades1 = this.neuShadeSVG(shadeVector, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
+            const shades1 = this.neuShadeSVG(shadeVector, mag, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
             shades.push(shades1)
 
             if (i === offsets.length - 1) {
@@ -486,7 +486,7 @@ class Shade {
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
             // console.log(`rotOffset`, rotOffset)
             // const shadeVector = vector.setMag(mag)
-            let shades = this.neuShadeSVG(shadeVector, blurRadius, highCol, shadCol, inset, blur, curve)
+            let shades = this.neuShadeSVG(shadeVector, mag, blurRadius, highCol, shadCol, inset, blur, curve)
             console.log(`${curve} shades`, shades)
             return shades
           })
