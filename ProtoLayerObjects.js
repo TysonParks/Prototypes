@@ -503,32 +503,36 @@ class Frame extends ProtoLayer {
     console.warn(`flushWrap corners`, looseCorners)
     console.warn(`wrappers`, looseCorners.map(s => [s.flushInWrapper, s.adjInWrapper]))
     console.warn(`dists`, looseCorners.map(s => [s.flushIntersectObjs.first?.dist, s.adjIntersectObjs.first?.dist]))
-    console.warn(`intObjs`, looseCorners.map(s => [s.flushIntersectObjs.first, s.adjIntersectObjs.first]))
+    console.warn(`intObjs`, looseCorners.map(s => [s.id, s.flushIntersectObjs.first, s.adjIntersectObjs.first]))
     looseCorners.forEach(s => {
       if (s.flushInWrapper && s.adjInWrapper) {
         if (s.hasCoincidentCorner(s.flushInWrapper)
           || s.flushIntersectObjs[0].dist < s.adjIntersectObjs[0].dist
         ) {
-          console.log(`hasBoth, flushWrapping!`, s.flushInWrapper)
+          console.log(`${s.id} hasBoth, flushWrapping!`, s.flushInWrapper)
           s.flushWrap(true, false)
         } else {
-          console.log(`hasBoth, adjWrapping!`, s.adjInWrapper)
+          console.log(`${s.id} hasBoth, adjWrapping!`, s.adjInWrapper)
           s.adjWrap(true, false)
         }
       } else {
         if (s.flushInWrapper) {
-          console.log(`has flush, flushWrapping!`, s.flushInWrapper)
+          console.log(`${s.id} has flush, flushWrapping!`, s.flushInWrapper)
           s.flushWrap(true, false)
         }
         if (s.adjInWrapper) {
-          console.log(`has adj, adjWrapping!`, s.adjInWrapper)
+          console.log(`${s.id} has adj, adjWrapping!`, s.adjInWrapper)
           s.adjWrap(true, false)
         }
         if (!s.inWrapper) {
-          if (!s.endNeighbor.inwrapper) {
+          console.log(`${s.id} has no inWrapper`)
+          if (!s.endNeighbor.inWrapper) {
+            // console.log(s.endNeighbor.inWrapper)
+            // console.log(`neighbor has no inWrapper, midWrapping`)
             s.setArcToMiddle()
             s.endNeighbor.setArcToMiddle()
           } else {
+            // console.log(`neighbor has no inWrapper, maxWrapping`)
             s.replaceEndCurveOrigin(s.maxArcOrigin)
           }
         }
@@ -578,7 +582,7 @@ class Frame extends ProtoLayer {
 
     // backGrid.maximizeCuddles()
     //NOTE: calculate padWidth
-    const padWidth = (1 + grid.insetAmount.x / grid.cellRadius) / 2
+    const padWidth = (1 + (grid.insetAmount.x / grid.cellRadius || grid.cellRadius)) / 2
 
     //NOTE: cut flat backing island (no cut, just fill actually)
     this.backGroup.cutIslands({
@@ -595,7 +599,7 @@ class Frame extends ProtoLayer {
     //   profile: Profile.jIn,
     //   isFrame: true,
     //   layerStart: 1.75 * padWidth,
-    //   layerEnd: 1.25 * padWidth,
+    //   layerEnd: 1.5 * padWidth,
     //   // outsetLoft: false,
     //   amount: 1,
     //   loftScale: 1 / 1,
