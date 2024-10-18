@@ -78,6 +78,14 @@ class ProtoStorage {
     let index = this.#db.findIndex(e => e[0] === key)
     if (index) { this.#db.splice(index, 1) }
   }
+  find(callback) {
+    for (let item of this.db) {
+      if (callback(item[1])) {
+        return item[1]  // Return the first item that matches the condition
+      }
+    }
+    return undefined // Return undefined if no matching item is found
+  }
   //METH: named() :
   named(id) { return this.item({ key: id }) }
   //METH: random() :
@@ -99,10 +107,45 @@ const Stored = {
   store: 'unassigned',
   id: 'unassigned',
   //METH: storeObject() :
-  storeObject(store) {
+  storeObject(store, checkFirst = false) {
     if (store) {
       this.store = store
+      // if (checkFirst) {
+      //   const match = this.store.db.find(item => {
+      //     // console.log(`checkFirst item.breed`, item.last.breed)
+      //     // console.log(`checkFirst this.breed`, this.breed)
+      //     // console.log(`checkFirst manual check`, item.last.breed === this.breed)
+      //     return this.equals(item.last)
+      //   })
+      //   // console.error(`ProtoCut Match!`, match)
+      //   // console.error(`ProtoCut store!`, this.store.db)
+      //   // console.error(`ProtoCut this!`, this)
+      //   // console.error(`ProtoCut store.first!`, this.store.db.first?.last)
+      //   if (match) {
+      //     // console.error(`ProtoCut Match!`, match)
+      //     // this.isDuplicate = true
+      //     this = match
+      //     // return match
+      //     // this.assignID()
+      //   } else {
+      //     // this.isDuplicate = undefined
+      //     this.assignID()
+      //   }
+      //   // store.db.forEach(item => {
+      //   //   const match = this.equals(item[1])
+      //   //   if (match) {
+      //   //     // this = match
+      //   //     this.isDuplicate = true
+      //   //     return
+      //   //   } else {
+      //   //     this.assignID()
+      //   //   }
+      //   // })
+      // } else {
+      //   // this.isDuplicate = false
       this.assignID()
+      // }
+
     }
   },
   //METH: assignID() :
