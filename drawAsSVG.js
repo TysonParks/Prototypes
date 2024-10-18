@@ -9,6 +9,7 @@ class SVGPath {
   //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
     // console.warn(`segPath`, segPath)                                           //LOGGING:
+    // cornerScale = R.random_num(-1, 2)
     segPath = segPath.copy
     let curves = []
     let start, end, cornerStart, cornerEnd
@@ -1813,21 +1814,32 @@ class ProtoSegment extends Segment {
 
   #setRadiantOrigin(vert, replace = false, start = false, out = true) {
     if (vert) { this.#setCurveOrigin(vert, replace, start) }
-    const wrappers = out ? this.radiantOutWrappers : this.radiantInWrappers
-    wrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, replace, start))
+    const radWrappers = out ? this.radiantOutWrappers : this.radiantInWrappers
+    const allWrappers = out ? this.outWrappers : this.inWrappers
+    radWrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, replace, start))
+    if (allWrappers?.length > radWrappers?.length) {
+      const last = radWrappers.last
+      if (last.flushOutWrapper) {
+        last.flushWrap(true)
+      } else {
+        last.adjWrap(true)
+      }
+      last.outWrapper.replaceEndRadiantOutWrapsOrigin()
+    }
   }
 
   #setCurveOrigin(toVert, replace = false, start = false) {
     const seg = start ? this.startNeighbor : this             // seg/corner to reference
     let report = false                                                                                  //LOGGING:
-    if (this.id.includes('cell222')                                                                     //LOGGING:
-      || this.id.includes('cell185')                                                                       //LOGGING:
+    if (this.id.includes('cel082')                                                                     //LOGGING:
+      // || this.id.includes('cell185')                                                                       //LOGGING:
       // || s.id.includes('cell001')                                                                       //LOGGING:
     ) { report = true }                                                                                 //LOGGING:
     if (report) {                                                                                       //LOGGING:
       console.error(`setCurveOrigin this`, this.id)                                                     //LOGGING:
       console.log(`setCurveOrigin seg`, seg)                                                          //LOGGING:
-      console.log(`currentRadius`, seg.arcRadius)                                                       //LOGGING:
+      console.log(`currentRadius`, seg.arcRadius)
+      console.log(`currentOrigin`, seg.arcOrigin)                                                       //LOGGING:
       console.log(`seg.viableArcOrigins`, seg.viableArcOrigins)                                         //LOGGING:
       console.log(`toVert`, toVert)                                                                     //LOGGING:
     }
@@ -1925,7 +1937,7 @@ class ProtoSegment extends Segment {
         `arcOriginToEnd`,
         `arcOriginToArcCenter`,
         `arcRadius`,
-        `finalAdjWrapperObjs`,
+        `adjWrapperObjsFinal`,
         `flatAmount`,
         `hasNoFlatness`,
         `hasCompleteStartCorner`,
@@ -2564,16 +2576,16 @@ class ProtoSegment extends Segment {
       .sort((a, b) => a.dist - b.dist)
   }
 
-  get finalFlushWrapperObjs() {
+  get flushWrapperObjsFinal() {
     const intersectWraps = this.flushIntersectObjs
     return intersectWraps
       .filter(obj => obj.dist === intersectWraps[0].dist)
       .sort((a, b) => b.isStart - a.isStart)
   }
 
-  get finalFlushWrappers() { return this.finalFlushWrapperObjs.map(obj => obj.seg) }
+  get flushWrappersFinal() { return this.flushWrapperObjsFinal.map(obj => obj.seg) }
 
-  get flushWrapper() { return this.finalFlushWrappers[0] }
+  get flushWrapper() { return this.flushWrappersFinal[0] }
 
   //MEMO: coincidentWrapper
   get coincidentWrapper() {
@@ -2665,8 +2677,10 @@ class ProtoSegment extends Segment {
     // console.log(`intersectObj side`, side)
     // console.log(`intersectObj inWrapper.arcOrigin`, inWrapper.arcOrigin)
     // const origin = inWrapper.hasArc ? inWrapper.arcOrigin : inWrapper.minArcOrigin
-    const intersect = side.perpendicularIntersectionWith(inWrapper.arcOrigin)
-      || side.perpendicularIntersectionWith(inWrapper.minArcOrigin)             // calc intersection
+    const intersect =
+      side.perpendicularIntersectionWith(inWrapper.arcOrigin)
+      ||
+      side.perpendicularIntersectionWith(inWrapper.minArcOrigin)             // calc intersection
 
     // const intersect = isStart ?
     //   inWrapper.arcStartToShapeBoundsEdgeSeg.intersectionWith(outWrapper.endNeighbor, true)
@@ -2709,40 +2723,75 @@ class ProtoSegment extends Segment {
       .map(s => this.minAdjWrapperDistanceObj(s)).flat()
       .sort((a, b) => a.dist - b.dist)
       .sort((a, b) => a.tangDist - b.tangDist)
-      .sort((a, b) => a.seg.couldHaveInWrapper(b.seg) - b.seg.couldHaveInWrapper(a.seg))
+    // .sort((a, b) => a.seg.couldHaveInWrapper(b.seg) - b.seg.couldHaveInWrapper(a.seg))
+    // .sort((a, b) => b.seg.couldHaveInWrapper(a.seg) - a.seg.couldHaveInWrapper(b.seg))
     // console.log(`adjWraps`, adjWraps)
     return adjWraps
     // }, `adjDistanceObjs`).call(this)
   }
 
   get adjIntersectObjs() {
+    //ARROW: inOutSorted()
+    const inOutSorted = (objs) => {
+      if (objs.length > 1) {                            // there are two or more wrappers that are coincident pair
+        // console.log(`objs pre`, objs)
+        if (objs.length > 2) {                          // wrappers are diagonal so start/end for each seg
+          let newObjs = new OpArray
+          objs.forEach(obj => {                         // filter out repeat seg objs
+            if (newObjs.isEmpty || !newObjs.some(newObj => newObj?.seg.id === obj.seg.id)) { newObjs.push(obj) }
+          })
+          objs = newObjs
+        }
+        // console.log(`objs post`, objs)
+        if (this.couldHaveInWrapper(objs[0].seg)) {     // objs are inWrappers
+          // return objs.sort((a, b) => a.seg.couldHaveInWrapper(b.seg) - b.seg.couldHaveInWrapper(a.seg))
+          return objs.sort((a, b) => b.seg.couldHaveInWrapper(a.seg) - a.seg.couldHaveInWrapper(b.seg))
+        } else {                                        // objs are outWrappers
+          return objs.sort((a, b) => a.seg.couldHaveInWrapper(b.seg) - b.seg.couldHaveInWrapper(a.seg))
+          // return objs.sort((a, b) => b.seg.couldHaveInWrapper(a.seg) - a.seg.couldHaveInWrapper(b.seg))
+        }
+      } else {                                          // only single wrapper
+        return objs
+      }
+    }
+
     const adjWraps = this.adjDistanceObjs
-    return adjWraps
-      .filter(obj =>
-        obj.tangDist === adjWraps[0].tangDist
-        && obj.dist === adjWraps[0].dist
-        // && (equalsRoundedDec(obj.seg.maxArcRadius, obj.dist, 1) || obj.seg.maxArcRadius > obj.dist)
-      )
+    const wrapsAreCoincident = adjWraps[1]?.seg.hasCoincidentCorner(adjWraps[0].seg)
+    let finalWraps
+    if (wrapsAreCoincident) {
+      finalWraps = adjWraps
+    } else {
+      finalWraps = adjWraps
+        .filter(obj =>
+          obj.tangDist === adjWraps[0].tangDist
+          && obj.dist === adjWraps[0].dist
+        )
+    }
+    finalWraps = inOutSorted(finalWraps)
       .map(obj => this.intersectObj(obj.seg, obj.isStart))
-      .sort((a, b) => a.dist - b.dist)
+    if (!wrapsAreCoincident) {
+      finalWraps = finalWraps.sort((a, b) => a.dist - b.dist)
+    }
+
+    return finalWraps
   }
 
-  get finalAdjWrapperObjs() {
+  get adjWrapperObjsFinal() {
     // return memoize(() => {
     const intersectWraps = this.adjIntersectObjs
     return intersectWraps
       .filter(obj => obj.dist === intersectWraps[0].dist)
-      .sort((a, b) => b.isStart - a.isStart)
-    // }, `finalAdjWrapperObjs`).call(this)
+    // .sort((a, b) => b.isStart - a.isStart)
+    // }, `adjWrapperObjsFinal`).call(this)
   }
-  get finalAdjWrappers() { return this.finalAdjWrapperObjs.map(obj => obj.seg) }
+  get adjWrappersFinal() { return this.adjWrapperObjsFinal.map(obj => obj.seg) }
   // get intendedArcRadius() {                                                                            //UNUSED:
-  //   if (this.isOutsideCorner && this.adjInWrapper) { return this.adjInWrapper.finalAdjWrapperObjs.map(obj => obj.dist)[0] }
+  //   if (this.isOutsideCorner && this.adjInWrapper) { return this.adjInWrapper.adjWrapperObjsFinal.map(obj => obj.dist)[0] }
   // }
   //MEMO: adjacentWrapper
   get adjacentWrapper() {
     // return memoize(() => {
-    return this.finalAdjWrappers[0]
+    return this.adjWrappersFinal[0]
     // }, `adjacentWrapper`).call(this)
   }
 
@@ -2763,8 +2812,8 @@ class ProtoSegment extends Segment {
     let wrapper = flush ? this.flushWrapper : this.adjacentWrapper
     const wrapType = flush ? `flushWrap()` : `adjWrap()`                                        //LOGGING:
     let report = false                                                                            //LOGGING:
-    if (this.id.includes('cel1356')                                                               //LOGGING:
-      // || this.id.includes('cell022')                                                              //LOGGING:
+    if (this.id.includes('cel210')                                                               //LOGGING:
+      || this.id.includes('cel027')                                                              //LOGGING:
     ) {                                                                                           //LOGGING:
       report = true                                                                               //LOGGING:
       console.error(`${wrapType} called on:`, this)                                               //LOGGING:
@@ -2777,6 +2826,7 @@ class ProtoSegment extends Segment {
       if (report) { console.log(`wrapper:`, wrapper.id) }                                         //LOGGING:
       const [inWrapper, outWrapper] = flush ? this.inOutFlushWrappers : this.inOutAdjWrappers
       const viables = flush ? this.viableCoinWrapOrigins : this.viableAdjWrapOrigins
+      if (report) { console.log(`viables:`, viables) }                                         //LOGGING:
 
       if (this.hasArc) {                                                         // this has arc
         if (report) { console.log(`this hasArc`) }                                                //LOGGING:
@@ -2848,10 +2898,12 @@ class ProtoSegment extends Segment {
               console.log(`intersectObject`, obj)                                                 //LOGGING:
             }
             if (obj) {
-              if (obj.dist < target.maxArcRadius) {
+              if (obj.dist <= target.maxArcRadius) {
+                console.log(`addDistancedEndCornerVerts`)
                 target.addDistancedEndCornerVerts(obj.dist, true)
                 // target.replaceEndCurveOrigin(target.currentMaxArcOrigin)
               } else {
+                console.log(`replaceEndCurveOrigin`)
                 target.replaceEndCurveOrigin(target.currentMaxArcOrigin)
               }
               // if (this.isAdjOutWrapper) {
@@ -2888,15 +2940,37 @@ class ProtoSegment extends Segment {
 
       } else {                                                                   // has NO arc
         if (report) { console.log(`this DOES NOT hasArc`) }                                       //LOGGING:
+        if (viables) {
+          this.replaceEndCurveOrigin(viables.last)                                 // replace with largest viable
+          wrapper.replaceEndCurveOrigin(viables.last)                              // replace with largest viable
+        }
 
-        this.replaceEndCurveOrigin(viables.last)                                 // replace with largest viable
-        wrapper.replaceEndCurveOrigin(viables.last)                              // replace with largest viable
       }
     }
   }
 
-  get outWrapper() { return this.flushOutWrapper || this.adjOutWrapper }
-  get inWrapper() { return this.flushInWrapper || this.adjInWrapper }
+  get outWrapper() {
+    // const wraps = [this.flushOutWrapper, this.adjOutWrapper]
+    // if (wraps.every(s => !!s)) {
+
+    // } else {
+    //   if (wraps[0]) { return wraps[0] }
+    //   if (wraps[1]) { return wraps[1] }
+    // }
+
+    return this.flushOutWrapper || this.adjOutWrapper
+  }
+  get inWrapper() {
+    // const wraps = [this.flushInWrapper, this.adjInWrapper]
+    // if (wraps.every(s => !!s)) {
+
+    // } else {
+    //   if (wraps[0]) { return wraps[0] }
+    //   if (wraps[1]) { return wraps[1] }
+    // }
+
+    return this.flushInWrapper || this.adjInWrapper
+  }
   //MEMO: outWrappers
   get outWrappers() {
     // console.log(`outWrappers.this`, this)                                                                     //LOGGING:
@@ -2918,19 +2992,34 @@ class ProtoSegment extends Segment {
       //   // .filter(s => boundsIsWithinTestBounds(this.innerMostRadiantWrapper.minArcBoundsSeg, s.maxArcBoundsSeg))
       // }
       // console.log(`radiantOutWrappers for`, this)
+      //ARROW: filterRadiants()
+      const filterRadiants = (outWrappers) => {
+        let radiants = new OpArray
+        while (outWrappers.length > 0) {
+          const wrapper = outWrappers.shift()
+          if (wrapper.inWrapper.canRadiateTo(wrapper) && this.hasDiagonalCorner(wrapper)) {
+            radiants.push(wrapper)
+          } else {
+            outWrappers = []
+          }
+        }
+        return radiants
+      }
+
       if (this.outWrappers) {
         let wrappers
         if (this.isInnerMostWrapper && this.outWrapperIsRadiant) {
-          wrappers = this.outWrappers
-            .filter(s => this.canRadiateTo(s))
+          wrappers = filterRadiants(this.outWrappers)
+          // .filter(s => this.canRadiateTo(s))
+          // console.log(`wrappers`, wrappers)
         } else {                                  //this is NOT innerMostWrapper
           if (this.inWrapper?.outWrapperIsRadiant) {
             // console.error(`hitting this`)
             wrappers = this.innerMostRadiantWrapper.radiantOutWrappers?.intersect(this.outWrappers, `id`)
           } else if (this.outWrapperIsRadiant) {
             // console.warn(`hitting that`)
-            wrappers = this.outWrappers
-              .filter(s => this.canRadiateTo(s))
+            wrappers = filterRadiants(this.outWrappers)
+            // .filter(s => this.canRadiateTo(s))
           }
         }
         if (!wrappers || !wrappers.isEmpty) { return wrappers }
@@ -3290,13 +3379,52 @@ class ProtoSegment extends Segment {
     const inOuts = flush ? this.inOutFlushWrappers : this.inOutAdjWrappers
     const hasCompleteWrap = flush ? this.hasCompleteFlushWrap : this.hasCompleteAdjWrap
     if (hasCompleteWrap) {
-      const outCorner = inOuts[1].end                                       // cornerpoint of outer wrap
-      const [inDist, outDist] = inOuts.map(w => roundToDec(w.arcOrigin.dist(outCorner), 2))
+      const [inner, outer] = inOuts
+      if (inner.hasDiagonalCorner(outer)) {                           // wrappers are radiant
+        const outCorner = outer.end                                       // cornerpoint of outer wrap
+        const [inDist, outDist] = inOuts.map(w => roundToDec(w.arcOrigin.dist(outCorner), 2))
 
-      if (inDist === outDist) { return 0 }                                  // EQUIDISTANT: dists to corner are equal
-      if (inDist > outDist) { return 1 }                                    // DIVERGING: inDist > outDist
-      if (inDist < outDist) { return 2 }                                    // CONVERGING: inDist < outDist
+        if (inDist === outDist) { return 0 }                                  // EQUIDISTANT: dists to corner are equal
+        if (inDist > outDist) { return 1 }                                    // DIVERGING: inDist > outDist
+        if (inDist < outDist) { return 2 }                                    // CONVERGING: inDist < outDist
+
+      } else {                                                                // wrappers are proximal
+        const obj = flush ? inner.flushIntersectObjs[0] : inner.adjIntersectObjs[0]
+        if (roundToDec(obj?.dist) >= roundToDec(outer.arcRadius)) {
+          return 0
+        } else {
+          return 2
+        }
+
+        // const distObj = outer.minAdjWrapperDistanceObj(inner)
+        // // const [startObj, endObj] = [true, false].map(isStart => outer.intersectObj(inner, isStart))
+
+        // const startIsLess = startObj.dist < endObj.dist
+        // const [startOverlap,endOverlap] = [
+        //   inner.arcOriginToStart.isCollinearWith(outer.arcOriginToEnd),
+        //   inner.arcOriginToEnd.isCollinearWith(outer.arcOriginToStart)
+        // ]
+
+        // if(startIsLess===)
+
+        // if (inner.arcOriginToStart.vertIsOnLine(outer.arcEndCorner)
+        //   || inner.arcOriginToEnd.vertIsOnLine(outer.arcStartCorner)
+        // ) {
+        //   // return 0
+        // }
+
+
+
+
+
+        // const
+        // if(startObj.dist <)
+
+      }
+
     }
+
+
 
 
     // if (flush) {
