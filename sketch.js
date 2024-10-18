@@ -81,8 +81,8 @@ function setupPrefs() {
   S = new Store()
   RuID = new Random()
   TestMode = true
-  frameRate(12)
-  ROT = 20 * PI
+  frameRate(24)
+  ROT = 10 * PI
 }
 
 // FUNC: setupFeatures()
@@ -145,6 +145,8 @@ class ProtoMill {
       gridSize: vert(FTS.x, FTS.y),
       insetScale: gridInsetScale,
     })
+    FRAME.setGrid(GRID)
+
     this.minCellSize = min(this.grid.cellSize.x, this.grid.cellSize.y)
     console.log('Grid Cells', FTS.x, FTS.y)
   }
@@ -267,9 +269,9 @@ function gridTests2() {
   //                                                                  //NOTE: 1. Calculate GridX
   let gridX = R.random_int(1, 10)
   // gridX = R.random_int(10, 20)
-  // gridX = 7
+  // gridX = 10
   //                                                                  //NOTE: 2. Calculate GridY
-  let gridSize = vert(gridX, round(gridX * 4))
+  let gridSize = vert(gridX, round(gridX * 2))
   // gridSize = vert(3, 7)
   //                                                                  //NOTE: 3. Calculate inset (bezel size)
   let insetMultiplier = 2
@@ -327,7 +329,7 @@ function gridTests2() {
 
     // group0 = GRID.randomComb({
     //   selection: (GRID.cellRows
-    //     // .rotated2D(90)
+    //     .rotated2D(90)
     //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
     //     .flat()),
     //   keepRange: range(1, round(gridX / .5)),
@@ -343,27 +345,27 @@ function gridTests2() {
     //   keep: R.random_int(1, 3), drop: R.random_int(12, 16), start: 0
     // })
 
-    // group0 = GRID.comb2({
-    //   selection: (GRID.cellRows
-    //     .rotated2D(R.random_int(0, 3) * 90)
-    //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
-    //     .flat()),
-    //   dashArray: OpArray.randomIntArray(R.random_int(3, 6), range(4, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
-    // })
+    group0 = GRID.comb2({
+      selection: (GRID.cellRows
+        .rotated2D(R.random_int(0, 3) * 90)
+        .flipped2D(Direction.Cardinal.random(1).andOpposites)
+        .flat()),
+      dashArray: OpArray.randomIntArray(R.random_int(3, 12), range(1, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
+    })
 
-    if (gridX < 4) {
-      // group0 = GRID.groupFromIndices([1, 2])
-      // group0 = GRID.groupFromIndices([1])
-      // group1 = GRID.groupFromIndices([1])
-      group0 = GRID.groupFromIndices(
-        OpArray.randomIntArray(
-          ceil((GRID.cellCount - 1) * initialCoverage),
-          range(0, GRID.cellCount - 1)
-        ).unique()
-      )
-    } else {
-      group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
-    }
+    // if (gridX < 4) {
+    //   // group0 = GRID.groupFromIndices([1, 2])
+    //   // group0 = GRID.groupFromIndices([1])
+    //   // group1 = GRID.groupFromIndices([1])
+    //   group0 = GRID.groupFromIndices(
+    //     OpArray.randomIntArray(
+    //       ceil((GRID.cellCount - 1) * initialCoverage),
+    //       range(0, GRID.cellCount - 1)
+    //     ).unique()
+    //   )
+    // } else {
+    //   group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
+    // }
 
 
     // group1 = GRID.squares({ coverage: 0.3, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
@@ -510,44 +512,46 @@ function gridTests2() {
   group0?.cutIslands({
     profile: Profile.jIn,
     isOutsetCut: true,
-    layerStart: 18 / 20,
-    layerEnd: 9 / 20,
+    layerStart: 19 / 20,
+    // layerEnd: 0 / 20,
     amount: 1,
-    loftScale: 1,
+    loftScale: 1 / 1,
     // direction: Direction.All
     // backing: true,
 
   })
-  group0?.cutIslands({
-    profile: Profile.rOut,
-    // isOutsetCut: true,
-    layerStart: 9 / 20,
-    // layerEnd: 19 / 20,
-    // dilationEnd: 1,
-    amount: 1,
-    loftScale: 8 / 8,
-    // direction: Direction.Horizontal,
-  })
+  // group0?.cutIslands({
+  //   profile: Profile.jIn,
+  //   isOutsetCut: true,
+  //   layerStart: 10 / 20,
+  //   // layerEnd: 0 / 20,
+  //   // dilationEnd: 1,
+  //   amount: 1,
+  //   loftScale: 8 / 8,
+  //   // backing: true,
+  //   // direction: Direction.Horizontal,
+  // })
 
   //MARK: group1
   group1?.cutIslands({
-    profile: Profile.rOut,
+    profile: Profile.jIn,
     // isOutsetCut: true,
-    // layerStart: 12 / 20,
-    layerEnd: 19 / 20,
+    layerStart: 19 / 20,
+    // layerEnd: 0 / 20,
     // dilationEnd: 1,
     amount: 1,
     loftScale: 8 / 8,
     // direction: Direction.Horizontal,
+    // backing: true,
   })
 
 
   //MARK: group2
   group2?.cutIslands({
-    profile: Profile.rOut,
+    profile: Profile.jIn,
     // isOutsetCut: true,
-    // layerStart: 9 / 20,
-    layerEnd: 18 / 20,
+    layerStart: 19 / 20,
+    // layerEnd: 10 / 20,
     amount: 1,
     loftScale: 1,
     // direction: Direction.Horizontal
@@ -555,10 +559,21 @@ function gridTests2() {
   })
 
   // group2?.cutIslands({
+  //   profile: Profile.jOut,
+  //   // isOutsetCut: true,
+  //   layerStart: 5 / 20,
+  //   // layerEnd: 0 / 20,
+  //   amount: 1,
+  //   loftScale: 1,
+  //   // direction: Direction.Horizontal
+  //   // backing: true,
+  // })
+
+  // group2?.cutIslands({
   //   profile: Profile.jIn,
   //   // isOutsetCut: true,
-  //   // layerStart: 0,
-  //   layerEnd: 9 / 20,
+  //   layerStart: 2 / 20,
+  //   // layerEnd: 10 / 20,
   //   amount: 1,
   //   loftScale: 1,
   //   // direction: Direction.Horizontal
@@ -573,7 +588,7 @@ function gridTests2() {
     profile: Profile.jIn,
     // isOutsetCut: true,
     layerStart: 19 / 20,
-    // layerEnd: .0,
+    // layerEnd: 0 / 20,
     amount: 1,
     loftScale: 1,
     // direction: Direction.All
@@ -586,7 +601,7 @@ function gridTests2() {
     profile: Profile.jIn,
     // isOutsetCut: true,
     layerStart: 19 / 20,
-    // layerEnd: .0,
+    // layerEnd: 0 / 20,
     amount: 1,
     loftScale: 1 / 1,
     // direction: Direction.All
@@ -597,7 +612,7 @@ function gridTests2() {
   console.log(``)
   //                                                                        //NOTE: 14. set backGridGroup
   console.groupCollapsed(`setBackGridGroup`)
-  FRAME.setBackGridGroup()
+  FRAME.setBackGridGroup(R.random_int(0, 1), R.random_bool())
   console.groupEnd()
   console.log(``)
 
@@ -608,8 +623,8 @@ function gridTests2() {
   // GRID.showShapesDebug()
 
   // console.log(`multi-island simpleSubshapes`, GRID.allSimpleSubShapes.flat().map(s => s.parentID))
-  let interCells01 = GRID.perimeterIslands[3]?.interCells
-  console.log(`interCells01`, interCells01?.map(c => c.id))
+  // let interCells01 = GRID.perimeterIslands[3]?.interCells
+  // console.log(`interCells01`, interCells01?.map(c => c.id))
   // console.log(`GRID.islands`, GRID.islands)
   // console.log(`are squares?`, GRID.islands.map(i => i.isSquare))
   // console.log(`are roundedSquares?`, GRID.islands.map(i => i.shape.isRoundedSquare))

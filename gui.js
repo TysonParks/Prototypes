@@ -1,8 +1,8 @@
 let gui
 
 let testingControls = {
-  hashNumber: 634,
-  lastHash: false,
+  hashNumber: 653,
+  lastHash: true,
   labels: true,
   borders: false,
   testColors: false,
@@ -12,7 +12,7 @@ let testingControls = {
 
 let globalControls = {
   baseColor: '#EEEEEE',
-  shadAngle: 0,
+  shadAngle: 90,
   shadMag: 64,
   shadQuality: 0.25,
   start: 0.5,
