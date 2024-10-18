@@ -34,6 +34,10 @@ class SVG {
   static feComposite = `feComposite`
 }
 
+// class FE {
+//   static
+// }
+
 // make .attr() prototype extension that gets and sets attributes similar to p5's .style() 
 // make neuShadow equivalents for inset shadows in SVG
 // make stage for comparing shadows and see if svg shadows are deal-breaker for neumorphism
@@ -63,9 +67,9 @@ function addElement(elt, pInst, media) {
 function createFilter() { return new ProtoFilter() }
 class ProtoFilter {
   id
+  type
   filter
   defs
-  type
   offsetElts = new OpArray
 
   constructor() {
@@ -75,11 +79,11 @@ class ProtoFilter {
     // console.log('filter init', this)
   }
 
-  //MARK: Drop Shadow method
-  dropShadow(shades, clearInset = true) {
+  //METH: shade()
+  shade(shades, type, clearInset = true, normalBlending = true) {
     shades = OpArray.format(shades)
 
-    const normalBlending = true            // always use true (use false for special one offs!)
+    // const normalBlending = false            // always use true (use false for special one offs!)
     const insetShadows = shades.filter(shade => shade.inset)
     const outsetShadows = shades.filter(shade => !shade.inset)
     // const insetHighlights = shades.filter(shad => shad.inset && shad.lighten)
@@ -90,7 +94,7 @@ class ProtoFilter {
     this.shades = outsetShadows
 
     // this.clearInset = clearInset
-    this.type = 'dropShadow'
+    this.type = type
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
 
@@ -180,7 +184,7 @@ class ProtoFilter {
 
         //3 feFlood: flood the offset result with the input color
         createSVGElt('feFlood')
-          .attribute(`in`, 'offset-blurred')
+          // .attribute(`in`, 'offset-blurred')
           .attribute('flood-color', color)
           .attribute('flood-opacity', 1)
           .attribute('result', 'colored')
