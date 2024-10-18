@@ -107,45 +107,10 @@ const Stored = {
   store: 'unassigned',
   id: 'unassigned',
   //METH: storeObject() :
-  storeObject(store, checkFirst = false) {
+  storeObject(store) {
     if (store) {
       this.store = store
-      // if (checkFirst) {
-      //   const match = this.store.db.find(item => {
-      //     // console.log(`checkFirst item.breed`, item.last.breed)
-      //     // console.log(`checkFirst this.breed`, this.breed)
-      //     // console.log(`checkFirst manual check`, item.last.breed === this.breed)
-      //     return this.equals(item.last)
-      //   })
-      //   // console.error(`ProtoCut Match!`, match)
-      //   // console.error(`ProtoCut store!`, this.store.db)
-      //   // console.error(`ProtoCut this!`, this)
-      //   // console.error(`ProtoCut store.first!`, this.store.db.first?.last)
-      //   if (match) {
-      //     // console.error(`ProtoCut Match!`, match)
-      //     // this.isDuplicate = true
-      //     this = match
-      //     // return match
-      //     // this.assignID()
-      //   } else {
-      //     // this.isDuplicate = undefined
-      //     this.assignID()
-      //   }
-      //   // store.db.forEach(item => {
-      //   //   const match = this.equals(item[1])
-      //   //   if (match) {
-      //   //     // this = match
-      //   //     this.isDuplicate = true
-      //   //     return
-      //   //   } else {
-      //   //     this.assignID()
-      //   //   }
-      //   // })
-      // } else {
-      //   // this.isDuplicate = false
       this.assignID()
-      // }
-
     }
   },
   //METH: assignID() :
