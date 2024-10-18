@@ -66,10 +66,18 @@ class Profile {
     if (isSingleDepth) { return 0 }
     else { return 1 }
   }
+  //METH: equals()
+  equals(profile) {
+    return this.type === profile.type
+      && this.cutIn === profile.cutIn
+      && this.halfCurve === profile.halfCurve
+      && this.frameEdge === profile.frameEdge
+  }
 }
 
 //MARK: PROTOCUT CLASS
 class ProtoCut {
+  id
   breed
   profile           // Profile: cut profile: [i,j,r,f,v] combined with [in, out]
   depth             // (end) depth
@@ -88,8 +96,11 @@ class ProtoCut {
     this.start = start
     this.angleOffset = angleOffset
     this.breed = this.description
+    const match = S.Cuts.find(item => item.breed === this.breed)  // use equivalent cut if already exists
+    if (match) { return match }
+    this.storeObject(S.Cuts, true)
     this.#createFilters()
-    this.storeObject(S.Cuts)
+    // this.storeObject(S.Cuts)
   }
 
   //MARK: Computed
@@ -118,38 +129,63 @@ class ProtoCut {
   //METH: createSingleShader()
   #createFilters() {
     if (abs(this.depth) < 0.25 / FRAME.pixToUserUnits) { return }     // don't create filters for 1/4 pixel depth or less
+    const inset = this.profile.hasInsetShade
     if (this.profile.isSingleDepth) {
-      this.#createShader()
-      // if (this.profile.isJ) {
-      //   this.#createShader(`r`, this.depth)
-      // } else {
-      //   this.#createShader()
-      // }
+      if (this.profile.isI) {
+        this.#createShader(`high`)
+        this.#createShader(`shad`)
+      } else {
+        this.#createShader(`combo`)
+      }
     }
 
     if (this.profile.isR) {
-      this.#createShader(`r`, this.depth)
-      this.#createShader(`r2`, -this.depth)
+      if (inset) {
+        this.#createShader(`combo`, `r`, this.depth)
+        this.#createShader(`high`, `r2`, -this.depth)
+        this.#createShader(`shad`, `r2`, -this.depth)
+      } else {
+        this.#createShader(`combo`, `r`, this.depth)
+        this.#createShader(`combo`, `r2`, -this.depth)
+      }
     }
+
+
     if (this.profile.isF) {
-      this.#createShader(`j`, this.depth)
-      this.#createShader(`r`, this.depth2)
+      console.error(`ProtoCut "f" profile not yet implemented`)
+      //   if (inset) { 
+
+      //   }else{
+
+      //   }
+      //   this.#createShader(`j`, this.depth)
+      //   this.#createShader(`r`, this.depth2)
     }
     //TODO: implement v shader
     if (this.profile.isV) { console.error(`ProtoCut "v" profile not yet implemented`) }
   }
   //METH: createShader()
-  #createShader(curve = this.profile.type, mag = this.depth) {
+  #createShader(shadeType, curve = this.profile.type, mag = this.depth) {
     const cutIn = this.profile.cutIn ? 1 : -1
     const r = curve === `r` ? -1 : 1
     const r2 = curve === `r2` ? 1 : -1
     const angle = curve === `r` ? this.angleOffset + 180 : this.angleOffset
     mag = mag * cutIn * r * r2
     console.warn({ curve: curve, cut: this.profile.cutIn ? `in` : `out`, mag: mag, rotOffset: angle })
-    const stack = Shade.neuShadeSVGFactory({ curve: curve, cutIn: this.profile.cutIn, mag: mag, rotOffset: angle })
-    const filter = createFilter().dropShadow(stack)
+    const stack = Shade.neuShadeSVGFactory({
+      shadeType: shadeType,
+      curve: curve,
+      cutIn: this.profile.cutIn,
+      mag: mag,
+      rotOffset: angle
+    })
+    console.error(`stack`, stack)
+
+    const filter = createFilter().shade(stack, shadeType)
     this.filters.push(filter)
   }
+  //METH: equals()
+  equals(cut) { return this.breed === cut.breed }
 
   //TODO: implement createPerimeter()
   //METH: createPerimeter()
@@ -177,49 +213,57 @@ class Shade {
     return { lighten: lighten, invert: invert, vector: vector, mag: mag, blur: blurRad, color: col, inset: inset }
   }
   //METH: neuShadeSVG()
-  static neuShadeSVG(vector = this.shadVect(), mag, blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
+  static neuShadeSVG(shadeType, vector = this.shadVect(), mag, blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
     const invert = curve === `r`
     // console.log('components', vector.x, vector.y, blurRad)
     const iCutHighMagMult = curve === `i` ? .75 : 1
     const r2CutHighMagMult = curve === `r2` ? .5 : 1
     const jCutMagMult = curve === `j` ? .75 : 1
     const highMag = iCutHighMagMult * r2CutHighMagMult * jCutMagMult * highOffsetRatio * mag
-    const shadeHighlight = this.dropShadeSVG({
-      invert: invert,
-      vector: vector,
-      mag: highMag,
-      blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
-      col: highCol,
-      inset: inset
-    })
-    // const highlight = this.dropShadSVG({
-    //   x: highMag * vector.x,
-    //   y: highMag * vector.y,
-    //   blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
-    //   col: highCol,
-    //   inset: inset
-    // })
 
-    const r2CutMagMult = curve === `r2` ? .5 : 1
-    const shadeShadow = this.dropShadeSVG({
-      lighten: false,
-      invert: invert,
-      vector: vector,
-      mag: jCutMagMult * r2CutMagMult * mag,
-      blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
-      col: shadCol,
-      inset: inset
-    })
-    // const shadow = this.dropShadSVG({
-    //   lighten: false,
-    //   x: jCutMagMult * r2CutMagMult * vector.x,
-    //   y: jCutMagMult * r2CutMagMult * vector.y,
-    //   blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
-    //   col: shadCol,
-    //   inset: inset
-    // })
+    let shadeHighlight
+    if (shadeType !== `shad`) {
+      shadeHighlight = this.dropShadeSVG({
+        invert: invert,
+        vector: vector,
+        mag: highMag,
+        blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
+        col: highCol,
+        inset: inset
+      })
+      // const highlight = this.dropShadSVG({
+      //   x: highMag * vector.x,
+      //   y: highMag * vector.y,
+      //   blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
+      //   col: highCol,
+      //   inset: inset
+      // })
+    }
 
-    return [shadeShadow, shadeHighlight]
+    let shadeShadow
+    if (shadeType !== `high`) {
+      const r2CutMagMult = curve === `r2` ? .5 : 1
+      const shadowCol = shadeType === `shad` ? 'black' : shadCol
+      shadeShadow = this.dropShadeSVG({
+        lighten: false,
+        invert: invert,
+        vector: vector,
+        mag: jCutMagMult * r2CutMagMult * mag,
+        blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
+        col: shadowCol,
+        inset: inset
+      })
+      // const shadow = this.dropShadSVG({
+      //   lighten: false,
+      //   x: jCutMagMult * r2CutMagMult * vector.x,
+      //   y: jCutMagMult * r2CutMagMult * vector.y,
+      //   blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
+      //   col: shadCol,
+      //   inset: inset
+      // })
+    }
+
+    return OpArray.format([shadeShadow, shadeHighlight]).compacted
     // return [shadow, highlight]
     // // console.log('nsSVG shadow', shadow)
     // if (curve === 'j') {
@@ -245,6 +289,7 @@ class Shade {
   static neuShadeSVGFactory({
     curve = 'j',                            // type of cut/curve : [i, j, r, r2, f, v]
     cutIn,
+    shadeType,
     mag,                                    // magnitude of shade offset, corresponds to depth/loft of shade effect
     vector = Shade.shadVect(),               // direction of light
     rotOffset = 0,                          // deg rotation offset, used for dif shade types and CHAOS
@@ -357,18 +402,18 @@ class Shade {
       //MARK: "I" Cut
       if (curve === 'i' || curve === 'r2') {
         const highColSpread = 0.04                           // spread up from base (0.9) to max highlight luma (1!)
-        const shadColSpread = curve === 'r2' ? 0.25 : 0.25  // spread down from base (0.9) to min shadow luma (0.7)
+        const shadColSpread = curve === 'r2' ? 0.25 : .25  // spread down from base (0.9) to min shadow luma (0.7)
         const maxHighlight = 0.9 + highColSpread             // 0.9 + 0.04 = 0.94
         const minShadow = (0.9 - shadColSpread)              // 0.9 - 0.25 = 0.65
         const perceptualDivisor = curve === 'i' ? 4 : 16                   // compensates for blur, etc to get visually correct result
-        const highOffsetRatio = curve === 'i' ? 1 : 1 / 8
+        const highOffsetRatio = curve === 'i' ? 1 : 1 / 16
 
         // blur = true
         neuShades = offsets
           .map((offset, i) => {
             mag = offset / pixToUserUnits * 1         // convert pixelUnit to userUnit magnitude
             mag = curve === 'i' ? mag * 1 : mag * 1
-            const iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 5  //
+            const iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 4  //
             const r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 4  //
             const blurRadius = curve === 'i' ? iBlurRadius : r2BlurRadius
             const highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset, 2) / perceptualDivisor)
@@ -392,11 +437,11 @@ class Shade {
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
             // console.log(`rotOffset`, rotOffset)
 
-            const shades1 = this.neuShadeSVG(shadeVector, mag, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
+            const shades1 = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
             shades.push(shades1)
 
             if (i === offsets.length - 1) {
-              // const shades2 = this.neuShadeSVG(vector.setMag(mag * 1).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
+              // const shades2 = this.neuShadeSVG(shadeType,vector.setMag(mag * 1).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
               // shades.push(shades2)
             }
             console.log(`${curve} shades`, shades)
@@ -486,8 +531,8 @@ class Shade {
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
             // console.log(`rotOffset`, rotOffset)
             // const shadeVector = vector.setMag(mag)
-            let shades = this.neuShadeSVG(shadeVector, mag, blurRadius, highCol, shadCol, inset, blur, curve)
-            console.log(`${curve} shades`, shades)
+            let shades = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, highCol, shadCol, inset, blur, curve)
+            console.log(`${curve} ${shadeType} shades`, shades)
             return shades
           })
           .flat()
@@ -512,6 +557,7 @@ class Shade {
       //     const mag = o / pixToUserUnits
       //     const blurRadius = mag / sqrt(2)
       //     const shades = this.neuShadeSVG(
+      // shadeType,
       //       vector.setMag(mag).rotate(radians(rotOffset)),
       //       blurRadius,
       //       color1,
