@@ -145,8 +145,10 @@ function calculateFeatures(token = tokenData) {
       // if (x < 5) {
       //   this.enums.seedStyle.removeOptions(['Rectangles', 'Squares', 'Triangles'])// only 5-10 can pack more than 3 rects, squares, or triangles
       // }
+      if (x < 2) { this.enums.extraLayers.removeOptions(['2']) }    // not enough cells to support 4 extra layers 
+      if (x < 3) { this.enums.extraLayers.removeOptions(['3']) }    // not enough cells to support 3 extra layers 
       if (x < 4) {
-        this.enums.extraLayers.removeOptions(['2', '3'])// not enough cells to support extra layers
+        this.enums.extraLayers.removeOptions(['4'])// not enough cells to support extra layers
         this.enums.pyramidal.replaceOptions([['True', 0.5], ['False', 0.5]])
         // this.enums.seedStyle.reduceOptions(['Noise', 'Thin Random Comb']) // not enough cells to support other styles
         // this.enums.symmetryStyle.replaceOptions([['None', 1.2]])
@@ -163,16 +165,18 @@ function calculateFeatures(token = tokenData) {
     //METH:
     #calcY(r) {
       const x = this.x
-      const interpOpts = () => { this.enums.shapeInterpreter.replaceOptions([['v0', 0.05], ['v1', 0.95]]) }
+      // const interpOpts = () => { this.enums.shapeInterpreter.replaceOptions([['v0', 0.05], ['v1', 0.95]]) }
       let y
       switch (this.cellAspect) {
         case 'Square':
           return 2 * x
         case 'Tall':
-          interpOpts()
+          // interpOpts()
+          return x
           return r.random_int(x, 2 * x)
         case 'Wide':
-          interpOpts()
+          // interpOpts()
+          return 4 * x
           return r.random_int(x / 2, x)
       }
     }
@@ -456,16 +460,16 @@ function calculateFeatures(token = tokenData) {
       gridX: {
         name: 'Columns',
         options: [
-          ['10', 0.038],
-          ['9', 0.042],
-          ['8', 0.045],
-          ['7', 0.125],
-          ['6', 0.2],
-          ['5', 0.2],
-          ['4', 0.2],
-          ['3', 0.075],
+          ['10', 0.05],
+          ['9', 0.1],
+          ['8', 0.1],
+          ['7', 0.15],
+          ['6', 0.15],
+          ['5', 0.15],
+          ['4', 0.15],
+          ['3', 0.08],
           ['2', 0.05],
-          // ['1', 0.025],
+          ['1', 0.02],
         ]
       },
       // Public: y cell height of grid
@@ -481,8 +485,8 @@ function calculateFeatures(token = tokenData) {
       baseLayer: {
         name: 'Base Layer',
         options: [
-          ['None', 0.2],
-          ['Additive', 0.4],
+          ['Flat', 0.1],
+          ['Additive', 0.5],
           ['Subtractive', 0.4],
         ]
       },
@@ -502,9 +506,9 @@ function calculateFeatures(token = tokenData) {
       layerTypes: {
         name: 'Layer Types',
         options: [
-          ['Additive', 0.2],
+          ['Additive', 0.3],
           ['Subtractive', 0.25],
-          ['Additive and Subtractive', 0.55],
+          ['Additive and Subtractive', 0.45],
         ]
       },
       // Public: layering options
@@ -527,10 +531,11 @@ function calculateFeatures(token = tokenData) {
       extraLayers: {
         name: 'Extra Layers',
         options: [
-          ['None', 0.5],
-          ['1', 0.35],
-          ['2', 0.125],
-          ['3', 0.025],
+          ['None', 0.05],
+          ['1', 0.3],
+          ['2', 0.3],
+          ['3', 0.2],
+          ['4', 0.15],
         ]
       },
       // Public: how densely the grid is filled with shapes
@@ -555,12 +560,36 @@ function calculateFeatures(token = tokenData) {
       insetRatio: {
         name: 'Inset Ratio',
         options: [
-          ['1:1', 0.15],
-          ['5:4', 0.3],
-          ['4:3', 0.25],
-          ['3:2', 0.2],
-          ['2:1', 0.1],
-        ]
+          ['Min', 0.3],   // 0.025
+          ['1:20', 0.1],   // 0.05
+          // ['1:16', 0.15],   // 0.0625
+          // ['1:12', 0.15],   // 0.0833
+          ['1:10', 0.1],    // 0.1
+          ['1:8', 0.1],    // 0.125
+          // ['1:6', 0.25],    // 0.1667
+          ['1:5', 0.1],     // 0.2
+          ['1:4', 0.1],     // 0.25
+          ['1:3', 0.05],    // 0.333
+          ['1:2', 0.05],     // 0.5
+          ['Max', 0.05],   // 0.025
+        ],
+        // options: [
+        //   ['1:96', 0.1],   // 0.01041667
+        //   ['1:64', 0.3],   // 0.015625
+        //   ['1:48', 0.1],   // 0.0208333
+        //   ['1:32', 0.1],   // 0.03125
+        //   ['1:24', 0.15],   // 0.041667
+        //   ['1:16', 0.15],   // 0.0625
+        //   ['1:12', 0.15],   // 0.0833
+        //   ['1:8', 0.15],   // 0.0833
+        // ],
+        // options: [
+        //   ['1:1', 0.15],
+        //   ['5:4', 0.3],
+        //   ['4:3', 0.25],
+        //   ['3:2', 0.2],
+        //   ['2:1', 0.1],
+        // ]
       },
       // Public: random variability of inset per shape
       insetVariability: {
@@ -659,7 +688,7 @@ function calculateFeatures(token = tokenData) {
         options: [
           ['v0', 0.2],    // early iPhone style, maintains 2:1 aspect using top and bottom bezels
           ['v1', 0.8],    // modern 'shrinkwrap' style that conforms to corner shape curves
-          // ['v2', 0.0],    // enhanced 'shrinkWrap' style that has cutouts for uninhabited cells
+          ['v2', 0.0],    // enhanced 'shrinkWrap' style that has cutouts for uninhabited cells
           // ['v3', 0.0],    // further enhanced uses diagonal and tangent cuts on uninhabited cells
         ]
       },
