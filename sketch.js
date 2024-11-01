@@ -293,16 +293,16 @@ function gridTests2() {
   //                                                                  //NOTE: 1. Calculate GridX
   let gridX = R.random_int(1, 10)
   // gridX = R.random_int(10, 20)
-  gridX = 8
+  gridX = 5
   //   
-  let gridYMult = 4
+  let gridYMult = 2
   //NOTE: 2. Calculate GridY
   let gridSize = vert(gridX, round(gridX * gridYMult))
   // gridSize = vert(23, 73)
   //                                                                  //NOTE: 3. Calculate inset (bezel size)
 
   let insetMultiplier = round((gridYMult - 2) * (gridX) * 2)
-  insetMultiplier = .125
+  insetMultiplier = 1
   let gridRatio
 
   //ARROW: calcInset()
@@ -426,13 +426,13 @@ function gridTests2() {
 
     console.log(GRID)
 
-    // group1 = GRID.outlineGroup({
-    //   groupID: GRID.lastGroup.id,
-    //   // direction: Direction.All,
-    //   direction: grp1Dir,
-    //   newGroup: true,
-    //   amount: grp1Amount
-    // })
+    group1 = GRID.outlineGroup({
+      groupID: GRID.lastGroup.id,
+      // direction: Direction.All,
+      direction: grp1Dir,
+      newGroup: true,
+      amount: grp1Amount
+    })
 
     // group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
 
