@@ -1496,6 +1496,7 @@ class ProtoSegment extends Segment {
   //MARK: computed 
   get cellRadius() { return this.grid.cellRadius }
   get cellSize() { return this.grid.cellSize }
+  get isMinCorner() { return !this.shape.maxCorners }
   get isMinLength() {
     const minLength = this.isHorizontal ? this.cellSize.x : this.cellSize.y
     return equalsRoundedDec(this.length, minLength, 0)
@@ -1802,7 +1803,7 @@ class ProtoSegment extends Segment {
   //   this.matchStartCorner()
   //   this.endNeighbor.setArcToMiddle()
   // }
-  setMinEndCorner() { this.addDistancedEndCornerVerts(this.cellRadius) }
+  setMinEndCorner(replace = false) { this.addDistancedEndCornerVerts(this.cellRadius, replace) }
   // setMinStartCorner() { this.addDistancedStartCornerVerts(this.cellRadius) }                          //UNUSED:
   // setMinCorners() { this.addBothDistancedCornerVerts(this.cellRadius) }                               //UNUSED:
 
@@ -2994,6 +2995,7 @@ class ProtoSegment extends Segment {
       // console.log(`radiantOutWrappers for`, this)
       //ARROW: filterRadiants()
       const filterRadiants = (outWrappers) => {
+        // console.log(`radiantOutWrappers this`, this)
         let radiants = new OpArray
         while (outWrappers.length > 0) {
           const wrapper = outWrappers.shift()
