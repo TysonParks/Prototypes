@@ -11,8 +11,8 @@ class OpArray extends Array {
     super(...args)
   }
 
-  static get empty() { return OpArray.from([]) }
   // take a single value, or an array/OpArray and make/ensure its an OpArray
+
   static format(values) {
     if (!(values instanceof OpArray)) {
       if (!(values instanceof Array)) {
