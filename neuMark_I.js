@@ -19,20 +19,20 @@ class Profile {
   static jOut = new Profile(`j`, false)
   static rIn = new Profile(`r`)
   static rOut = new Profile(`r`, false)
-  static fIn = new Profile(`f`)
-  static fOut = new Profile(`f`, false)
+  static fIn = new Profile(`s`)
+  static fOut = new Profile(`s`, false)
   static vIn = new Profile(`v`)
   static vOut = new Profile(`v`, false)
 
-  static AllTypes = [`i`, `j`, `r`, `f`, `v`]
-  static CurveTypes = [`j`, `r`, `f`]
+  static AllTypes = [`i`, `j`, `r`, `s`, `v`]
+  static CurveTypes = [`j`, `r`, `s`]
   static FlatTypes = [`i`, `v`]
 
   //MARK: Computed
   get isI() { return this.type === `i` }                    // is `i` type
   get isJ() { return this.type === `j` }                    // is `j` type
   get isR() { return this.type === `r` }                    // is `r` type
-  get isF() { return this.type === `f` }                    // is `f` type
+  get isS() { return this.type === `s` }                    // is `s` type
   get isV() { return this.type === `v` }                    // is `v` type
 
   get isIIn() { return this.isI && this.isCutIn }
@@ -82,6 +82,7 @@ class ProtoCut {
   profile           // Profile: cut profile: [i,j,r,f,v] combined with [in, out]
   depth             // (end) depth
   start
+  extHighDepth      // limiter on external highlight depth
   angleOffset = 0   // offset angle from global vector
   filters = new OpArray
 
@@ -89,11 +90,13 @@ class ProtoCut {
     profile,
     depth,
     start,
+    extHighDepth,
     angleOffset = 0,
   }) {
     this.profile = profile
     this.depth = depth
     this.start = start
+    this.extHighDepth = extHighDepth
     this.angleOffset = angleOffset
     this.breed = this.description
     const match = S.Cuts.find(item => item.breed === this.breed)  // use equivalent cut if already exists
@@ -120,7 +123,7 @@ class ProtoCut {
   //MARK: Public Methods
   curve(layer) {
     if (this.profile.isR) { return layer === 0 ? `r` : `r2` }
-    if (this.profile.isF) { return layer === 0 ? `j` : `r` }
+    if (this.profile.isS) { return layer === 0 ? `j` : `r` }
     return this.profile.type
   }
 
@@ -142,7 +145,8 @@ class ProtoCut {
     if (this.profile.isR) {
       if (inset) {
         this.#createShader(`combo`, `r`, this.depth)
-        this.#createShader(`high`, `r2`, -this.depth)
+        // this.#createShader(`high`, `r2`, -this.depth)
+        this.#createShader(`high`, `r2`, this.extHighDepth)
         this.#createShader(`shad`, `r2`, -this.depth)
       } else {
         this.#createShader(`combo`, `r`, this.depth)
@@ -151,8 +155,8 @@ class ProtoCut {
     }
 
 
-    if (this.profile.isF) {
-      console.error(`ProtoCut "f" profile not yet implemented`)
+    if (this.profile.isS) {
+      console.error(`ProtoCut "s" profile not yet implemented`)
       //   if (inset) { 
 
       //   }else{
@@ -171,7 +175,7 @@ class ProtoCut {
     const r2 = curve === `r2` ? 1 : -1
     const angle = curve === `r` ? this.angleOffset + 180 : this.angleOffset
     mag = mag * cutIn * r * r2
-    console.warn({ curve: curve, cut: this.profile.cutIn ? `in` : `out`, mag: mag, rotOffset: angle })
+    console.warn({ curve: curve, cut: this.profile.cutIn ? `in` : `out`, shadeType, mag: mag / FRAME.pixToUserUnits, rotOffset: angle })
     const stack = Shade.neuShadeSVGFactory({
       shadeType: shadeType,
       curve: curve,
@@ -213,7 +217,7 @@ class Shade {
     return { lighten: lighten, invert: invert, vector: vector, mag: mag, blur: blurRad, color: col, inset: inset }
   }
   //METH: neuShadeSVG()
-  static neuShadeSVG(shadeType, vector = this.shadVect(), mag, blurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
+  static neuShadeSVG(shadeType, vector = this.shadVect(), mag, highBlurRad, shadBlurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
     const invert = curve === `r`
     // console.log('components', vector.x, vector.y, blurRad)
     const iCutHighMagMult = curve === `i` ? .75 : 1
@@ -227,7 +231,7 @@ class Shade {
         invert: invert,
         vector: vector,
         mag: highMag,
-        blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
+        blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * highBlurRad * blurRatio,
         col: highCol,
         inset: inset
       })
@@ -243,13 +247,13 @@ class Shade {
     let shadeShadow
     if (shadeType !== `high`) {
       const r2CutMagMult = curve === `r2` ? .5 : 1
-      const shadowCol = shadeType === `shad` ? 'black' : shadCol
+      const shadowCol = shadeType === `shad` ? achromic(0.5) : shadCol
       shadeShadow = this.dropShadeSVG({
         lighten: false,
         invert: invert,
         vector: vector,
         mag: jCutMagMult * r2CutMagMult * mag,
-        blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
+        blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * shadBlurRad * blurRatio,
         col: shadowCol,
         inset: inset
       })
@@ -308,6 +312,7 @@ class Shade {
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
     console.log(``)
     console.groupCollapsed(`neuShadeSVGFactory`, vector)
+    console.log(`mag`, mag)
     // //MARK: "I" Cut
     // if (curve === 'i') {
     //   mag = mag / pixToUserUnits * 0.85           // convert pixelUnit to userUnit magnitude
@@ -376,19 +381,22 @@ class Shade {
       mag / 256,    //
       mag / 512,    //
     ])
-      // .slice(start, keep())       // reduce layers based upon start and keep()
-      .slice(start, 7)       // reduce layers based upon start and keep()
+      .slice(start, keep())       // reduce layers based upon start and keep()
+    // .filter(e=> )
+    // .slice(start, 7)       // reduce layers based upon start and keep()
+    console.error('offsets', offsets)
+    offsets = offsets
       .map(e => { return rounding(e) }) // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
+      // .sort((a, b) => b - a)
       .numSorted                  // sort small-large
       .unique()                   // remove duplicates
 
-    // console.log('offsets', offsets)
+    console.error('offsets', offsets)
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
       const offsetRange = range(offsets[0], offsets.last)   // range from offsets
-
 
       //ARROW: easeInCircNormalized : number : normalizes and shifts value using circular easing
       const easeInCircNormalized = (x, exp = 2) => { return 1 - sqrt(1 - pow(offsetRange.normalize(x), exp)) }
@@ -399,10 +407,14 @@ class Shade {
         return x < 0.5 ? (1 - sqrt(1 - pow(2 * x, exp))) / 2
           : (sqrt(1 - pow(-2 * x + 2, exp)) + 1) / 2
       }
+
+      frameColor = achromic(0.9)
+      const shadColSpread = 0.25
+
       //MARK: "I" Cut
       if (curve === 'i' || curve === 'r2') {
-        const highColSpread = 0.04                           // spread up from base (0.9) to max highlight luma (1!)
-        const shadColSpread = curve === 'r2' ? 0.25 : .25  // spread down from base (0.9) to min shadow luma (0.7)
+        const highColSpread = 0.04                          // spread up from base (0.9) to max highlight luma (1!)
+        // const shadColSpread = curve === 'r2' ? 0.25 : .25  // spread down from base (0.9) to min shadow luma (0.7)
         const maxHighlight = 0.9 + highColSpread             // 0.9 + 0.04 = 0.94
         const minShadow = (0.9 - shadColSpread)              // 0.9 - 0.25 = 0.65
         const perceptualDivisor = curve === 'i' ? 4 : 16                   // compensates for blur, etc to get visually correct result
@@ -412,9 +424,9 @@ class Shade {
         neuShades = offsets
           .map((offset, i) => {
             mag = offset / pixToUserUnits * 1         // convert pixelUnit to userUnit magnitude
-            mag = curve === 'i' ? mag * 1 : mag * 1
+            mag = curve === 'i' ? mag * 1 : mag * 1.2
             const iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 4  //
-            const r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 4  //
+            const r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6  //
             const blurRadius = curve === 'i' ? iBlurRadius : r2BlurRadius
             const highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset, 2) / perceptualDivisor)
             const shadColLuma1 = minShadow + (shadColSpread * easeInOutCircNormalized(offset, 3) / perceptualDivisor)
@@ -423,7 +435,7 @@ class Shade {
             const highCol = achromic(highColLuma)
             const shadCol1 = achromic(shadColLuma1)
             // const shadCol2 = achromic(shadColLuma2)
-            const shadCol2 = achromic(shadColLuma1).setAlpha(.25)
+            // const shadCol2 = achromic(shadColLuma1).setAlpha(.25)
 
             let shades = new OpArray
             console.log(`mag`, mag)
@@ -437,7 +449,7 @@ class Shade {
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
             // console.log(`rotOffset`, rotOffset)
 
-            const shades1 = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
+            const shades1 = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
             shades.push(shades1)
 
             if (i === offsets.length - 1) {
@@ -454,7 +466,7 @@ class Shade {
         // if (curve === 'r') {                            // "R" cut
         // rotOffset = rotOffset + PI
         const rangeSize = mag                       // shadow range
-        reflLightRange = rangeSize / 2.2                // visual observation shows relfLight to be about 1/5 the shadow
+        reflLightRange = rangeSize / 2.6              // visual observation shows relfLight to be about 1/5 the shadow
         // console.log(`reflLightRange`, reflLightRange)
         if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
           offsets.push(reflLightRange)
@@ -463,9 +475,9 @@ class Shade {
         // }
         // console.log('bonus offsets', offsets)
 
-        const highColSpread = 0.1                           // spread up from base (0.9) to max highlight luma (1!)
-        const shadColSpread = 0.25                          // spread down from base (0.9) to min shadow luma (0.7)
-        const reflHighMult = 0.7                            // 
+        const highColSpread = 0.1                         // spread up from base (0.9) to max highlight luma (1!)
+        // const shadColSpread = 0.25                          // spread down from base (0.9) to min shadow luma (0.7)
+        const reflHighMult = 0.6                         // 
         const reflShadMult = 1                           //
         const reflHighSpread = reflHighMult * shadColSpread // spread down from base (0.9) to min shadow luma (0.65)
         let shadowReducer = curve === 'r' ? min(0.2, (20 / (mag * mag * pixToUserUnits))) : 0
@@ -475,37 +487,57 @@ class Shade {
         const minShadow = (1 - highColSpread - shadColSpread) + shadowReducer       // 0.9 -0.1 - 0.25 = .65
         const reflHighlight = (1 - highColSpread - reflHighSpread)                  // 0.9 -0.1 - 0.2  = .7
         // const reflHighlight = (1 - highColSpread - reflHighSpread) - shadowReducer  // 0.9 -0.1 - 0.2  = .7
-        const perceptualDivisor = 8                        // compensates for blur, etc to get visually correct result
+        const perceptualDivisor = 4                        // compensates for blur, etc to get visually correct result
         console.log(``)
         console.warn(`offsets`, offsets)
         neuShades = offsets
           .map(offset => {
             let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
-            mag = curve === 'j' ? mag : mag * (cutIn ? .6 : .95)
+            mag = curve === 'j' ? mag * .9 : mag * (cutIn ? .6 : 1)
             // mag = curve === 'j' ? mag : mag * mag * .4
+            let isSCurve = false
+
+            let highBlurRad = mag * 1
+            let shadBlurRad = mag * 1
             let blurRadius = mag
-            blurRadius = mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
+            blurRadius = isSCurve ? mag - offsets[0] / pixToUserUnits * .5
+              : mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
+            highBlurRad = blurRadius
+
             let highColLuma, shadColLuma
+
             // "r" curve
             if (curve === 'r') {
-              if (offset <= reflLightRange) {               // add relfective highlight to shadow
-                highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
-                shadColLuma = reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+              highColLuma =
+                !isSCurve ?
+                  maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                  : 1 * maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+              if (offset <= reflLightRange * 1.) {               // add relfective highlight to shadow
+                shadColLuma =
+                  !isSCurve ?
+                    reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                    : .915 * reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
               } else {
-                highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
-                shadColLuma = minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                shadColLuma =
+                  !isSCurve ?
+                    minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                    : 1.2 * minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
               }
               // "j" curve
             } else if (curve === 'j') {
               // blur = false
-              if (offset <= reflLightRange * 1) {
-                highColLuma = maxHighlight - (highColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
-                shadColLuma = minShadow + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
-                // shadColLuma = reflHighlight + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+              highColLuma = maxHighlight - (highColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+              if (offset <= reflLightRange * .625) {
+                shadColLuma =
+                  !isSCurve ?
+                    minShadow + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+                    : .865 * reflHighlight + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
               } else {
-                highColLuma = maxHighlight - (highColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
-                shadColLuma = minShadow + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
-                // shadColLuma = minShadow * reflHighMult * reflShadMult + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+                shadColLuma =
+                  // !isSCurve ?
+                  1 * minShadow + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
+                // 1.4 * minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                // : 1.4 * minShadow * reflHighMult * reflShadMult + (shadColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
               }
             }
 
@@ -531,7 +563,7 @@ class Shade {
             // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
             // console.log(`rotOffset`, rotOffset)
             // const shadeVector = vector.setMag(mag)
-            let shades = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, highCol, shadCol, inset, blur, curve)
+            let shades = this.neuShadeSVG(shadeType, shadeVector, mag, highBlurRad, shadBlurRad, highCol, shadCol, inset, blur, curve)
             console.log(`${curve} ${shadeType} shades`, shades)
             return shades
           })
@@ -559,6 +591,8 @@ class Shade {
       //     const shades = this.neuShadeSVG(
       // shadeType,
       //       vector.setMag(mag).rotate(radians(rotOffset)),
+
+      //       blurRadius, 
       //       blurRadius,
       //       color1,
       //       color2,
