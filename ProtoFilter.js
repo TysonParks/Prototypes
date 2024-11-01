@@ -121,9 +121,17 @@ class ProtoFilter {
         const blendMode = () => {
           if ((prevMode === 'lighten' && !lighten) || (prevMode === 'darken' && lighten)) { return 'normal' }
           return lighten ? 'lighten' : 'darken'
+          // return lighten ? 'multiply' : 'darken'
+          // return 'normal'
+          // return 'hard-light'
+          // return lighten ? 'darken' : 'screen'
+          // return lighten ? 'hard-light' : 'multiply'
+          return lighten ? 'multiply' : 'screen'
+          return lighten ? 'screen' : 'darken'
         }
 
         let useBlur = blur > 0
+        // useBlur = false
 
         if (useBlur) {
           //1 feGaussianBlur: blur the alpha channel of the input shape
