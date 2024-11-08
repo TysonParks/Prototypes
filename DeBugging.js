@@ -13,7 +13,7 @@ const Debuggable = {
   get isPerimeterIsland() { return this.type === `PerimeterIsland` },
   get isIsland() { return this.type === `Island` || this.isPerimeterIsland },
   get isShape() { return this.type === `Shape` || this.isPerimeterShape },
-  get isShapeGroup() { return this.type === `ShapeGroup` },
+  get isShapeGroup() { return this.type.includes(`ShapeGroup`) },
 
   get deBugAnchor() {
     if (this.cellBounds?.selection) {
@@ -30,7 +30,7 @@ const Debuggable = {
     if (this.drawDeBugRect) { this.showRect() }
     if (this.drawPerimeter) { this.showPerimeter() }
     if (this.drawInset) { this.showInset() }
-    if (this.drawLoft) { this.showLoft() }
+    if (this.drawLoft) { this.showLofts() }
   },
 
   showLabel() {
@@ -140,7 +140,60 @@ const Debuggable = {
         .attribute('stroke-dasharray', `4 1`)
     }
   },
-  showLoft() { },
+  showLofts() {
+    console.error(`DEBUG: showLofts`)
+
+    const randHue = ProtoColor.randomShadHue()
+    const lightHue = protoColor(randHue.red, randHue.green, randHue.blue)
+    console.groupCollapsed(this.id)
+    if (this.isShapeGroup && this.cut?.profile) {
+      this.debugStartElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugStart`)
+      this.debugEndElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugEnd`)
+      const debugElts = OpArray.format([this.debugStartElt, this.debugEndElt])
+      debugElts.forEach(elt => {
+        const lowHue = protoColor(randHue.red, randHue.green, randHue.blue, 10)
+
+        elt
+          .parent(this.svgElt)
+          .attribute('fill', protoColor(0, 0))
+          .attribute('stroke-width', `.125`)
+          .attribute('stroke-dasharray', `.5`)
+      })
+
+      this.shapes.forEach(sh => {
+        console.log(`this.cut`, this.cut)
+        console.log(`cut values`, this.cut.start, this.cut.depth, sh.insetScale)
+        const depthScale = vert(this.cut.depth / this.grid.cellRadius / 2)
+        console.log(`depthScale`, depthScale)
+        let startScale, endScale
+        if (this.cut.profile.hasOutsetShade) {
+          startScale = Vertex.add(sh.insetScale, depthScale)
+          endScale = sh.insetScale
+        } else {
+          startScale = sh.insetScale
+          endScale = Vertex.sub(vert(this.cut.start), vert(this.cut.depth / this.grid.cellRadius / 2))
+        }
+
+        const newScales = [startScale, endScale]
+        console.log(`newScales`, newScales)
+        const newPaths = newScales.map((scale, i) => {
+          const shape = sh.copy({
+            insetScale: scale,
+            protoParent: sh.protoParent,
+            island: sh.island,
+          })
+          const path = createSVGElt('path').id(`${shape.id}-debugStartPath`)
+            .attribute(`d`, shape.svg)
+            .layout(shape.anchor, shape.size, shape.padding)
+            .parent(i = 0 ? this.debugStartElt : this.debugEndElt)
+            .attribute(`stroke`, i = 0 ? lightHue : lightHue)
+        })
+      })
+
+
+    }
+    console.groupEnd()
+  },
 
 
 }
