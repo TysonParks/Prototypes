@@ -206,6 +206,14 @@ class Direction {
   get toLeft() { return this.previous(2) }
   get toRight() { return this.next(2) }
 
+  get hierarchy() {
+    if (this.isAll) { return 3 }
+    if (this.isCardinal) { return 2 }
+    if (this.isTwoOpposites) { return 1 }
+    if (this.isNone) { return 0 }
+    console.error('Undefined directionHierachy')
+  }
+
   random(amount = 1) {
     const reducer = min(amount / this.vals.length, 0.999999)
     //NOTE: when 'copy' is removed here it creates a cool shadow stacking effect with findIslands (see Aug 2,2023 captures)
@@ -445,6 +453,9 @@ class Corners {
   get upRight() { return this.values[1] }
   get downRight() { return this.values[2] }
   get downLeft() { return this.values[3] }
+
+  get posOrdinals() { return [this.upRight, this.downLeft] }
+  get negOrdinals() { return [this.downRight, this.upLeft] }
 
   get bounds() { return findBounds(this.upLeft, this.downRight) }
 
@@ -1060,6 +1071,14 @@ class Range {
     return range(normalize(subrange.start, this), normalize(subrange.end, this))
   }
   cycle(x) { return ((x - this.start) % this.cycleSize + this.cycleSize) % this.cycleSize + this.start }
+  subRanges(amount) {
+    const subSize = this.size / amount
+    return new OpArray(amount).fill(0).map((u, i) => {
+      const start = this.start + i * subSize
+      const end = start + subSize
+      return range(start, end)
+    })
+  }
 }
 
 
