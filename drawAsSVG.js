@@ -1001,7 +1001,7 @@ class Vertex extends p5.Vector {
   //TODO: not sure when I started this implementation. Do I need this?
   // }
 
-  get aspect() { return Aspect.fromRatio((this.x / this.y)) }
+  get aspect() { return Aspect.fromRatio((roundToDec(this.x) / roundToDec(this.y))) }
   get quadrantDirection() {
     if (this.x > 0) {
       if (this.y > 0) { return Direction.UpRight }
@@ -1305,6 +1305,12 @@ class Segment {
   //METH: isOverlappingWith()
   isOverlappingWith({ seg, includeEnds = true, decimal = 0, mode = 2, infinite = false, accuracy = 0 } = {}) {
     // console.log(`seg`, seg)
+    if (this.isVert || seg.isVert) {
+      if (this.isVert && seg.isVert) { return this.start.equals(seg.start, 3) }
+      if (this.isVert && !infinite) { return seg.vertIsOnLine(this.start) }
+      if (seg.isVert && !infinite) { return this.vertIsOnLine(seg.start) }
+    }
+
     if (!this.isParallelTo(seg)) {
       // console.warn(`isOverlappingWith is not parallel`)                                            //LOGGING:
       return false
@@ -2992,14 +2998,14 @@ class ProtoSegment extends Segment {
       //     .union(this.outWrapper.radiantOutWrappers, `id`)
       //   // .filter(s => boundsIsWithinTestBounds(this.innerMostRadiantWrapper.minArcBoundsSeg, s.maxArcBoundsSeg))
       // }
-      // console.log(`radiantOutWrappers for`, this)
+      console.log(`radiantOutWrappers for`, this)
       //ARROW: filterRadiants()
       const filterRadiants = (outWrappers) => {
-        // console.log(`radiantOutWrappers this`, this)
+        console.log(`radiantOutWrappers this`, this)
         let radiants = new OpArray
         while (outWrappers.length > 0) {
           const wrapper = outWrappers.shift()
-          if (wrapper.inWrapper.canRadiateTo(wrapper) && this.hasDiagonalCorner(wrapper)) {
+          if (wrapper.inWrapper?.canRadiateTo(wrapper) && this.hasDiagonalCorner(wrapper)) {
             radiants.push(wrapper)
           } else {
             outWrappers = []
@@ -3015,7 +3021,7 @@ class ProtoSegment extends Segment {
           // .filter(s => this.canRadiateTo(s))
           // console.log(`wrappers`, wrappers)
         } else {                                  //this is NOT innerMostWrapper
-          if (this.inWrapper?.outWrapperIsRadiant) {
+          if (this.inWrapper?.canRadiateTo(this)) {
             // console.error(`hitting this`)
             wrappers = this.innerMostRadiantWrapper.radiantOutWrappers?.intersect(this.outWrappers, `id`)
           } else if (this.outWrapperIsRadiant) {
