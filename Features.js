@@ -6,6 +6,7 @@ class FeatureSet {
   // grid dependencies
   gridStyle               // Magical / Flexible
   cellAspect              // Square / Portrait / Landscape
+  cellOutset              // [0, .125, .2, .25, 1 / 3, .375, .5, .625, 2 / 3, .75, .875, 8 / 9]
   x                       // Int, 1-10
   y                       // Int, 1-40
   frameWidth               // None / Small / Medium / Large
@@ -144,6 +145,7 @@ class FeatureSet {
     } else {                                        // calculate cellAspect using native distributions
       this.cellAspect = this.enums.cellAspect.feature(r)
     }
+    this.cellOutset = this.enums.cellOutset.feature(r)
   }
   //METH: #calcX()
   #calcX(r) {
@@ -202,25 +204,28 @@ class FeatureSet {
     }
     console.log(`frameWidth:`, this.frameWidth)
 
-    const widthVal = this.enums.frameWidth.getIndex(this.frameWidth)
+    const widthVal = this.enums.frameWidth.value
     console.warn(`widthVal`, widthVal)
-    if (widthVal < 3) {
+    if (widthVal < 3) {                                   // Medium or Less
       this.enums.frameDivs.removeOptions([`5`, `4`])
       this.enums.frameSpacing.removeOptions([`Ninths`, `Eighths`])
       this.enums.frameStairs.removeOptions([`Some`])
     }
-    if (widthVal < 2) {
+    if (widthVal < 2) {                                   // Small or Less
       this.enums.frameDivs.removeOptions([`3`])
       this.enums.frameSpacing.removeOptions([`Fifths`, `Quarters`])
       this.enums.frameStairs.removeOptions([`One`])
     }
-    if (widthVal < 1) {
+    if (widthVal < 1) {                                   // Minimum
       this.enums.frameSpacing.removeOptions([`Thirds`])
     }
     this.frameDivs = this.enums.frameDivs.feature(r)
+    if (this.frameDivs > 4) { this.enums.frameSpacing.removeOptions([`Quarters`, `Thirds`]) }
+    if (this.frameDivs < 3) { this.enums.frameStairs.removeOptions([`Some`]) }
     this.frameSpacing = this.enums.frameSpacing.feature(r)
     this.frameStairs = this.enums.frameStairs.feature(r)
   }
+
 
   // #endregion
   // MARK: Layer Methods
@@ -416,8 +421,8 @@ class FeatureSet {
     const enums = {}
     Object.keys(this.#options).forEach((optionKey) => {
       const option = this.#options[optionKey]
-      const { name: name, options: optionValues } = option
-      const enumFeature = new EnumFeature(name, optionValues, this.usageStore)
+      const { name: name, options: options, values: values } = option
+      const enumFeature = new EnumFeature(name, options, values, this.usageStore)
       enums[optionKey] = enumFeature
     })
     this.enums = enums
@@ -429,395 +434,7 @@ class FeatureSet {
   // #region Feature Options
   // MARK: Grid Dependencies
   // #region Grid Dependencies
-  // #options = {
-  //   //Public: Grid Style : "Magical/Fixed" or "Flexible/Shrinking"
-  //   gridStyle: {
-  //     name: 'Grid Style',
-  //     options: [
-  //       ['Magical', 2 / 3],       // 200  / 300 (Total)
-  //       ['Flexible', 1 / 3],      // 100  / 300 (Total)
-  //     ]
-  //   },
-  //   // Public: Cell Aspect
-  //   cellAspect: {
-  //     name: 'Cell Aspect',
-  //     options: [
-  //       ['Square', 0.3],         // 30 / 100 ("Flexible")
-  //       ['Tall', 0.35],          // 35 / 100 ("Flexible")
-  //       ['Wide', 0.35],          // 35 / 100 ("Flexible")
-  //     ]
-  //   },
-  //   //Public: grid column amount
-  //   gridX: {
-  //     name: 'Columns',
-  //     options: [
-  //       ['1', 0.01],              // 1  / 100 ("Flexible")
-  //       ['2', 0.05],              // 5  / 100 ("Flexible")
-  //       ['3', 0.08],              // 8  / 100 ("Flexible")
-  //       ['4', 0.15],              // 15 / 100 ("Flexible")
-  //       ['5', 0.15],              // 15 / 100 ("Flexible")
-  //       ['6', 0.15],              // 15 / 100 ("Flexible")
-  //       ['7', 0.15],              // 15 / 100 ("Flexible")
-  //       ['8', 0.1],               // 10 / 100 ("Flexible")
-  //       ['9', 0.1],               // 10 / 100 ("Flexible")
-  //       ['10', 0.06],             // 6  / 100 ("Flexible")
-  //     ]
-  //   },
-  //   // Public: Frame Width
-  //   frameWidth: {
-  //     name: 'Frame Width',
-  //     options: [
-  //       ['Minimum', 0.15],        // 15 / 100 ("Flexible")     10 / 300 (Total)
-  //       ['Small', 0.4],           // 40 / 100 ("Flexible")
-  //       ['Medium', 0.25],         // 25 / 100 ("Flexible")
-  //       ['Large', 0.2],           // 20 / 100 ("Flexible")
-  //     ]
-  //   },
-  //   // Public: Frame Divisions
-  //   frameDivs: {
-  //     name: 'Frame Divisions',
-  //     options: [
-  //       ['1', 0.2],               // 60  / 300 (Total)
-  //       ['2', 0.2],               // 60  / 300 (Total)
-  //       ['3', 0.25],              // 75  / 300 (Total)
-  //       ['4', 0.35],              // 105 / 300 (Total)
-  //       ['5', 0.1],               // 30  / 300 (Total)       
-  //     ]
-  //   },
-  //   // Public: Frame Divisions
-  //   frameSpacing: {
-  //     name: 'Frame Spacing',
-  //     options: [
-  //       ['Whole', 0.4],           // 120 / 300 (Total)
-  //       ['Thirds', 0.1],          // 30  / 300 (Total)
-  //       ['Quarters', 0.2],        // 60  / 300 (Total)
-  //       ['Fifths', 0.1],          // 30  / 300 (Total)  
-  //       ['Eighths', 0.1],         // 30  / 300 (Total)     
-  //       ['Ninths', 0.1],          // 30  / 300 (Total)   
-  //     ]
-  //   },
-  //   // Public: Frame Stairs
-  //   frameStairs: {
-  //     name: 'Frame Stairs',
-  //     options: [
-  //       ['None', 0.1],            // 150 / 300 (Total)
-  //       ['One', 0.4],             // 90  / 300 (Total)
-  //       ['Some', 0.5],            // 60  / 300 (Total)
-  //     ]
-  //   },
-  //   // Private: Frame Profiles
-  //   frameProfiles: {
-  //     name: 'Frame Profiles',
-  //     options: [
-  //       ['jIn', 0.1],            // 150 / 300 (Total)
-  //       ['jOut', 0.4],           // 90  / 300 (Total)
-  //       ['rIn', 0.5],            // 60  / 300 (Total)
-  //       ['rOut', 0.5],           // 60  / 300 (Total)
-  //     ]
-  //   },
-  //   // Public: (TRANSLATED) base is layer framing the grid
-  //   baseLayer: {
-  //     name: 'Base Layer',
-  //     options: [
-  //       ['Flat', 0.1],
-  //       ['Additive', 0.5],
-  //       ['Subtractive', 0.4],
-  //     ]
-  //   },
-  //   // Public: style of Base Layer
-  //   baseLayerStyle: {
-  //     name: 'Base Layer Style',
-  //     options: [
-  //       ['j', 0.3],
-  //       // ['v', 0.3],
-  //       ['r', 0.4],
-  //     ]
-  //   },
-  //   // #endregion
-  //   // MARK: Shader Dependencies
-  //   // #region Shader Dependencies
-  //   // Public: group options
-  //   cutStyles: {
-  //     name: 'Variable Group Styles',
-  //     options: [
-  //       ['True', 0.7],
-  //       ['False', 0.3],
-  //     ]
-  //   },
-  //   // Public: layering options
-  //   cutDirections: {
-  //     name: 'Cut Directions',
-  //     options: [
-  //       ['Additive', 0.3],
-  //       ['Subtractive', 0.2],
-  //       ['Additive and Subtractive', 0.5],
-  //     ]
-  //   },
-  //   // Public: group options
-  //   loftStyles: {
-  //     name: 'Group Loft Styles',
-  //     options: [
-  //       ['True', 0.6],
-  //       ['False', 0.4],
-  //     ]
-  //   },
-  //   // TODO: insetStyles
-  //   // TODO: groupCount
-  //   // Public: amount of extra groups to create
-  //   extraGroups: {
-  //     name: 'Extra Layers',
-  //     options: [
-  //       ['None', 0.05],
-  //       ['1', 0.3],
-  //       ['2', 0.3],
-  //       ['3', 0.2],
-  //       ['4', 0.15],
-  //     ]
-  //   },
 
-  //   // Public: how densely the grid is filled with shapes
-  //   density: {
-  //     name: 'Density',
-  //     options: [
-  //       ['So Lonely', 0.05],
-  //       ['Some Availability', 0.25],
-  //       ['At Capacity', 0.7],
-  //     ]
-  //   },
-  //   // Public: inset options
-  //   insetScale: {
-  //     name: 'Inset Scale',
-  //     options: [
-  //       ['Minimum', 0.65],
-  //       ['Medium', 0.25],
-  //       ['Maximum', 0.1],
-  //     ]
-  //   },
-  //   // Public: inset ratio options
-  //   insetRatio: {
-  //     name: 'Inset Ratio',
-  //     options: [
-  //       ['Min', 0.3],   // 0.025
-  //       ['1:20', 0.1],   // 0.05
-  //       // ['1:16', 0.15],   // 0.0625
-  //       // ['1:12', 0.15],   // 0.0833
-  //       ['1:10', 0.1],    // 0.1
-  //       ['1:8', 0.1],    // 0.125
-  //       // ['1:6', 0.25],    // 0.1667
-  //       ['1:5', 0.1],     // 0.2
-  //       ['1:4', 0.1],     // 0.25
-  //       ['1:3', 0.05],    // 0.333
-  //       ['1:2', 0.05],     // 0.5
-  //       ['Max', 0.05],   // 0.025
-  //     ],
-  //     // options: [
-  //     //   ['1:96', 0.1],   // 0.01041667
-  //     //   ['1:64', 0.3],   // 0.015625
-  //     //   ['1:48', 0.1],   // 0.0208333
-  //     //   ['1:32', 0.1],   // 0.03125
-  //     //   ['1:24', 0.15],   // 0.041667
-  //     //   ['1:16', 0.15],   // 0.0625
-  //     //   ['1:12', 0.15],   // 0.0833
-  //     //   ['1:8', 0.15],   // 0.0833
-  //     // ],
-  //     // options: [
-  //     //   ['1:1', 0.15],
-  //     //   ['5:4', 0.3],
-  //     //   ['4:3', 0.25],
-  //     //   ['3:2', 0.2],
-  //     //   ['2:1', 0.1],
-  //     // ]
-  //   },
-  //   // Public: random variability of inset per shape
-  //   insetVariability: {
-  //     name: 'Inset Variability',
-  //     options: [
-  //       ['None', 0.8],
-  //       ['Unhinged', 0.05],
-  //       ['Lively', 0.05],
-  //       ['Tame', 0.1],
-  //     ]
-  //   },
-  //   // Public: pyramidal options
-  //   pyramidal: {
-  //     name: 'Pyramidal',
-  //     options: [
-  //       ['True', 0.3],
-  //       ['False', 0.7],
-  //     ]
-  //   },
-  //   // #endregion
-  //   // MARK: Group Dependencies
-  //   // #region Group Dependencies
-  //   // Public: style of seed
-  //   seedStyle: {
-  //     name: 'Seed Style',
-  //     options: [
-  //       ['Noise', 0.2],
-  //       ['Thick Random Comb', 0.1],
-  //       ['Thin Random Comb', 0.1],
-  //       // ['Rectangles', 0.1],
-  //       ['Squares', 0.2],
-  //       // ['Triangles', 0.1],
-  //       ['Pattern Simple', 0.1],
-  //       ['Pattern Complex', 0.1],
-  //       // ['Ordinal Pattern', 0.1],
-  //       // ['Snake', 0.1],
-  //     ]
-  //   },
-  //   // Public: style of modifier
-  //   modifierStyle: {
-  //     name: 'Modifier Style',
-  //     options: [
-  //       ['Inflate', 0.1],
-  //       ['Inflate Horizontal', 0.1],
-  //       ['Inflate Vertical', 0.1],
-  //       ['Concentric', 0.15],
-  //       ['Thick Concentric', 0.15],
-  //       ['Double Concentric', 0.1],
-  //       ['Triple Concentric', 0.05],
-
-  //     ]
-  //   },
-  //   // Public: style of symmetry to apply to groups
-  //   // symmetryStyle: {                                                                 //UNUSED:
-  //   //   name: 'Symmetry Style',
-  //   //   options: [
-  //   //     ['None', 0.6],
-  //   //     ['Horizontal Reflection', .1],
-  //   //     ['Vertical Reflection', .1],
-  //   //     ['Quadrant Reflection', .08],
-  //   //     ['Horizontal Rotation', .04],
-  //   //     ['Vertical Rotation', .04],
-  //   //     ['Quadrant Rotation', .04],
-  //   //     // ['Positive Ordinal Reflection', .02],
-  //   //     // ['Negative Ordinal Reflection', .02],
-  //   //     // ['Positive Ordinal Rotation', .02],
-  //   //     // ['Negative Ordinal Rotation', .02],
-  //   //   ]
-  //   // },
-  //   // Public: the way symmetry is used
-  //   // symmetryUse: {
-  //   //   name: 'Symmetry Use',
-  //   //   options: [
-  //   //     ['All', 0.5],
-  //   //     ['Empty Layers', .1], // removed if (Density === 'At Capacity') in #calcDensity()
-  //   //     ['Assigned Layers', .2],// removed if (Density === 'At Capacity') in #calcDensity()
-  //   //     ['One Layer', .1], // removed if (layersCount < 2) in #calcLayerCounts()
-  //   //     ['Some Layers', .1], // removed if (layersCount < 3) in #calcLayerCounts()
-  //   //   ]
-  //   // },
-  //   // #endregion
-  //   // MARK: Shape Dependencies
-  //   // #region Shape Dependencies
-  //   // Public: shape interpretor version
-  //   shapeInterpreter: {
-  //     name: 'Shape Interpreter',
-  //     options: [
-  //       ['v0', 0.025],
-  //       ['v1', 0.275],
-  //       ['v2', 0.7],
-  //     ]
-  //   },
-  //   // Public: block wraps to design
-  //   blockStyle: {
-  //     name: 'Block Style',
-  //     options: [
-  //       ['v0', 0.2],    // early iPhone style, maintains 2:1 aspect using top and bottom bezels
-  //       ['v1', 0.8],    // modern 'shrinkwrap' style that conforms to corner shape curves
-  //       ['v2', 0.0],    // enhanced 'shrinkWrap' style that has cutouts for uninhabited cells
-  //       // ['v3', 0.0],    // further enhanced uses diagonal and tangent cuts on uninhabited cells
-  //     ]
-  //   },
-  //   // #endregion
-  //   // MARK: Private INSTANCE USE ENUMS
-  //   // #region Private INSTANCE USE ENUMS
-  //   // Private: direction that traversal functions
-  //   gridTraversalDirection: {
-  //     name: 'Grid Traversal Direction',
-  //     options: [
-  //       ['Horizontal', 0.5],
-  //       ['Vertical', 0.5]
-  //     ]
-  //   },
-  //   // Private: (INSTANCE USE) quadrant/corner to start from
-  //   startQuad: {
-  //     name: 'Starting Quadrant',
-  //     options: [
-  //       ['Top Left', 0.25],
-  //       ['Top Right', 0.25],
-  //       ['Bottom Right', 0.25],
-  //       ['Bottom Left', 0.25]
-  //     ]
-  //   },
-  //   // Private: (INSTANCE USE) style of additive cut
-  //   additiveStyle: {
-  //     name: 'Additive Style',
-  //     options: [
-  //       ['j', 0.2],
-  //       ['i', 0.2],
-  //       // ['v', 0.3],
-  //       ['r', 0.3],
-  //     ]
-  //   },
-  //   // Private: (INSTANCE USE) style of subtractive cut
-  //   subtractiveStyle: {
-  //     name: 'Subtractive Style',
-  //     options: [
-  //       ['j', 0.7],
-  //       ['i', 0.1],
-  //       // ['v', 0.175],
-  //       ['r', 0.025],
-  //     ]
-  //   },
-  //   // Private: (INSTANCE USE) (subtractive) depth of cutouts
-  //   layerDepth: {
-  //     name: 'Depth',
-  //     options: [
-  //       ['0.25', 0.025],
-  //       ['0.5', 0.05],
-  //       ['0.666', 0.075],
-  //       ['0.75', 0.075],
-  //       ['0.875', 0.1],
-  //       ['1', 0.6],
-  //       ['2', 0.075],
-  //     ]
-  //   },
-  //   // Private: (INSTANCE USE) (additive) height of addons
-  //   layerHeight: {
-  //     name: 'Height',
-  //     options: [
-  //       ['0.25', 0.025],
-  //       ['0.5', 0.075],
-  //       ['0.666', 0.1],
-  //       ['0.8', 0.2],
-  //       ['1', 0.6],
-  //     ]
-  //   },
-  //   // Private: (INSTANCE USE) pyramidal layer count options
-  //   pyramidalLayerCount: {
-  //     name: 'Pyramidal Layer Count',
-  //     options: [
-  //       ['All', 0.05],
-  //       ['Most', 0.1],
-  //       ['Few', 0.15],
-  //       ['1', 0.7],
-  //     ]
-  //   },
-  //   // Private: (INSTANCE USE) pyramidal layer count options
-  //   pyramidStacks: {
-  //     name: 'Pyramidal',
-  //     options: [
-  //       ['1', 0.4],
-  //       ['2', 0.3],
-  //       ['3', 0.2],
-  //       ['4', 0.1],
-  //     ]
-  //   },
-  //   // #endregion
-
-  // }
-  // #endregion
   // #endregion
 }
 const publicOptions = {
@@ -837,6 +454,25 @@ const publicOptions = {
       ['Tall', 0.35],          // 35 / 100 ("Flexible")
       ['Wide', 0.35],          // 35 / 100 ("Flexible")
     ]
+  },
+  // Public: Cell Outset
+  cellOutset: {
+    name: 'Cell Outset',
+    options: [
+      ['None', .3],              // 90  / 300 (Total)
+      ['Eighth', .03],           // 9   / 300 (Total)
+      ['Fifth', .03],            // 9   / 300 (Total)
+      ['Quarter', .06],          // 18  / 300 (Total)
+      ['Third', .04],            // 9   / 300 (Total)
+      ['Three Eighths', .03],    // 9   / 300 (Total)
+      ['Half', .2],              // 60  / 300 (Total)
+      ['Five Eighths', .03],     // 9   / 300 (Total)
+      ['Two Thirds', .04],       // 9   / 300 (Total)
+      ['Three Quarters', .06],   // 18  / 300 (Total)
+      ['Seven Eighths', .03],    // 9   / 300 (Total)
+      ['Eight Ninths', .15],     // 30  / 300 (Total)
+    ],
+    values: [0, .125, .2, .25, 1 / 3, .375, .5, .625, 2 / 3, .75, .875, 8 / 9],
   },
   //Public: grid column amount
   gridX: {
@@ -862,14 +498,15 @@ const publicOptions = {
       ['Small', 0.4],           // 40 / 100 ("Flexible")
       ['Medium', 0.25],         // 25 / 100 ("Flexible")
       ['Large', 0.2],           // 20 / 100 ("Flexible")
-    ]
+    ],
+    values: [0, 1, 2, 3],
   },
   // Public: Frame Divisions
   frameDivs: {
     name: 'Frame Divisions',
     options: [
-      ['1', 0.2],               // 60  / 300 (Total)
-      ['2', 0.2],               // 60  / 300 (Total)
+      ['1', 0.15],               // 60  / 300 (Total)
+      ['2', 0.15],               // 60  / 300 (Total)
       ['3', 0.25],              // 75  / 300 (Total)
       ['4', 0.35],              // 105 / 300 (Total)
       ['5', 0.1],               // 30  / 300 (Total)       
@@ -879,31 +516,33 @@ const publicOptions = {
   frameSpacing: {
     name: 'Frame Spacing',
     options: [
-      ['Whole', 0.4],           // 120 / 300 (Total)
-      ['Thirds', 0.1],          // 30  / 300 (Total)
+      ['Whole', 0.2],           // 120 / 300 (Total)
+      ['Thirds', 0.15],          // 30  / 300 (Total)
       ['Quarters', 0.2],        // 60  / 300 (Total)
-      ['Fifths', 0.1],          // 30  / 300 (Total)  
-      ['Eighths', 0.1],         // 30  / 300 (Total)     
-      ['Ninths', 0.1],          // 30  / 300 (Total)   
-    ]
+      ['Fifths', 0.15],          // 30  / 300 (Total)  
+      ['Eighths', 0.15],         // 30  / 300 (Total)     
+      ['Ninths', 0.15],          // 30  / 300 (Total)   
+    ],
+    values: [1, 3, 4, 5, 8, 9],
   },
   // Public: Frame Stairs
   frameStairs: {
     name: 'Frame Stairs',
     options: [
-      ['None', 0.1],            // 150 / 300 (Total)
+      ['None', 0.4],            // 150 / 300 (Total)
       ['One', 0.4],             // 90  / 300 (Total)
-      ['Some', 0.5],            // 60  / 300 (Total)
-    ]
+      ['Some', 0.2],            // 60  / 300 (Total)
+    ],
+    values: [0, 1, 2],
   },
   // Private: Frame Profiles
   frameProfiles: {
     name: 'Frame Profiles',
     options: [
-      ['jIn', 0.1],            // 150 / 300 (Total)
-      ['jOut', 0.4],           // 90  / 300 (Total)
-      ['rIn', 0.5],            // 60  / 300 (Total)
-      ['rOut', 0.5],           // 60  / 300 (Total)
+      ['jIn', 0.3],            // 90 / 300 (Total)
+      ['jOut', 0.2],           // 60  / 300 (Total)
+      ['rIn', 0.2],            // 30  / 300 (Total)
+      ['rOut', 0.3],           // 120  / 300 (Total)
     ]
   },
   // Public: (TRANSLATED) base is layer framing the grid
@@ -1215,12 +854,16 @@ class EnumFeature {
   // FIXME: make options and weightedOptions private after fully tested 
   name
   options
+  values
   weightedOptions
   usageStore
 
-  constructor(name, options = [], usageStore) {
+  chosen
+
+  constructor(name, options = [], values, usageStore) {
     this.name = name
     this.options = options
+    this.values = values
     this.usageStore = usageStore
     this.weightedOptions = this.#weighOptions()
   }
@@ -1230,7 +873,10 @@ class EnumFeature {
   // MARK: Public Methods
   // #region Public Methods
   //METH:
-  feature(r) { return this.#getFeature(this.#getFeatureIndex(r.random_dec())) }
+  feature(r) {
+    this.chosen = this.#getFeature(this.#getFeatureIndex(r.random_dec()))
+    return this.chosen
+  }
   //METH:
   addOptions(options) {
     // console.log('addOptions called')
@@ -1244,8 +890,23 @@ class EnumFeature {
   }
   //METH:
   removeOptions(options) {
+    // console.warn(`removeOptions`, this.name)
+    // console.log(`options before`, this.options)
+    // console.log(`values before`, this.values)
+    // console.log(`options to remove`, options)
+    let vals
+    if (this.values) { vals = options.map(opt => this.valueOf(opt)) }
+    // console.log(`vals to remove`, vals)
     const reduced = this.options.filter(opt => !options.includes(opt[0]))
+    // console.log(`reduced`, reduced)
     if (reduced) { this.replaceOptions(reduced) }
+    if (this.values) {
+      const reducedVals = this.values.filter(val => !vals.includes(val))
+      // console.log(`reducedVals`, reducedVals)
+      if (reducedVals) { this.values = reducedVals }
+    }
+    // console.log(`options after`, this.options)
+    // console.log(`values after`, this.values)
   }
   //METH:
   reduceOptions(toOptions) {
@@ -1264,12 +925,10 @@ class EnumFeature {
     }
     this.weightedOptions = this.#weighOptions()
   }
-  //METH: getIndex(option)
-  getIndex(option) {
-    console.error(`getIndex`)
-    console.error(`this.options`, this.options)
-    return this.options.findIndex(opt => opt[0] === option)
-  }
+  indexOf(option) { return this.options.findIndex(opt => opt[0] === option) }
+  valueOf(option) { return this.values[this.indexOf(option)] }
+  get index() { return this.indexOf(this.chosen) }
+  get value() { return this.values[this.index] }
   // #endregion
   // MARK: Private Methods
   // #region Private Methods
@@ -1289,7 +948,7 @@ class EnumFeature {
     let weight = this.options
       .map(option => option[1])
       .reduce((a, b) => a + b, 0)
-    // if (roundToDec(weight) !== 1) console.error(`weight != 1`, this.name, weight)
+    if (roundToDec(weight) !== 1) console.error(`weight != 1`, this.name, weight)
     return weight
   }
   //METH:
