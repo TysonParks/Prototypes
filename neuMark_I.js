@@ -1,5 +1,6 @@
 //ENUM: Profile : Cut Profile Descriptor
 class Profile {
+  breed
   type
   cutIn
   halfCurve
@@ -10,6 +11,7 @@ class Profile {
     this.cutIn = cutIn
     this.frameEdge = frameEdge
     this.halfCurve = halfCurve
+    this.breed = this.description
   }
 
   //MARK: Static 
@@ -24,9 +26,11 @@ class Profile {
   static vIn = new Profile(`v`)
   static vOut = new Profile(`v`, false)
 
-  static AllTypes = [`i`, `j`, `r`, `s`, `v`]
-  static CurveTypes = [`j`, `r`, `s`]
-  static FlatTypes = [`i`, `v`]
+  static AllTypes = [`i`, `j`, `r`]     // Add `s`  and `v` when implemented
+  static CurveTypes = [`j`, `r`]        // Add `s` when implemented
+  static FlatTypes = [`i`]              // Add `v` when implemented
+
+  static CurveOptions = [Profile.jIn, Profile.jOut, Profile.rIn, Profile.rOut]
 
   //MARK: Computed
   get isI() { return this.type === `i` }                    // is `i` type
@@ -66,6 +70,11 @@ class Profile {
     if (isSingleDepth) { return 0 }
     else { return 1 }
   }
+
+  get description() {
+    const inOut = this.cutIn ? `In` : `Out`
+    return `${this.type}${inOut}`
+  }
   //METH: equals()
   equals(profile) {
     return this.type === profile.type
@@ -83,6 +92,7 @@ class ProtoCut {
   depth             // (end) depth
   start
   extHighDepth      // limiter on external highlight depth
+  useExtHighDepth
   angleOffset = 0   // offset angle from global vector
   filters = new OpArray
 
@@ -91,12 +101,14 @@ class ProtoCut {
     depth,
     start,
     extHighDepth,
+    useExtHighDepth = true,
     angleOffset = 0,
   }) {
     this.profile = profile
     this.depth = depth
     this.start = start
     this.extHighDepth = extHighDepth
+    this.useExtHighDepth = useExtHighDepth
     this.angleOffset = angleOffset
     this.breed = this.description
     const match = S.Cuts.find(item => item.breed === this.breed)  // use equivalent cut if already exists
@@ -111,8 +123,7 @@ class ProtoCut {
   get padding() { return vert(this.depth * 2) }
   get description() {
     const p = this.profile
-    const inOut = p.cutIn ? `In` : `Out`
-    const prime = `${p.type}${inOut}`
+    const prime = p.breed
     const half = p.halfCurve ? `-half` : ``
     const edge = p.frameEdge ? `-frameEdge` : ``
     const dep = roundToDec(this.depth / GRID.cellRadius, 4)
@@ -135,7 +146,13 @@ class ProtoCut {
     const inset = this.profile.hasInsetShade
     if (this.profile.isSingleDepth) {
       if (this.profile.isI) {
-        this.#createShader(`high`)
+        if (inset) {
+          this.#createShader(`high`)
+        } else {
+          this.#createShader(`high`)
+          // this.#createShader(`high`, `i`, this.extHighDepth)
+        }
+
         this.#createShader(`shad`)
       } else {
         this.#createShader(`combo`)
@@ -145,12 +162,17 @@ class ProtoCut {
     if (this.profile.isR) {
       if (inset) {
         this.#createShader(`combo`, `r`, this.depth)
-        // this.#createShader(`high`, `r2`, -this.depth)
-        this.#createShader(`high`, `r2`, this.extHighDepth)
+        if (this.useExtHighDepth) {
+          this.#createShader(`high`, `r2`, this.extHighDepth)
+        } else {
+          this.#createShader(`high`, `r2`, -this.depth)
+        }
         this.#createShader(`shad`, `r2`, -this.depth)
       } else {
         this.#createShader(`combo`, `r`, this.depth)
-        this.#createShader(`combo`, `r2`, -this.depth)
+        this.#createShader(`high`, `r2`, this.extHighDepth)
+        this.#createShader(`shad`, `r2`, -this.depth)
+        // this.#createShader(`combo`, `r2`, -this.depth)
       }
     }
 
@@ -425,7 +447,7 @@ class Shade {
           .map((offset, i) => {
             mag = offset / pixToUserUnits * 1         // convert pixelUnit to userUnit magnitude
             mag = curve === 'i' ? mag * 1 : mag * 1.2
-            const iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 4  //
+            const iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6  //
             const r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6  //
             const blurRadius = curve === 'i' ? iBlurRadius : r2BlurRadius
             const highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset, 2) / perceptualDivisor)
@@ -466,7 +488,7 @@ class Shade {
         // if (curve === 'r') {                            // "R" cut
         // rotOffset = rotOffset + PI
         const rangeSize = mag                       // shadow range
-        reflLightRange = rangeSize / 2.6              // visual observation shows relfLight to be about 1/5 the shadow
+        reflLightRange = rangeSize / 2.2              // visual observation shows relfLight to be about 1/5 the shadow
         // console.log(`reflLightRange`, reflLightRange)
         if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
           offsets.push(reflLightRange)
@@ -487,13 +509,13 @@ class Shade {
         const minShadow = (1 - highColSpread - shadColSpread) + shadowReducer       // 0.9 -0.1 - 0.25 = .65
         const reflHighlight = (1 - highColSpread - reflHighSpread)                  // 0.9 -0.1 - 0.2  = .7
         // const reflHighlight = (1 - highColSpread - reflHighSpread) - shadowReducer  // 0.9 -0.1 - 0.2  = .7
-        const perceptualDivisor = 4                        // compensates for blur, etc to get visually correct result
+        const perceptualDivisor = 16                       // compensates for blur, etc to get visually correct result
         console.log(``)
         console.warn(`offsets`, offsets)
         neuShades = offsets
           .map(offset => {
             let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
-            mag = curve === 'j' ? mag * .9 : mag * (cutIn ? .6 : 1)
+            mag = curve === 'j' ? mag * 1 : mag * (cutIn ? .75 : .75)
             // mag = curve === 'j' ? mag : mag * mag * .4
             let isSCurve = false
 
