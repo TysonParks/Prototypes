@@ -120,13 +120,13 @@ class ProtoFilter {
           .substring(7)}`
         const blendMode = () => {
           if ((prevMode === 'lighten' && !lighten) || (prevMode === 'darken' && lighten)) { return 'normal' }
-          return lighten ? 'lighten' : 'darken'
+          // return lighten ? 'lighten' : 'darken'
           // return lighten ? 'multiply' : 'darken'
           // return 'normal'
-          // return 'hard-light'
+          return 'hard-light'
           // return lighten ? 'darken' : 'screen'
           // return lighten ? 'hard-light' : 'multiply'
-          return lighten ? 'multiply' : 'screen'
+          // return lighten ? 'multiply' : 'screen'
           return lighten ? 'screen' : 'darken'
         }
 
@@ -187,7 +187,7 @@ class ProtoFilter {
           .attribute('result', 'offset-blurred')
           .parent(filter)
 
-        console.log(`this.offsetElts`, this.offsetElts)
+        // console.log(`this.offsetElts`, this.offsetElts)
         this.offsetElts.push({ elt: feOffset, mag: mag, })
 
         //3 feFlood: flood the offset result with the input color
@@ -375,9 +375,18 @@ class ProtoFilter {
 
   //METH: updateOffsets()
   updateOffsets(shadVect) {
+    const updates = []
+
     this.offsetElts.forEach(({ elt, mag }) => {
-      elt.attribute(`dx`, shadVect.x * mag)
-      elt.attribute(`dy`, shadVect.y * mag)
+      const dx = shadVect.x * mag
+      const dy = shadVect.y * mag
+      updates.push({ elt, dx, dy })
+    })
+
+    // Perform all updates in a batch
+    updates.forEach(({ elt, dx, dy }) => {
+      elt.attribute(`dx`, dx)
+      elt.attribute(`dy`, dy)
     })
   }
 
