@@ -1,8 +1,8 @@
 let gui
 
 let testingControls = {
-  hashNumber: 660,
-  lastHash: true,
+  hashNumber: 692,
+  lastHash: false,
   labels: true,
   borders: false,
   testColors: false,
@@ -104,7 +104,14 @@ function createGUI() {
 
 // MARK: Artwork UI
 function shadeAnimation() {
-  globalControls.animated = !globalControls.animated
+  if (globalControls.animated) {
+    stopAnimationLoop()
+  } else {
+    globalControls.animated = true
+    startAnimationLoop()
+  }
+
+  // globalControls.animated = !globalControls.animated
 }
 
 // MARK: Keyboard UI
