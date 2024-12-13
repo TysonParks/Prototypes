@@ -141,11 +141,11 @@ const Debuggable = {
     }
   },
   showLofts() {
-    console.error(`DEBUG: showLofts`)
+    DeBug.error(`DEBUG: showLofts`)
 
     const randHue = ProtoColor.randomShadHue()
     const lightHue = protoColor(randHue.red, randHue.green, randHue.blue)
-    console.groupCollapsed(this.id)
+    DeBug.groupCollapsed(this.id)
     if (this.isShapeGroup && this.cut?.profile) {
       this.debugStartElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugStart`)
       this.debugEndElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugEnd`)
@@ -161,10 +161,10 @@ const Debuggable = {
       })
 
       this.shapes.forEach(sh => {
-        console.log(`this.cut`, this.cut)
-        console.log(`cut values`, this.cut.start, this.cut.depth, sh.insetScale)
+        DeBug.log(`this.cut`, this.cut)
+        DeBug.log(`cut values`, this.cut.start, this.cut.depth, sh.insetScale)
         const depthScale = vert(this.cut.depth / this.grid.cellRadius / 2)
-        console.log(`depthScale`, depthScale)
+        DeBug.log(`depthScale`, depthScale)
         let startScale, endScale
         if (this.cut.profile.hasOutsetShade) {
           startScale = Vertex.add(sh.insetScale, depthScale)
@@ -175,7 +175,7 @@ const Debuggable = {
         }
 
         const newScales = [startScale, endScale]
-        console.log(`newScales`, newScales)
+        DeBug.log(`newScales`, newScales)
         const newPaths = newScales.map((scale, i) => {
           const shape = sh.copy({
             insetScale: scale,
@@ -192,8 +192,50 @@ const Debuggable = {
 
 
     }
-    console.groupEnd()
+    DeBug.groupEnd()
   },
 
 
+}
+
+//MARK: DeBug Class
+//CLASS: replace calls to console methods with these in order to have global control over logging
+class DeBug {
+  static enableLogging = false // Set to false to disable all logging
+
+  static log(...args) {
+    if (this.enableLogging) {
+      console.log(...args)
+    }
+  }
+
+  static error(...args) {
+    if (this.enableLogging) {
+      console.error(...args)
+    }
+  }
+
+  static warn(...args) {
+    if (this.enableLogging) {
+      console.warn(...args)
+    }
+  }
+
+  static group(...args) {
+    if (this.enableLogging) {
+      console.group(...args)
+    }
+  }
+
+  static groupCollapsed(...args) {
+    if (this.enableLogging) {
+      console.groupCollapsed(...args)
+    }
+  }
+
+  static groupEnd() {
+    if (this.enableLogging) {
+      console.groupEnd()
+    }
+  }
 }
