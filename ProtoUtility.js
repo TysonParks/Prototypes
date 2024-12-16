@@ -118,11 +118,11 @@ class Direction {
 
   get moveCoord() {
     return memoize(() => {
-      // console.group(`moveCoord`)
-      // console.log(this.name)
-      // console.log(this.angle)
-      // console.log(this.angleDegrees)
-      // console.groupEnd()
+      // DeBug.group(`moveCoord`)
+      // DeBug.log(this.name)
+      // DeBug.log(this.angle)
+      // DeBug.log(this.angleDegrees)
+      // DeBug.groupEnd()
       return this.directOp(a => {
         // if (a.value % 0.5 === 0) {
         //   return this.#moveCoords[a.name]
@@ -168,6 +168,12 @@ class Direction {
     }
   }
   get andOpposites() { return new Direction(this.vals.union(this.opposites.vals, 'vals')) }
+  get perpindiculars() {
+    if (this.allAreHorizontal) { return Direction.Vertical }
+    if (this.allAreVertical) { return Direction.Horizontal }
+    if (this.allArePosOrdinal) { return Direction.NegOrdinal }
+    if (this.allAreNegOrdinal) { return Direction.PosOrdinal }
+  }
 
   get isAll() { return this.vals.length === 8 }
   get isNone() { return this.vals.length === 0 }
@@ -193,6 +199,8 @@ class Direction {
 
   get allAreHorizontal() { return this.vals.every(a => a % 2 === 1) }
   get allAreVertical() { return this.vals.every(a => a % 2 === 0) }
+  get allArePosOrdinal() { return this.vals.every(a => (a + .5) % 2 === 1) }
+  get allAreNegOrdinal() { return this.vals.every(a => (a + .5) % 2 === 0) }
   get allAreCardinal() { return this.directions.every(a => a.isEachHorizontal || a.isEachVertical) }
   get allAreOrdinal() { return this.vals.every(a => a % 1 === 0.5) }
 
@@ -211,7 +219,7 @@ class Direction {
     if (this.isCardinal) { return 2 }
     if (this.isTwoOpposites) { return 1 }
     if (this.isNone) { return 0 }
-    console.error('Undefined directionHierachy')
+    DeBug.error('Undefined directionHierachy')
   }
 
   random(amount = 1) {
@@ -262,18 +270,18 @@ class Direction {
     const direction = Direction.None
     const name = direction.angleKeys.find(key => equalsRoundedDec(direction.#angles[key], angle, decimal))
     if (!name) {
-      console.error(`This angle is Non-Axial!: ${angle}`)
-      // console.log(this)
+      DeBug.error(`This angle is Non-Axial!: ${angle}`)
+      // DeBug.log(this)
       const value = Direction.angleToValue(angle)
       return new Direction(value)
 
       return Direction.None
     }
     const index = direction.#descriptions.findIndex(e => e === name)
-    // console.log(`angle`, angle)
-    // console.log(`direction`, direction)
-    // console.log(`name`, name)
-    // console.log(`index`, index)
+    // DeBug.log(`angle`, angle)
+    // DeBug.log(`direction`, direction)
+    // DeBug.log(`name`, name)
+    // DeBug.log(`index`, index)
     return new Direction(index / 2)
   }
 
@@ -281,14 +289,23 @@ class Direction {
 
   static valueToAngle(value) { return PI * (((value + 0.5) % 4) - 1.5) / 2 }
 
+  static fromMoveCoord(moveCoord) {
+    const dir = Direction.None
+    const dirs = Object
+      .keys(dir.#moveCoords)
+      .filter(key => dir.#moveCoords[key].equals(moveCoord))
+      .map(name => Direction.named(name))
+    return dirs.length === 1 ? dirs[0] : dirs
+  }
+
   static moveCoordFromAngle(angle) {
     let [x, y] = [cos(angle), sin(angle)]
     let [absX, absY] = [abs(x), abs(y)]
-    // console.group(`moveCoordFromAngle`)
-    // console.warn(`angle`, angle)
-    // console.warn(`degrees`, degrees(angle))
-    // console.warn(`cos,sin`, [x, y])
-    // console.groupEnd()
+    // DeBug.group(`moveCoordFromAngle`)
+    // DeBug.warn(`angle`, angle)
+    // DeBug.warn(`degrees`, degrees(angle))
+    // DeBug.warn(`cos,sin`, [x, y])
+    // DeBug.groupEnd()
 
     // const epsilon = 0.0001 // Small threshold for floating-point comparison
 
@@ -324,8 +341,8 @@ class Direction {
 
   static named(name) {
     if (name === `up`) { return Direction.Up }
-    const direction = Direction.None
-    const index = direction.#descriptions.findIndex(e => e === name)
+    const dir = Direction.None
+    const index = dir.#descriptions.findIndex(e => e === name)
     if (index) { return new Direction(index / 2) }
   }
 
@@ -410,6 +427,8 @@ class Corner {
   get isDown() { return !this.isUp }
   get isLeft() { return !this.isRight }
 
+  get direction() { return new Direction(this.value - .5) }
+
   //METH: equals()
   equals(corner) { return this.value === corner.value }
 
@@ -424,28 +443,28 @@ class Corner {
 // //MARK: Corners
 // // // ENUM: Corners
 class Corners {
-  static Directions = new Corners(Direction.Ordinal.directions)
+  static Directions = new Corners(Direction.Ordinal.directions.shifted(-1))   // Corner of corresponding directions. Requires shifting to match
 
   values
 
   constructor(values) {
-    // console.log(`values`, values)
+    // DeBug.log(`values`, values)
     if (values instanceof Segment) { values = [values.start, values.end] }
     if (values instanceof Array) {
       if (values.length === 2 && values.every(v => v instanceof Vertex)) {
-        // console.log(`values`, values)
+        // DeBug.log(`values`, values)
         values = this.#valuesFromBoundsVerts(values[0], values[1])
       }
-      // console.log(`after valuesFromBoundsVerts`, values)
+      // DeBug.log(`after valuesFromBoundsVerts`, values)
       if (values.length === 4) { this.values = values }
     } else if (isCornerObj(values)) {
       values = [values.upLeft, values.upRight, values.downRight, values.downLeft]
     } else {
-      console.error(`Corners failed to initialize`)
+      DeBug.error(`Corners failed to initialize`)
     }
-    this.values = values
+    this.values = OpArray.format(values)
     if (this.values.length !== 4) {
-      console.error(`Corners expects 4 values: expect problems!`)
+      DeBug.error(`Corners expects 4 values: expect problems!`)
     }
   }
 
@@ -488,6 +507,10 @@ class Corners {
     return new Sides(sideVals)
   }
 
+  //METH: atIndex()
+  atIndex(index) { return this.values[index] }
+
+  //METH: #valuesFromBoundsVerts()
   #valuesFromBoundsVerts(vert1, vert2) {
     const verts = OpArray.format([vert1, vert2]).gridVertSorted
     return [
@@ -507,18 +530,18 @@ class Sides {
   values
 
   constructor(values) {
-    // console.log(`Sides values`, values)
+    // DeBug.log(`Sides values`, values)
     if (values instanceof Array) {
-      this.values = values
+      values = values
     } else if (isSideObj(values)) {
-      // console.log(`values is isSideObj`, values)
-      this.values = [values.up, values.right, values.down, values.left]
+      // DeBug.log(`values is isSideObj`, values)
+      values = [values.up, values.right, values.down, values.left]
     } else {
-      console.error(`Sides require an array to initialize`, values)
+      DeBug.error(`Sides require an array to initialize`, values)
     }
-
+    this.values = OpArray.format(values)
     if (this.values.length !== 4) {
-      console.error(`Sides expects 4 values: expect problems!`)
+      DeBug.error(`Sides expects 4 values: expect problems!`)
     }
   }
 
@@ -530,6 +553,8 @@ class Sides {
   get verticals() { return [this.up, this.down] }
   get horizontals() { return [this.right, this.left] }
   get all() { return this.values }
+
+  get direction() { return new Direction(this.value) }
 
   get obj() {
     return {
@@ -560,7 +585,7 @@ class Turn {
   // static UR = new Turn(2)      // U-Turn Right
 
   static from(segPair) {
-    if (segPair.length !== 2) { console.error('expected 2 segments') }
+    if (segPair.length !== 2) { DeBug.error('expected 2 segments') }
     let d1 = segPair[0].direction
     let d2 = segPair[0].direction
     return d1.turnTo(d2)
@@ -708,14 +733,14 @@ class EdgePart {
   }
 
   static fromTurns(turns) {
-    // console.log('turns', turns)
-    // console.log('turnPatterns', this.turnPatterns)
+    // DeBug.log('turns', turns)
+    // DeBug.log('turnPatterns', this.turnPatterns)
     if (turns.length === 2) { return this.from2(turns) }
   }
 
   static from2(turns) {
-    // console.error(`from2(turns): `, turns)
-    // console.error(turns.map(t => t.shortName))
+    // DeBug.error(`from2(turns): `, turns)
+    // DeBug.error(turns.map(t => t.shortName))
     const pair = turns.map(e => e.shortName).join('')
     const name = getKeyByValue(this.turnPatterns, pair)
     return new EdgePart(name)
@@ -735,7 +760,7 @@ function isCornerObj(obj) { return hasProperties(obj, [`upLeft`, `upRight`, `dow
 function isSideObj(obj) { return hasProperties(obj, [`up`, `right`, `down`, `left`]) }
 // FUNC: findBounds() : {BoundsObject} : get bounds for combos of [segments, verts] or objects that contain bounds props
 function findBounds(...geo) {
-  // console.log(`geo`, geo)
+  // DeBug.log(`geo`, geo)
   let boundsVerts, xMin, xMax, yMin, yMax
   //ARROW: bounds() : assemble bounds obj from mins & maxes
   const bounds = () => { return { xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax, } }
@@ -749,13 +774,13 @@ function findBounds(...geo) {
   } else {                                                              // geo is rest param array
     boundsVerts = geo
   }
-  // console.log(`boundsVerts`, boundsVerts)
+  // DeBug.log(`boundsVerts`, boundsVerts)
   boundsVerts = OpArray.format(boundsVerts).flat(Infinity).compacted
     .map(e => {                                                         // map segs to verts
       if (e instanceof Segment) { return [e.start, e.end] }
       if (e instanceof Vertex) { return e }
       //TODO: I could also check for bounds objects and arrays here to unpack all combos of madness
-      console.error(`findBounds failed: geo contains item  of unrecognized type`, e)
+      DeBug.error(`findBounds failed: geo contains item  of unrecognized type`, e)
     }).flat()
   const xVals = boundsVerts.map(v => v.x)
   const yVals = boundsVerts.map(v => v.y)
@@ -772,8 +797,8 @@ function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, de
   const x = approxToDec(vert.x, accuracy, 0)
   const y = approxToDec(vert.y, accuracy, 0)
   bounds = { ...bounds }.map(val => approxToDec(val, accuracy, 0))
-  // console.log(`x: ${x}, y: ${y}`)
-  // console.log(`bounds`, bounds)
+  // DeBug.log(`x: ${x}, y: ${y}`)
+  // DeBug.log(`bounds`, bounds)
   const { xMin, xMax, yMin, yMax } = bounds
   let result
   if (includeBorder) {
@@ -793,7 +818,7 @@ function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, de
       && abs(y - yMin) < deviation
       && abs(y - yMax) < deviation
   }
-  // console.error(`result`, result)
+  // DeBug.error(`result`, result)
   return result
 }
 // FUNC: boundsIsWithinTestBounds() : BOOL : finds if vert is within bounds of testBounds
@@ -809,23 +834,23 @@ function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, just
 }
 // FUNC: boundsOverlap() : BOUNDS : finds overlap of two pieces of GEO
 function boundsOverlap({ geo, accuracy = 3 } = {}) {
-  // console.log(`boundsOverlap geo`, geo)                                                                  //LOGGING:
+  // DeBug.log(`boundsOverlap geo`, geo)                                                                  //LOGGING:
   let boundsArray
 
   if (Array.isArray(geo[0])) {
-    // console.log(`boundsOverlap found subArray`)
+    // DeBug.log(`boundsOverlap found subArray`)
     boundsArray = geo[0]
   } else {
     boundsArray = geo
   }
-  // console.log(`boundsOverlap boundsArray`, boundsArray.map(s => [s.start?.string, s.end?.string]))                     //LOGGING:
+  // DeBug.log(`boundsOverlap boundsArray`, boundsArray.map(s => [s.start?.string, s.end?.string]))                     //LOGGING:
   //ARROW: overlap(geo1, geo2)
   const overlap = (geo1, geo2) => {
-    // console.log()
+    // DeBug.log()
     const bounds1 = findBounds(geo1).map(v => roundToDec(v, accuracy))
     const bounds2 = findBounds(geo2).map(v => roundToDec(v, accuracy))
-    // console.log(`overlap() bounds1`, bounds1)
-    // console.log(`overlap() bounds2`, bounds2)
+    // DeBug.log(`overlap() bounds1`, bounds1)
+    // DeBug.log(`overlap() bounds2`, bounds2)
 
     const minOverlap = vert(max(bounds1.xMin, bounds2.xMin), max(bounds1.yMin, bounds2.yMin))
     const maxOverlap = vert(min(bounds1.xMax, bounds2.xMax), min(bounds1.yMax, bounds2.yMax))
@@ -837,7 +862,7 @@ function boundsOverlap({ geo, accuracy = 3 } = {}) {
 
 
   if (boundsArray.length === 0) return
-  // console.error(`boundsArray`, boundsArray)
+  // DeBug.error(`boundsArray`, boundsArray)
 
   const initialBounds = boundsArray[0]        // Initial bounds should be the first geo's bounds
 
@@ -865,7 +890,7 @@ function safeWhile(conditionFunc, actionFunc, maxIterations = 10) {
     iterations++
   }
   if (iterations >= maxIterations) {
-    console.error('Reached the maximum iteration limit of ' + maxIterations)
+    DeBug.error('Reached the maximum iteration limit of ' + maxIterations)
   }
 }
 //FUNC: safeArrayWhile()
@@ -875,7 +900,7 @@ function safeArrayWhile(conditionArrayFunc, actionFunc, arrayMin = 0, maxRepeats
   let currentCount
   while (conditionArrayFunc().length > arrayMin && repeats < maxRepeats) {
     currentCount = conditionArrayFunc().length
-    console.log(`currentCount`, currentCount)
+    DeBug.log(`currentCount`, currentCount)
     if (currentCount < minCount) {
       minCount = currentCount
     }
@@ -889,7 +914,7 @@ function safeArrayWhile(conditionArrayFunc, actionFunc, arrayMin = 0, maxRepeats
     }
   }
   if (repeats >= maxRepeats) {
-    console.error('Reached the maximum iteration limit of ' + maxRepeats)
+    DeBug.error('Reached the maximum iteration limit of ' + maxRepeats)
   }
 }
 
