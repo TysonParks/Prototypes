@@ -178,7 +178,7 @@ class ProtoCut {
 
 
     if (this.profile.isS) {
-      console.error(`ProtoCut "s" profile not yet implemented`)
+      DeBug.error(`ProtoCut "s" profile not yet implemented`)
       //   if (inset) { 
 
       //   }else{
@@ -188,7 +188,7 @@ class ProtoCut {
       //   this.#createShader(`r`, this.depth2)
     }
     //TODO: implement v shader
-    if (this.profile.isV) { console.error(`ProtoCut "v" profile not yet implemented`) }
+    if (this.profile.isV) { DeBug.error(`ProtoCut "v" profile not yet implemented`) }
   }
   //METH: createShader()
   #createShader(shadeType, curve = this.profile.type, mag = this.depth) {
@@ -197,7 +197,7 @@ class ProtoCut {
     const r2 = curve === `r2` ? 1 : -1
     const angle = curve === `r` ? this.angleOffset + 180 : this.angleOffset
     mag = mag * cutIn * r * r2
-    console.warn({ curve: curve, cut: this.profile.cutIn ? `in` : `out`, shadeType, mag: mag / FRAME.pixToUserUnits, rotOffset: angle })
+    DeBug.warn({ curve: curve, cut: this.profile.cutIn ? `in` : `out`, shadeType, mag: mag / FRAME.pixToUserUnits, rotOffset: angle })
     const stack = Shade.neuShadeSVGFactory({
       shadeType: shadeType,
       curve: curve,
@@ -205,7 +205,7 @@ class ProtoCut {
       mag: mag,
       rotOffset: angle
     })
-    console.error(`stack`, stack)
+    DeBug.error(`stack`, stack)
 
     const filter = createFilter().shade(stack, shadeType)
     this.filters.push(filter)
@@ -241,7 +241,7 @@ class Shade {
   //METH: neuShadeSVG()
   static neuShadeSVG(shadeType, vector = this.shadVect(), mag, highBlurRad, shadBlurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
     const invert = curve === `r`
-    // console.log('components', vector.x, vector.y, blurRad)
+    // DeBug.log('components', vector.x, vector.y, blurRad)
     const iCutHighMagMult = curve === `i` ? .75 : 1
     const r2CutHighMagMult = curve === `r2` ? .5 : 1
     const jCutMagMult = curve === `j` ? .75 : 1
@@ -291,7 +291,7 @@ class Shade {
 
     return OpArray.format([shadeShadow, shadeHighlight]).compacted
     // return [shadow, highlight]
-    // // console.log('nsSVG shadow', shadow)
+    // // DeBug.log('nsSVG shadow', shadow)
     // if (curve === 'j') {
     //   return [shadow, highlight]
     //   // return [highlight, shadow]
@@ -332,9 +332,9 @@ class Shade {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
-    console.log(``)
-    console.groupCollapsed(`neuShadeSVGFactory`, vector)
-    console.log(`mag`, mag)
+    DeBug.log(``)
+    DeBug.groupCollapsed(`neuShadeSVGFactory`, vector)
+    DeBug.log(`mag`, mag)
     // //MARK: "I" Cut
     // if (curve === 'i') {
     //   mag = mag / pixToUserUnits * 0.85           // convert pixelUnit to userUnit magnitude
@@ -352,13 +352,13 @@ class Shade {
     //   const highCol = achromic(highColLuma)
     //   const shadCol1 = achromic(shadColLuma1)
     //   const shadCol2 = achromic(shadColLuma2)
-    //   console.log(`i inset`, inset)
+    //   DeBug.log(`i inset`, inset)
     //   let shades = new OpArray
     //   const shades1 = this.neuShadeSVG(vector.setMag(mag).rotate(rotOffset), blurRadius, highCol, shadCol1, inset, blur, curve)
     //   shades.push(shades1)
     //   const shades2 = this.neuShadeSVG(vector.setMag(mag * 1.5).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
     //   shades.push(shades2)
-    //   // console.log(`i shades`, shades)
+    //   // DeBug.log(`i shades`, shades)
     //   return shades.flat()
     // }
 
@@ -405,8 +405,8 @@ class Shade {
     ])
       .slice(start, keep())       // reduce layers based upon start and keep()
     // .filter(e=> )
-    // .slice(start, 7)       // reduce layers based upon start and keep()
-    console.error('offsets', offsets)
+    // .slice(start, 2)       // reduce layers based upon start and keep()
+    DeBug.error('offsets', offsets)
     offsets = offsets
       .map(e => { return rounding(e) }) // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
@@ -414,7 +414,7 @@ class Shade {
       .numSorted                  // sort small-large
       .unique()                   // remove duplicates
 
-    console.error('offsets', offsets)
+    DeBug.error('offsets', offsets)
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
@@ -460,16 +460,16 @@ class Shade {
             // const shadCol2 = achromic(shadColLuma1).setAlpha(.25)
 
             let shades = new OpArray
-            console.log(`mag`, mag)
-            console.log(`vector`, vector)
-            console.log(`rotOffset`, rotOffset)
+            DeBug.log(`mag`, mag)
+            DeBug.log(`vector`, vector)
+            DeBug.log(`rotOffset`, rotOffset)
             const shadeVector = Vertex.cleanRotate(vector, radians(rotOffset)).setMag(mag)
             // const shadeVector = vector.setMag(mag)
 
-            // console.log(`angleMode`, _angleMode)
-            // console.log(`shadeVector`, shadeVector)
-            // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
-            // console.log(`rotOffset`, rotOffset)
+            // DeBug.log(`angleMode`, _angleMode)
+            // DeBug.log(`shadeVector`, shadeVector)
+            // DeBug.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
+            // DeBug.log(`rotOffset`, rotOffset)
 
             const shades1 = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
             shades.push(shades1)
@@ -478,7 +478,7 @@ class Shade {
               // const shades2 = this.neuShadeSVG(shadeType,vector.setMag(mag * 1).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
               // shades.push(shades2)
             }
-            console.log(`${curve} shades`, shades)
+            DeBug.log(`${curve} shades`, shades)
             return shades.flat()
           }).flat()
       }
@@ -489,13 +489,13 @@ class Shade {
         // rotOffset = rotOffset + PI
         const rangeSize = mag                       // shadow range
         reflLightRange = rangeSize / 2.2              // visual observation shows relfLight to be about 1/5 the shadow
-        // console.log(`reflLightRange`, reflLightRange)
+        // DeBug.log(`reflLightRange`, reflLightRange)
         if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
           offsets.push(reflLightRange)
           offsets = offsets.numSorted
         }
         // }
-        // console.log('bonus offsets', offsets)
+        // DeBug.log('bonus offsets', offsets)
 
         const highColSpread = 0.1                         // spread up from base (0.9) to max highlight luma (1!)
         // const shadColSpread = 0.25                          // spread down from base (0.9) to min shadow luma (0.7)
@@ -510,8 +510,8 @@ class Shade {
         const reflHighlight = (1 - highColSpread - reflHighSpread)                  // 0.9 -0.1 - 0.2  = .7
         // const reflHighlight = (1 - highColSpread - reflHighSpread) - shadowReducer  // 0.9 -0.1 - 0.2  = .7
         const perceptualDivisor = 16                       // compensates for blur, etc to get visually correct result
-        console.log(``)
-        console.warn(`offsets`, offsets)
+        DeBug.log(``)
+        DeBug.warn(`offsets`, offsets)
         neuShades = offsets
           .map(offset => {
             let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
@@ -566,27 +566,27 @@ class Shade {
             const highCol = achromic(highColLuma)
             const shadCol = achromic(shadColLuma)
             // angleMode(DEGREES)
-            // console.log(`DEG_TO_RAD`, DEG_TO_RAD)
-            // console.log(`PI/180`, PI / 180)
-            // console.log(`angleMode`, _angleMode)
-            // console.log(`vector`, vector)
-            // console.log(`vectorX: ${vector.x}, vectorY: ${vector.y}, vectorZ: ${vector.z}`)
-            // console.log(`rotOffset`, rotOffset)
-            // console.log(`calculation`, Vertex.rotate(vector, radians(rotOffset)))
-            // console.log(`calculation`, Vertex.rotate(vector, PI))
-            console.log(`mag`, mag)
-            console.log(`vector`, vector)
-            console.log(`rotOffset`, rotOffset)
+            // DeBug.log(`DEG_TO_RAD`, DEG_TO_RAD)
+            // DeBug.log(`PI/180`, PI / 180)
+            // DeBug.log(`angleMode`, _angleMode)
+            // DeBug.log(`vector`, vector)
+            // DeBug.log(`vectorX: ${vector.x}, vectorY: ${vector.y}, vectorZ: ${vector.z}`)
+            // DeBug.log(`rotOffset`, rotOffset)
+            // DeBug.log(`calculation`, Vertex.rotate(vector, radians(rotOffset)))
+            // DeBug.log(`calculation`, Vertex.rotate(vector, PI))
+            DeBug.log(`mag`, mag)
+            DeBug.log(`vector`, vector)
+            DeBug.log(`rotOffset`, rotOffset)
             const shadeVector = Vertex.cleanRotate(vector, rotOffset).setMag(mag)
             // const shadeVector = vector.setMag(mag)
 
-            // console.log(`angleMode`, _angleMode)
-            console.log(`shadeVector`, shadeVector)
-            // console.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
-            // console.log(`rotOffset`, rotOffset)
+            // DeBug.log(`angleMode`, _angleMode)
+            DeBug.log(`shadeVector`, shadeVector)
+            // DeBug.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
+            // DeBug.log(`rotOffset`, rotOffset)
             // const shadeVector = vector.setMag(mag)
             let shades = this.neuShadeSVG(shadeType, shadeVector, mag, highBlurRad, shadBlurRad, highCol, shadCol, inset, blur, curve)
-            console.log(`${curve} ${shadeType} shades`, shades)
+            DeBug.log(`${curve} ${shadeType} shades`, shades)
             return shades
           })
           .flat()
@@ -633,11 +633,11 @@ class Shade {
       neuShades = OpArray.from([...lighten, ...darken])
       // neuShades = OpArray.from([...darken, ...lighten])
     }
-    console.error(`neuShades`, neuShades)
-    // console.error(`vect`, neuShades.map(ns => [ns.dx, ns.dy]))
-    // console.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
-    // console.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
-    console.groupEnd()
+    DeBug.error(`neuShades`, neuShades)
+    // DeBug.error(`vect`, neuShades.map(ns => [ns.dx, ns.dy]))
+    // DeBug.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
+    // DeBug.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
+    DeBug.groupEnd()
     return neuShades
   }
 
@@ -668,11 +668,11 @@ class Shade {
   }
   //METH: Neumorphic Box Shadow Factory - create a shadow and highlight stack
   static neuBoxShadFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, spread = 16, inset = false } = {}) {
-    // console.log('neuCSS')
-    // console.log(baseCol, vector, start, spread, inset)
+    // DeBug.log('neuCSS')
+    // DeBug.log(baseCol, vector, start, spread, inset)
     let offset = vector.mag() / sqrt(2)
     let cols = baseCol.highShadSpread(spread)
-    // console.log(offset, cols)
+    // DeBug.log(offset, cols)
     let neuShads = cleanSlices(start, offset, globalControls.shadQuality)
     print(neuShads.map(e => e.toFixed(2)))
     neuShads = neuShads.map(sliceOffset => this.neuBoxShadCSS(vector.setMag(sliceOffset), 2 * sliceOffset, cols[0], cols[1], inset))
@@ -734,11 +734,11 @@ class ProtoColor extends p5.Color {
     const h = this.hue
     const s = this.saturation
     const b = this.brightness
-    // console.log('brightness', b)
+    // DeBug.log('brightness', b)
 
     const high = [h, s, constrain(b + spread, 0, 100)]
     const shad = [this.complementHue, s, constrain(b - 2.5 * spread, 0, 100)]
-    // console.log('cols:', high, shad)
+    // DeBug.log('cols:', high, shad)
     let cols = [high, shad]
       .map(hsb => `hsb(${hsb[0]}, ${hsb[1]}%, ${hsb[2]}%)`)
       .map(dscrpt => color(dscrpt))
@@ -748,7 +748,7 @@ class ProtoColor extends p5.Color {
   highShadSpread(spread = 16) {
     let b = this.brightness
     let bPair = [round(b + spread), round(b - 1.3 * spread)]
-    // console.log('bPair', bPair)
+    // DeBug.log('bPair', bPair)
     let cols = bPair
       .map(b => `hsb(${this.hue}, ${this.saturation}%, ${b}%)`)
       .map(dscrpt => protoColor(dscrpt))
@@ -767,7 +767,7 @@ class ProtoColor extends p5.Color {
 
   static okLCH(l, c, h) {
     const rgbColor = oklch2rgb([l, c, h])
-    // console.log(`okLCH 2 RGB:`, rgbColor)
+    // DeBug.log(`okLCH 2 RGB:`, rgbColor)
     return protoColor(rgbColor)
   }
 
@@ -804,12 +804,12 @@ function createSlices(min, max, factor = 0.5) {
 }
 // FUNC: exponentialSlices()
 function exponentialSlices(min, max, amount, factor = 0.5) {
-  // console.log('expSlicesInput', min, max, amount)
+  // DeBug.log('expSlicesInput', min, max, amount)
   // if (amount < 3) { return OpArray.from([min, max]) }
   const range = max - min
   const multipliers = createSlices(1, pow(2, amount - 1), factor).map(e => e - 1)
   const last = multipliers.last
-  // console.log('multipliers', multipliers)
+  // DeBug.log('multipliers', multipliers)
   return multipliers.map(e => min + e * (range / last))
 }
 // FUNC: cleanSlices()
