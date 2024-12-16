@@ -47,16 +47,12 @@ class SVG {
 //FUNC: addElement(elt, pInst, media) allows for the creation of p5.Elements without using instance mode
 function addElement(elt, pInst, media) {
   const node = pInst._userNode ? pInst._userNode : document.body
-  // print(`node:`)
-  // print(node)
+  console.log(`addElement node:`, node)
   node.appendChild(elt)
   const c = media
     ? new p5.MediaElement(elt, pInst)
     : new p5.Element(elt, pInst)
-  // print(`c:`)
-  // print(c)
-  // print(`pInst._elements:`)
-  // print(pInst._elements)
+
   pInst._elements.push(c)
   return c
 }
@@ -76,13 +72,13 @@ class ProtoFilter {
     this.needsPadding = false
     this.storeObject(S.Effects)
     this.offsetElts = new OpArray
-    // console.log('filter init', this)
+    // DeBug.log('filter init', this)
   }
 
   //METH: shade()
   shade(shades, type, clearInset = true, normalBlending = true) {
     shades = OpArray.format(shades)
-
+    DeBug.log(`shade creation`)
     // const normalBlending = false            // always use true (use false for special one offs!)
     const insetShadows = shades.filter(shade => shade.inset)
     const outsetShadows = shades.filter(shade => !shade.inset)
@@ -91,22 +87,31 @@ class ProtoFilter {
     // const outsetHighlights = shades.filter(shad => !shad.inset && shad.lighten)
     // const outsetShadows = shades.filter(shad => !shad.inset && !shad.lighten)
 
-    this.shades = outsetShadows
+    this.shades = shades
+    // this.shades = outsetShadows
 
     // this.clearInset = clearInset
     this.type = type
     this.defs = createSVGElt('defs')
     this.filter = createSVGElt('filter').id(this.id)
 
+    createSVGElt('feFlood')
+      .attribute('flood-opacity', 0)
+      .attribute('result', 'transparentInput')
+      .parent(this.filter)
+
     let previousResult = 'SourceGraphic'
     let insetResult = clearInset ? 'transparentInput' : 'SourceGraphic'
+    // let insetResult = clearInset ? 'SourceAlpha' : 'SourceGraphic'
     let outsetResult = 'SourceGraphic'
 
 
     //ARROW: buildFilter()
     const buildFilter = (shades, filter, inset, clearInset) => {
       let prevMode = 'normal'
+      DeBug.warn(`building shades`)
       for (const shade of shades) {
+        DeBug.log(`current shade:`, shade)
         // const { dx, dy, blur, color, lighten } = shade
         let { invert, blur, color, lighten } = shade
         const vector = Shade.shadVect()
@@ -118,6 +123,7 @@ class ProtoFilter {
         const resultId = `shade-${inset ? "inset" : "outset"}-${random()
           .toString(36)
           .substring(7)}`
+        // insetResult = resultId
         const blendMode = () => {
           if ((prevMode === 'lighten' && !lighten) || (prevMode === 'darken' && lighten)) { return 'normal' }
           // return lighten ? 'lighten' : 'darken'
@@ -136,9 +142,9 @@ class ProtoFilter {
         if (useBlur) {
           //1 feGaussianBlur: blur the alpha channel of the input shape
           createSVGElt('feGaussianBlur')
-            .attribute('in', `SourceAlpha`)
-            .attribute('stdDeviation', blur)
-            .attribute('result', 'blurred')
+            .attribute('in', `SourceAlpha`)                         // verified attr
+            .attribute('stdDeviation', blur)                        // verified attr
+            .attribute('result', 'blurred')                         // verified attr
             .parent(filter)
         }
         //NOTE: NEW BLOCK START-------------------------------------------
@@ -181,42 +187,47 @@ class ProtoFilter {
 
         //2 feOffset: offset the blurred result
         const feOffset = createSVGElt('feOffset')
-          .attribute('in', useBlur ? 'blurred' : 'SourceAlpha')
-          .attribute('dx', dx)
-          .attribute('dy', dy)
-          .attribute('result', 'offset-blurred')
+          .attribute('in', useBlur ? 'blurred' : 'SourceAlpha')       // verified attr
+          .attribute('dx', dx)                                        // verified attr
+          .attribute('dy', dy)                                        // verified attr
+          .attribute('result', 'offset-blurred')                      // verified attr
           .parent(filter)
 
-        // console.log(`this.offsetElts`, this.offsetElts)
+        // DeBug.log(`this.offsetElts`, this.offsetElts)
         this.offsetElts.push({ elt: feOffset, mag: mag, })
 
         //3 feFlood: flood the offset result with the input color
         createSVGElt('feFlood')
-          // .attribute(`in`, 'offset-blurred')
-          .attribute('flood-color', color)
-          .attribute('flood-opacity', 1)
-          .attribute('result', 'colored')
+          // .attribute(`in`, 'offset-blurred') // FLOOD creates a solid color shape so no input, mix with composite/blend
+          .attribute('flood-color', color)                            // verified attr
+          .attribute('flood-opacity', 1)                              // verified attr
+          .attribute('result', 'colored')                             // verified attr
           .parent(filter)
 
+        // 4a feComposite - 
         if (inset) {
+          DeBug.warn(`INSET FILTER!!!`)
           //3B feComposite - MASK IN: if this is an inset shade, mask 
           createSVGElt('feComposite')
             .attribute('operator', 'out')
-            .attribute('in', clearInset ? 'SourceAlpha' : insetResult) // might need to option insetResult here
+            .attribute('in', clearInset ? 'SourceGraphic' : insetResult) // might need to option insetResult here
             // .attribute('in2', insetResult)
             // .attribute('in', insetResult)
             .attribute('in2', 'offset-blurred')
-            .attribute('result', 'mask')
+            .attribute('result', 'insetMask')
             .parent(filter)
         }
 
-        //4 feComposite - 'composite'
+        //4 feComposite - composite the 'colored' flood layer with the offset/blurred or insetMask
         createSVGElt('feComposite')
           .attribute('operator', 'in')
           .attribute('in', `colored`)
-          .attribute('in2', inset ? 'mask' : `offset-blurred`)
+          // .attribute('in2', `offset-blurred`)
+          .attribute('in2', inset ? 'insetMask' : `offset-blurred`)
           .attribute('result', `composite`)
           .parent(filter)
+
+        // .attribute('result', resultId)
         //5 feMerge - 'resultId'
         // createSVGElt('feMerge')
         //   .child(
@@ -229,7 +240,7 @@ class ProtoFilter {
         //   )
         //   .attribute('result', resultId)
         //   .parent(filter)
-        // console.log('blendMode', blendMode())
+        // DeBug.log('blendMode', blendMode())
         //5A feBlend - 'resultId'
         createSVGElt('feBlend')
           .attribute('mode', normalBlending ? 'normal' : blendMode()) // 'darken' or 'lighten'
@@ -239,14 +250,14 @@ class ProtoFilter {
           .parent(filter)
 
         prevMode = blendMode()
-        // console.log('prevMode', prevMode)
+        // DeBug.log('prevMode', prevMode)
 
         if (inset) {
           insetResult = resultId
-          // console.log('inset resultId', resultId)
+          // DeBug.log('inset resultId', resultId)
         } else {
           outsetResult = resultId
-          // console.log('outset resultId', resultId)
+          // DeBug.log('outset resultId', resultId)
         }
       }
     }
@@ -280,11 +291,11 @@ class ProtoFilter {
 
 
     // createSVGElt('feMerge')
-    // .child(
-    createSVGElt('feMergeNode')
-      .attribute('in', previousResult)
-      .parent(this.filter)
-    // )
+    //   .child(
+    //     createSVGElt('feMergeNode')
+    //       .attribute('in', previousResult)
+    //       .parent(this.filter)
+    //   )
 
 
     this.defs.child(this.filter)
@@ -295,15 +306,15 @@ class ProtoFilter {
   //MARK: Utility methods
   applyFilterToElement({ element, size, padding = vert(40), time = 0, applyToGroup = true } = {}) {
     if (!this.type) { return this }
-    // console.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
-    // console.warn(`applyFilter paddingX: ${padding.x}, paddingY: ${padding.y}`)
+    // DeBug.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
+    // DeBug.warn(`applyFilter paddingX: ${padding.x}, paddingY: ${padding.y}`)
 
-    // console.log(`applyFilter size: x:${size.x}, y:${size.y}`)
-    // console.log(`applyFilter GRID.cellSize: x:${GRID.cellSize.x}, y:${GRID.cellSize.y}`)
-    // console.log(`applyFilter padding: x:${padding.x}, y:${padding.y}`)
+    // DeBug.log(`applyFilter size: x:${size.x}, y:${size.y}`)
+    // DeBug.log(`applyFilter GRID.cellSize: x:${GRID.cellSize.x}, y:${GRID.cellSize.y}`)
+    // DeBug.log(`applyFilter padding: x:${padding.x}, y:${padding.y}`)
 
 
-    // console.log(`final padding: x:${padding.x}, y:${padding.y} `)
+    // DeBug.log(`final padding: x:${padding.x}, y:${padding.y} `)
     const x = -padding.x / size.x * 100
     const y = -padding.y / size.y * 100
 
@@ -315,6 +326,11 @@ class ProtoFilter {
       .attribute("y", `${y}%`)
       .attribute("width", `${width}%`)
       .attribute("height", `${height}%`)
+    // .attribute('overflow', 'visible')
+
+
+    // .attribute(`filterUnits`, `userSpaceOnUse`)
+    // .attribute(`primitiveUnits`, `userSpaceOnUse`)
 
     // .attribute("filterUnits", "userSpaceOnUse")
     // .attribute("x", `-10%`)
@@ -324,10 +340,10 @@ class ProtoFilter {
 
 
 
-    // console.warn(`this.filter x`, this.filter.attribute("x"))
-    // console.warn(`this.filter y`, this.filter.attribute("y"))
-    // console.warn(`this.filter width`, this.filter.attribute("width"))
-    // console.warn(`this.filter height`, this.filter.attribute("height"))
+    // DeBug.warn(`this.filter x`, this.filter.attribute("x"))
+    // DeBug.warn(`this.filter y`, this.filter.attribute("y"))
+    // DeBug.warn(`this.filter width`, this.filter.attribute("width"))
+    // DeBug.warn(`this.filter height`, this.filter.attribute("height"))
 
     const parentSVG = element.elt.ownerSVGElement
     const filterUrl = `url(#${this.id})`
@@ -338,9 +354,11 @@ class ProtoFilter {
       newGroup = createSVGElt("g")
         .id(`${this.id} -${element.id()}`)
         .attribute("filter", filterUrl)
-        .attribute('overflow', 'visible')
+        // .attribute('overflow', 'visible')
         .parent(parentSVG)
         .child(this.defs)
+      // .attribute(`filterUnits`, `userSpaceOnUse`)
+      // .attribute(`primitiveUnits`, `userSpaceOnUse`)
     }
 
     if (time > 0) {
@@ -549,7 +567,7 @@ p5.Element.prototype.addToClassList = function (newClass) {
 
 //PROTOTYPE: p5.Element extension layout(x, y, width, height)
 p5.Element.prototype.layout = function (x, y, width, height, padding = vert(0)) {
-  // console.log(`layout arguments`, arguments)
+  // DeBug.log(`layout arguments`, arguments)
   const args = OpArray.from(arguments)
   // single object input
   if (args.length === 1) {
@@ -678,8 +696,8 @@ p5.Element.prototype.applyFilter = function ({ filter, size, padding, time = 0 }
 
 //PROTOTYPE: p5.Element extension crossfadeElements(fromElement, toElement, duration, onComplete)
 p5.prototype.crossfadeElements = async function (fromElement, toElement, duration, onComplete) {
-  console.log('fromElement', fromElement)
-  console.log('toElement', toElement)
+  DeBug.log('fromElement', fromElement)
+  DeBug.log('toElement', toElement)
   const startTime = performance.now()
   const fromElementOpacity = parseFloat(fromElement.attribute("opacity") || "1")
   const toElementOpacity = parseFloat(toElement.attribute("opacity") || "1")
