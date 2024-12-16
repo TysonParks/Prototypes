@@ -8,8 +8,8 @@ const bezCircle45DegConst = 0.265
 class SVGPath {
   //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
-    // console.warn(`segPath`, segPath)                                           //LOGGING:
-    // cornerScale = R.random_num(-1, 2)
+    // DeBug.warn(`segPath`, segPath)                                           //LOGGING:
+    // cornerScale = R.random_num(0, 4)
     segPath = segPath.copy
     let curves = []
     let start, end, cornerStart, cornerEnd
@@ -17,10 +17,13 @@ class SVGPath {
     let controlStart, lineStart, lineEnd, controlEnd
 
     segPath.forEach((seg, i) => {
-      let report = true                                                                                  //LOGGING:
-      // if (seg.id.includes(`cell011`)) { report = true }                                                //LOGGING:
+      let report = false                                                                                  //LOGGING:
+      if (seg.id.includes(`cell000`)
+        // || seg.id.includes(`cell122`)
+      ) { report = true }                                                //LOGGING:
       if (report) {                                                                                       //LOGGING:
-        console.log(`svg creation, seg:`, seg)                                                            //LOGGING:
+        DeBug.log(`svg creation, seg:`, seg)                                                            //LOGGING:
+        DeBug.log(`cornerVerts`, seg.cornerVerts)
       }                                                                                                   //LOGGING:
       // cornerMin = min(cornerMin, seg.length / 2)
 
@@ -28,13 +31,16 @@ class SVGPath {
       lineStart = seg.distancedStartPoint(startRadius * cornerScale) // start point of line connecting corner arcs 
       startSegment = segment(lineStart, seg.start) // control point calculation segment, connects hard corner to mid line
       controlStart = startSegment.pointOnsegment(bezCircleConst)
+      if (report) {                                                                                       //LOGGING:
+        DeBug.log(`start props:`, seg.hasCubicStartVert, seg.cubicVerts.start, seg.start, seg.availableStartLength, startRadius)  //LOGGING:
+      }
 
       endRadius = seg.hasCubicEndVert ? seg.availableEndLength : cornerMin // radius of corner arc
       lineEnd = seg.distancedEndPoint(endRadius * cornerScale) // end point of line connecting corner arcs
       endSegment = segment(lineEnd, seg.end) // control point calculation segment, connects hard corner to middle line
       controlEnd = endSegment.pointOnsegment(bezCircleConst)
       if (report) {                                                                                       //LOGGING:
-        console.log(seg.hasCubicEndVert, seg.cubicVerts.end, seg.end, seg.availableEndLength, endRadius)  //LOGGING:
+        DeBug.log(`end props:`, seg.hasCubicEndVert, seg.cubicVerts.end, seg.end, seg.availableEndLength, endRadius)  //LOGGING:
       }                                                                                                   //LOGGING:
       curves.push([controlStart, lineStart, lineEnd, controlEnd])
       if (i === 0) { // firstLoop
@@ -45,9 +51,9 @@ class SVGPath {
         end = [lineEnd, controlEnd]
         cornerEnd = seg.end
         if (!cornerStart.equals(cornerEnd, 3)) { // verify start and end meet at same point
-          console.error(`ERROR: start and end are not connected!`)
-          console.log(`cornerStart`, cornerStart)
-          console.log(`cornerEnd`, cornerEnd)
+          DeBug.error(`ERROR: start and end are not connected!`)
+          DeBug.log(`cornerStart`, cornerStart)
+          DeBug.log(`cornerEnd`, cornerEnd)
         }
       }
     })
@@ -62,17 +68,23 @@ class SVGPath {
     // calculate start, (middle) curves, and end
     start = simplify(start)
     curves = curves.map(curve => simplify(curve))
+
     end = simplify(end)
 
     const startSVG = `M ${end[0]} C ${end[1]}`
-    const curvesSVG = curves.map(c => `${c[0]} ${c[1]} L ${c[2]} C ${c[3]} `)
-    const endSVG = `${end[0]} ${end[0]} Z` //use 1st coord twice because Z creates line closing path loop
-    const svgPath = `${startSVG} ${curvesSVG} ${endSVG}`
-    console.log(`end`, end)                                                                           //LOGGING:
-    console.log(`endSVG`, endSVG)                                                                     //LOGGING:
-    console.log(`svgPath`, svgPath)                                                                   //LOGGING:
+    const curvesSVG = curves.map((c, i) =>
+      i === curves.lastIndex ? `${c[0]} ${c[1]} L ${c[2]} ` : `${c[0]} ${c[1]} L ${c[2]} C ${c[3]} `
+    )
+    // const endSVG = ` Z` //use 1st coord twice because Z creates line closing path loop
+    // const endSVG = `${end[0]} ${end[0]} Z` //use 1st coord twice because Z creates line closing path loop
+    // const svgPath = `${startSVG} ${curvesSVG} ${endSVG}`
+    const svgPath = `${startSVG} ${curvesSVG} Z`
+    DeBug.log(`end`, end)                                                                           //LOGGING:
+    // DeBug.log(`endSVG`, endSVG)                                                                     //LOGGING:
+    DeBug.log(`svgPath`, svgPath)                                                                   //LOGGING:
     return svgPath
   }
+
 
   //METH: fromSegPath() :                                                                                  //UNUSED:
   // static fromSegPath({ segPath, refine = true, random = false, straightness = 0 } = {}) {          
@@ -132,10 +144,10 @@ class SVGPath {
   //       lineEnd = seg.pointOnsegment(lineEndLoc)
   //       control2 = seg.scaledEndPoint(offset(), lineEndLoc)
   //     } else {
-  //       // console.error(`YAAAASSSSSS`)
-  //       // console.log(`segment`, seg)
+  //       // DeBug.error(`YAAAASSSSSS`)
+  //       // DeBug.log(`segment`, seg)
   //       if (seg.hasSomeCubicVerts) {
-  //         // console.error(`YEEEEEEESSSSSS`)
+  //         // DeBug.error(`YEEEEEEESSSSSS`)
   //         circleCurve = min(seg.length, prevSeg.length) / 8
   //       } else {
   //         circleCurve = min(seg.length, prevSeg.length) / 2
@@ -281,19 +293,19 @@ class SegPath {
   makeCurves(equal = true, max = true, outWrap = true) {
     // let radius
     // if (equal && max) { radius = min(...this.path.map(s => s.length / 2)) }
-    console.log(this.path)
+    DeBug.log(this.path)
     // const sorted = this.path.sort((a, b) => b.arcRadius - a.arcRadius)
     const sorted = this.path
     sorted.forEach(s => {
-      console.log(s.id)
+      DeBug.log(s.id)
       if (equal && max) {
         s.replaceEndCurveOrigin(s.middleArcOrigin)
         // if (outWrap) {
         //   if (s.outWrapper?.canCurveToMiddleOrigin)) {
-        //     console.log(`CAN curve!`)
+        //     DeBug.log(`CAN curve!`)
         //     s.replaceEndRadiantOutWrapsOrigin()
         //   } else {
-        //     console.log(`can't curve!`)
+        //     DeBug.log(`can't curve!`)
         //   }
         // } else {
         //   s.flushWrap(true)
@@ -302,15 +314,15 @@ class SegPath {
       }
     })
     sorted.forEach(s => {
-      // console.log(s.id)
+      // DeBug.log(s.id)
       if (outWrap) {
         if (s.outWrapper?.canCurveToMiddleOrigin) {
-          // console.log(`CAN curve!`)
+          // DeBug.log(`CAN curve!`)
           // s.flushWrap(true)
-          // console.log(s)
+          // DeBug.log(s)
           s.replaceEndRadiantOutWrapsOrigin()
         } else {
-          // console.log(`can't curve!`)
+          // DeBug.log(`can't curve!`)
         }
       } else {
         s.flushWrap(true)
@@ -325,14 +337,14 @@ class SegPath {
   refined() {
     const parentID = this.shape.id
     const segPath = this.path
-    console.log(`segPath`, segPath)
+    DeBug.log(`segPath`, segPath)
     let newPath = new OpArray
     let length, prevDir, dir, start, end, firstID, lastID, islandIDs, cells, points, sideDir
 
     // for (let i = 0; i < segPath.length; i++) {
     //   const seg = segPath.at(i)
     segPath.forEach((seg, i) => {
-      // console.log(`seg in loop`, seg.id)                                                                //LOGGING:
+      // DeBug.log(`seg in loop`, seg.id)                                                                //LOGGING:
 
       //ARROW: reset()
       const reset = () => {                                     // set cumulative props from current seg
@@ -362,7 +374,7 @@ class SegPath {
           grid: this.grid,
           shape: this.shape,
         })
-        // console.log(`newSeg`, newSeg)                                                                   //LOGGING:
+        // DeBug.log(`newSeg`, newSeg)                                                                   //LOGGING:
         newPath.push(newSeg)
       }
 
@@ -393,21 +405,21 @@ class SegPath {
       const next = newPath[loop.cycle(i + 1)]
       seg.assignNeighbors({ start: prev, end: next })
     })
-    console.log(`newPath`, newPath)                                                                     //LOGGING:
+    DeBug.log(`newPath`, newPath)                                                                     //LOGGING:
     return new SegPath(newPath, this.shape)
   }
 
   //FIXME: still have an issue recognizing final stairs on #559
   get stairSets() {
-    console.log(``)
+    DeBug.log(``)
     let firstStair, lastStair, stairSet
     let stairSets = new OpArray
     this.stairs.forEach((seg, i) => {
-      // console.warn(`current`, i, seg.id)
+      // DeBug.warn(`current`, i, seg.id)
       let current = seg
       if (lastStair) {
         //TODO: In order to get non-ordinal results in future, need to adapt minLength checks. Maybe a previousLength prop?
-        // if (i === this.stairs.lastIndex) { console.error(`this is the last index!`) }  
+        // if (i === this.stairs.lastIndex) { DeBug.error(`this is the last index!`) }  
         if (current.id === lastStair.endNeighbor.id && lastStair.isMinLength && current.isMinLength) {
           if (!stairSet) { stairSet = OpArray.format(lastStair) }
           stairSet.push(current)
@@ -422,26 +434,26 @@ class SegPath {
       }
       lastStair = current
 
-      // console.log(`firstStair`, firstStair)
-      // console.log(`lastStair`, lastStair)
-      // console.log(`stairSet`, stairSet)
-      // console.log(`stairSets.last`, stairSets.last)
+      // DeBug.log(`firstStair`, firstStair)
+      // DeBug.log(`lastStair`, lastStair)
+      // DeBug.log(`stairSet`, stairSet)
+      // DeBug.log(`stairSets.last`, stairSets.last)
     })
     stairSets = stairSets.compacted
-    // console.log(`stairSets`, stairSets)
-    console.log(``)
+    // DeBug.log(`stairSets`, stairSets)
+    DeBug.log(``)
     if (!stairSets.isEmpty) { return stairSets }
   }
 
   //FIXME: Finish implementation
   //METH: withDiagonals() 
   withDiagonals() {
-    console.log(``)
-    console.warn(`withDiagonals`)
+    DeBug.log(``)
+    DeBug.warn(`withDiagonals`)
 
 
     this.stairSets?.forEach((set, i) => {
-      console.error(`currentset`, set)
+      DeBug.error(`currentset`, set)
       // use setcount to decide which direction to "move"
       const count = set.length
       const firstTurn = set.first.endTurn.direction
@@ -451,11 +463,11 @@ class SegPath {
       // if (count % 2 === 0) { preferredMove = firstTurn.opposites }
       if (count % 2 === 1) { preferredMove = this.isCutOut ? Direction.Right : Direction.Left }
 
-      console.log(`count`, count)
-      console.log(`firstTurn`, firstTurn)
-      console.log(`firstTurn`, firstTurn.name)
-      console.log(`possibleMoves`, possibleMoves.name)
-      console.log(`preferredMove`, preferredMove?.name)
+      DeBug.log(`count`, count)
+      DeBug.log(`firstTurn`, firstTurn)
+      DeBug.log(`firstTurn`, firstTurn.name)
+      DeBug.log(`possibleMoves`, possibleMoves.name)
+      DeBug.log(`preferredMove`, preferredMove?.name)
 
       // verify that cells are empty in each area considering to "move" into
       const availableMoves = possibleMoves.directions.map(dir => {
@@ -465,7 +477,7 @@ class SegPath {
         if (segs.length > 0) { return { name, segs } }
       }).compacted
         .sort((a, b) => b.segs.length - a.segs.length)
-      console.log(`availableMoves`, availableMoves)
+      DeBug.log(`availableMoves`, availableMoves)
 
       if (availableMoves.isEmpty) { return }
 
@@ -475,7 +487,7 @@ class SegPath {
       } else {
         finalMoves = availableMoves[0]
       }
-      console.warn(`finalMoves!!!`, finalMoves)
+      DeBug.warn(`finalMoves!!!`, finalMoves)
 
       // move stairSet
       // this.diagonalsPath = this.path.copy
@@ -501,7 +513,7 @@ class SegPath {
     const change = sqrt(2) - 1
 
 
-    console.warn(`convertToDiagonals segs`, segs)
+    DeBug.warn(`convertToDiagonals segs`, segs)
 
     //ARROW: ordinalSegment()
     const ordinalSegment = () => {
@@ -510,7 +522,7 @@ class SegPath {
       const startRad = startNeighbor.arcRadius
       const curveStartReduce = startHasSmallRad ? (1 - change) * startRad : (1 + change) * startRad
       const diagStartVert = startNeighbor.distancedEndPoint(curveStartReduce)
-      // console.log(`diagStartVert`, diagStartVert)
+      // DeBug.log(`diagStartVert`, diagStartVert)
       const diagDir = startHasSmallRad ? startNeighbor.direction.next() : startNeighbor.direction.previous()
       const cellDiagLength = 2 * sqrt(2 * startRad * startRad)
       const diagMag = (segCount - 1) * cellDiagLength
@@ -562,7 +574,7 @@ class SegPath {
         const rad = neighbor.arcRadius
         const newTermLength = startHasSmallRad ? (1 - change) * rad : (1 + change) * rad
         const diagStartVert = neighbor.distancedEndPoint(newTermLength)
-        // console.log(`diagStartVert`, diagStartVert)
+        // DeBug.log(`diagStartVert`, diagStartVert)
         const diagDir = startHasSmallRad ? neighbor.direction.next() : neighbor.direction.previous()
         const diagMag = (segCount - 1) * 2 * sqrt(2 * rad * rad)
         const diagVect = diagDir.lineVector.setMag(diagMag)
@@ -583,7 +595,7 @@ class SegPath {
 
           // diagonal = simpleDiagonal(turnStart)
           diagonal = ordinalSegment()
-          console.log(`diagonal`, diagonal)
+          DeBug.log(`diagonal`, diagonal)
 
           turnStart.id = `turnStart-${idSuffix(turnStart, false)}`
           turnStart.end = diagonal.start
@@ -657,32 +669,32 @@ class SegPath {
       }
     })
 
-    console.log(`moveOut`, moveOut)
-    console.log(`startsStairIn`, startsStairIn)
-    console.log(`startHasSmallRad`, startHasSmallRad)
-    console.log(`diagonal`, diagonal)
-    // console.log(`convertToDiagonals`, turnStart, diagStart, diagonals, diagEnd, turnEnd)
-    // console.log(`turnStart`, turnStart)
-    // console.log(`diagStart`, diagStart)
-    // console.log(`diagonals`, diagonals)
-    // console.log(`diagEnd`, diagEnd)
-    // console.log(`turnEnd`, turnEnd)
+    DeBug.log(`moveOut`, moveOut)
+    DeBug.log(`startsStairIn`, startsStairIn)
+    DeBug.log(`startHasSmallRad`, startHasSmallRad)
+    DeBug.log(`diagonal`, diagonal)
+    // DeBug.log(`convertToDiagonals`, turnStart, diagStart, diagonals, diagEnd, turnEnd)
+    // DeBug.log(`turnStart`, turnStart)
+    // DeBug.log(`diagStart`, diagStart)
+    // DeBug.log(`diagonals`, diagonals)
+    // DeBug.log(`diagEnd`, diagEnd)
+    // DeBug.log(`turnEnd`, turnEnd)
 
     // const diagPath = OpArray.format([turnStart, diagStart, ...diagonals, diagEnd, turnEnd])
     const diagPath = OpArray.format([turnStart, diagonal, turnEnd])
-    console.warn(`diagPath`, diagPath)
+    DeBug.warn(`diagPath`, diagPath)
 
-    console.log(`segs`, segs)
-    console.log(`removals`, removals)
+    DeBug.log(`segs`, segs)
+    DeBug.log(`removals`, removals)
     //FIXME: THE ISSUE IS STILL TODO WITH newPath/this.path not having the diagSegs added in previous step!!
-    console.warn(`path`, this.path)
+    DeBug.warn(`path`, this.path)
 
     let newPath = this.diagonalsPath
-    console.warn(`newPath`, newPath)
+    DeBug.warn(`newPath`, newPath)
 
     diagPath.forEach((seg, i) => {
-      // console.log(`lastIndex`, diagPath.lastIndex)
-      console.log(i, seg)
+      // DeBug.log(`lastIndex`, diagPath.lastIndex)
+      DeBug.log(i, seg)
       if (i === 0) {
         const neighbor = newPath.find(s => s.id === seg.startNeighbor.id)
         neighbor.assignNeighbors({ end: seg })
@@ -695,23 +707,23 @@ class SegPath {
       }
     })
 
-    console.warn(`diagPath edgeParts`, diagPath.map(d => d.part))
+    DeBug.warn(`diagPath edgeParts`, diagPath.map(d => d.part))
 
 
     newPath = newPath
       .exclude(removals, `id`)
-    console.warn(`newPath`, newPath)
+    DeBug.warn(`newPath`, newPath)
     newPath = newPath
       .union(diagPath, `id`)
-    console.warn(`newPath`, newPath)
+    DeBug.warn(`newPath`, newPath)
 
     newPath = newPath[0].segPath
-    // console.warn(`genPath`, genPath)
+    // DeBug.warn(`genPath`, genPath)
     // newPath = genPath
     this.diagonalsPath = newPath
-    console.log(`diagonalsPath`, this.diagonalsPath)
-    console.log(`diagonalsPath`, this.diagonalsPath.map(s => [s.start.string, s.cubicStart?.string, s.cubicEnd?.string, s.end.string]))
-    // console.log(`stairSets`, this.stairSets)
+    DeBug.log(`diagonalsPath`, this.diagonalsPath)
+    DeBug.log(`diagonalsPath`, this.diagonalsPath.map(s => [s.start.string, s.cubicStart?.string, s.cubicEnd?.string, s.end.string]))
+    // DeBug.log(`stairSets`, this.stairSets)
 
     if (this.stairSets && this.stairSets[0][0].startNeighbor.id === segs.last.id) {
       this.stairSets[0][0].assignNeighbors({ start: diagPath.last })
@@ -723,11 +735,11 @@ class SegPath {
 
   // METH: fromVertPath() : convert array of verts to a shape path made of Segments                         //UNUSED:
   // static fromVertPath({ vertPath, refine = true, parentID } = {}) {
-  //   // console.log('vertPath', vertPath)                                                            //LOGGING:
+  //   // DeBug.log('vertPath', vertPath)                                                            //LOGGING:
   //   let vertCount = vertPath.length
   //   if (vertCount < 3) { return }
   //   vertPath = SegPath.loopPath(vertPath)
-  //   // console.log('loopedpath', vertPath)                                                          //LOGGING:
+  //   // DeBug.log('loopedpath', vertPath)                                                          //LOGGING:
   //   let segmentPath = new OpArray
   //   let previousSeg = undefined
   //   for (let i = 0; i < vertCount; i++) {
@@ -939,7 +951,7 @@ class ProtoSVG {
   // NOTE: Made with GPT-4 on April 14, 2023
   //METH:
   static exportPNG(svgMarkup, fileName, width, height, scale = 1) {
-    // console.log("Starting exportPNG() function...")
+    // DeBug.log("Starting exportPNG() function...")
 
     const canvas = document.createElement("canvas")
     canvas.width = width * scale
@@ -953,21 +965,21 @@ class ProtoSVG {
     img.src = svgUrl
 
     img.onload = function () {
-      // console.log("Image loaded...")                                                           //LOGGING:
+      // DeBug.log("Image loaded...")                                                           //LOGGING:
       ctx.drawImage(img, 0, 0, width, height)
       canvas.toBlob(function (blob) {
-        // console.log("Blob created...")                                                         //LOGGING:
+        // DeBug.log("Blob created...")                                                         //LOGGING:
         const url = URL.createObjectURL(blob)
 
         const link = document.createElement("a")
         link.href = url
         link.download = fileName
         link.click()
-        // console.log("Link clicked...")                                                         //LOGGING:
+        // DeBug.log("Link clicked...")                                                         //LOGGING:
 
         URL.revokeObjectURL(url) // Revoke the Blob URL for the PNG
         URL.revokeObjectURL(svgUrl) // Revoke the Blob URL for the SVG
-        console.log(`PNG saved`)                                                                  //LOGGING:
+        DeBug.log(`PNG saved`)                                                                  //LOGGING:
       })
     }
   }
@@ -1087,7 +1099,7 @@ class Vertex extends p5.Vector {
   static mult(a, b) {
     if (b instanceof Vertex) {
       if (!a || !b) {
-        console.error(`Vertex.mult issue:`, a, b)
+        DeBug.error(`Vertex.mult issue:`, a, b)
         return
       }
       return vert(a.x * b.x, a.y * b.y)
@@ -1239,26 +1251,26 @@ class Segment {
     //   // || this.id.includes('cell185')                                                                    //LOGGING:
     //   // || this.id.includes('cell001')                                                                    //LOGGING:
     // ) { report = true }
-    if (report) { console.log(`vertIsOnLine this`, this) }
+    if (report) { DeBug.log(`vertIsOnLine this`, this) }
     if (!includeEnds && (vert.equals(this.start, decimal) || vert.equals(this.end, decimal))) {
-      if (report) { console.log(`vertIsOnLine fail: vert is on terminus`, vert) }
+      if (report) { DeBug.log(`vertIsOnLine fail: vert is on terminus`, vert) }
       return false                                                // point is on a terminus
     }
 
     if (!this.vertIsInBounds(vert, decimal)) {                           // point is outside seg's bounding box
-      if (report) { console.error(`vertIsOnLine fail: vert is outside bounds`, vert, this.bounds) }
+      if (report) { DeBug.error(`vertIsOnLine fail: vert is outside bounds`, vert, this.bounds) }
       return false
     }
-    // console.log(`vertIsOnLine: vert is in bounds!`)
+    // DeBug.log(`vertIsOnLine: vert is in bounds!`)
     // Calculate the t parameter using linear interpolation
     // const t = this.lineVector.dot(Vertex.sub(vert, this.start)) / this.lineVector.magSq()
     const t = roundToDec((this.lineVector.dot(Vertex.sub(vert, this.start)) / this.lineVector.magSq()), 4)
-    // console.log(`t`, t)
+    // DeBug.log(`t`, t)
     // Check if t is within the range [0, 1]
     if (t < 0 || t > 1) {
       if (report) {
-        console.error(`vertIsOnLine fail: t param test`, vert, t)
-        console.error(this.lineVector)
+        DeBug.error(`vertIsOnLine fail: t param test`, vert, t)
+        DeBug.error(this.lineVector)
       }
       return false // The point does not lie within the segment
     }
@@ -1267,21 +1279,21 @@ class Segment {
     const projectedPoint = Vertex.add(this.start, Vertex.mult(this.lineVector, t))
     // Check if the vert is close enough to the projected point (considering a small threshold for precision issues)
     // const threshold = 0.1 // Adjust this threshold based on your precision needs
-    // console.log(`vertIsInBounds projectedPoint`, projectedPoint)
+    // DeBug.log(`vertIsInBounds projectedPoint`, projectedPoint)
     const diff = vert.dist(projectedPoint)
-    // console.log(`vertIsInBounds diff`, diff)
+    // DeBug.log(`vertIsInBounds diff`, diff)
     const result = diff < deviation
     if (report && !result) {
-      console.error(`vertIsOnLine fail: threshold`, vert)
-      console.error(projectedPoint, diff)
+      DeBug.error(`vertIsOnLine fail: threshold`, vert)
+      DeBug.error(projectedPoint, diff)
     }
     return result
   }
   //METH: vertOrientation()
   vertOrientation(vert) {
-    // console.warn(vert, this.start)
+    // DeBug.warn(vert, this.start)
     const vertVector = Vertex.sub(vert, this.start)       // vert to this.start
-    // console.warn(this.vector, vertVector)
+    // DeBug.warn(this.vector, vertVector)
     const cross = Vertex.cross(this.opposite.lineVector, vertVector).z // cross this opposite vector to vertVector
     if (cross > 0) {                                      // vert is to the left
       return Direction.Left
@@ -1293,18 +1305,18 @@ class Segment {
   //METH: isParallelTo()
   // isParallelTo(seg) { return this.direction.andOpposites.equals(seg.direction.andOpposites) }
   isParallelTo(seg, accuracy = 1) {
-    // console.log(`this.lineVector`, this.lineVector)                                                //LOGGING:
-    // console.log(`seg`, seg)                                                                        //LOGGING:
-    // console.log(`seg.lineVector`, seg.lineVector)                                                  //LOGGING:
+    // DeBug.log(`this.lineVector`, this.lineVector)                                                //LOGGING:
+    // DeBug.log(`seg`, seg)                                                                        //LOGGING:
+    // DeBug.log(`seg.lineVector`, seg.lineVector)                                                  //LOGGING:
     const precise = Vertex.cross(this.lineVector, seg.lineVector).z
-    // console.log(`isParallelTo precise`, precise)                                                   //LOGGING:
+    // DeBug.log(`isParallelTo precise`, precise)                                                   //LOGGING:
     return abs(roundToDec(precise, accuracy)) === 0    // MUCH FASTER!!!
   }
   //METH: isCollinearWith()
   isCollinearWith(seg) { return this.isOverlappingWith({ seg: seg, infinite: true }) }
   //METH: isOverlappingWith()
   isOverlappingWith({ seg, includeEnds = true, decimal = 0, mode = 2, infinite = false, accuracy = 0 } = {}) {
-    // console.log(`seg`, seg)
+    // DeBug.log(`seg`, seg)
     if (this.isVert || seg.isVert) {
       if (this.isVert && seg.isVert) { return this.start.equals(seg.start, 3) }
       if (this.isVert && !infinite) { return seg.vertIsOnLine(this.start) }
@@ -1312,7 +1324,7 @@ class Segment {
     }
 
     if (!this.isParallelTo(seg)) {
-      // console.warn(`isOverlappingWith is not parallel`)                                            //LOGGING:
+      // DeBug.warn(`isOverlappingWith is not parallel`)                                            //LOGGING:
       return false
     }                         // false if not parallel
 
@@ -1321,7 +1333,7 @@ class Segment {
       // and the start of the other segment is orthogonal to the direction vector of this segment
       const connectiveVector = Vertex.sub(seg.start, this.start)
       const cross = abs(roundToDec(Vertex.cross(connectiveVector, this.lineVector).z, 1))
-      // console.warn(`isOverlappingWith ${seg.id}, crossProduct: ${cross}`)                          //LOGGING:
+      // DeBug.warn(`isOverlappingWith ${seg.id}, crossProduct: ${cross}`)                          //LOGGING:
       if (accuracy > 0) { return abs(cross) < accuracy }
       return cross === 0
     }
@@ -1349,14 +1361,14 @@ class Segment {
   }
   //METH: perpendicularIntersectionWith()
   perpendicularIntersectionWith(vert) {
-    // console.log(`perpX this`, this)                                                                      //LOGGING:
+    // DeBug.log(`perpX this`, this)                                                                      //LOGGING:
     const perpEnd = Vertex.add(this.direction.toLeft.lineVector, vert)
     const perpSeg = segment(vert, perpEnd)
-    // console.log(`perpX: perpSeg`, perpSeg)                                                               //LOGGING:
+    // DeBug.log(`perpX: perpSeg`, perpSeg)                                                               //LOGGING:
     const projected = this.intersectionWith(perpSeg, true)
-    // console.log(`perpX: projected`, projected)                                                           //LOGGING:
+    // DeBug.log(`perpX: projected`, projected)                                                           //LOGGING:
     const vertOnLine = this.vertIsOnLine(projected)
-    // console.log(`perpX: vertOnLine`, vertOnLine)                                                         //LOGGING:
+    // DeBug.log(`perpX: vertOnLine`, vertOnLine)                                                         //LOGGING:
     return vertOnLine ? projected : undefined
   }
 
@@ -1369,9 +1381,9 @@ class Segment {
     const s = seg.lineVector
 
     if (this.isParallelTo(seg)) {                                                     // check for parallelism
-      // console.warn(`yes isParallel`)                                                             //LOGGING:
+      // DeBug.warn(`yes isParallel`)                                                             //LOGGING:
       if (this.isOverlappingWith({ seg: seg, infinite: infinite })) {                 // check for overlapping
-        // console.warn(`yes isOverlapping`)                                                        //LOGGING:
+        // DeBug.warn(`yes isOverlapping`)                                                        //LOGGING:
         const starts = OpArray.format([this.gridSorted.start, seg.gridSorted.start])  // gridSorted point same way
         const ends = OpArray.format([this.gridSorted.end, seg.gridSorted.end])        // OpArrays from points
         let overlapStart, overlapEnd
@@ -1459,8 +1471,8 @@ class Segment {
 
 //MARK: ProtoSegment CLASS
 // SIZE: 356 lines
-function protoSegment({ start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape } = {}) {
-  return new ProtoSegment(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape)
+function protoSegment({ start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape, _direction } = {}) {
+  return new ProtoSegment(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale, shape, _direction)
 }
 class ProtoSegment extends Segment {
   id
@@ -1473,12 +1485,13 @@ class ProtoSegment extends Segment {
   grid
   insetScale
   shape
+  _direction
 
   cubicVerts = { start: undefined, end: undefined }
   // maxCubicVerts = { start: undefined, end: undefined }
   neighbors = { start: undefined, end: undefined }
 
-  constructor(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale = 1, shape) {
+  constructor(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, maxCubicVerts, insetScale = 1, shape, _direction) {
     super(start, end)
     this.parentID = parentID
     this.islandIDs = islandIDs
@@ -1489,6 +1502,7 @@ class ProtoSegment extends Segment {
     this.grid = grid
     this.insetScale = insetScale
     this.shape = shape
+    this._direction = _direction
     // if (maxCubicVerts) {
     //   this.maxCubicVerts = maxCubicVerts
     // }
@@ -1496,7 +1510,7 @@ class ProtoSegment extends Segment {
     if (cubicVerts) { this.cubicVerts = cubicVerts }
     if (neighbors) { this.neighbors = neighbors }
     if (!this.direction.allAreCardinal) {
-      console.error(`this segment is not Cardinal!`, this)
+      DeBug.error(`this segment is not Cardinal!`, this)
     }
   }
   //MARK: computed 
@@ -1508,6 +1522,14 @@ class ProtoSegment extends Segment {
     return equalsRoundedDec(this.length, minLength, 0)
   }
   get isEdgeOfQuad() { return this.segPath.length === 4 }
+
+  get direction() {
+    if (!this.isVert) {
+      return super.direction
+    } else {
+      return this._direction || super.direction
+    }
+  }
   //MEMO: outsideCells
   get outsideCells() {
     return memoize(() => {
@@ -1519,14 +1541,14 @@ class ProtoSegment extends Segment {
   get turns() {
     return memoize(() => {
       if (!this.hasBothNeighbors) {
-        console.error(`segment ${this.id} without neighbors has no turns`)
+        DeBug.error(`segment ${this.id} without neighbors has no turns`)
         return
       }
       const start = this.startNeighbor.direction.turnTo(this.direction)
       const end = this.direction.turnTo(this.endNeighbor.direction)
 
-      if (!start) { console.error(`segment ${this.id} failed to calculate start turn`) }
-      if (!end) { console.error(`segment ${this.id} failed to calculate end turn`) }
+      if (!start) { DeBug.error(`segment ${this.id} failed to calculate start turn`) }
+      if (!end) { DeBug.error(`segment ${this.id} failed to calculate end turn`) }
 
       return {
         start: start,
@@ -1539,12 +1561,12 @@ class ProtoSegment extends Segment {
   get normals() {
     return memoize(() => {
       if (!this.hasBothNeighbors) {
-        console.error(`segment ${this.id} without neighbors has no normals`)
+        DeBug.error(`segment ${this.id} without neighbors has no normals`)
         return
       }
       if (this.angle === undefined) {
-        console.error(`segment ${this.id} has no angle!`, this)
-        console.log(`this.angle = ${this.angle}`)
+        DeBug.error(`segment ${this.id} has no angle!`, this)
+        DeBug.log(`this.angle = ${this.angle}`)
       }
 
       const normals =
@@ -1592,11 +1614,11 @@ class ProtoSegment extends Segment {
   get cornerVerts() {
     return memoize(() => {
       if (!this.hasBothNeighbors) {
-        console.error(`segment ${this.id} without neighbors has no cornerVerts`)
+        DeBug.error(`segment ${this.id} without neighbors has no cornerVerts`)
         return
       }
       if (!this.turns.start || !this.turns.end) {
-        console.error(`segment ${this.id} without turns has no cornerVerts`)
+        DeBug.error(`segment ${this.id} without turns has no cornerVerts`)
         return
       }
       return {
@@ -1652,8 +1674,8 @@ class ProtoSegment extends Segment {
 
   #availableLength(start = true, max = false) {
     if (!this.cornerVerts?.start || !this.cornerVerts?.end) {       // needs to have cornerVerts to calculate
-      console.warn(`cannot calculate available length without cornerVerts`)
-      console.log(this)
+      DeBug.warn(`cannot calculate available length without cornerVerts`)
+      DeBug.log(this)
       return
     }
     if (this.hasNoCubicVerts) { return this.length / 2 }            // assume half of entire length available
@@ -1662,21 +1684,21 @@ class ProtoSegment extends Segment {
       let startLength, endLength
       if (this.hasCubicStartVert) {
         startLength = max ? this.maxCubicStartLength : this.start.dist(this.cubicVerts.start)
-        // console.log(`availableLength: startLength: ${startLength}, maxStartLength: ${this.maxCubicStartLength} `)
+        // DeBug.log(`availableLength: startLength: ${startLength}, maxStartLength: ${this.maxCubicStartLength} `)
         // if (roundToDec(this.maxCubicStartLength) < roundToDec(startLength)) {
         //   startLength = this.maxCubicStartLength
         // }
       }
       if (this.hasCubicEndVert) {
         endLength = max ? this.maxCubicEndLength : this.end.dist(this.cubicVerts.end)
-        // console.log(`availableLength: endLength: ${endLength}, maxEndLength: ${this.maxCubicEndLength} `)
+        // DeBug.log(`availableLength: endLength: ${endLength}, maxEndLength: ${this.maxCubicEndLength} `)
         // if (roundToDec(this.maxCubicEndLength) < roundToDec(endLength)) {
         //   endLength = this.maxCubicEndLength
         // }
       }
-      // console.warn(`this seg`, this)                                                               //LOGGING:
-      // console.log(`startLength`, startLength)                                                      //LOGGING:
-      // console.log(`endLength`, endLength)                                                          //LOGGING:
+      // DeBug.warn(`this seg`, this)                                                               //LOGGING:
+      // DeBug.log(`startLength`, startLength)                                                      //LOGGING:
+      // DeBug.log(`endLength`, endLength)                                                          //LOGGING:
       if (!max) {
         if (startLength && endLength) {                               // this.hasBothCubicVerts
           if (approxToDec(startLength, 2, 1) + approxToDec(endLength, 2, 1) > approxToDec(this.length, 2, 2)) {
@@ -1726,11 +1748,11 @@ class ProtoSegment extends Segment {
   //METH: canCurveTo()
   canCurveTo(newOrigin, current = false) {
     const viables = current ? this.currentViableArcOrigins : this.viableArcOrigins
-    // console.log(newOrigin)
+    // DeBug.log(newOrigin)
     const canCurve = viables.some(v => v.equals(newOrigin, 1))
     if (!canCurve) {
-      console.log(`newOrigin`, newOrigin)
-      console.log(`viables`, viables)
+      DeBug.log(`newOrigin`, newOrigin)
+      DeBug.log(`viables`, viables)
     }
     return canCurve
   }
@@ -1838,28 +1860,28 @@ class ProtoSegment extends Segment {
   #setCurveOrigin(toVert, replace = false, start = false) {
     const seg = start ? this.startNeighbor : this             // seg/corner to reference
     let report = false                                                                                  //LOGGING:
-    if (this.id.includes('cel082')                                                                     //LOGGING:
+    if (this.id.includes('cel000')                                                                     //LOGGING:
       // || this.id.includes('cell185')                                                                       //LOGGING:
       // || s.id.includes('cell001')                                                                       //LOGGING:
     ) { report = true }                                                                                 //LOGGING:
     if (report) {                                                                                       //LOGGING:
-      console.error(`setCurveOrigin this`, this.id)                                                     //LOGGING:
-      console.log(`setCurveOrigin seg`, seg)                                                          //LOGGING:
-      console.log(`currentRadius`, seg.arcRadius)
-      console.log(`currentOrigin`, seg.arcOrigin)                                                       //LOGGING:
-      console.log(`seg.viableArcOrigins`, seg.viableArcOrigins)                                         //LOGGING:
-      console.log(`toVert`, toVert)                                                                     //LOGGING:
+      DeBug.error(`setCurveOrigin this`, this.id)                                                     //LOGGING:
+      DeBug.log(`setCurveOrigin seg`, seg)                                                          //LOGGING:
+      DeBug.log(`currentRadius`, seg.arcRadius)
+      DeBug.log(`currentOrigin`, seg.arcOrigin)                                                       //LOGGING:
+      DeBug.log(`seg.viableArcOrigins`, seg.viableArcOrigins)                                         //LOGGING:
+      DeBug.log(`toVert`, toVert)                                                                     //LOGGING:
     }
     if (seg.viableArcOrigins.some(v => toVert.equals(v, 1, 0.1))) {
       const intersect = seg.perpendicularIntersectionWith(toVert)
       if (report) {                                                                                     //LOGGING:
-        console.log(`intersect`, intersect)                                                             //LOGGING:
-        // console.log(`newRadius`, newRadius)                                                             //LOGGING:
+        DeBug.log(`intersect`, intersect)                                                             //LOGGING:
+        // DeBug.log(`newRadius`, newRadius)                                                             //LOGGING:
       }
       const newRadius = toVert.dist(intersect)
       if (report) {                                                                                     //LOGGING:
-        // console.log(`intersect`, intersect)                                                             //LOGGING:
-        console.log(`newRadius`, newRadius)                                                             //LOGGING:
+        // DeBug.log(`intersect`, intersect)                                                             //LOGGING:
+        DeBug.log(`newRadius`, newRadius)                                                             //LOGGING:
       }
       seg.addDistancedEndCornerVerts(newRadius, replace)
     }
@@ -1874,11 +1896,11 @@ class ProtoSegment extends Segment {
       // || this.id.includes('cell001')                                                                    //LOGGING:
     ) { report = true }                                                                                 //LOGGING:
     if (report) {                                                                                       //LOGGING:
-      console.warn(`addCubic${mode}Vert: ${vert?.string}`, this)                                        //LOGGING:
-      console.log(`hasCubicStartVert: ${this.hasCubicStartVert}`)                                       //LOGGING:
-      if (this.availableStartLength) { console.log(`availableStartLength: ${this.availableStartLength}`) }  //LOGGING:
-      console.log(`hasCubicEndVert: ${this.hasCubicEndVert}`)                                           //LOGGING:
-      if (this.availableEndLength) { console.log(`availableEndLength: ${this.availableEndLength}`) }    //LOGGING:
+      DeBug.warn(`addCubic${mode}Vert: ${vert?.string}`, this)                                        //LOGGING:
+      DeBug.log(`hasCubicStartVert: ${this.hasCubicStartVert}`)                                       //LOGGING:
+      if (this.availableStartLength) { DeBug.log(`availableStartLength: ${this.availableStartLength}`) }  //LOGGING:
+      DeBug.log(`hasCubicEndVert: ${this.hasCubicEndVert}`)                                           //LOGGING:
+      if (this.availableEndLength) { DeBug.log(`availableEndLength: ${this.availableEndLength}`) }    //LOGGING:
     }
 
     const cubicVert = start ? this.cubicVerts.start : this.cubicVerts.end
@@ -1886,18 +1908,18 @@ class ProtoSegment extends Segment {
 
     if (vert instanceof Vertex) {
       if (!this.vertIsOnLine(vert)) {
-        console.error(`trying to assign a cubicVert that is not on this segment`)
-        console.log(`off-line vert`, vert)
-        console.log(`this.segment`, this)
+        DeBug.error(`trying to assign a cubicVert that is not on this segment`)
+        DeBug.log(`off-line vert`, vert)
+        DeBug.log(`this.segment`, this)
         return
       }
 
       const matchingPoint = this.points.find(p => p.equals(vert, 1))
       if (!matchingPoint) {
         if (usePoints) {
-          console.error(`trying to assign a cubicVert that is not a functional point on this segment`)
-          console.log(`bad vert`, vert)
-          console.log(`this.points`, this.points)
+          DeBug.error(`trying to assign a cubicVert that is not a functional point on this segment`)
+          DeBug.log(`bad vert`, vert)
+          DeBug.log(`this.points`, this.points)
           return
         }
       }
@@ -1909,9 +1931,9 @@ class ProtoSegment extends Segment {
 
       this.#resetMemoProps()
       if (report) {
-        console.log(`this.cubicStartVert: ${this.cubicVerts.start?.string}`)
-        console.log(`this.cubicEndVert: ${this.cubicVerts.end?.string}`)
-        console.log(`new available${mode}Length:`, start ? this.availableStartLength : this.availableEndLength)
+        DeBug.log(`this.cubicStartVert: ${this.cubicVerts.start?.string}`)
+        DeBug.log(`this.cubicEndVert: ${this.cubicVerts.end?.string}`)
+        DeBug.log(`new available${mode}Length:`, start ? this.availableStartLength : this.availableEndLength)
       }
     }
   }
@@ -1993,7 +2015,7 @@ class ProtoSegment extends Segment {
 
   // #setupMaxCubicVerts() {                                                                               //UNUSED:
   //   const max = this.length - this.cellRadius
-  //   console.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
+  //   DeBug.warn(` setupMaxCubicVerts this.length: ${this.length}, this.cellRadius: ${this.cellRadius},`)
   //   this.maxCubicVerts = { start: this.distancedStartPoint(max), end: this.distancedEndPoint(max) }
   // }
   // addMaxStartVert(vert, replace = false) { this.#addCubicVert(vert, replace, true, false) }             //UNUSED:
@@ -2138,21 +2160,21 @@ class ProtoSegment extends Segment {
 
   //MEMO: arcCenterMidPointTangent
   get arcCenterMidPointTangent() {
-    // console.warn(`arcCenterMidPointTangent`, this.hasArc)
+    // DeBug.warn(`arcCenterMidPointTangent`, this.hasArc)
     // return memoize(() => {
     return this.#calcArcCenterMidTangent()
     // }, `arcCenterMidPointTangent`).call(this)
   }
   //MEMO: maxArcCenterMidTangent
   // get maxArcCenterMidTangent() {                                                                        //UNUSED:
-  //   // console.warn(`maxArcCenterMidTangent`, this.hasArc)
+  //   // DeBug.warn(`maxArcCenterMidTangent`, this.hasArc)
   //   return memoize(() => {
   //     return this.#calcArcCenterMidTangent(false)
   //   }, `maxArcCenterMidTangent`).call(this)
   // }
   //MEMO: minArcCenterMidTangent
   // get minArcCenterMidTangent() {                                                                        //UNUSED:
-  //   // console.warn(`minArcCenterMidTangent`, this.hasArc)
+  //   // DeBug.warn(`minArcCenterMidTangent`, this.hasArc)
   //   return memoize(() => {
   //     return this.#calcArcCenterMidTangent(false, false)
   //   }, `minArcCenterMidTangent`).call(this)
@@ -2287,41 +2309,41 @@ class ProtoSegment extends Segment {
       const refSeg = horAspect === this.isVertical ? this : this.endNeighbor  // seg to reference points from
       const refPoints = refSeg.points
         .slice(1, -1)                            // remove first & last, cant be arcOrigins
-      // console.log(``)                                                                                //LOGGING:
-      // console.log(`viableArcOrigins()`, this)                                                        //LOGGING:
-      // console.log(`viableArcOrigins() horAspect`, horAspect)                                         //LOGGING:
-      // console.log(`refPoints`, refPoints)                                                            //LOGGING:
-      // console.log(`this.viableArcOriginsSeg`, this.viableArcOriginsSeg)                              //LOGGING:
+      // DeBug.log(``)                                                                                //LOGGING:
+      // DeBug.log(`viableArcOrigins()`, this)                                                        //LOGGING:
+      // DeBug.log(`viableArcOrigins() horAspect`, horAspect)                                         //LOGGING:
+      // DeBug.log(`refPoints`, refPoints)                                                            //LOGGING:
+      // DeBug.log(`this.viableArcOriginsSeg`, this.viableArcOriginsSeg)                              //LOGGING:
       let projectedPoints = refPoints.map(p => {
         const projEnd = Vertex.add(refSeg.direction.toLeft.lineVector, p)
         const projSeg = segment(p, projEnd)
         return this.viableArcOriginsSeg.intersectionWith(projSeg, true)
       })
-      // console.log(`viableArcOrigins projectedPoints`, projectedPoints)                               //LOGGING:
+      // DeBug.log(`viableArcOrigins projectedPoints`, projectedPoints)                               //LOGGING:
       const viables = projectedPoints
         .filter(p => this.viableArcOriginsSeg.vertIsOnLine(p))
         .gridVertSorted
         .filter((p, i, a) => !p.equals(a.at(i - 1), 1))
-      // console.log(`filtered viables`, viables)                                                       //LOGGING:
-      return viables
+      // DeBug.log(`filtered viables`, viables)                                                       //LOGGING:
+      return !viables.isEmpty ? viables : OpArray.format([this.viableArcOriginsSeg.start])
     }, `viableArcOrigins`).call(this)
   }
 
   get currentViableArcOrigins() {
-    // console.error(`currentViableArcOrigins`, this)                                                      //LOGGING:
-    // console.log(`currentViableArcOrigins viableArcOrigins`, this.viableArcOrigins)                      //LOGGING:
+    // DeBug.error(`currentViableArcOrigins`, this)                                                      //LOGGING:
+    // DeBug.log(`currentViableArcOrigins viableArcOrigins`, this.viableArcOrigins)                      //LOGGING:
     if (this.viableArcOrigins.length === 1) { return this.viableArcOrigins }
     //FIXME: startBounds and endBounds should stretch to edges
     const startBounds = this.isVertical ?
       this.startNeighbor.arcBoundsHorizontal : this.startNeighbor.arcBoundsVertical
     const endBounds = this.endNeighbor.isVertical ?
       this.endNeighbor.arcBoundsHorizontal : this.endNeighbor.arcBoundsVertical
-    // console.log(`currentViableArcOrigins startBounds`, startBounds)                                     //LOGGING:
-    // console.log(`currentViableArcOrigins endBounds`, endBounds)                                         //LOGGING:
+    // DeBug.log(`currentViableArcOrigins startBounds`, startBounds)                                     //LOGGING:
+    // DeBug.log(`currentViableArcOrigins endBounds`, endBounds)                                         //LOGGING:
     const viables = this.viableArcOrigins.filter(v =>
       !vertIsWithinBounds(v, startBounds, false, 2)
       && !vertIsWithinBounds(v, endBounds, false, 2))
-    // console.log(`currentViableArcOrigins viables`, viables)                                             //LOGGING:
+    // DeBug.log(`currentViableArcOrigins viables`, viables)                                             //LOGGING:
     return viables
   }
 
@@ -2357,7 +2379,7 @@ class ProtoSegment extends Segment {
   // }
 
   get arcStartToShapeBoundsEdgeSeg() {
-    // console.log(this)
+    // DeBug.log(this)
     const edgeIntersect = this.arcOriginToStart.intersectionWith(this.adjEndShapeBoundsEdge, true)
     return segment(this.arcStartCorner, edgeIntersect)
   }
@@ -2370,7 +2392,7 @@ class ProtoSegment extends Segment {
   //MEMO: inShapeSameFacingCorners
   get inShapeSameFacingCorners() {
     return memoize(() => {
-      if (!this.shape) { console.log(this) }
+      if (!this.shape) { DeBug.log(this) }
       return this.shape.simpleSubShapes.flat().exclude(this, 'id')
         .filter(s => this.hasSameFacingCorner(s))
     }, `inShapeSameFacingCorners`).call(this)
@@ -2406,11 +2428,11 @@ class ProtoSegment extends Segment {
   hasSameFacingCorner(seg) { return this.endCorner.equals(seg.endCorner) }
   //METH: isDiagonalCorner()
   hasDiagonalCorner(seg) {
-    // console.warn(`hasDiagonalCorner`, this, seg)
+    // DeBug.warn(`hasDiagonalCorner`, this, seg)
     const facing = this.hasSameFacingCorner(seg)
     const colBoundsSeg = this.maxArcBoundsSeg.isCollinearWith(seg.maxArcBoundsSeg)
-    // console.log(`hasDiagonalCorner`, facing, colBoundsSeg)                                                //LOGGING:
-    // console.log(`segs:`, this.viableArcOriginsSeg, seg.viableArcOriginsSeg)                               //LOGGING:
+    // DeBug.log(`hasDiagonalCorner`, facing, colBoundsSeg)                                                //LOGGING:
+    // DeBug.log(`segs:`, this.viableArcOriginsSeg, seg.viableArcOriginsSeg)                               //LOGGING:
     return facing && colBoundsSeg
     return this.hasSameFacingCorner(seg) && this.maxArcBoundsSeg.isCollinearWith(seg.maxArcBoundsSeg)
   }
@@ -2447,7 +2469,7 @@ class ProtoSegment extends Segment {
   }
   //METH: couldHaveInWrapper(seg) : BOOL : does not check orientation
   couldHaveInWrapper(seg) {
-    // console.log(this, seg)
+    // DeBug.log(this, seg)
     if (this.hasCoincidentCorner(seg)) {
       if (seg.isOutsideCorner === this.isOutsideCorner) {
         return boundsIsWithinTestBounds(seg.shape.bounds, this.shape.bounds)
@@ -2474,7 +2496,7 @@ class ProtoSegment extends Segment {
 
   //MEMO: shapesWithinThisMaxArcBounds : [Shape] : array of Shapes within this.maxArcBounds, including this.shape
   get shapesWithinThisMaxArcBounds() {
-    // console.log(`shapesWithinThisMaxArcBounds`, this)
+    // DeBug.log(`shapesWithinThisMaxArcBounds`, this)
     return memoize(() => {
       return this.grid.perimeterShapes.filter(shp => {
         if (shp.id === this.shape.id) { return true }                   // always true for this.shape
@@ -2483,7 +2505,7 @@ class ProtoSegment extends Segment {
           : this.grid.cellsWithinBounds(this.maxArcBounds)              // inside: check cells within maxArcBounds
 
         if (boundsOverlap({ geo: [this.maxArcBounds, shp.bounds] })) {  // 1. test bounds overlap
-          // console.log(`cells`, cells.map(c => c.id))                                                //LOGGING:
+          // DeBug.log(`cells`, cells.map(c => c.id))                                                //LOGGING:
           return !cells.intersect(shp.cells, `id`).isEmpty              // 2. test cells intersection
         }
       })
@@ -2535,7 +2557,8 @@ class ProtoSegment extends Segment {
   //METH: findFlushDistanceObjs
   findFlushDistanceObjs(viables = this.viableWrappers) {
     // return memoize(() => {
-    // console.log(`this.viableWrappers`, this.viableWrappers)
+    // DeBug.log(`findFlushDistanceObjs: `, this)
+    // DeBug.log(`this.viableWrappers`, this.viableWrappers)
     if (viables.isEmpty) { return viables }
 
     //ARROW: closest()
@@ -2545,8 +2568,22 @@ class ProtoSegment extends Segment {
       return segs
         .filter(s => {
           const testVertsSeg = testSeg.isHorizontal ? s.horVertSides[0] : s.horVertSides[1]
-          // if (this.id.includes('cell180')) { console.warn(`flushDistanceObjs current testVertsSeg`, testVertsSeg) }
+          // if (this.id.includes('cell180')) { DeBug.warn(`flushDistanceObjs current testVertsSeg`, testVertsSeg) }
+          // DeBug.log(`testSeg`, testSeg)
+          // DeBug.log(`testVertsSeg`, testVertsSeg)
+          // const test1 = testSeg.vertIsOnLine(testVertsSeg.start)
+          // const test2 = testSeg.vertIsOnLine(testVertsSeg.end)
+          // const test3 = testVertsSeg.vertIsOnLine(testSeg.start)
+          // const test4 = testVertsSeg.vertIsOnLine(testSeg.end)
+          // const test5 = this.hasCollinearCorner(s) || this.hasCoincidentCorner(s)
+          // DeBug.log(`test1`, test1)
+          // DeBug.log(`test2`, test2)
+          // DeBug.log(`test3`, test3)
+          // DeBug.log(`test4`, test4)
+          // DeBug.log(`test5`, test5)
+          // return test1 || test2 || test3 || test4 && test3
           return testSeg.vertIsOnLine(testVertsSeg.start) || testSeg.vertIsOnLine(testVertsSeg.end)
+            || testVertsSeg.vertIsOnLine(testSeg.start) || testVertsSeg.vertIsOnLine(testSeg.end)
             // return testSeg.isOverlappingWith(s) || testSeg.isOverlappingWith(s.endNeighbor)
             &&
             (this.hasCollinearCorner(s) || this.hasCoincidentCorner(s))
@@ -2558,8 +2595,8 @@ class ProtoSegment extends Segment {
     }
     const startWraps = closest(viables, true)                             // calculate closest obj on corner start
     const endWraps = closest(viables, false)                              // calculate closest obj on corner end
-    // console.log(`startWraps`, startWraps)
-    // console.log(`endWraps`, endWraps)
+    // DeBug.log(`startWraps`, startWraps)
+    // DeBug.log(`endWraps`, endWraps)
     if (!startWraps.isEmpty && !endWraps.isEmpty) {
       return startWraps.union(endWraps, `id`)
     } else if (!startWraps.isEmpty) {
@@ -2653,8 +2690,8 @@ class ProtoSegment extends Segment {
     //   seg: seg, tang: tangent, tangX: tangentIntersect, tangDist: tangDist, dist: endDist, isStart: false
     // }
 
-    // console.error(`minAdjWrapperDistanceObj startObj`, startObj)
-    // console.error(`minAdjWrapperDistanceObj endObj`, endObj)
+    // DeBug.error(`minAdjWrapperDistanceObj startObj`, startObj)
+    // DeBug.error(`minAdjWrapperDistanceObj endObj`, endObj)
     // return [startObj, endObj]
     if (startDist === endDist) { return [startObj, endObj] }                        // return closest object(s) 
     //FIXME: Determine correct sign below, should be less than, right?
@@ -2677,12 +2714,12 @@ class ProtoSegment extends Segment {
     const { inWrapper, outWrapper } = this.inOutWrapObjWith(seg)                    // calc inOutWraps
     const side = isStart ? outWrapper.endNeighbor : outWrapper  //FIXME: seems opposite? // calc side     
     //FIXME: test this works with flush (collinear) wraps   
-    // console.log(``)
-    // console.log(`intersectObj inOut`, [inWrapper.id, outWrapper.id])
-    // console.log(`intersectObj this`, this)
-    // console.log(`intersectObj seg`, seg) warn
-    // console.log(`intersectObj side`, side)
-    // console.log(`intersectObj inWrapper.arcOrigin`, inWrapper.arcOrigin)
+    // DeBug.log(``)
+    // DeBug.log(`intersectObj inOut`, [inWrapper.id, outWrapper.id])
+    // DeBug.log(`intersectObj this`, this)
+    // DeBug.log(`intersectObj seg`, seg) warn
+    // DeBug.log(`intersectObj side`, side)
+    // DeBug.log(`intersectObj inWrapper.arcOrigin`, inWrapper.arcOrigin)
     // const origin = inWrapper.hasArc ? inWrapper.arcOrigin : inWrapper.minArcOrigin
     const intersect =
       side.perpendicularIntersectionWith(inWrapper.arcOrigin)
@@ -2699,7 +2736,7 @@ class ProtoSegment extends Segment {
   //MEMO : adjDistanceObjs
   get adjDistanceObjs() {
     // if (this.id.includes('cell019')) {
-    //   console.warn(`processing cell199`)
+    //   DeBug.warn(`processing cell199`)
     // }
     // return memoize(() => {
     const outside = !this.isOutsideCorner             // opposite isOutsideCorner value of this
@@ -2715,8 +2752,8 @@ class ProtoSegment extends Segment {
     }
 
     // let adjWraps = this.inShapeSameFacingCorners
-    // console.log(`adjDistanceObjs`, this)
-    // console.log(`viableInWrappers`, this.viableWrappers)
+    // DeBug.log(`adjDistanceObjs`, this)
+    // DeBug.log(`viableInWrappers`, this.viableWrappers)
     let adjWraps = this.viableWrappers
       .filter(s =>
         this.hasSameFacingCorner(s)
@@ -2732,7 +2769,7 @@ class ProtoSegment extends Segment {
       .sort((a, b) => a.tangDist - b.tangDist)
     // .sort((a, b) => a.seg.couldHaveInWrapper(b.seg) - b.seg.couldHaveInWrapper(a.seg))
     // .sort((a, b) => b.seg.couldHaveInWrapper(a.seg) - a.seg.couldHaveInWrapper(b.seg))
-    // console.log(`adjWraps`, adjWraps)
+    // DeBug.log(`adjWraps`, adjWraps)
     return adjWraps
     // }, `adjDistanceObjs`).call(this)
   }
@@ -2741,7 +2778,7 @@ class ProtoSegment extends Segment {
     //ARROW: inOutSorted()
     const inOutSorted = (objs) => {
       if (objs.length > 1) {                            // there are two or more wrappers that are coincident pair
-        // console.log(`objs pre`, objs)
+        // DeBug.log(`objs pre`, objs)
         if (objs.length > 2) {                          // wrappers are diagonal so start/end for each seg
           let newObjs = new OpArray
           objs.forEach(obj => {                         // filter out repeat seg objs
@@ -2749,7 +2786,7 @@ class ProtoSegment extends Segment {
           })
           objs = newObjs
         }
-        // console.log(`objs post`, objs)
+        // DeBug.log(`objs post`, objs)
         if (this.couldHaveInWrapper(objs[0].seg)) {     // objs are inWrappers
           // return objs.sort((a, b) => a.seg.couldHaveInWrapper(b.seg) - b.seg.couldHaveInWrapper(a.seg))
           return objs.sort((a, b) => b.seg.couldHaveInWrapper(a.seg) - a.seg.couldHaveInWrapper(b.seg))
@@ -2823,24 +2860,24 @@ class ProtoSegment extends Segment {
       || this.id.includes('cel027')                                                              //LOGGING:
     ) {                                                                                           //LOGGING:
       report = true                                                                               //LOGGING:
-      console.error(`${wrapType} called on:`, this)                                               //LOGGING:
-      console.log(`wrapper:`, wrapper)                                                            //LOGGING:
+      DeBug.error(`${wrapType} called on:`, this)                                               //LOGGING:
+      DeBug.log(`wrapper:`, wrapper)                                                            //LOGGING:
     }
 
     if (wrapper
       // && viables
     ) {                                                    // has a flush wrapper
-      if (report) { console.log(`wrapper:`, wrapper.id) }                                         //LOGGING:
+      if (report) { DeBug.log(`wrapper:`, wrapper.id) }                                         //LOGGING:
       const [inWrapper, outWrapper] = flush ? this.inOutFlushWrappers : this.inOutAdjWrappers
       const viables = flush ? this.viableCoinWrapOrigins : this.viableAdjWrapOrigins
-      if (report) { console.log(`viables:`, viables) }                                         //LOGGING:
+      if (report) { DeBug.log(`viables:`, viables) }                                         //LOGGING:
 
       if (this.hasArc) {                                                         // this has arc
-        if (report) { console.log(`this hasArc`) }                                                //LOGGING:
+        if (report) { DeBug.log(`this hasArc`) }                                                //LOGGING:
 
         if (wrapper.hasArc                                                       // both have arcs!
           && wrapper.arcOrigin.equals(this.arcOrigin, 2)) {               // already flushly wrapped!
-          if (report) { console.log(`already flushly wrapped!`) }
+          if (report) { DeBug.log(`already flushly wrapped!`) }
           return
         }
 
@@ -2849,21 +2886,21 @@ class ProtoSegment extends Segment {
         // if (viables?.some(v => this.arcOrigin.equals(v, 2))) {                    // arcs are diagonal & can wrap
         if (this.hasDiagonalCorner(wrapper)) {                  // wraps are diagonal (COINCIDENT or RADIANT)
           if (report) {                                                                           //LOGGING:
-            console.log(`this.arcOrigin`, this.arcOrigin)                                         //LOGGING:
-            console.log(`${wrapType} cubicVerts before`, wrapper.cubicVerts)                      //LOGGING:
+            DeBug.log(`this.arcOrigin`, this.arcOrigin)                                         //LOGGING:
+            DeBug.log(`${wrapType} cubicVerts before`, wrapper.cubicVerts)                      //LOGGING:
           }                                                                                       //LOGGING:
           if (replace                                                            // forced replacement
             || (flush ? this.flushWrapIsNonEquidistant                          // nonEquidistant wrappers!
               : this.adjWrapIsNonEquidistant)) {                                    // nonEquidistant wrappers!
-            if (report) { console.log(`replacing end curve origin`) }                                       //LOGGING:
+            if (report) { DeBug.log(`replacing end curve origin`) }                                       //LOGGING:
             target.replaceEndCurveOrigin(source.arcOrigin)                        // replace matching wrapper curve
           } else {
-            // console.log(`setting end curve origin`)                                            //LOGGING:
+            // DeBug.log(`setting end curve origin`)                                            //LOGGING:
             target.setEndCurveOrigin(source.arcOrigin)                            // set matching wrapper curve
           }
           if (report) {                                                                           //LOGGING:
-            console.log(`wrapper.setEndCurve`)                                                    //LOGGING:
-            console.log(`${wrapType} cubicVerts after`, wrapper.cubicVerts)                       //LOGGING:
+            DeBug.log(`wrapper.setEndCurve`)                                                    //LOGGING:
+            DeBug.log(`${wrapType} cubicVerts after`, wrapper.cubicVerts)                       //LOGGING:
           }                                                                                       //LOGGING:
           // }
 
@@ -2873,25 +2910,25 @@ class ProtoSegment extends Segment {
           if (flush) {                                          // wraps are COLLINEAR 
             const obj = target.flushIntersectObjs[0]
             if (report) {
-              console.log(`wraps are COLLINEAR`)                                                  //LOGGING: 
-              console.log(`target`, target)                                                     //LOGGING:
-              console.log(`flushDistanceObjs:`, obj)                                              //LOGGING:
+              DeBug.log(`wraps are COLLINEAR`)                                                  //LOGGING: 
+              DeBug.log(`target`, target)                                                     //LOGGING:
+              DeBug.log(`flushDistanceObjs:`, obj)                                              //LOGGING:
             }                                                                                     //LOGGING:
             if (obj) {
               if (report) {
-                console.log(`obj.dist`, obj.dist)
-                console.log(`target.maxArcRadius`, target.maxArcRadius)
+                DeBug.log(`obj.dist`, obj.dist)
+                DeBug.log(`target.maxArcRadius`, target.maxArcRadius)
               }
               if (obj.dist < target.maxArcRadius) {
-                if (report) { console.log(`addDistancedEndCornerVerts`) }
+                if (report) { DeBug.log(`addDistancedEndCornerVerts`) }
                 target.addDistancedEndCornerVerts(obj.dist, true)
               } else {
-                if (report) { console.log(`replaceEndCurveOrigin`) }
+                if (report) { DeBug.log(`replaceEndCurveOrigin`) }
                 target.replaceEndCurveOrigin(target.currentMaxArcOrigin)
               }
               // const start = inWrapper.id === obj.start.seg.id        // part of outWrapper flush to inWrapper
               // const dist = start ? obj.start.dist : obj.end.dist
-              // console.log(`start`, start)
+              // DeBug.log(`start`, start)
               // outWrapper.addDistancedEndCornerVerts(dist)
             }
 
@@ -2899,18 +2936,18 @@ class ProtoSegment extends Segment {
           } else {                                              // wraps are PROXIMAL 
             const obj = target.adjIntersectObjs[0]
             if (report) {                                                                         //LOGGING:
-              console.log(`wraps are PROXIMAL `)                                                  //LOGGING:
-              // console.log(`target`, target)                                                  //LOGGING:
-              // console.log(`target int obj`, target.adjIntersectObjs[0])                 //LOGGING:
-              console.log(`intersectObject`, obj)                                                 //LOGGING:
+              DeBug.log(`wraps are PROXIMAL `)                                                  //LOGGING:
+              // DeBug.log(`target`, target)                                                  //LOGGING:
+              // DeBug.log(`target int obj`, target.adjIntersectObjs[0])                 //LOGGING:
+              DeBug.log(`intersectObject`, obj)                                                 //LOGGING:
             }
             if (obj) {
               if (obj.dist <= target.maxArcRadius) {
-                console.log(`addDistancedEndCornerVerts`)
+                DeBug.log(`addDistancedEndCornerVerts`)
                 target.addDistancedEndCornerVerts(obj.dist, true)
                 // target.replaceEndCurveOrigin(target.currentMaxArcOrigin)
               } else {
-                console.log(`replaceEndCurveOrigin`)
+                DeBug.log(`replaceEndCurveOrigin`)
                 target.replaceEndCurveOrigin(target.currentMaxArcOrigin)
               }
               // if (this.isAdjOutWrapper) {
@@ -2946,7 +2983,7 @@ class ProtoSegment extends Segment {
 
 
       } else {                                                                   // has NO arc
-        if (report) { console.log(`this DOES NOT hasArc`) }                                       //LOGGING:
+        if (report) { DeBug.log(`this DOES NOT hasArc`) }                                       //LOGGING:
         if (viables) {
           this.replaceEndCurveOrigin(viables.last)                                 // replace with largest viable
           wrapper.replaceEndCurveOrigin(viables.last)                              // replace with largest viable
@@ -2980,11 +3017,11 @@ class ProtoSegment extends Segment {
   }
   //MEMO: outWrappers
   get outWrappers() {
-    // console.log(`outWrappers.this`, this)                                                                     //LOGGING:
+    // DeBug.log(`outWrappers.this`, this)                                                                     //LOGGING:
     return memoize(() => {
-      // console.log(`this`, this)                                                                     //LOGGING:
-      // console.log(`outWrapper`, this.outWrapper)                                                    //LOGGING:
-      // console.log(this.outWrapper?.outWrappers)                                                      //LOGGING:
+      // DeBug.log(`this`, this)                                                                     //LOGGING:
+      // DeBug.log(`outWrapper`, this.outWrapper)                                                    //LOGGING:
+      // DeBug.log(this.outWrapper?.outWrappers)                                                      //LOGGING:
       if (this.outWrapper) { return OpArray.format(this.outWrapper).union(this.outWrapper.outWrappers, `id`) }
     }, `outWrappers`).call(this)
   }
@@ -2998,16 +3035,25 @@ class ProtoSegment extends Segment {
       //     .union(this.outWrapper.radiantOutWrappers, `id`)
       //   // .filter(s => boundsIsWithinTestBounds(this.innerMostRadiantWrapper.minArcBoundsSeg, s.maxArcBoundsSeg))
       // }
-      console.log(`radiantOutWrappers for`, this)
+      // DeBug.warn(`radiantOutWrappers for`, this)
+      // DeBug.log(`outWrappers`, this.outWrappers?.map(o => o.id))
       //ARROW: filterRadiants()
       const filterRadiants = (outWrappers) => {
-        console.log(`radiantOutWrappers this`, this)
+        // DeBug.log(`radiantOutWrappers this`, this)
+        // DeBug.log(`radiantOutWrappers filterRadiants`)
         let radiants = new OpArray
         while (outWrappers.length > 0) {
           const wrapper = outWrappers.shift()
-          if (wrapper.inWrapper?.canRadiateTo(wrapper) && this.hasDiagonalCorner(wrapper)) {
+          // DeBug.log(`wrapper`, wrapper)
+          // DeBug.log(`wrapper.inWrapper`, wrapper.inWrapper)
+          if (wrapper.canRadiateTo(this)
+            && wrapper.inWrapper?.canRadiateTo(wrapper)
+            && this.hasDiagonalCorner(wrapper)
+            && wrapper.inWrapper.id === radiants.last) {
+            // DeBug.error(`It's Good!`)
             radiants.push(wrapper)
           } else {
+            // DeBug.error(`It's Bad!`)
             outWrappers = []
           }
         }
@@ -3019,13 +3065,13 @@ class ProtoSegment extends Segment {
         if (this.isInnerMostWrapper && this.outWrapperIsRadiant) {
           wrappers = filterRadiants(this.outWrappers)
           // .filter(s => this.canRadiateTo(s))
-          // console.log(`wrappers`, wrappers)
+          // DeBug.log(`wrappers`, wrappers)
         } else {                                  //this is NOT innerMostWrapper
           if (this.inWrapper?.canRadiateTo(this)) {
-            // console.error(`hitting this`)
+            // DeBug.error(`hitting this`)
             wrappers = this.innerMostRadiantWrapper.radiantOutWrappers?.intersect(this.outWrappers, `id`)
           } else if (this.outWrapperIsRadiant) {
-            // console.warn(`hitting that`)
+            // DeBug.warn(`hitting that`)
             wrappers = filterRadiants(this.outWrappers)
             // .filter(s => this.canRadiateTo(s))
           }
@@ -3037,7 +3083,7 @@ class ProtoSegment extends Segment {
   //MEMO: inWrappers
   get inWrappers() {
     return memoize(() => {
-      // console.log(`this.inWrapper`, this.inWrapper)
+      // DeBug.log(`this.inWrapper`, this.inWrapper)
       if (this.inWrapper) { return OpArray.format(this.inWrapper).union(this.inWrapper.inWrappers, `id`) }
     }, `inWrappers`).call(this)
   }
@@ -3045,7 +3091,12 @@ class ProtoSegment extends Segment {
   get radiantInWrappers() {
     return memoize(() => {
       if (this.inWrapperIsRadiant) {
+        // if (this.outWrapper && this.inWrapper.canRadiateTo(this.outWrapper)) {
         return OpArray.format(this.inWrapper).union(this.inWrapper.radiantInWrappers, `id`)
+        // } else {
+        //   OpArray.format(this.inWrapper)
+        // }
+
       }
       // if (this.inWrappers && this.inWrapperIsRadiant) {
       //   let wrappers
@@ -3087,9 +3138,9 @@ class ProtoSegment extends Segment {
     if (this.radiantInWrappers) { return this.radiantInWrappers.last }
     else if (this.radiantOutWrappers) { return this }
 
-    // console.log(`innerMostRadiantWrapper`, this)
+    // DeBug.log(`innerMostRadiantWrapper`, this)
     // if (!!this.inWrappers) {
-    //   // console.log(`this.inWrappers`, this.inWrappers)
+    //   // DeBug.log(`this.inWrappers`, this.inWrappers)
     //   if (this.innerMostWrapper.radiantOutWrappers.some(s => s.id === this.id)) {
     //     return this.innerMostWrapper
     //   } else {
@@ -3171,13 +3222,14 @@ class ProtoSegment extends Segment {
   get viableRadOutWrappersOriginBounds() {
     // return memoize(() => {
     if (this.isInnerMostRadiantWrapper) {
-      // console.log(`viableRadOutWrappersOriginBounds radiantOutWrappers`, this.radiantOutWrappers)
-      // console.log(`viableRadOutWrappersOriginBounds radiantOutWrappers`, this.radiantOutWrappers.map(s => [s.start.string, s.end.string]))
+      DeBug.log(`viableRadOutWrappersOriginBounds radiantOutWrappers`, this.radiantOutWrappers)
+      // DeBug.log(`viableRadOutWrappersOriginBounds radiantOutWrappers`, this.radiantOutWrappers.map(s => [s.start.string, s.end.string]))
+      DeBug.log(`viableRadOutWrappersOriginBounds radiantOutWrappers`, this.radiantOutWrappers.map(s => s.currentViableArcOriginsSeg))
       let viables = this.radiantOutWrappers
         .map(s => s.currentViableArcOriginsSeg)
-      // console.log(`viableRadOutWrappersOriginBounds viables`, viables)                                  //LOGGING:
+      DeBug.log(`viableRadOutWrappersOriginBounds viables`, viables)                                  //LOGGING:
       const result = boundsOverlap({ geo: [viables], accuracy: 0 })
-      // console.log(`result`, result)                                                              //LOGGING:
+      // DeBug.log(`result`, result)                                                              //LOGGING:
       return result
     }
     // }, `viableRadOutWrappersOriginBounds`).call(this)
@@ -3195,21 +3247,38 @@ class ProtoSegment extends Segment {
   }
 
   get viableRadiantOrigins() {
-    // console.error(`can has viableRadiantOrigins?`)
+    // DeBug.error(`can has viableRadiantOrigins?`)
 
     if (this.viableRadiantOriginBounds) {
-      // console.warn(`yes! viableRadiantOrigins`)
-      // console.error(`viableArcOrigins`, this.viableArcOrigins.map(v => v.string))
-      // console.error(`viableRadiantOriginBounds`, this.viableRadiantOriginBounds)
+      // DeBug.warn(`yes! viableRadiantOrigins`)
+      // DeBug.error(`viableArcOrigins`, this.viableArcOrigins.map(v => v.string))
+      // DeBug.error(`viableRadiantOriginBounds`, this.viableRadiantOriginBounds)
       const viableBounds = this.viableRadOutWrappersOriginBounds
-      // console.log(`viableRadOutWrappersOriginBounds`, viableBounds)
+      DeBug.log(`viableRadOutWrappersOriginBounds`, viableBounds)
+      const origins = this.viableArcOrigins
+        .filter(v => vertIsWithinBounds(v, viableBounds, true, 0))
+        .sort((a, b) => Vertex.dist(a, this.end) - Vertex.dist(b, this.end))
+      if (!origins.isEmpty) { return origins } else {
+        return this.viableArcOrigins
+      }
+
+    }
+
+  }
+
+  get currentViableRadiantOrigins() {
+    if (this.viableRadiantOriginBounds) {
+      // DeBug.warn(`yes! viableRadiantOrigins`)
+      // DeBug.error(`viableArcOrigins`, this.viableArcOrigins.map(v => v.string))
+      // DeBug.error(`viableRadiantOriginBounds`, this.viableRadiantOriginBounds)
+      const viableBounds = this.viableRadOutWrappersOriginBounds
+      // DeBug.log(`viableRadOutWrappersOriginBounds`, viableBounds)
       const origins = this.currentViableArcOrigins
         .filter(v => vertIsWithinBounds(v, viableBounds, true, 0))
         .sort((a, b) => Vertex.dist(a, this.end) - Vertex.dist(b, this.end))
       if (!origins.isEmpty) { return origins }
 
     }
-
   }
   //MARK: INTERFERENCE WRAPPING
   get interferenceWrappers() {
@@ -3262,16 +3331,16 @@ class ProtoSegment extends Segment {
   //MEMO: viableInterferenceOrigins
   get viableInterferenceOrigins() {
     // return memoize(() => {
-    // console.log(`viableInterferenceOrigins()`)
+    // DeBug.log(`viableInterferenceOrigins()`)
     if (!this.hasInterference) { return }
     //ARROW: 
     const viables = (corner, isStart = true) => {
       if (!corner) { return }
-      // console.log(`cornerOrigins`, corner.viableArcOriginsSeg.string)
-      // console.log(`corner viables`, corner.viableArcOrigins)
+      // DeBug.log(`cornerOrigins`, corner.viableArcOriginsSeg.string)
+      // DeBug.log(`corner viables`, corner.viableArcOrigins)
       let bounds = { ...corner.viableArcOriginsSeg.bounds }                 // copy minMax bounds
       // let bounds = { ...corner.viableRadiantOriginBounds }      //TODO: this fixes #472
-      // console.log(`bounds`, bounds)
+      // DeBug.log(`bounds`, bounds)
       const side = isStart === this.isOutsideCorner ? this : this.endNeighbor    // seg to reference direction
       if (side.isVertical) {
         bounds.xMin = 0
@@ -3280,21 +3349,21 @@ class ProtoSegment extends Segment {
         bounds.yMin = 0
         bounds.yMax = 200
       }
-      // console.log(`isStart`, isStart)
-      // console.log(`side`, side)
-      // console.log(`bounds`, bounds)
-      const viables = this.viableRadiantOrigins || this.viableArcOrigins
+      // DeBug.log(`isStart`, isStart)
+      // DeBug.log(`side`, side)
+      // DeBug.log(`bounds`, bounds)
+      const viables = this.currentViableRadiantOrigins || this.viableArcOrigins
       // const origins = this.viableArcOrigins.filter(v => vertIsWithinBounds(v, bounds, true, 0))
       const origins = viables.filter(v => vertIsWithinBounds(v, bounds, true, 0))
-      // console.log(`origins`, origins)
+      // DeBug.log(`origins`, origins)
       if (!origins.isEmpty) return origins
     }
 
     const starts = viables(this.interferenceWrappers.start)
     const ends = viables(this.interferenceWrappers.end, false)
 
-    // console.log(`starts`, starts)
-    // console.log(`ends`, ends)
+    // DeBug.log(`starts`, starts)
+    // DeBug.log(`ends`, ends)
     if (starts && ends) {
       return starts.intersect(ends, [`x`, `y`])
     }
@@ -3547,8 +3616,8 @@ class ProtoSegment extends Segment {
   insetCopy(insetScale) {
     // if (insetScale <= 0) { return }
     // if (insetScale > 2) { insetScale = 2 }
-    // console.log(`insetCopy`, this)
-    // console.log(`normals`, this.normals)
+    // DeBug.log(`insetCopy`, this)
+    // DeBug.log(`normals`, this.normals)
 
     const scaleToOffset = Vertex.sub(insetScale, vert(1))  // create scaleToOffset 
     const offset = Vertex.mult(scaleToOffset, this.cellRadius)
@@ -3556,7 +3625,7 @@ class ProtoSegment extends Segment {
     const insetStart = Vertex.add(this.start, startMove) // new inset segment start
     const endMove = Vertex.mult(this.normals.end.moveCoord, offset) // endMove vector
     const insetEnd = Vertex.add(this.end, endMove) // new inset segment end
-    if (insetEnd.x < 0 || insetEnd.y < 0) { console.warn(`created insetEnd with negative values`) }
+    if (insetEnd.x < 0 || insetEnd.y < 0) { DeBug.warn(`created insetEnd with negative values`) }
 
     const cubicMove = Vertex.mult(this.normals.cubic.moveCoord, offset) // cubicMove vector
 
@@ -3601,6 +3670,7 @@ class ProtoSegment extends Segment {
       points: insetPoints,
       sideDir: this.sideDir,
       shape: this.shape,
+      _direction: this.direction,
     })
   }
   // #endregion
@@ -3613,9 +3683,9 @@ class ProtoSegment extends Segment {
   get hasBothNeighbors() { return !!this.startNeighbor && !!this.endNeighbor }
   //MEMO: overlapSegs
   get overlapSegs() {
-    // console.log(`this.shape.andNeighborSimples`, this.shape.andNeighborSimples)
-    // console.log(`overlapSegs seg`, this)
-    // console.log(`this.shape`, this.shape)
+    // DeBug.log(`this.shape.andNeighborSimples`, this.shape.andNeighborSimples)
+    // DeBug.log(`overlapSegs seg`, this)
+    // DeBug.log(`this.shape`, this.shape)
     return memoize(() => {
       return this.shape.andNeighborSimples
         .exclude(this, `id`)
@@ -3648,7 +3718,7 @@ class ProtoSegment extends Segment {
   }
   get segPath() {
     if (!this.hasBothNeighbors) {
-      console.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
+      DeBug.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
       return
     }
     let path = new OpArray
@@ -3683,13 +3753,13 @@ class ProtoSegment extends Segment {
   assignNeighbors({ start, end } = {}) {
     if (start) {
       if (!this.start.equals(start.end, 1)) {
-        console.error(`assigned a disconnected start neighbor!`, this.start, start.end)
+        DeBug.error(`assigned a disconnected start neighbor!`, this.start, start.end)
       }
       this.neighbors.start = start
     }
     if (end) {
       if (!this.end.equals(end.start, 1)) {
-        console.error(`assigned a disconnected end neighbor!`, this.end, end.start)
+        DeBug.error(`assigned a disconnected end neighbor!`, this.end, end.start)
       }
       this.neighbors.end = end
     }
