@@ -132,7 +132,7 @@ class OpArray extends Array {
     if (this.isEmpty) { return new OpArray }
     const clean = this.compacted
     props = OpArray.format(props).compacted
-    // console.log(`props`, props)
+    // DeBug.log(`props`, props)
     return clean.map(e => {
       let key
       if (props.isEmpty) {
@@ -260,7 +260,7 @@ class OpArray extends Array {
     let a, b, kv, res
     if (isObjectArray) {
       kv = this.kvObj(vals, props)
-      // console.log('kv', kv)
+      // DeBug.log('kv', kv)
       a = kv.aKeys
       b = kv.bKeys
     } else {
@@ -286,8 +286,8 @@ class OpArray extends Array {
   // apply to numeric arrays 
   reduceLength(reducer, fn) {
     let array = this.unique().numSorted
-    // console.log('this', this)
-    // console.log('array', array)
+    // DeBug.log('this', this)
+    // DeBug.log('array', array)
     let remove = round(reduce(array.length, reducer))
     if (remove < 1 || !fn) { return array }
 
@@ -327,7 +327,7 @@ class OpArray extends Array {
   // }
   //NOTE: Implemented with ChatGPT o1-preview on Sept 16, 2024
   combReduce(dashArray) {
-    // console.log()
+    // DeBug.log()
     // Step 1: Normalize the dashArray
     if (dashArray.length % 2 !== 0) {
       dashArray = dashArray.concat(dashArray)                // normalize the dashArray
@@ -394,7 +394,7 @@ class OpArray extends Array {
   }
 
   static randomIntArray(length, range) {
-    console.log(`length`, length)
+    DeBug.log(`length`, length)
     let array = OpArray.format(new Array(length))
     array.forEach((n, i) => array[i] = R.random_int(range.start, range.end))
     return array
