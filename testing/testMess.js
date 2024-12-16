@@ -1,45 +1,45 @@
 //-------------------------------------------------------------------------
 //FUNC: FUNCTION TESTS
 function functionTestPrint() {
-  console.log('hash', tokenData.hash)
+  DeBug.log('hash', tokenData.hash)
 
-  console.groupCollapsed(`TestMess`)
+  DeBug.groupCollapsed(`TestMess`)
 
 
   //NOTE: p5.js vector tests
   // const vert1 = vert(1, 0)
   // const vert2 = vert(0, 1)
   // const vert1Vert2angle = vert1.angleBetween(vert2)
-  // console.log(`vert1Vert2angle`, vert1Vert2angle)
+  // DeBug.log(`vert1Vert2angle`, vert1Vert2angle)
 
   //NOTE: modulo tests
-  // console.log(1.4 % 1)
-  // console.log(1.69 % 1)
+  // DeBug.log(1.4 % 1)
+  // DeBug.log(1.69 % 1)
 
   //NOTE: primeDivisors() test
-  // console.log('prime divisors 8', getDivisors(8))
-  // console.log('prime divisors 18', getDivisors(18))
-  // console.log('prime divisors 32', getDivisors(32))
-  // console.log('prime divisors 30', getDivisors(30))
-  // console.log('prime divisors 50', getDivisors(50))
-  // console.log('prime divisors 72', getDivisors(72))
-  // console.log('prime divisors 98', getDivisors(98))
-  // console.log('prime divisors 128', getDivisors(128))
-  // console.log('prime divisors 162', getDivisors(162))
-  // console.log('prime divisors 200', getDivisors(200))
+  // DeBug.log('prime divisors 8', getDivisors(8))
+  // DeBug.log('prime divisors 18', getDivisors(18))
+  // DeBug.log('prime divisors 32', getDivisors(32))
+  // DeBug.log('prime divisors 30', getDivisors(30))
+  // DeBug.log('prime divisors 50', getDivisors(50))
+  // DeBug.log('prime divisors 72', getDivisors(72))
+  // DeBug.log('prime divisors 98', getDivisors(98))
+  // DeBug.log('prime divisors 128', getDivisors(128))
+  // DeBug.log('prime divisors 162', getDivisors(162))
+  // DeBug.log('prime divisors 200', getDivisors(200))
 
   //NOTE: OpArray.shift() test
   // const arrayOne = OpArray.from([1, 2, 3, 4, 5])
   // const shiftArray = arrayOne.shifted(2)
   // const shiftArray2 = arrayOne.shifted(-2)
-  // console.log('shiftArray', shiftArray)
-  // console.log('shiftArray2', shiftArray2)
+  // DeBug.log('shiftArray', shiftArray)
+  // DeBug.log('shiftArray2', shiftArray2)
 
   // print(values16x16bit)
   // print(values21x12bit)
 
   //NOTE: Bounds Tests
-  // console.log(`Bounds Tests`)
+  // DeBug.log(`Bounds Tests`)
   // const vert0 = vert(0, 0)
   // const vert1 = vert(1, 1)
   // const vert2 = vert(2, 2)
@@ -50,93 +50,93 @@ function functionTestPrint() {
   // const vert23 = vert(2, 3)
 
   // const seg01 = segment(vert0, vert1)
-  // console.log(`seg01`, seg01)
+  // DeBug.log(`seg01`, seg01)
   // const seg02 = segment(vert0, vert2)
-  // console.log(`seg02`, seg02)
+  // DeBug.log(`seg02`, seg02)
   // const seg12 = segment(vert1, vert2)
-  // console.log(`seg12`, seg12)
+  // DeBug.log(`seg12`, seg12)
   // const seg23 = segment(vert2, vert3)
-  // console.log(`seg23`, seg23)
+  // DeBug.log(`seg23`, seg23)
   // const seg0112 = segment(vert01, vert12)
-  // console.log(`seg0112`, seg0112)
+  // DeBug.log(`seg0112`, seg0112)
   // const seg0123 = segment(vert01, vert23)
-  // console.log(`seg0123`, seg0123)
+  // DeBug.log(`seg0123`, seg0123)
 
   // const bounds0 = findBounds(vert0)
-  // console.log(`bounds0`, bounds0)
+  // DeBug.log(`bounds0`, bounds0)
   // const boundsNested = findBounds(bounds0)
-  // console.log(`boundsNested`, boundsNested)
+  // DeBug.log(`boundsNested`, boundsNested)
   // const bounds01 = findBounds(seg01)
-  // console.log(`bounds01`, bounds01)
+  // DeBug.log(`bounds01`, bounds01)
   // const bounds02 = findBounds(seg02)
-  // console.log(`bounds02`, bounds02)
+  // DeBug.log(`bounds02`, bounds02)
   // const bounds12 = findBounds(seg12)
-  // console.log(`bounds12`, bounds12)
+  // DeBug.log(`bounds12`, bounds12)
 
   // const vert0InBounds01 = vertIsInsideBounds(vert0, bounds01)
-  // console.log(`vert0InBounds01`, vert0InBounds01)
+  // DeBug.log(`vert0InBounds01`, vert0InBounds01)
   // const vert0InBounds01NotBorder = vertIsInsideBounds(vert0, bounds01, false)
-  // console.log(`vert0InBounds01NotBorder`, vert0InBounds01NotBorder)
+  // DeBug.log(`vert0InBounds01NotBorder`, vert0InBounds01NotBorder)
 
   // const bounds01InBounds02 = boundsIsWithinTestBounds(bounds01, bounds02)
-  // console.log(`bounds01InBounds02`, bounds01InBounds02)
+  // DeBug.log(`bounds01InBounds02`, bounds01InBounds02)
   // const bounds01InBounds12 = boundsIsWithinTestBounds(bounds01, bounds12)
-  // console.log(`bounds01InBounds12`, bounds01InBounds12)
+  // DeBug.log(`bounds01InBounds12`, bounds01InBounds12)
   // const bounds01OverlapsBounds12 = boundsIsWithinTestBounds(bounds01, bounds12, true, true)
-  // console.log(`bounds01OverlapsBounds12`, bounds01OverlapsBounds12)
+  // DeBug.log(`bounds01OverlapsBounds12`, bounds01OverlapsBounds12)
 
-  // console.log(`seg01.lineVector`, seg01.lineVector)
-  // console.log(`seg02.lineVector`, seg02.lineVector)
-  // console.log(`seg12.lineVector`, seg12.lineVector)
+  // DeBug.log(`seg01.lineVector`, seg01.lineVector)
+  // DeBug.log(`seg02.lineVector`, seg02.lineVector)
+  // DeBug.log(`seg12.lineVector`, seg12.lineVector)
 
   // const seg01IsOverlappingSeg02 = seg01.isOverlappingWith({ seg: seg02 })
-  // console.log(`seg01IsOverlappingSeg02`, seg01IsOverlappingSeg02)
+  // DeBug.log(`seg01IsOverlappingSeg02`, seg01IsOverlappingSeg02)
 
   // const seg01IntrsctSeg02 = seg01.intersectionWith(seg02)
-  // console.log(`seg01IntrsctSeg02`, seg01IntrsctSeg02)
+  // DeBug.log(`seg01IntrsctSeg02`, seg01IntrsctSeg02)
   // const seg01INFIntrsctSeg02 = seg01.intersectionWith(seg02, true)
-  // console.log(`seg01INFIntrsctSeg02`, seg01INFIntrsctSeg02)
+  // DeBug.log(`seg01INFIntrsctSeg02`, seg01INFIntrsctSeg02)
 
   // const seg01IntrsctSeg12 = seg01.intersectionWith(seg12)
-  // console.log(`seg01IntrsctSeg12`, seg01IntrsctSeg12)
+  // DeBug.log(`seg01IntrsctSeg12`, seg01IntrsctSeg12)
   // const seg01INFIntrsctSeg12 = seg01.intersectionWith(seg12, true)
-  // console.log(`seg01INFIntrsctSeg12`, seg01INFIntrsctSeg12)
+  // DeBug.log(`seg01INFIntrsctSeg12`, seg01INFIntrsctSeg12)
 
   // const seg01CollinearWithSeg02 = seg01.isCollinearWith(seg02)
-  // console.log(`seg01CollinearWithSeg02`, seg01CollinearWithSeg02)   // expect: true
+  // DeBug.log(`seg01CollinearWithSeg02`, seg01CollinearWithSeg02)   // expect: true
   // const seg01CollinearWithSeg23 = seg01.isCollinearWith(seg23)
-  // console.log(`seg01CollinearWithSeg23`, seg01CollinearWithSeg23)   // expect: true
+  // DeBug.log(`seg01CollinearWithSeg23`, seg01CollinearWithSeg23)   // expect: true
   // const seg01CollinearWithSeg0112 = seg01.isCollinearWith(seg0112)
-  // console.log(`seg01CollinearWithSeg0112`, seg01CollinearWithSeg0112)   // expect: false
+  // DeBug.log(`seg01CollinearWithSeg0112`, seg01CollinearWithSeg0112)   // expect: false
   // const seg0112CollinearWithSeg0123 = seg0112.isCollinearWith(seg0123)
-  // console.log(`seg0112CollinearWithSeg0123`, seg0112CollinearWithSeg0123)   // expect: true
+  // DeBug.log(`seg0112CollinearWithSeg0123`, seg0112CollinearWithSeg0123)   // expect: true
 
   // const vert0OrientToSeg01 = seg01.vertOrientation(vert0)
-  // console.log(`vert0OrientToSeg01`, vert0OrientToSeg01.name)
+  // DeBug.log(`vert0OrientToSeg01`, vert0OrientToSeg01.name)
   // const vert1OrientToSeg01 = seg01.vertOrientation(vert1)
-  // console.log(`vert1OrientToSeg01`, vert1OrientToSeg01.name)
+  // DeBug.log(`vert1OrientToSeg01`, vert1OrientToSeg01.name)
 
   // const vert01OrientToSeg01 = seg01.vertOrientation(vert01)
-  // console.log(`vert01OrientToSeg01`, vert01OrientToSeg01.name)
+  // DeBug.log(`vert01OrientToSeg01`, vert01OrientToSeg01.name)
   // const vert10OrientToSeg01 = seg01.vertOrientation(vert10)
-  // console.log(`vert10OrientToSeg01`, vert10OrientToSeg01.name)
+  // DeBug.log(`vert10OrientToSeg01`, vert10OrientToSeg01.name)
 
   //NOTE: OpArray Tests
-  // console.log(`OpArray Tests`)
+  // DeBug.log(`OpArray Tests`)
 
   // let array = [`a`, `b`, `c`, `d`]
   // let opArray01 = OpArray.format(array)
-  // console.log(`array`, array)
-  // console.log(`opArray01`, opArray01)
+  // DeBug.log(`array`, array)
+  // DeBug.log(`opArray01`, opArray01)
 
   // let word = 'cell40'
 
   // let opArray02 = OpArray.format(word)
-  // console.log(`word`, word)
-  // console.log(`opArray02`, opArray02)
+  // DeBug.log(`word`, word)
+  // DeBug.log(`opArray02`, opArray02)
 
   // let union = opArray01.union(opArray02)
-  // console.log(`union`, union)
+  // DeBug.log(`union`, union)
   // let idBoy1 = { name: `bro`, id: `b01` }
   // let idBoy2 = { name: `dude`, id: `b02` }
   // let idBoy3 = { name: `bruh`, id: `b03` }
@@ -144,8 +144,8 @@ function functionTestPrint() {
 
 
   // const idBoy1Values = Object.values(idBoy1).join('-')
-  // console.log(`idBoy1Values`, idBoy1Values)
-  // console.log(`idBoy1.values.string`, idBoy1Values.join('-'))
+  // DeBug.log(`idBoy1Values`, idBoy1Values)
+  // DeBug.log(`idBoy1.values.string`, idBoy1Values.join('-'))
 
   // let boyToy1 = { start: idBoy1, end: idBoy2 }
   // let boyToy2 = { start: idBoy1, end: idBoy2 }
@@ -156,40 +156,40 @@ function functionTestPrint() {
   // let boyColxn3 = OpArray.format(boyToy3)
 
   // let boyColxn4 = boyColxn1.union(boyColxn2, `start`)
-  // console.log(`boyColxn4`, boyColxn4)
+  // DeBug.log(`boyColxn4`, boyColxn4)
   // let boyColxn5 = boyColxn1.union(boyColxn3, `start`)
-  // console.log(`boyColxn5`, boyColxn5)
+  // DeBug.log(`boyColxn5`, boyColxn5)
 
   // const boysWithNoRepeats = OpArray.format([idBoy1, idBoy2, idBoy3, idBoy4])
-  // console.log(`boysWithNoRepeats`, boysWithNoRepeats)
+  // DeBug.log(`boysWithNoRepeats`, boysWithNoRepeats)
   // const boysWithRepeats = OpArray.format([idBoy1, idBoy2, idBoy3, idBoy4, idBoy2])
-  // console.log(`boysWithRepeats`, boysWithRepeats)
-  // console.log(`boysWithRepeats.kvArray`, boysWithRepeats.kvArray([`name`, 'id']))
-  // console.log(`boysWithRepeats.kvArray2`, boysWithRepeats.kvArray())
-  // console.log(`boysWithRepeats.kvMap`, boysWithRepeats.kvMap([`name`, 'id']))
-  // console.log(`boysWithRepeats.vcMap`, boysWithRepeats.valueCountMap([`name`, 'id']))
+  // DeBug.log(`boysWithRepeats`, boysWithRepeats)
+  // DeBug.log(`boysWithRepeats.kvArray`, boysWithRepeats.kvArray([`name`, 'id']))
+  // DeBug.log(`boysWithRepeats.kvArray2`, boysWithRepeats.kvArray())
+  // DeBug.log(`boysWithRepeats.kvMap`, boysWithRepeats.kvMap([`name`, 'id']))
+  // DeBug.log(`boysWithRepeats.vcMap`, boysWithRepeats.valueCountMap([`name`, 'id']))
 
-  // console.log(`findDuplicateObjs01`, boysWithNoRepeats.duplicates(`id`)) // expect: []
-  // console.log(`findDuplicateObjs02`, boysWithRepeats.duplicates(`id`)) // expect: [idBoy2]
-  // console.log(`findDuplicateObjs03`, boysWithRepeats.duplicates([`name`, 'id'])) // expect: [idBoy2]
+  // DeBug.log(`findDuplicateObjs01`, boysWithNoRepeats.duplicates(`id`)) // expect: []
+  // DeBug.log(`findDuplicateObjs02`, boysWithRepeats.duplicates(`id`)) // expect: [idBoy2]
+  // DeBug.log(`findDuplicateObjs03`, boysWithRepeats.duplicates([`name`, 'id'])) // expect: [idBoy2]
 
   // const numberArray01 = OpArray.format([3, 7, 4, 2, 6])
-  // console.log(`numberArray01`, numberArray01)
-  // console.log(`findDuplicateNumbers01`, numberArray01.duplicates()) // expect: []
+  // DeBug.log(`numberArray01`, numberArray01)
+  // DeBug.log(`findDuplicateNumbers01`, numberArray01.duplicates()) // expect: []
   // const numberArray02 = OpArray.format([3, 7, 4, 2, 6, 7])
-  // console.log(`numberArray02`, numberArray02)
-  // console.log(`findDuplicateNumbers01`, numberArray02.duplicates()) // expect: [7]
+  // DeBug.log(`numberArray02`, numberArray02)
+  // DeBug.log(`findDuplicateNumbers01`, numberArray02.duplicates()) // expect: [7]
 
   // const stringsArray01 = OpArray.format(['cow', 'dog', 'pig'])
-  // console.log(`stringsArray01`, stringsArray01)
-  // console.log(`findDuplicateStringss01`, stringsArray01.duplicates()) // expect: []
+  // DeBug.log(`stringsArray01`, stringsArray01)
+  // DeBug.log(`findDuplicateStringss01`, stringsArray01.duplicates()) // expect: []
   // const stringsArray02 = OpArray.format(['cow', 'dog', 'pig', 'cow'])
-  // console.log(`stringsArray02`, stringsArray02)
-  // console.log(`findDuplicateStringss02`, stringsArray02.duplicates()) // expect: ['cow']
+  // DeBug.log(`stringsArray02`, stringsArray02)
+  // DeBug.log(`findDuplicateStringss02`, stringsArray02.duplicates()) // expect: ['cow']
 
 
   // NOTE: ProtoSegment Tests
-  // console.log(`ProtoSegment Tests`)
+  // DeBug.log(`ProtoSegment Tests`)
 
   // const vert0 = vert(0, 0)
   // const vert1 = vert(1, 0)
@@ -201,26 +201,38 @@ function functionTestPrint() {
   // const seg3 = protoSegment({ start: vert3, end: vert1, id: `seg3` })
   // seg1.assignCubicVert(vert2)
   // seg1.assignCubicVert(vert3)
-  // console.log(`seg1`, seg1)
-  // console.log(`seg1.cubicVerts`, seg1.cubicVerts)
+  // DeBug.log(`seg1`, seg1)
+  // DeBug.log(`seg1.cubicVerts`, seg1.cubicVerts)
 
-  // console.log(`subtest01`, vert0.sub(vert1).mag())
-  // console.log(`subtest02`, vert1.sub(vert0).mag())
-  // console.log(`vert2 is on line? (true)`, seg1.vertIsOnLine(vert2))
-  // console.log(`vert3 is on line? (true)`, seg1.vertIsOnLine(vert3))
-  // console.log(`vert4 is on line? (false)`, seg1.vertIsOnLine(vert4))
+  // DeBug.log(`subtest01`, vert0.sub(vert1).mag())
+  // DeBug.log(`subtest02`, vert1.sub(vert0).mag())
+  // DeBug.log(`vert2 is on line? (true)`, seg1.vertIsOnLine(vert2))
+  // DeBug.log(`vert3 is on line? (true)`, seg1.vertIsOnLine(vert3))
+  // DeBug.log(`vert4 is on line? (false)`, seg1.vertIsOnLine(vert4))
 
-  // console.log(`seg2 is collinear with seg3? (true)`, seg2.isCollinearWith(seg3))
+  // DeBug.log(`seg2 is collinear with seg3? (true)`, seg2.isCollinearWith(seg3))
 
-  // console.log(`distance between vert0 and vert1 (1)`, vert0.dist(vert1))
-  // console.log(`distance between vert1 and vert2 (0.75)`, vert1.dist(vert2))
-  // console.log(`current angleMode`, _angleMode)
+  // DeBug.log(`distance between vert0 and vert1 (1)`, vert0.dist(vert1))
+  // DeBug.log(`distance between vert1 and vert2 (0.75)`, vert1.dist(vert2))
+  // DeBug.log(`current angleMode`, _angleMode)
   // angleMode(DEGREES)
-  // console.log(`current angleMode`, _angleMode)
+  // DeBug.log(`current angleMode`, _angleMode)
 
   // NOTE: hash display
   // print(printInputToGridRows(values32x8bit, 4, 8))
   // print(pointsToHex5s(similarGridNeighbors(32, 4, 8, values32x8bit)))
+
+  //NOTE: Direction Tests
+  // DeBug.log(`Direction Tests`)
+
+  // const dir1 = Direction.fromMoveCoord(vert(0, -1))
+  // DeBug.log(`dir1 (expect up)`, dir1)
+  // const dir2 = Direction.fromMoveCoord(vert(-1, 0))
+  // DeBug.log(`dir2 (expect left)`, dir2)
+  // const dir3 = Direction.fromMoveCoord(vert(1, 1))
+  // DeBug.log(`dir3 (expect downRight)`, dir3)
+  // const dir4 = Direction.fromMoveCoord(vert(-1, 1))
+  // DeBug.log(`dir4 (expect downLeft)`, dir4)
 
   // print(Direction.UpRight.value)
   // let corner = Corner.TopLeft
@@ -338,149 +350,149 @@ function functionTestPrint() {
   // print(normRadToDeg(upRad))
 
   // const pi = PI
-  // console.log(`pi`, pi)
+  // DeBug.log(`pi`, pi)
   // const sinCosPi = [sin(pi), cos(pi)]
-  // console.log(`sinCosPi`, sinCosPi)
+  // DeBug.log(`sinCosPi`, sinCosPi)
 
   // const upRightAngle = PI * -1 / 4
-  // console.log(`upRightAngle`, upRightAngle)
+  // DeBug.log(`upRightAngle`, upRightAngle)
   // const sinCosUpRightAngle = [sin(upRightAngle), cos(upRightAngle)]
-  // console.log(`sinCosUpRightAngle`, sinCosUpRightAngle)
+  // DeBug.log(`sinCosUpRightAngle`, sinCosUpRightAngle)
 
   // const upToUpRightAngle = PI * -3 / 8
-  // console.log(`upToUpRightAngle`, upToUpRightAngle)
+  // DeBug.log(`upToUpRightAngle`, upToUpRightAngle)
   // const sinCosUpToUpRightAngle = [sin(upToUpRightAngle), cos(upToUpRightAngle)]
-  // console.log(`sinCosUpToUpRightAngle`, sinCosUpToUpRightAngle)
+  // DeBug.log(`sinCosUpToUpRightAngle`, sinCosUpToUpRightAngle)
 
 
   // const up = Direction.Up
-  // console.warn(`up`, up)
+  // DeBug.warn(`up`, up)
   // const upRadian = up.angle
-  // console.warn(`upRadian`, upRadian)
+  // DeBug.warn(`upRadian`, upRadian)
   // const upRadToValue = Direction.angleToValue(upRadian)
-  // console.log(`upRadToValue`, upRadToValue)
+  // DeBug.log(`upRadToValue`, upRadToValue)
   // const upRadMovCoord = Direction.moveCoordFromAngle(upRadian)
-  // console.log(`upRadMovCoord`, upRadMovCoord)
-  // console.error(`upRadInternalMovCoord`, up.moveCoord)
+  // DeBug.log(`upRadMovCoord`, upRadMovCoord)
+  // DeBug.error(`upRadInternalMovCoord`, up.moveCoord)
 
   // const upRight = Direction.UpRight
-  // console.warn(`upRight`, upRight)
+  // DeBug.warn(`upRight`, upRight)
   // const upRightRadian = upRight.angle
-  // console.warn(`upRightRadian`, upRightRadian)
+  // DeBug.warn(`upRightRadian`, upRightRadian)
   // const upRightRadToValue = Direction.angleToValue(upRightRadian)
-  // console.log(`upRightRadToValue`, upRightRadToValue)
+  // DeBug.log(`upRightRadToValue`, upRightRadToValue)
   // const upRightRadMovCoord = Direction.moveCoordFromAngle(upRightRadian)
-  // console.log(`upRightRadMovCoord`, upRightRadMovCoord)
-  // console.error(`upRightRadInternalMovCoord`, upRight.moveCoord)
+  // DeBug.log(`upRightRadMovCoord`, upRightRadMovCoord)
+  // DeBug.error(`upRightRadInternalMovCoord`, upRight.moveCoord)
 
   // const right = Direction.Right
-  // console.warn(`right`, right)
+  // DeBug.warn(`right`, right)
   // const rightRadian = right.angle
-  // console.warn(`rightRadian`, rightRadian)
+  // DeBug.warn(`rightRadian`, rightRadian)
   // const rightRadToValue = Direction.angleToValue(rightRadian)
-  // console.log(`rightRadToValue`, rightRadToValue)
+  // DeBug.log(`rightRadToValue`, rightRadToValue)
   // const rightRadMovCoord = Direction.moveCoordFromAngle(rightRadian)
-  // console.log(`rightRadMovCoord`, rightRadMovCoord)
-  // console.error(`rightRadInternalMovCoord`, right.moveCoord)
+  // DeBug.log(`rightRadMovCoord`, rightRadMovCoord)
+  // DeBug.error(`rightRadInternalMovCoord`, right.moveCoord)
 
   // const downRight = Direction.DownRight
-  // console.warn(`downRight`, downRight)
+  // DeBug.warn(`downRight`, downRight)
   // const downRightRadian = downRight.angle
-  // console.warn(`downRightRadian`, downRightRadian)
+  // DeBug.warn(`downRightRadian`, downRightRadian)
   // const downRightRadToValue = Direction.angleToValue(downRightRadian)
-  // console.log(`downRightRadToValue`, downRightRadToValue)
+  // DeBug.log(`downRightRadToValue`, downRightRadToValue)
   // const downRightRadMovCoord = Direction.moveCoordFromAngle(downRightRadian)
-  // console.log(`downRightRadMovCoord`, downRightRadMovCoord)
-  // console.error(`downRightRadInternalMovCoord`, downRight.moveCoord)
+  // DeBug.log(`downRightRadMovCoord`, downRightRadMovCoord)
+  // DeBug.error(`downRightRadInternalMovCoord`, downRight.moveCoord)
 
   // const downRadian = Direction.Down.angle
-  // console.warn(`downRadian`, downRadian)
+  // DeBug.warn(`downRadian`, downRadian)
   // const downRadToValue = Direction.angleToValue(downRadian)
-  // console.log(`downRadToValue`, downRadToValue)
+  // DeBug.log(`downRadToValue`, downRadToValue)
   // const downRadMovCoord = Direction.moveCoordFromAngle(downRadian)
-  // console.log(`downRadMovCoord`, downRadMovCoord)
+  // DeBug.log(`downRadMovCoord`, downRadMovCoord)
 
   // const downLeftRadian = Direction.DownLeft.angle
-  // console.warn(`downLeftRadian`, downLeftRadian)
+  // DeBug.warn(`downLeftRadian`, downLeftRadian)
   // const downLeftRadToValue = Direction.angleToValue(downLeftRadian)
-  // console.log(`downLeftRadToValue`, downLeftRadToValue)
+  // DeBug.log(`downLeftRadToValue`, downLeftRadToValue)
   // const downLeftRadMovCoord = Direction.moveCoordFromAngle(downLeftRadian)
-  // console.log(`downLeftRadMovCoord`, downLeftRadMovCoord)
+  // DeBug.log(`downLeftRadMovCoord`, downLeftRadMovCoord)
 
   // const leftRadian = Direction.Left.angle
-  // console.warn(`leftRadian`, leftRadian)
+  // DeBug.warn(`leftRadian`, leftRadian)
   // const leftRadToValue = Direction.angleToValue(leftRadian)
-  // console.log(`leftRadToValue`, leftRadToValue)
+  // DeBug.log(`leftRadToValue`, leftRadToValue)
   // const leftRadMovCoord = Direction.moveCoordFromAngle(leftRadian)
-  // console.log(`leftRadMovCoord`, leftRadMovCoord)
+  // DeBug.log(`leftRadMovCoord`, leftRadMovCoord)
 
   // const upLeftRadian = Direction.UpLeft.angle
-  // console.warn(`upLeftRadian`, upLeftRadian)
+  // DeBug.warn(`upLeftRadian`, upLeftRadian)
   // const upLeftRadToValue = Direction.angleToValue(upLeftRadian)
-  // console.log(`upLeftRadToValue`, upLeftRadToValue)
+  // DeBug.log(`upLeftRadToValue`, upLeftRadToValue)
   // const upLeftRadMovCoord = Direction.moveCoordFromAngle(upLeftRadian)
-  // console.log(`upLeftRadMovCoord`, upLeftRadMovCoord)
+  // DeBug.log(`upLeftRadMovCoord`, upLeftRadMovCoord)
 
   // //Inter-Axial
   // const upToUpRight = new Direction(0.25)
-  // console.warn(`upToUpRight`, upToUpRight)
+  // DeBug.warn(`upToUpRight`, upToUpRight)
   // const upToUpRightRadian = -3 / 8 * PI
-  // console.warn(`upToUpRightRadian`, upToUpRightRadian)
+  // DeBug.warn(`upToUpRightRadian`, upToUpRightRadian)
   // const upToUpRightRadToValue = Direction.angleToValue(upToUpRightRadian)
-  // console.log(`upToUpRightRadToValue`, upToUpRightRadToValue)
+  // DeBug.log(`upToUpRightRadToValue`, upToUpRightRadToValue)
   // const upToUpRightRadMovCoord = Direction.moveCoordFromAngle(upToUpRightRadian)
-  // console.log(`upToUpRightRadMovCoord`, upToUpRightRadMovCoord)
-  // console.error(`upRadInternalMovCoord`, upToUpRight.moveCoord)
+  // DeBug.log(`upToUpRightRadMovCoord`, upToUpRightRadMovCoord)
+  // DeBug.error(`upRadInternalMovCoord`, upToUpRight.moveCoord)
 
   // const upRightToRight = new Direction(0.75)
-  // console.warn(`upRightToRight`, upRightToRight)
+  // DeBug.warn(`upRightToRight`, upRightToRight)
   // const upRightToRightRadian = upRightToRight.angle
   // // const upRightToRightRadian = -1 / 8 * PI
-  // console.warn(`upRightToRightRadian`, upRightToRightRadian)
+  // DeBug.warn(`upRightToRightRadian`, upRightToRightRadian)
   // const upRightToRightRadToValue = Direction.angleToValue(upRightToRightRadian)
-  // console.log(`upRightToRightRadToValue`, upRightToRightRadToValue)
+  // DeBug.log(`upRightToRightRadToValue`, upRightToRightRadToValue)
   // const upRightToRightRadMovCoord = Direction.moveCoordFromAngle(upRightToRightRadian)
-  // console.log(`upRightToRightRadMovCoord`, upRightToRightRadMovCoord)
-  // console.error(`upRadInternalMovCoord`, upRightToRight.moveCoord)
+  // DeBug.log(`upRightToRightRadMovCoord`, upRightToRightRadMovCoord)
+  // DeBug.error(`upRadInternalMovCoord`, upRightToRight.moveCoord)
 
   // const rightToDownRightRadian = 1 / 8 * PI
-  // console.warn(`rightToDownRightRadian`, rightToDownRightRadian)
+  // DeBug.warn(`rightToDownRightRadian`, rightToDownRightRadian)
   // const rightToDownRightRadToValue = Direction.angleToValue(rightToDownRightRadian)
-  // console.log(`rightToDownRightRadToValue`, rightToDownRightRadToValue)
+  // DeBug.log(`rightToDownRightRadToValue`, rightToDownRightRadToValue)
 
   // const downRightToDownRadian = 3 / 8 * PI
-  // console.warn(`downRightToDownRadian`, downRightToDownRadian)
+  // DeBug.warn(`downRightToDownRadian`, downRightToDownRadian)
   // const downRightToDownRadToValue = Direction.angleToValue(downRightToDownRadian)
-  // console.log(`downRightToDownRadToValue`, downRightToDownRadToValue)
+  // DeBug.log(`downRightToDownRadToValue`, downRightToDownRadToValue)
 
   // const downToDownLeftRadian = 5 / 8 * PI
-  // console.warn(`downToDownLeftRadian`, downToDownLeftRadian)
+  // DeBug.warn(`downToDownLeftRadian`, downToDownLeftRadian)
   // const downToDownLeftRadToValue = Direction.angleToValue(downToDownLeftRadian)
-  // console.log(`downToDownLeftRadToValue`, downToDownLeftRadToValue)
+  // DeBug.log(`downToDownLeftRadToValue`, downToDownLeftRadToValue)
 
   // const downLeftToLeftRadian = 7 / 8 * PI
-  // console.warn(`downLeftToLeftRadian`, downLeftToLeftRadian)
+  // DeBug.warn(`downLeftToLeftRadian`, downLeftToLeftRadian)
   // const downLeftToLeftRadToValue = Direction.angleToValue(downLeftToLeftRadian)
-  // console.log(`downLeftToLeftRadToValue`, downLeftToLeftRadToValue)
+  // DeBug.log(`downLeftToLeftRadToValue`, downLeftToLeftRadToValue)
 
   // const leftToUpLeftRadian = -7 / 8 * PI
-  // console.warn(`leftToUpLeftRadian`, leftToUpLeftRadian)
+  // DeBug.warn(`leftToUpLeftRadian`, leftToUpLeftRadian)
   // const leftToUpLeftRadToValue = Direction.angleToValue(leftToUpLeftRadian)
-  // console.log(`leftToUpLeftRadToValue`, leftToUpLeftRadToValue)
+  // DeBug.log(`leftToUpLeftRadToValue`, leftToUpLeftRadToValue)
 
   // const upLeftToUpRadian = -5 / 8 * PI
-  // console.warn(`upLeftToUpRadian`, upLeftToUpRadian)
+  // DeBug.warn(`upLeftToUpRadian`, upLeftToUpRadian)
   // const upLeftToUpRadToValue = Direction.angleToValue(upLeftToUpRadian)
-  // console.log(`upLeftToUpRadToValue`, upLeftToUpRadToValue)
+  // DeBug.log(`upLeftToUpRadToValue`, upLeftToUpRadToValue)
 
   // const allDir = Direction.All
-  // console.log(`allDir`, allDir)
+  // DeBug.log(`allDir`, allDir)
   // const allDirections = allDir.directions
-  // console.log(`allDirections`, allDirections)
+  // DeBug.log(`allDirections`, allDirections)
   // const allAngles = allDir.angle
-  // console.log(`allAngles`, allAngles)
+  // DeBug.log(`allAngles`, allAngles)
   // const allAnglesDeg = allDir.angleDegrees
-  // console.log(`allAnglesDeg`, allAnglesDeg)
+  // DeBug.log(`allAnglesDeg`, allAnglesDeg)
 
   // const simpleGrid = OpArray.from([
   //   OpArray.from(['a', 'b', 'c']),
@@ -561,16 +573,16 @@ function functionTestPrint() {
   // print(S)
 
   // NOTE: Direction Multiples Tests
-  // console.log('Direction Multiples Tests')
+  // DeBug.log('Direction Multiples Tests')
   // const dirA = Direction.Up
   // const dirB = Direction.Vertical
   // const dirC = Direction.Horizontal
   // const dirD = Direction.Cardinal
 
-  // console.log('dirA: ', dirA.name, dirA.vals)
-  // console.log('dirB: ', dirB.name, dirB.vals)
-  // console.log('dirC: ', dirC.name, dirC.vals)
-  // console.log('dirD: ', dirD.name, dirD.vals)
+  // DeBug.log('dirA: ', dirA.name, dirA.vals)
+  // DeBug.log('dirB: ', dirB.name, dirB.vals)
+  // DeBug.log('dirC: ', dirC.name, dirC.vals)
+  // DeBug.log('dirD: ', dirD.name, dirD.vals)
   // print(dirA.directions)
   // print(dirC.directions)
 
@@ -592,29 +604,29 @@ function functionTestPrint() {
   // print(dirC.adjacents)
   // print('')
   // print('is tests')
-  // console.log('dirA.isHorizontal', dirA.isHorizontal)
-  // console.log('dirB.isHorizontal', dirB.isHorizontal)
-  // console.log('dirC.isHorizontal', dirC.isHorizontal)
-  // console.log('dirD.isHorizontal', dirD.isHorizontal)
-  // console.log('dirA.isEachHorizontal', dirA.isEachHorizontal)
-  // console.log('dirB.isEachHorizontal', dirB.isEachHorizontal)
-  // console.log('dirC.isEachHorizontal', dirC.isEachHorizontal)
-  // console.log('dirD.isEachHorizontal', dirD.isEachHorizontal)
-  // console.log('dirA.isVertical', dirA.isVertical)
-  // console.log('dirC.isVertical', dirC.isVertical)
-  // console.log('dirA.isCardinal', dirA.isCardinal)
-  // console.log('dirC.isCardinal', dirC.isCardinal)
-  // console.log('dirD.isCardinal', dirD.isCardinal)
-  // console.log('dirA.equals Cardinal', dirA.equals(Direction.Cardinal))
-  // console.log('dirC.equals Cardinal', dirC.equals(Direction.Cardinal))
-  // console.log('dirD.equals Cardinal', dirD.equals(Direction.Cardinal))
+  // DeBug.log('dirA.isHorizontal', dirA.isHorizontal)
+  // DeBug.log('dirB.isHorizontal', dirB.isHorizontal)
+  // DeBug.log('dirC.isHorizontal', dirC.isHorizontal)
+  // DeBug.log('dirD.isHorizontal', dirD.isHorizontal)
+  // DeBug.log('dirA.isEachHorizontal', dirA.isEachHorizontal)
+  // DeBug.log('dirB.isEachHorizontal', dirB.isEachHorizontal)
+  // DeBug.log('dirC.isEachHorizontal', dirC.isEachHorizontal)
+  // DeBug.log('dirD.isEachHorizontal', dirD.isEachHorizontal)
+  // DeBug.log('dirA.isVertical', dirA.isVertical)
+  // DeBug.log('dirC.isVertical', dirC.isVertical)
+  // DeBug.log('dirA.isCardinal', dirA.isCardinal)
+  // DeBug.log('dirC.isCardinal', dirC.isCardinal)
+  // DeBug.log('dirD.isCardinal', dirD.isCardinal)
+  // DeBug.log('dirA.equals Cardinal', dirA.equals(Direction.Cardinal))
+  // DeBug.log('dirC.equals Cardinal', dirC.equals(Direction.Cardinal))
+  // DeBug.log('dirD.equals Cardinal', dirD.equals(Direction.Cardinal))
 
-  // console.log('dirA.isTwoOpposites', dirA.isTwoOpposites)
-  // console.log('dirB.isTwoOpposites', dirB.isTwoOpposites)
-  // console.log('dirC.isTwoOpposites', dirC.isTwoOpposites)
-  // console.log('dirD.isTwoOpposites', dirD.isTwoOpposites)
+  // DeBug.log('dirA.isTwoOpposites', dirA.isTwoOpposites)
+  // DeBug.log('dirB.isTwoOpposites', dirB.isTwoOpposites)
+  // DeBug.log('dirC.isTwoOpposites', dirC.isTwoOpposites)
+  // DeBug.log('dirD.isTwoOpposites', dirD.isTwoOpposites)
 
-  // console.log('dirA.opposites', dirA.opposites)
+  // DeBug.log('dirA.opposites', dirA.opposites)
   // print(dirA.isOrdinal)
   // print(dirC.isOrdinal)
   // print('')
@@ -888,7 +900,7 @@ function functionTestPrint() {
   // print('Shade tests')
   // print(Look.neuShade())
 
-  console.groupEnd()
+  DeBug.groupEnd()
 }
 
 //-------------------------------------------------------------------------
@@ -1617,10 +1629,10 @@ class DeprecatedFrameMethods {
     // .applyFilter(this.dropShadow3, 3)
     // .applyFilter(this.dropShadow1, 3, 4)
 
-    // console.log('circle3', this.testCircle3)
+    // DeBug.log('circle3', this.testCircle3)
     this.testCircle3
       .applyFilter(this.dropShadow2, 3)
-    // console.log('circle3', this.testCircle3)
+    // DeBug.log('circle3', this.testCircle3)
     // this.testCircle3
     // .applyFilter(this.dropShadow3, 3, 3000)
 
