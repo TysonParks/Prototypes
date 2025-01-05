@@ -11,8 +11,8 @@ const Debuggable = {
   //MARK: Debuggable Computed Properties
   get isPerimeterShape() { return this.type === `PerimeterShape` },
   get isPerimeterIsland() { return this.type === `PerimeterIsland` },
-  get isIsland() { return this.type === `Island` || this.isPerimeterIsland },
-  get isShape() { return this.type === `Shape` || this.isPerimeterShape },
+  get isIsland() { return this.type.includes(`Island`) },
+  get isShape() { return this.type.includes(`Shape`) },
   get isShapeGroup() { return this.type.includes(`ShapeGroup`) },
 
   get deBugAnchor() {
