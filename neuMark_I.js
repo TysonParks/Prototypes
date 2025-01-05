@@ -94,6 +94,7 @@ class ProtoCut {
   extHighDepth      // limiter on external highlight depth
   useExtHighDepth
   angleOffset = 0   // offset angle from global vector
+  shapeGroups = new OpArray
   filters = new OpArray
 
   constructor({
@@ -130,8 +131,37 @@ class ProtoCut {
     const start = roundToDec(this.start, 4)
     return `${prime}${half}${edge}-${dep}xCellRadius-${start}start`
   }
+  get maxLayout() {
+    let [xMax, yMax, widthMax, heightMax] = [0, 0, 0, 0]
+    this.shapeGroups.forEach(grp => {
+      const [size, padding] = [grp.insetSize, grp.padding]
+      const padSize = Vertex.div(padding, size)
+      const anchor = Vertex.mult(padSize, -100)
+      const newSize = Vertex.mult(padSize, 200).add(vert(100))
+
+      xMax = min(anchor.x, xMax)
+      yMax = min(anchor.y, yMax)
+      widthMax = max(newSize.x, widthMax)
+      heightMax = max(newSize.y, heightMax)
+    })
+    return { x: xMax, y: yMax, width: widthMax, height: heightMax }
+  }
 
   //MARK: Public Methods
+  setLayouts() {
+    console.warn(`setLayouts`, this)
+    const layout = this.maxLayout
+    console.log(`maxLayout`, layout)
+    this.filters.forEach(f => {
+      f.filter
+        .attribute("x", `${layout.x}%`)
+        .attribute("y", `${layout.y}%`)
+        .attribute("width", `${layout.width}%`)
+        .attribute("height", `${layout.height}%`)
+    })
+
+  }
+
   curve(layer) {
     if (this.profile.isR) { return layer === 0 ? `r` : `r2` }
     if (this.profile.isS) { return layer === 0 ? `j` : `r` }
@@ -142,7 +172,7 @@ class ProtoCut {
 
   //METH: createSingleShader()
   #createFilters() {
-    if (abs(this.depth) < 0.25 / FRAME.pixToUserUnits) { return }     // don't create filters for 1/4 pixel depth or less
+    // if (abs(this.depth) < 0.25 / FRAME.pixToUserUnits) { return }     // don't create filters for 1/4 pixel depth or less
     const inset = this.profile.hasInsetShade
     if (this.profile.isSingleDepth) {
       if (this.profile.isI) {
