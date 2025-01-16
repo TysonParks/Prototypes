@@ -288,6 +288,21 @@ class SegPath {
     if (!this.diagonalsPath) { this.diagonalsPath = this.path.copy }
     return this.diagonalsPath.filter(s => s.isStair)
   }
+  //METH: hasSameForm() : Form = same shape, different position. Used for determining svg instancing.
+  hasSameForm(otherPath) {
+    const length = this.path.length
+    if (length !== otherPath.path.length) return false
+
+    for (let i = 0; i < length; i++) {
+      const a = this.path[i], b = otherPath.path[i]
+      if (equalsRoundedDec(a.length, b.length)
+        || equalsRoundedDec(a.arcRadius, b.arcRadius)
+        || !a.direction.equals(b.direction)) {
+        return false
+      }
+    }
+    return true
+  }
 
   //MARK: Quad Methods
   makeCurves(equal = true, max = true, outWrap = true) {
