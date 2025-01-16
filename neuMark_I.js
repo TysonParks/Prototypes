@@ -270,6 +270,9 @@ class Shade {
   }
   //METH: neuShadeSVG()
   static neuShadeSVG(shadeType, vector = this.shadVect(), mag, highBlurRad, shadBlurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
+    // highCol = achromic(1)
+    // shadCol = achromic(0.7)
+
     const invert = curve === `r`
     // DeBug.log('components', vector.x, vector.y, blurRad)
     const iCutHighMagMult = curve === `i` ? .75 : 1
@@ -299,6 +302,7 @@ class Shade {
     let shadeShadow
     if (shadeType !== `high`) {
       const r2CutMagMult = curve === `r2` ? .5 : 1
+      // const shadowCol = shadeType === `shad` ? achromic(0.9) : shadCol
       const shadowCol = shadeType === `shad` ? achromic(0.5) : shadCol
       shadeShadow = this.dropShadeSVG({
         lighten: false,
@@ -756,7 +760,7 @@ class ProtoColor extends p5.Color {
 
   get complementHue() { return (this.hue + 180 % 360) }
 
-  setAlpha(alpha) { return protoColor(`hsba(${this.hue}, ${this.saturationsat}%, ${this.brightness}%, ${alpha})`) }
+  setAlpha(alpha) { return protoColor(`hsba(${this.hue}, ${this.saturation}%, ${this.brightness}%, ${alpha})`) }
   setSaturation(sat) { return protoColor(`hsba(${this.hue}, ${sat}%, ${this.brightness}%, ${this.alpha})`) }
 
   highShadComplementSpread(spread = 16) {
