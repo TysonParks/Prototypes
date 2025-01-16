@@ -131,9 +131,9 @@ class ProtoFilter {
           // return lighten ? 'lighten' : 'darken'
           // return lighten ? 'multiply' : 'darken'
           // return 'normal'
-          return 'hard-light'
+          // return 'hard-light'
           // return lighten ? 'darken' : 'screen'
-          // return lighten ? 'hard-light' : 'multiply'
+          return lighten ? 'hard-light' : 'multiply'
           // return lighten ? 'multiply' : 'screen'
           return lighten ? 'screen' : 'darken'
         }
@@ -375,12 +375,12 @@ class ProtoFilter {
     // .attribute("width", `120%`)
     // .attribute("height", `120%`)
 
-    console.error(`this.filter`, this.filter)
+    // console.error(`this.filter`, this.filter)
 
-    console.log(`${this.filter.elt.id} x`, this.filter.attribute("x"))
-    console.log(`${this.filter.elt.id} y`, this.filter.attribute("y"))
-    console.log(`${this.filter.elt.id} width`, this.filter.attribute("width"))
-    console.log(`${this.filter.elt.id} height`, this.filter.attribute("height"))
+    // console.log(`${this.filter.elt.id} x`, this.filter.attribute("x"))
+    // console.log(`${this.filter.elt.id} y`, this.filter.attribute("y"))
+    // console.log(`${this.filter.elt.id} width`, this.filter.attribute("width"))
+    // console.log(`${this.filter.elt.id} height`, this.filter.attribute("height"))
 
     const parentSVG = element.elt.ownerSVGElement
     const filterUrl = `url(#${this.id})`
@@ -701,31 +701,31 @@ p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
 
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
 //PROTOTYPE: p5.Element extension blur(radius)
-// p5.Element.prototype.blur = function (radius) {
-//   const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
-//   const [x, y, width, height] = viewBox
-//   const padding = Math.ceil(radius * 3)
-//   const newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' ')
-//   const filterID = 'blur-' + Math.floor(Math.random() * 100000)
+p5.Element.prototype.blur = function (radius) {
+  const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
+  const [x, y, width, height] = viewBox
+  const padding = Math.ceil(radius * 3)
+  const newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' ')
+  const filterID = 'blur-' + Math.floor(Math.random() * 100000)
 
-//   const filter = createSVGElt('filter')
-//     .attribute('id', filterID)
-//     .attribute('x', '-50%')
-//     .attribute('y', '-50%')
-//     .attribute('width', '200%')
-//     .attribute('height', '200%')
-//     .parent(this.parent())
+  const filter = createSVGElt('filter')
+    .attribute('id', filterID)
+    .attribute('x', '-50%')
+    .attribute('y', '-50%')
+    .attribute('width', '200%')
+    .attribute('height', '200%')
+    .parent(this.parent())
 
-//   createSVGElt('feGaussianBlur')
-//     .attribute('in', 'SourceGraphic')
-//     .attribute('stdDeviation', radius)
-//     .parent(filter)
+  createSVGElt('feGaussianBlur')
+    .attribute('in', 'SourceGraphic')
+    .attribute('stdDeviation', radius)
+    .parent(filter)
 
-//   this.attribute('filter', `url(#${filterID})`)
-//     .attribute('viewBox', newViewBox)
+  this.attribute('filter', `url(#${filterID})`)
+    .attribute('viewBox', newViewBox)
 
-//   return this
-// }
+  return this
+}
 
 //PROTOTYPE: p5.Element extension applyFilter(filter, scale = 1)
 p5.Element.prototype.applyFilter = function ({ filter, size, padding, time = 0 } = {}) {
