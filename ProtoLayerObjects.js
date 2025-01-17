@@ -26,6 +26,7 @@ class ProtoLayer {
   constructor({
     protoParent,
     svgParent,
+    type,
     insetScale,
     filter,
     drawSVG = true,
@@ -40,6 +41,7 @@ class ProtoLayer {
     else if (protoParent instanceof p5.Element) { this.svgParent = protoParent }
     else { DeBug.error('protoParent is not valid') }
     if (svgParent) { this.svgParent = svgParent }
+    this._type = type
     if (insetScale !== undefined) { this._insetScale = insetScale instanceof Vertex ? insetScale : vert(insetScale) }
     this._filter = filter
     this.drawSVG = drawSVG
@@ -194,30 +196,6 @@ class ProtoLayer {
       // return sidesObj
       return new Sides(sidesObj)
 
-      // //ARROW: side()
-      // const side = (start, end, sideDir) => {
-      //   const startPoint = this.corners[start]
-      //   const endPoint = this.corners[end]
-      //   const midPoint = segment(startPoint, endPoint).mid
-      //   const points = OpArray.format([startPoint, midPoint, endPoint])
-      //   return protoSegment({
-      //     start: startPoint,
-      //     end: endPoint,
-      //     parentID: this.id,
-      //     islandIDs: isCell ? this.islandIDs : undefined,
-      //     id: `${this.id}-${sideDir}Side`,
-      //     cells: isCell ? OpArray.format(this) : undefined,
-      //     points: isCell ? points : undefined,
-      //     sideDir: isCell ? Direction.named(sideDir.trim()) : undefined,
-      //     grid: this.grid
-      //   })
-      // }
-      // return {
-      //   up: side(`upLeft`, `upRight`, `up`),
-      //   right: side(`upRight`, `downRight`, `right`),
-      //   down: side(`downRight`, `downLeft`, `down`),
-      //   left: side(`downLeft`, `upLeft`, `left`)
-      // }
     }, `sides`).call(this)
   }
   //MEMO: midPoints
@@ -266,8 +244,8 @@ class ProtoLayer {
   equals(protoLayer) { return this.id === protoLayer.id }
   // MARK: Settings Methods
   // #region 
-  // //METH: 
-  // resize() { this.drawElement() }                                                            //UNUSED:
+  //METH: setType()
+  setType(toType) { this._type = toType }
   //METH: setInsetScale()
   setInsetScale(scale) {
     this._insetScale = scale instanceof Vertex ? scale : vert(scale)
@@ -278,7 +256,7 @@ class ProtoLayer {
   setFilter(filter) {
     // DeBug.log(`setting filter of ${this.id} to ${filter?.id}`)
     this._filter = filter
-    this.drawElement()
+    // this.drawElement()
   }
   //METH: setFilterLoft()
   setFilterLoft(loft) { this._filterLoft = loft }
@@ -383,8 +361,8 @@ class Frame extends ProtoLayer {
       protoParent: svgParent,
       insetScale: 1,
       drawRect: false,
+      type: 'Frame',
     })
-    this._type = 'Frame'
     // this.drawLabel = true
     // this.drawDeBugRect = true
     // this.drawPerimeter = true
@@ -442,6 +420,14 @@ class Frame extends ProtoLayer {
     this.grid.backGrid = this.backGrid
     this.backGrid.frontGrid = grid
     BGRID = this.backGrid
+
+    console.log(`this.grid`, this.grid)
+    console.log(`this.backGrid`, this.backGrid)
+    this.backGrid.backElt = this.grid.backElt
+    this.backGrid.comboElt = this.grid.comboElt
+    this.backGrid.highElt = this.grid.highElt
+    this.backGrid.shadElt = this.grid.shadElt
+    this.backGrid.shaderElts = this.grid.shaderElts
   }
   // setBackGrid(grid) {
   //   this.backGrid = grid
@@ -477,7 +463,7 @@ class Frame extends ProtoLayer {
       this.backGroup = backGrid.groupFromIndices(indices)
     }
 
-    this.backGroup.isBackGroup = true
+    this.backGroup.setType(`BackGroup`)
     DeBug.error(`this.backGroup`, this.backGroup)
 
     //NOTE: remove holes
@@ -545,28 +531,6 @@ class Frame extends ProtoLayer {
       })
     }
 
-
-
-
-    // looseCorners.forEach(bSeg => {
-    //   const match = grid.allSimpleSubShapesSegs
-    //     .find(gSeg =>
-    //       gSeg.end.equals(bSeg.end, 0)
-    //       && gSeg.isOverlappingWith({ seg: bSeg })
-    //     )
-    //   if (match) {
-    //     DeBug.warn(`setBackGridGroup match!`, match)
-    //     if (bSeg.canCurveTo(match.arcOrigin)) {
-    //       bSeg.replaceEndCurveOrigin(match.arcOrigin)
-    //     } else {
-    //       bSeg.replaceEndCurveOrigin(bSeg.currentMaxArcOrigin)
-    //     }
-
-    //   } else {
-    //     bSeg.replaceEndCurveOrigin(bSeg.currentMaxArcOrigin)
-    //   }
-    // })
-
     //NOTE: process stairs
     const shapes = this.backGroup.perimeterIslands
       .map(i => i.shape).flat()
@@ -622,6 +586,7 @@ class Frame extends ProtoLayer {
         layerEnd: scaled(cut.end),
         amount: cut.amount,
         loftScale: 1 / 1,
+        // addBacking: true,
       })
     })
 
@@ -629,13 +594,13 @@ class Frame extends ProtoLayer {
 
     this.backGroup.shapeGroups.forEach(sg => {
       // DeBug.log(`svgGroupElt`, sg.svgGroupElt)
-      sg.drawFilter = false
+      // sg.drawFilter = false
 
       sg.svgGroupElt
         .attribute(`fill`, frameColor)
-        // .attribute('fill', protoColor(130))
-        // .attribute('fill', `green`)
-        .attribute('opacity', 1)
+      // .attribute('fill', protoColor(130))
+      // .attribute('fill', `green`)
+      // .attribute('opacity', 1)
       // sg.drawElement()
       // .attribute('opacity', 0)
       // .attribute('stroke', 'white')
@@ -723,13 +688,16 @@ class Frame extends ProtoLayer {
   //METH: drawElement()
   drawElement() {
     this.bleed
-      .attribute('width', `${frameSize.x}`)
-      .attribute('height', `${frameSize.y}`)
+    // .attribute('fill', '#e24')
+    // .attribute('width', `${frameSize.x}`)
+    // .attribute('height', `${frameSize.y}`)
 
     this.bleedRect
-      .attribute('fill', frameColor)
-      .attribute('fill', 'black')
-    // .attribute(`fill`, `red`)
+    // .attribute('fill', frameColor)
+    // .attribute('fill', '#e24')
+    // .attribute('fill', 'black')
+    // .attribute(`fill`, `white`)
+
 
     super.drawElement()
 
@@ -737,10 +705,10 @@ class Frame extends ProtoLayer {
       .attribute(`pointer-events`, `none`)
       // .parent(this.bleed)
       .layout(this.anchor, this.size)
-      .attribute('rx', `${this.cornerRadius}`)
-      .attribute('ry', `${this.cornerRadius}`)
+      // .attribute('rx', `${this.cornerRadius}`)
+      // .attribute('ry', `${this.cornerRadius}`)
       // .attribute('fill', ProtoColor.randomHighHue().setSaturation(10))
-      .attribute(`fill`, frameColor)
+      // .attribute(`fill`, frameColor)
       // .attribute(`fill`, 'black')
       .attribute('fill-opacity', '0')
     // .attribute('stroke', 'red')
@@ -1185,9 +1153,25 @@ class Grid extends ProtoLayer {
   groups = new OpArray
 
   constructor({ protoParent, gridSize, insetScale = 1, transform, startCoord = vert(), gridStyle = 0, gridType = 0, isInterGrid = false, cellOutset = 0 } = {}) {
+    let type
+    switch (gridType) {
+      case 0:
+        type = `Grid`
+        break
+      case 1:
+        type = `InfraGrid`
+        break
+      case 2:
+        type = `UltraGrid`
+        break
+      case 3:
+        type = `BackGrid`
+        break
+    }
     super({
       protoParent: protoParent,
       insetScale: insetScale,
+      type: type,
       // drawSVG: false,
       // drawRect: true,
       // drawFilter: true,
@@ -1196,22 +1180,8 @@ class Grid extends ProtoLayer {
     this.startCoord = startCoord
     this.offset = isInterGrid ? 0.5 : 0
     this.cellOutset = cellOutset
-    // this._type = 'Grid'
     this.gridStyle = gridStyle
-    switch (gridType) {
-      case 0:
-        this._type = `Grid`
-        break
-      case 1:
-        this._type = `InfraGrid`
-        break
-      case 2:
-        this._type = `UltraGrid`
-        break
-      case 3:
-        this._type = `BackGrid`
-        break
-    }
+
 
     // this.drawLabel = true
     // this.drawDeBugRect = true
@@ -1737,14 +1707,12 @@ class Grid extends ProtoLayer {
     if (!groupID && !islandID && !selection) {  // "taken/available" mode - currently unused, probably DEPRECATE!
       if (isTaken) { cells = this.takenCells }
       else { cells = this.availableCells }
-      // if (filter) { this.setFilter(filter) }
     }
     // if (!selection) {
     //TODO: could/should I migrate from ID to direct reference?
     if (groupID) {                            // "group" mode finds & creates islands within a group
       group = this.groupNamed(groupID)
       cells = group?.cells || new OpArray
-      // group?.setFilter(filter)
       if (group) { protoParent = group }
     }
     //TODO: could/should I migrate from ID to direct reference?
@@ -1752,7 +1720,6 @@ class Grid extends ProtoLayer {
       island = this.islandNamed(islandID)
       cells = island?.cells || new OpArray
       DeBug.warn(`island found for ${islandID}?`, island)
-      // island?.setFilter(filter)
       if (island) { protoParent = island }
     }
     if (selection) { cells = OpArray.from(selection) }
@@ -1829,7 +1796,7 @@ class Grid extends ProtoLayer {
       })
 
       if (stored) {
-        newIsland.setFilter(filter)
+        // newIsland.setFilter(filter)
         //FIXME: Need to figure out how to properly assign/add subIslands from Island.CreateSubIsland() call to createIslands
         if (group) { group.perimeterIslands.push(newIsland) }
         if (protoParent?.type === 'Island' || protoParent?.type === 'PerimeterIsland') {
@@ -3941,7 +3908,7 @@ class Grid extends ProtoLayer {
     }
 
     while (amount > 0 && !this.isFull) {
-      if (selection.length > 0) {
+      if (selection?.length > 0) {
         const outline = this.validNeighbors({ selection: selection, direction: direction })
           .filter(cell => cell.isAvailable)
         // DeBug.log(`${groupID} outline ${amount}:`, outline.map(c => c.isAvailable))
@@ -4319,51 +4286,64 @@ class Grid extends ProtoLayer {
   //MARK: Setup Methods
   //METH: assignElement() override
   assignElement() {
+    // if (this.isFrontGrid) {
     super.assignElement()
 
-    this.backElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-backLayer`)
-    this.comboElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-comboLayer`)
-    this.highElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-highLayer`)
-    this.shadElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-shadLayer`)
+    if (this.isFrontGrid) {
+      this.backElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-backLayer`)
+      this.comboElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-comboLayer`)
+      this.highElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-highLayer`)
+      this.shadElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-shadLayer`)
 
-    this.shaderElts = OpArray.format([this.backElt, this.comboElt, this.highElt, this.shadElt])
-    this.shaderElts.forEach(elt => {
-      elt
-        .parent(this.svgElt)
-        .addToClassList(this.id)
-        .addToClassList(this.svgParent.elt.classList.value)
-    })
+      this.shaderElts = OpArray.format([this.backElt, this.comboElt, this.highElt, this.shadElt])
+      this.shaderElts.forEach(elt => {
+        elt
+          .parent(this.svgElt)
+          .addToClassList(this.id)
+          .addToClassList(this.svgParent.elt.classList.value)
+      })
+    }
+    // else {
+    //   this.backElt = this.frontGrid.backElt
+    //   this.comboElt = this.frontGrid.comboElt
+    //   this.highElt = this.frontGrid.highElt
+    //   this.shadElt = this.frontGrid.shadElt
+    //   this.shaderElts = this.frontGrid.shaderElts
+    // }
   }
   //METH: drawElement() override
   drawElement() {
     super.drawElement()
 
-    this.shaderElts.forEach(elt => {
-      elt
-      // .viewBox(this.insetAnchor, this.insetSize, this.padding)
-      // .layout(this.insetAnchor, this.insetSize, this.padding)
-      // .attribute(`fill`, frameColor)
-      // .attribute('overflow', 'visible')
-      // .attribute(`filterUnits`, `userSpaceOnUse`)
-      // .attribute(`primitiveUnits`, `userSpaceOnUse`)
+    if (this.isFrontGrid) {
+      this.shaderElts?.forEach(elt => {
+        elt
+        // .viewBox(this.insetAnchor, this.insetSize, this.padding)
+        // .layout(this.insetAnchor, this.insetSize, this.padding)
+        // .attribute(`fill`, frameColor)
+        // .attribute('overflow', 'visible')
+        // .attribute(`filterUnits`, `userSpaceOnUse`)
+        // .attribute(`primitiveUnits`, `userSpaceOnUse`)
+        // .attribute(`fill`, `red`)
+      })
+      this.backElt
+      // .attribute(`display`, `none`)
+
+      this.comboElt
+        // .attribute(`display`, `none`)
+        // .style(`visibility`, `hidden`)
+        .attribute(`opacity`, 1)
       // .attribute(`fill`, `red`)
-    })
 
-    this.comboElt
-      // .attribute(`display`, `none`)
-      // .style(`visibility`, `hidden`)
-      .attribute(`opacity`, 1)
-    // .attribute(`fill`, `red`)
-
-    this.highElt
-      // .attribute(`display`, `none`)
-      // .style(`visibility`, `hidden`)
-      .attribute(`opacity`, 1)
-    this.shadElt
-      // .attribute(`display`, `none`)
-      .attribute(`opacity`, .6)
-    // .style(`mixBlendMode`, `luminosity`)
-
+      this.highElt
+        // .attribute(`display`, `none`)
+        // .style(`visibility`, `hidden`)
+        .attribute(`opacity`, 1)
+      this.shadElt
+        // .attribute(`display`, `none`)
+        .attribute(`opacity`, .6)
+      // .style(`mixBlendMode`, `luminosity`)
+    }
   }
 
   //MARK: debug Methods
@@ -4418,13 +4398,13 @@ class CellGroup extends ProtoLayer {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
+      type: 'CellGroup',
       // drawSVG: false,
       // drawRect: true,
       insetScale: 1,
     })
     if (cells) { this.cells = cells }
     this.grid = grid
-    this._type = 'CellGroup'
 
     // this.drawLabel = true
     // this.drawDeBugRect = true
@@ -4622,6 +4602,9 @@ class CellGroup extends ProtoLayer {
           || sh.hasOffsetConnections
           || sh.isPizzaSlice
         ) { minRad = sh.minCornerRadius }
+        if (!this.grid.cellAspect.isSquare) {
+          if (sh.minInsideCornerRadius < sh.minOutsideCornerRadius) { minRad = sh.minInsideCornerRadius }
+        }
       } else {
         if (sh.isPizzaSlice) { minRad = sh.minCornerRadius }
         if (sh.isPointedLeaf) { minRad = sh.maxCornerRadius }
@@ -4637,7 +4620,6 @@ class CellGroup extends ProtoLayer {
           minRad = this.grid.cellRadius
         }
       }
-
 
       //TODO: hierarchy downgrade - use once interGrids are implemented
       // if (this.perimeterIslands.last.direction.hierarchy > direction.hierarchy) {  // hierarchy downgrade - use
@@ -4852,7 +4834,7 @@ class CellGroup extends ProtoLayer {
         let newIslands = this.createSubIslands({ cut: cut, islands: islands, selection: selection, direction: direction, insetScale: insetScale })
         DeBug.groupEnd()
         DeBug.groupCollapsed(`islandsToShapeGroups`)
-        if (!newIslands.flat().isEmpty) { this.islandsToShapeGroups(newIslands, cut, direction) }
+        if (!newIslands.flat().isEmpty) { this.islandsToShapeGroups(newIslands, cut, direction, isFrame) }
         DeBug.groupEnd()
         DeBug.log(``)
       }
@@ -4883,7 +4865,7 @@ class CellGroup extends ProtoLayer {
     return newIslands
   }
   //METH: assignToShapeGroups()
-  islandsToShapeGroups(islands, cut, direction) {
+  islandsToShapeGroups(islands, cut, direction, isFrame = false) {
     DeBug.log(`islandsToShapeGroups`)
     DeBug.log(`islands`, islands)
     DeBug.log(`cut`, cut)
@@ -4903,17 +4885,20 @@ class CellGroup extends ProtoLayer {
         cut: cut,
         islandLevel: this.islandLevel,
         direction: direction,
+        isFrame: isFrame,
         // insetScale: insetScale,
       })
+      cut?.shapeGroups.push(shapeGroup)
       DeBug.log(`new shapeGroup`, shapeGroup)
     })
   }
 
   //METH: createShapeGroup() :
-  createShapeGroup({ islands, cut, filter, islandLevel, direction = Direction.Cardinal, insetScale = 1 } = {}) {
+  createShapeGroup({ islands, cut, filter, islandLevel, direction = Direction.Cardinal, insetScale = 1, isFrame = false } = {}) {
     const shapeGroup = new ShapeGroup({
       cellGroup: this,
       islands: islands,
+      isFrame: isFrame,
       protoParent: this,
       svgParent: this.svgElt,
       grid: this.grid,
@@ -4959,6 +4944,7 @@ class CellGroup extends ProtoLayer {
 class ShapeGroup extends ProtoLayer {
   cellGroup
   islands
+  isFrame
   svgGroupElt
   // shadeElt
   paths = new OpArray
@@ -4973,7 +4959,8 @@ class ShapeGroup extends ProtoLayer {
     filter,
     cut,
     insetScale,
-    direction
+    direction,
+    isFrame,
   }) {
     DeBug.log(`New ShapeGroup! with arguments:`, arguments[0])
     super({
@@ -4981,6 +4968,7 @@ class ShapeGroup extends ProtoLayer {
       svgParent: svgParent,
       insetScale: insetScale,
       filter: filter,
+      type: `ShapeGroup-${filter?.type || `backing`}`,
       // drawSVG: false,
       // drawRect: true,
       // drawFilter: false,
@@ -4991,7 +4979,7 @@ class ShapeGroup extends ProtoLayer {
     this.grid = grid
     this.direction = direction
     this.islandLevel = islandLevel
-    this._type = `ShapeGroup-${filter?.type || `backing`}`
+    this.isFrame = isFrame
 
     // this.drawLabel = true
     // this.drawDeBugRect = true
@@ -5013,7 +5001,20 @@ class ShapeGroup extends ProtoLayer {
     // const backGroupPadding = 2 * this.grid.insetAmount.x
     // const defaultPadding = 100 / this.grid.gridSize.x / this.grid.insetScale.x
     // return defaultPadding
+    // console.log(`defaultPadding`, defaultPadding)
+    // console.log(`backGroupPadding`, backGroupPadding)
     return this.cellGroup.isBackGroup ? backGroupPadding : defaultPadding
+  }
+  get maxLayout() { return this.cut?.maxLayout }
+  get finalSize() {
+    const insetLayout = { x: this.insetAnchor.x, y: this.insetAnchor.y, width: this.insetSize.x, height: this.insetSize.y }
+    const maxLayout = this.cut?.maxLayout || 100
+    return {
+      x: insetLayout.x * maxLayout.x / 100,
+      y: insetLayout.y * maxLayout.y / 100,
+      width: insetLayout.width * maxLayout.width / 100,
+      height: insetLayout.height * maxLayout.height / 100,
+    }
   }
 
   get shapes() { return this.islands.map(i => i.shape) }
@@ -5039,7 +5040,7 @@ class ShapeGroup extends ProtoLayer {
     this.assignElement()
     this.createSVGGroup()
     this.assignShapes()
-    this.drawElement()
+    // this.drawElement()
     this.showDeBug()
   }
   //METH: assignElement() override
@@ -5056,22 +5057,34 @@ class ShapeGroup extends ProtoLayer {
       .parent(this.svgElt)
       // .parent(this.shadeElt)
       .addToClassList(this.id)
-    // .addToClassList(this.shadeElt.classList.value)
-    // .attribute('fill-rule', 'evenodd')
+      // .addToClassList(this.shadeElt.classList.value)
+      // .attribute('fill-rule', 'evenodd')
+      .viewBox(this.anchor, this.size, this.padding)
+      .layout(this.anchor, this.size, this.padding)
+      .attribute(`fill`, frameColor)
 
   }
   //METH: assignShapes()
   assignShapes() {
+    let sameForms = new OpArray
+    let combined
     this.shapes.forEach(s => {
       // DeBug.log(`ShapeGroup.assignShapes() current svg: ${s.svg}`)
       // const pathCopy = s.path
       // DeBug.log(`pathCopy`, pathCopy)
       // pathCopy.elt = pathCopy.elt.cloneNode()
 
+      // const nextPath = s.svg
+      // if (combined) {
+      //   combined = combined + ' ' + nextPath
+      // } else {
+      //   combined = nextPath
+      // }
+
       const path = createSVGElt('path')
         .attribute(`d`, s.svg)
         .addToClassList(s.id)
-        .layout(s.anchor, s.size, s.padding)
+        // .layout(s.anchor, s.size, s.padding)
         .attribute(`shape-rendering`, `geometricPrecision`)
         // pathCopy
         .id(`${s.id}-copy`)
@@ -5080,6 +5093,18 @@ class ShapeGroup extends ProtoLayer {
       // .attribute(`pathLength`, 154)
       this.paths.push(path)
     })
+
+    // const path = createSVGElt('path')
+    //   .attribute(`d`, combined)
+    //   // .addToClassList(s.id)
+    //   // .layout(s.anchor, s.size, s.padding)
+    //   .attribute(`shape-rendering`, `geometricPrecision`)
+    //   // pathCopy
+    //   .id(`${this.id}-copy`)
+    //   .parent(this.svgGroupElt)
+    // // .attribute('fill-rule', 'evenodd')
+    // // .attribute(`pathLength`, 154)
+    // this.paths.push(path)
   }
   //METH: drawElement() override
   drawElement() {
@@ -5094,18 +5119,21 @@ class ShapeGroup extends ProtoLayer {
       // .attribute('stroke-dasharray', `4 4`)
     }
 
-    const luma = 50
-    const chroma = 20
-    const hue = 120
+    if (this.isFrame) {
+      this.svgElt
+        .viewBox(vert(), vert(100, 200))
+        .layout(vert(), vert(100, 200))
+    } else {
+      this.svgElt
+        // .attribute('overflow', 'visible')
+        // .viewBox(this.insetAnchor, this.insetSize, this.padding)
+        // .layout(this.insetAnchor, this.insetSize, this.padding)
+        .viewBox(this.anchor, this.size, this.padding)
+        .layout(this.anchor, this.size, this.padding)
+      DeBug.log(`drawElement() layout vals`, this.anchor.string, this.size.string, this.padding.string)
+    }
 
-    const lchcol02 = ProtoColor.okLCH(luma, chroma, hue)
-    const lchCol01 = color(`oklch(0.9 0.2 66deg)`)
 
-    this.svgElt
-    // .attribute('overflow', 'visible')
-    // .viewBox(this.anchor, this.size, this.padding)
-    // .layout(this.anchor, this.size, this.padding)
-    DeBug.log(`drawElement() layout vals`, this.anchor.string, this.size.string, this.padding.string)
 
     // const length = path.elt.getTotalLength()
 
@@ -5134,6 +5162,102 @@ class ShapeGroup extends ProtoLayer {
     // .attribute('stroke-width', this.cellGroup.isBackGroup ? 0 : this.grid.cellRadius * .25)
     // .attribute('stroke-opacity', this.cellGroup.isBackGroup ? 0 : 1)
     // .attribute('fill-opacity', this.cellGroup.isBackGroup ? 1 : 0)
+    console.warn(`ShapeGroup`, this.id)
+    console.warn(`this.padding`, this.padding)
+    console.warn(`this.cut`, this.cut)
+    console.warn(`this.drawFilter`, this.drawFilter)
+
+
+    const vintage = [
+      [221, 179, 101],
+      [124, 82, 134],
+      [237, 124, 75],
+      [28, 142, 184],
+      [57, 144, 159],
+      [191, 45, 54],
+      [73, 184, 232],
+    ]
+    const sunset = [
+      [215, 19, 39],
+      [250, 146, 49],
+      [131, 203, 223],
+      [30, 21, 55],
+      [238, 204, 112],
+      [246, 114, 43],
+    ]
+    const sunset2 = [
+      [222, 19, 39],
+      [254, 206, 88],
+      [252, 154, 49],
+      [235, 99, 39],
+      [245, 189, 39],
+    ]
+    const london = [
+      [242, 54, 74],
+      [199, 186, 176],
+      [6, 83, 182],
+      [86, 202, 250]
+    ]
+    const blues = [
+      [30, 86, 185],
+      [7, 59, 144],
+      // [5, 114, 212],
+      // [59, 183, 250],
+      [15, 30, 55],
+    ]
+    const vapor = [
+      [32, 154, 144],
+      [132, 22, 119],
+      [117, 27, 99],
+      [55, 120, 103],
+      [32, 14, 38]
+    ]
+    const grays = [
+      [30, 30, 34],
+      [50, 59, 52],
+      // [96, 101, 102],
+      [59, 62, 69],
+      [15, 20, 23],
+    ]
+    const bw = [[0, 0, 0], [255, 255, 255]]
+    const randomTransit = (palette) => {
+      //  const val =R.random_choice(['#f22', '#48f', '#dd0', '#0'])
+      const val = R.random_choice(palette)
+      return protoColor(...val)
+    }
+    const randomTransit2 = () => {
+      return R.random_choice(['#f26', '#22e', '#ff0', '#0'])
+    }
+
+    const randomLCH = (l) => {
+      const hue = R.random_num(0, 360)
+      const chroma = R.random_num(0, .25)
+      return `oklch(${l} ${chroma} ${hue})`
+    }
+    if (this.isFrame) {
+
+      this.svgGroupElt
+      // .attribute('fill', 'white')
+      // .attribute('fill', 'black')
+      // .attribute('fill', achromic(.3))
+      // .attribute('fill', randomLCH(.8))
+      // .attribute('fill', randomTransit(vintage))
+      // .style(`background`, `linear-gradient(45deg, blue, red)`)
+    } else {
+      this.svgGroupElt
+      // .attribute('fill', achromic(1))
+      // .attribute('fill', randomLCH(.7))
+      // .attribute('fill', 'red')
+      // .attribute('fill-opacity', .5)
+      // .attribute('fill', randomTransit(sunset))
+      // .blur(R.random_num(0, 1))
+      // .attribute('stroke', randomTransit(bw))
+      // .attribute(`stroke-dasharray`, `2 2`)
+      // .attribute(`stroke-linecap`, `round`)
+      // .attribute('stroke-width', R.random_num(.25, 1))
+      // .style('mix-blend-mode', `difference`)
+      // .blur(R.random_num(0, 2))
+    }
 
     if (this.drawFilter) {
       DeBug.error(`shapeGroup.drawFilter`, this.filter)
@@ -5178,6 +5302,7 @@ class Cell extends ProtoLayer {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
+      type: 'Cell',
       drawSVG: false,
       // drawRect: true,
       insetScale: 1,
@@ -5187,8 +5312,6 @@ class Cell extends ProtoLayer {
     this.index = index
     this.coords = coords
     this.isAvailable = isAvailable
-    // this.color = color
-    this._type = 'Cell'
 
     // this.drawLabel = true
     // this.drawDeBugRect = true
@@ -5479,6 +5602,7 @@ class Island extends ProtoLayer {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
+      type: parentIslandID ? 'Island' : 'PerimeterIsland',
       insetScale: insetScale,
       drawSVG: false,
       drawRect: false,
@@ -5494,7 +5618,6 @@ class Island extends ProtoLayer {
     this.maxCorners = maxCorners
     this.parentIslandID = parentIslandID
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
-    this._type = parentIslandID ? 'Island' : 'PerimeterIsland'
 
     // this.drawLabel = true
     // this.drawDeBugRect = true
@@ -5540,6 +5663,7 @@ class Island extends ProtoLayer {
   get minCornerRadius() { return this.shape.minCornerRadius }
 
   get ordinalConnections() { return this.cells.filter(c => !c.ordinalOnlyNeighbors.isEmpty) }
+  get hasOrdinalConnections() { return !this.ordinalConnections.isEmpty }
 
   get isSingleCell() {
     return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index, Direction.All))
@@ -6089,6 +6213,7 @@ class Shape extends ProtoLayer {
     super({
       protoParent: protoParent,
       svgParent: svgParent,
+      type: protoParent.type === `Island` ? 'Shape' : `PerimeterShape`,
       insetScale: insetScale,
       drawSVG: false,
       drawRect: false,
@@ -6101,8 +6226,6 @@ class Shape extends ProtoLayer {
     this.island = island
     this.testColor = `${R.random_hash(3, '#')}8`
     this.assignSegments()
-    // this.drawPerimeter = true
-    this._type = protoParent.type === `Island` ? 'Shape' : `PerimeterShape`
 
     // this.drawLabel = true
     // this.drawDeBugRect = true
@@ -6120,10 +6243,10 @@ class Shape extends ProtoLayer {
   get insetSize() { return this.size }
   get padding() { return vert(this.grid.cellRadius) }
 
-  get group() { return this.island.group }
+  get group() { return this.grid.groupNamed(this.groupID) }
   get groupID() { return this.island.groupID }
   get grid() { return this.island.grid }
-  get simpleSegPaths() { return this.simpleSubShapes.map((sub, i) => new SegPath(sub, this)) }
+  get simpleSegPaths() { return this.simpleSubShapes.map(sub => new SegPath(sub, this)) }
   get cells() { return this.island.cells }
   //MEMO: cutOutCells
   get cutOutCells() {
@@ -6216,6 +6339,7 @@ class Shape extends ProtoLayer {
   get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
   get allSegments() { return this.subShapes.flat() }
   get allSimpleSegs() { return this.simpleSubShapes.flat() }
+  get allInsideCorners() { return this.allSimpleSegs.filter(s => !s.isOutsideCorner) }
   get allOutsideCorners() { return this.allSimpleSegs.filter(s => s.isOutsideCorner) }
   get allCornerRadii() { return this.allSimpleSegs.map(s => s.arcRadius) }
   get assignedVerts() {
@@ -6232,6 +6356,13 @@ class Shape extends ProtoLayer {
 
   get minCornerRadius() { return min(this.allSimpleSegs.map(s => s.arcRadius)) }
   get maxCornerRadius() { return max(this.allSimpleSegs.map(s => s.arcRadius)) }
+  get minInsideCornerRadius() {
+    const corners = this.allInsideCorners
+    if (corners.isEmpty) { return }
+    if (this.isSingleShape) {
+      return min(corners.map(s => s.arcRadius))
+    }
+  }
   get minOutsideCornerRadius() {
     if (this.isSquareLeaf) { return this.squareLeafLoftRadius }
     if (this.isSingleShape) {
@@ -6243,30 +6374,12 @@ class Shape extends ProtoLayer {
       const minVertThick = this.cellBounds.minVertCellThickness
       DeBug.log(`minHorThick`, minHorThick)
       DeBug.log(`minVertThick`, minVertThick)
-      // let mult, size
       const horRadius = minHorThick * cellSize.x / 2
       const vertRadius = minVertThick * cellSize.y / 2
       DeBug.log(`horRadius`, horRadius)
       DeBug.log(`vertRadius`, vertRadius)
-      // switch (grid.cellAspect.value) {
-      //   case 0:
       return min(horRadius, vertRadius)
-      //   case 1:
-      //     return horRadius
-      //   case 2:
-      //     return vertRadius
-      // }
-      // if (!grid.cellAspect.isLandscape) {
-      //   mult = minHorThick
-      //   size = cellSize.x / 2
-      // } else {
-      //   mult = minVertThick
-      //   size = cellSize.y / 2
-      // }
-      // return mult * size
-      // return this.grid.cellRadius * 2
     }
-
   }
   get minInsetCornerRadius() { return this.minCornerRadius + (this.insetScale.x - 1) * this.cellRadius }
   get maxInsetCornerRadius() { return this.maxCornerRadius + (this.insetScale.x - 1) * this.cellRadius }
@@ -6358,7 +6471,18 @@ class Shape extends ProtoLayer {
 
   // MARK: methods
   // #region methods
-  //METH: : create initial SimpleSubShapes with minCorners to be refined by nestleShapes
+  //METH: hasSameForm() : Form = same shape, different position. Used for determining svg instancing
+  hasSameForm(otherShape) {
+    const length = this.simpleSegPaths.length
+    if (length !== otherShape.simpleSegPaths.length) return false
+
+    for (let i = 0; i < length; i++) {
+      const a = this.simpleSegPaths[i], b = otherPath.simpleSegPaths[i]
+      if (!a.hasSameForm(b)) return false
+    }
+    return true
+  }
+  //METH: createSimpleSubShapes() : create initial SimpleSubShapes with minCorners to be refined by nestleShapes
   createSimpleSubShapes() {
     DeBug.warn(`${this.id}.createSimpleSubShapes called!!!`)
     this.simpleSubShapes = this.subShapes.map((sub, i) => {
