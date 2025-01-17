@@ -270,8 +270,15 @@ class Shade {
   }
   //METH: neuShadeSVG()
   static neuShadeSVG(shadeType, vector = this.shadVect(), mag, highBlurRad, shadBlurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
-    // highCol = achromic(1)
-    // shadCol = achromic(0.7)
+    // const randomLCH = (l) => {
+    //   const hue = R.random_num(0, 360)
+    //   return `oklch(${l} .25 ${hue})`
+    // }
+    // highCol = randomLCH(.98)
+    // shadCol = randomLCH(0.5)
+
+    highCol = achromic(1)
+    shadCol = achromic(0.7)
 
     const invert = curve === `r`
     // DeBug.log('components', vector.x, vector.y, blurRad)
