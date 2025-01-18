@@ -45,6 +45,7 @@ function setup() {
   DeBug.log('random R useage', R.useage)
   DeBug.groupEnd()
   gridTests2()
+
   // areciboMonolith()
   // const mill = new ProtoMill()
   // mill.mkProtoType()
@@ -272,6 +273,7 @@ class ProtoMill {
 
     DeBug.log('GRID', GRID)
     // const cellSize = Vertex.div(this.insetSize, this.gridSize)
+    // const minInsetAmount = 1 / GRID.minCellWidth
     const minInsetAmount = 1 / GRID.minCellWidth
     this.minInsetScale = 1 - minInsetAmount
     // const maxGlobalOutset = FTS.gridStyle === `Flexible` ? globalOutset : min(this.minInsetScale - minInsetAmount, max(GRID.minCellWidth - 5, 0))
@@ -639,7 +641,7 @@ function gridTests2() {
     const initialCoverage = 0.3
 
     //NOTE: Snake
-    group0 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .3 })
+    // group0 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .3 })
 
     // group1 = GRID.snake({ direction: Direction.Cardinal })
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(1).andAdjacents, newGroup: false, amount: 1 })
@@ -660,7 +662,18 @@ function gridTests2() {
     //   start: 0
     // })
 
-    // group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never', mode: 4 })
+    // group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never', mode: 0 })
+    // group1 = GRID.randGroup({ amount: initialCoverage })
+
+    //NOTE: Complex Pattern
+    // group0 = GRID.comb2({
+    //   selection: (GRID.cellRows
+    //     .rotated2D(R.random_int(0, 3) * 90)
+    //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
+    //     .flat()
+    //     .intersect(GRID.availableCells, `id`)),
+    //   dashArray: OpArray.randomIntArray(R.random_int(3, 12), range(1, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
+    // })
 
     //NOTE: Simple Pattern
     // group1 = GRID.comb({
@@ -672,38 +685,28 @@ function gridTests2() {
     //   keep: R.random_int(1, 3), drop: R.random_int(12, 16), start: 0
     // })
 
-    //NOTE: Complex Pattern
-    // group1 = GRID.comb2({
-    //   selection: (GRID.cellRows
-    //     .rotated2D(R.random_int(0, 3) * 90)
-    //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
-    //     .flat()
-    //     .intersect(GRID.availableCells, `id`)),
-    //   dashArray: OpArray.randomIntArray(R.random_int(3, 12), range(1, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
-    // })
-
     //NOTE: Squares
-    // if (FTS.x < 4) {
-    //   group1 = GRID.groupFromIndices(
-    //     OpArray.randomIntArray(
-    //       ceil((GRID.cellCount - 1) * initialCoverage),
-    //       range(0, GRID.cellCount - 1)
-    //     ).unique()
-    //   )
-    // } else {
+    if (FTS.x < 4) {
+      group0 = GRID.groupFromIndices(
+        OpArray.randomIntArray(
+          ceil((GRID.cellCount - 1) * initialCoverage),
+          range(0, GRID.cellCount - 1)
+        ).unique()
+      )
+    } else {
 
-    group1 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh', mode: 1 })
+      group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh', mode: 5 })
 
-    // }
+    }
 
     //NOTE: Rectangles
-    // group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', mode: 4 })
+    // group1 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', mode: 1 })
 
     //NOTE: Noise
     // group1 = GRID.randGroup({ amount: initialCoverage })
 
-    group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 5, coverage: .5 })
-    // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 5, coverage: .5 })
+    group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .5 })
+    // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .5 })
 
     // group1 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 8)), newGroup: true, amount: R.random_int(1, 1) })
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(1), newGroup: false, amount: 1 })
@@ -718,34 +721,36 @@ function gridTests2() {
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.Cardinal.random(1), newGroup: false, amount: R.random_int(0, 2) })
 
     const grp1Dir = Direction.All.random(R.random_int(1, 8))
-    const grp1Amount = R.random_int(1, 1)
+    const grp1Amount = R.random_int(1, 2)
     DeBug.log(`grp1Dir`, grp1Dir.name)
     DeBug.log(`grp1Amount`, grp1Amount)
 
     DeBug.log(GRID)
 
-    // group1 = GRID.outlineGroup({
-    //   groupID: GRID.lastGroup.id,
-    //   // direction: Direction.All,
-    //   direction: grp1Dir,
-    //   newGroup: true,
-    //   amount: grp1Amount
-    // })
+    group1 = GRID.outlineGroup({
+      groupID: GRID.lastGroup?.id,
+      // direction: Direction.All,
+      direction: grp1Dir,
+      newGroup: true,
+      amount: grp1Amount
+    })
 
+    // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 2, turns: 12, coverage: .5 })
+    // group3 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .5 })
     // group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
 
-    // group2 = GRID.outlineGroup({
-    //   groupID: GRID.lastGroup.id,
-    //   direction: Direction.All.random(R.random_int(2, 4)),
-    //   newGroup: true,
-    //   amount: R.random_int(1, 2)
-    // })
+    group4 = GRID.outlineGroup({
+      groupID: GRID.lastGroup.id,
+      direction: Direction.All.random(R.random_int(2, 8)),
+      newGroup: true,
+      amount: R.random_int(1, 2)
+    })
 
     const grp3Amount = R.random_int(1, 3)
 
-    group3 = GRID.outlineGroup({
-      // groupID: GRID.lastGroup.id,
-      groupID: group1?.id || GRID.lastGroup.id,
+    group5 = GRID.outlineGroup({
+      groupID: GRID.lastGroup?.id,
+      // groupID: group1?.id || GRID.lastGroup.id,
       // direction: Direction.All.random(R.random_int(1, 4)), 
       newGroup: true,
       amount: grp3Amount
@@ -758,11 +763,11 @@ function gridTests2() {
 
     // group3 = GRID.randGroup({ amount: 0.5 })
     // group3 = GRID.groupAvail()
-    // group3 = GRID.squares({ coverage: .8, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh' })
+    // group6 = GRID.squares({ coverage: .8, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', mode: 5 })
 
 
-    // group4 = GRID.randGroup({ amount: 0.5 })
-    group4 = GRID.groupAvail()
+    // group5 = GRID.randGroup({ amount: 0.5 })
+    group7 = GRID.groupAvail()
 
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
     // DeBug.log(group3)
@@ -805,6 +810,8 @@ function gridTests2() {
   DeBug.log(`outsetIndex`, outsetIndex)
   const outsetGroup = GRID.groups[outsetIndex]
   DeBug.log(`outsetGroup`, outsetGroup)
+  DeBug.log(`groups`, GRID.groups)
+
 
   //                                                                     //NOTE: 10. Create Perimeters for Each Group
   // DeBug.groupCollapsed(`createPerimiters`)
@@ -826,7 +833,8 @@ function gridTests2() {
   // DeBug.log(`groups`, GRID.groups)
 
   const converts = () => {
-    let converts = outsetGroup.nonNeighborIslands?.sort((a, b) => a.neighborIslands.length - b.neighborIslands.length)
+    let converts = outsetGroup?.nonNeighborIslands?.filter(i => !i.hasOrdinalConnections)
+      .sort((a, b) => a.neighborIslands.length - b.neighborIslands.length)
     // converts = converts?.slice(0, 2)
     return converts || []
   }
@@ -836,24 +844,24 @@ function gridTests2() {
   DeBug.log(`converts`, tempConverts?.map(i => i.id))
   while (tempConverts.length > 0) {
     DeBug.error(`converts`, converts().map(i => i.id))
-    const c = tempConverts.pop()
-    DeBug.warn(`processing:`, c.id)
-    const cells = c.cells
-    const group = GRID.groupNamed(c.groupID)
+    const isle = tempConverts.pop()
+    console.warn(`processing:`, isle.id)
+    const cells = isle.cells
+    const group = GRID.groupNamed(isle.groupID)
     group.cells = group.cells.exclude(cells, `id`)
-    group.perimeterIslands = group.perimeterIslands.exclude(c, `id`)
+    group.perimeterIslands = group.perimeterIslands.exclude(isle, `id`)
     // GRID.assignCells(cells, outsetGroup.id)
-    outsetGroup.cells = outsetGroup.cells.union(c.cells, `id`)
-    outsetGroup.perimeterIslands = outsetGroup.perimeterIslands.union(c, `id`)
-    // outset
-    // groupPerimeters()
+    outsetGroup.cells = outsetGroup.cells.union(isle.cells, `id`)
+    outsetGroup.perimeterIslands = outsetGroup.perimeterIslands.union(isle, `id`)
+    isle.groupID = outsetGroup.id
+    //FIXME: still need to change shapeGroups or cuts.shapeGroups to get padding/size calculation correct
 
     tempConverts = converts()
     DeBug.log(`updated converts`, tempConverts?.map(i => i.id))
     // tempConverts = new OpArray
     // converts = converts.slice(0, 3)
   }
-
+  // outsetGroup.createPerimiters(Direction.All)
 
   // group0?.createPerimiters(Direction.Cardinal)
 
@@ -875,6 +883,131 @@ function gridTests2() {
 
   //                                                                     //NOTE: 13. Cut Islands
   DeBug.groupCollapsed(`cutIslands`)
+
+  GRID.groups.forEach((g, i) => {
+    let makeInCut = R.random_bool(.2)
+    let inCut, dilAmount = 1
+    // let inCut
+    if (makeInCut) {
+      dilAmount = R.random_choice([.25, .5, .75,])
+      inCut = R.random_choice([Direction.Horizontal, Direction.Vertical, Direction.None, Direction.Cardinal])
+    }
+    g.cutIslands({
+      // profile: R.random_choice([
+      //   Profile.rOut,
+      //   Profile.jIn,
+      //   Profile.rIn,
+      //   Profile.jOut
+      // ]),
+      profile: Profile.rOut,
+      // isOutsetCut: false,
+      isOutsetCut: outsetIndex === i,
+      // layerStart: min(60 / 64, minInsetScale),
+      layerStart: minInsetScale,
+      // layerEnd: 0.5,
+      dilationStart: 0,
+      dilationEnd: dilAmount,
+      // amount: outsetIndex === i ? R.random_int(1, ceil(1 / (1 - GRID.cellOutset)) + 1) : 1,
+      amount: 1,
+      loftScale: 1 / 1,
+      direction: outsetIndex === i ? Direction.All : Direction.Cardinal
+      // addBacking: true,
+    })
+    if (makeInCut) {
+      g.cutIslands({
+        profile: R.random_choice([
+          Profile.rOut,
+          Profile.jIn,
+          Profile.rIn,
+          Profile.jOut
+        ]),
+        // profile: Profile.jIn,
+        isOutsetCut: false,
+        layerStart: minInsetScale,
+        // dilationStart: R.random_num(.25, .9),
+        dilationStart: dilAmount,
+        dilationEnd: 1,
+        // amount: R.random_int(1, round(1 / dilAmount) * 2),
+        direction: inCut
+      })
+    }
+    // if (!inCut.isNone && dilAmount < 0.75) {
+    //   g.cutIslands({
+    //     profile: Profile.jIn,
+    //     isOutsetCut: false,
+    //     layerStart: minInsetScale,
+    //     // dilationStart: R.random_num(.25, .9),
+    //     dilationStart: 1 - dilAmount / 2,
+    //     dilationEnd: 1,
+    //     amount: 1,
+    //     direction: Direction.None,
+    //   })
+    // }
+
+
+    //NOTE: layers on layers on layers
+    // if (outsetIndex === i) {
+    //   g.cutIslands({
+    //     profile: Profile.rOut,
+    //     isOutsetCut: false,
+    //     layerStart: minInsetScale,
+    //     dilationStart: 0,
+    //     dilationEnd: 7 / 8,
+    //     amount: 1,
+    //     // amount: R.random_int(2, ceil(1 / (1 - GRID.cellOutset)) + 2),
+    //     // direction: outsetIndex === i ? Direction.All : Direction.Vertical
+    //   })
+    //   g.cutIslands({
+    //     profile: Profile.jIn,
+    //     isOutsetCut: false,
+    //     layerStart: minInsetScale,
+    //     dilationStart: 7 / 8,
+    //     dilationEnd: 1,
+    //     amount: 1,
+    //     direction: Direction.Horizontal
+    //   })
+    // } else {
+    //   g.cutIslands({
+    //     profile: R.random_choice([
+    //       Profile.rOut,
+    //       Profile.jIn,
+    //       Profile.rIn,
+    //       Profile.jOut
+    //     ]),
+    //     isOutsetCut: false,
+    //     layerStart: minInsetScale,
+    //     dilationStart: 0,
+    //     dilationEnd: .5,
+    //     // amount: GRID.cellOutset < 0.5 ? R.random_int(2, ceil(1 / (1 - GRID.cellOutset))) : 1,
+    //     amount: 1,
+    //   })
+    //   g.cutIslands({
+    //     profile: R.random_choice([
+    //       Profile.rOut,
+    //       Profile.jIn,
+    //       Profile.rIn,
+    //       Profile.jOut
+    //     ]),
+    //     isOutsetCut: false,
+    //     layerStart: minInsetScale,
+    //     dilationStart: 0.5,
+    //     dilationEnd: 7 / 8,
+    //     // amount: GRID.cellOutset < 0.5 ? R.random_int(2, ceil(1 / (1 - GRID.cellOutset))) : 1,
+    //     amount: 1,
+    //   })
+    //   g.cutIslands({
+    //     profile: Profile.jIn,
+    //     isOutsetCut: false,
+    //     layerStart: minInsetScale,
+    //     dilationStart: 7 / 8,
+    //     dilationEnd: 1,
+    //     amount: 1,
+    //     direction: Direction.Vertical,
+    //   })
+    // }
+
+  })
+
   //MARK: group0
   // group0?.cutIslands({
   //   profile: Profile.rOut,
@@ -888,19 +1021,19 @@ function gridTests2() {
   //   // direction: Direction.All
   //   // addBacking: true,
   // })
-  group0?.cutIslands({
-    profile: Profile.rOut,
-    isOutsetCut: outsetIndex === 0,
-    // layerStart: min(60 / 64, minInsetScale),
-    layerStart: minInsetScale,
-    // layerEnd: 0.5,
-    // dilationStart: 0 / 3,
-    // dilationEnd: 2 / 4,
-    amount: 1,
-    loftScale: 1 / 1,
-    // direction: Direction.All
-    // addBacking: true,
-  })
+  // group0?.cutIslands({
+  //   profile: Profile.rOut,
+  //   isOutsetCut: outsetIndex === 0,
+  //   // layerStart: min(60 / 64, minInsetScale),
+  //   layerStart: minInsetScale,
+  //   // layerEnd: 0.5,
+  //   // dilationStart: 0 / 3,
+  //   // dilationEnd: 2 / 4,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.All
+  //   // addBacking: true,
+  // })
   // group0?.cutIslands({
   //   profile: Profile.jIn,
   //   isOutsetCut: outsetIndex===0,
@@ -927,18 +1060,18 @@ function gridTests2() {
 
 
   //MARK: group1
-  group1?.cutIslands({
-    profile: Profile.rOut,
-    isOutsetCut: outsetIndex === 1,
-    layerStart: minInsetScale,
-    // layerEnd: .6,
-    // dilationStart: 0,
-    // dilationEnd: 1 / 2,
-    amount: 1,
-    // loftScale: 8 / 8,
-    // direction: Direction.Vertical,
-    // addBacking: true,
-  })
+  // group1?.cutIslands({
+  //   profile: Profile.rOut,
+  //   isOutsetCut: outsetIndex === 1,
+  //   layerStart: minInsetScale,
+  //   // layerEnd: .6,
+  //   // dilationStart: 0,
+  //   // dilationEnd: 1 / 2,
+  //   amount: 1,
+  //   // loftScale: 8 / 8,
+  //   // direction: Direction.Vertical,
+  //   // addBacking: true,
+  // })
   // group1?.cutIslands({
   //   profile: Profile.rOut,
   //   isOutsetCut: outsetIndex === 1,
@@ -979,18 +1112,18 @@ function gridTests2() {
   //   // direction: Direction.Horizontal
   //   // addBacking: true,
   // })
-  group2?.cutIslands({
-    profile: Profile.jIn,
-    // isOutsetCut: outsetIndex===2,
-    layerStart: minInsetScale,
-    // layerEnd: 0 / 20,
-    dilationStart: 1 / 3,
-    dilationEnd: 5 / 6,
-    amount: 1,
-    loftScale: 1,
-    // direction: Direction.None
-    // addBacking: true,
-  })
+  // group2?.cutIslands({
+  //   profile: Profile.rOut,
+  //   // isOutsetCut: outsetIndex===2,
+  //   layerStart: minInsetScale,
+  //   // layerEnd: 0 / 20,
+  //   dilationStart: 1 / 3,
+  //   dilationEnd: 5 / 6,
+  //   amount: 1,
+  //   loftScale: 1,
+  //   // direction: Direction.None
+  //   // addBacking: true,
+  // })
   // group2?.cutIslands({
   //   profile: Profile.jIn,
   //   // isOutsetCut: outsetIndex===2,
@@ -1005,17 +1138,17 @@ function gridTests2() {
   // })
 
   //MARK: group3
-  group3?.cutIslands({
-    profile: Profile.rOut,
-    isOutsetCut: outsetIndex === 3,
-    // layerStart: min(60 / 64, minInsetScale),
-    layerStart: minInsetScale,
-    // layerEnd: 0.,
-    amount: 1,
-    loftScale: 1,
-    // direction: Direction.Horizontal
-    // addBacking: true,
-  })
+  // group3?.cutIslands({
+  //   profile: Profile.rOut,
+  //   isOutsetCut: outsetIndex === 3,
+  //   // layerStart: min(60 / 64, minInsetScale),
+  //   layerStart: minInsetScale,
+  //   // layerEnd: 0.,
+  //   amount: 1,
+  //   loftScale: 1,
+  //   // direction: Direction.Horizontal
+  //   // addBacking: true,
+  // })
   // group3?.cutIslands({
   //   profile: Profile.rOut,
   //   // isOutsetCut: outsetIndex===3,
@@ -1028,16 +1161,16 @@ function gridTests2() {
   // })
 
   //MARK: group4
-  group4?.cutIslands({
-    profile: Profile.jIn,
-    isOutsetCut: outsetIndex === 4,
-    layerStart: 1,
-    // layerStart: minInsetScale,
-    // layerEnd: 16 / 64,
-    amount: 1,
-    loftScale: 1 / 1,
-    // direction: Direction.Vertical
-  })
+  // group4?.cutIslands({
+  //   profile: Profile.rOut,
+  //   isOutsetCut: outsetIndex === 4,
+  //   layerStart: 1,
+  //   // layerStart: minInsetScale,
+  //   // layerEnd: 16 / 64,
+  //   amount: 1,
+  //   loftScale: 1 / 1,
+  //   // direction: Direction.Vertical
+  // })
   // group4?.cutIslands({
   //   profile: Profile.jIn,
   //   // isOutsetCut: outsetIndex===4,
@@ -1061,6 +1194,16 @@ function gridTests2() {
   DeBug.groupEnd()
   DeBug.log(``)
 
+  console.error(`GRID`, GRID.shapeGroups)
+  console.error(`backGrid`, BGRID.shapeGroups)
+
+  GRID.shapeGroups.forEach(shgrp => shgrp.drawElement())
+  BGRID.shapeGroups.forEach(shgrp => shgrp.drawElement())
+
+  console.error(`S.Cuts`, S.Cuts)
+
+  S.Cuts.db.map(c => c[1]).forEach(c => c.setLayouts())
+
   // DeBug.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
   // FRAME.backGrid.showCellsDebug()
   // FRAME.backGrid.showShapesDebug()
@@ -1069,34 +1212,16 @@ function gridTests2() {
   // GRID.showShapesDebug()
   // GRID.showShapeGroupsDebug(false)
 
-
-  // DeBug.log(`multi-island simpleSubshapes`, GRID.allSimpleSubShapes.flat().map(s => s.parentID))
-  // let interCells01 = GRID.perimeterIslands[3]?.interCells
-  // DeBug.log(`interCells01`, interCells01?.map(c => c.id))
-  // DeBug.log(`GRID.islands`, GRID.islands)
-  // DeBug.log(`are squares?`, GRID.islands.map(i => i.isSquare))
-  // DeBug.log(`are roundedSquares?`, GRID.islands.map(i => i.shape.isRoundedSquare))
-  // DeBug.log(`are circles?`, GRID.islands.map(i => i.shape.isCircle))
-  // DeBug.log(`are leaves?`, GRID.islands.map(i => i.shape.isLeaf))
-  // DeBug.log(`are square leaves?`, GRID.islands.map(i => i.shape.isSquareLeaf))
-  // DeBug.log(`maxSquareLeafLoftRadius?`, GRID.islands.map(i => i.shape.maxSquareLeafLoftRadius))
-  // DeBug.log(`start cell?`, GRID.islands.map(i => i.cells[0].id))
-
-  // let testShape = GRID.shapeNamed('shp057')
-  // DeBug.log(`testShape.simpleSubShapes`, testShape.simpleSubShapes)
-  // let subs = testShape.simpleSubShapes.flat()
-  // DeBug.log(`subs does not hasBothCubicVerts`, subs.filter(s => !s.hasBothCubicVerts))
-  // DeBug.log(`subs does not hasBothCompleteCorners`, subs.filter(s => !s.hasBothCompleteCorners))
-  // DeBug.log(`subs hasFlatness`, subs.filter(s => s.hasFlatness).map(s => s.id))
-  // DeBug.log(`subs canCurveMoreAtEnd`, subs.filter(s => s.canCurveMoreAtEnd).map(s => s.id))
   // globalAnimation()
-
   // GRID.maxCuddle()
 
-  DeBug.log(`  ######################   `)
-  DeBug.log(`Features`, FTS)
-  DeBug.log('all ProtoLayers', S.allLayers)
-  DeBug.log(`GRID`, GRID)
+  // DeBug.log(`  ######################   `)
+  console.error(`GRID`, GRID.shapeGroups)
+  console.error(`backGrid`, BGRID.shapeGroups)
+  console.log('hash', tokenData.hash)
+  console.log(`Features`, FTS)
+  console.log('all ProtoLayers', S.allLayers)
+  console.log(`GRID`, GRID)
   DeBug.warn(`cellSize`, GRID.cellSize)
   DeBug.warn(`GRID cells`, FTS.x, FTS.y)
   // DeBug.warn(`GRID cells`, gridSize)
