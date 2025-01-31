@@ -35,6 +35,7 @@ class Store {
     ]
       .map(e => e[1])
   }
+  get offsetElts() { return this.Effects.db.flatMap(e => e[1].offsetElts) }
   // static shared() {
   //   if (!this.instance) {
   //     this.instance = new Store()
