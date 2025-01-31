@@ -176,8 +176,8 @@ class FeatureSet {
       const wideMaxes = [6, 7, 9, 10, 12, 15, 17, 20, 22, 25]   // wide maxes hold ratio at 1:2.5 (except for 1=>1:3), producing less totem grids
       const chooseWide = R.random_bool(1 / 3)                   // lean towards wider ratios (from 0.26->0.33) 
       let max = chooseWide ? wideMaxes[x - 1] : maxes[x - 1]    // max taken from corresponding maxes entry
-      return r.random_int(min, max || min + 1)
-      // return r.random_int(min, min + 1)
+      // return r.random_int(min, max || min + 1)
+      return r.random_int(min, min + 1)
     } else {
       switch (this.cellAspect) {             // "Flexible" gridStyle uses cellAspect to multiply column count
         case 'Square':
