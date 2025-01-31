@@ -195,6 +195,30 @@ const Debuggable = {
     DeBug.groupEnd()
   },
 
+  // METH: showFrameRate()
+  showFrameRate(animationController) {
+    // Create display element once if it doesn't exist
+    if (!Debuggable.frameRateDisplay) {
+      Debuggable.frameRateDisplay = createDiv('')
+        .id('frameRateDisplay')
+        .style('position', 'fixed')
+        .style('bottom', '10px')
+        .style('right', '10px')
+        .style('backgroundColor', 'rgba(0, 0, 0, 0.5)')
+        .style('color', 'white')
+        .style('padding', '5px')
+        .style('fontFamily', 'monospace')
+        .style('zIndex', '1000')
+        .parent(document.body)
+
+      // Update content every second instead of every frame
+      setInterval(() => {
+        const fps = animationController.frameRate
+        const offsetEltsCount = S.offsetElts.length
+        Debuggable.frameRateDisplay.html(`FPS: ${fps} | Offset Elements: ${offsetEltsCount}`)
+      }, 1000)
+    }
+  }
 
 }
 
