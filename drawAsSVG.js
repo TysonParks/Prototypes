@@ -9,7 +9,7 @@ class SVGPath {
   //METH: fromProtoSegPath() : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath({ segPath, cornerMin = 0, cornerScale = 1 } = {}) {
     // DeBug.warn(`segPath`, segPath)                                           //LOGGING:
-    // cornerScale = R.random_num(0, 4)
+    // cornerScale = R.random_int(0, 1)
     segPath = segPath.copy
     let curves = []
     let start, end, cornerStart, cornerEnd
