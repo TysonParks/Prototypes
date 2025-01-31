@@ -24,6 +24,7 @@ let FTS = {}// Feature Set
 let BG, FRAME, BGRID, GRID // Background, Frame, Background Grid, Grid
 let ROT, frameRate
 let R, S, RuID // Random, Store, Random UID
+let animationController
 
 //Graphics constants
 const expSeries = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
@@ -84,8 +85,9 @@ function setupPrefs() {
   S = new Store()
   RuID = new Random()
   TestMode = true
-  frameRate = 6
+  frameRate = 12
   ROT = 10 * PI
+  animationController = new AnimationController(frameRate)
 }
 
 // FUNC: setupFeatures()
@@ -641,7 +643,7 @@ function gridTests2() {
     const initialCoverage = 0.3
 
     //NOTE: Snake
-    // group0 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .3 })
+    group0 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
 
     // group1 = GRID.snake({ direction: Direction.Cardinal })
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(1).andAdjacents, newGroup: false, amount: 1 })
@@ -662,7 +664,7 @@ function gridTests2() {
     //   start: 0
     // })
 
-    // group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never', mode: 0 })
+    // group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never', mode: 6 })
     // group1 = GRID.randGroup({ amount: initialCoverage })
 
     //NOTE: Complex Pattern
@@ -686,26 +688,26 @@ function gridTests2() {
     // })
 
     //NOTE: Squares
-    if (FTS.x < 4) {
-      group0 = GRID.groupFromIndices(
-        OpArray.randomIntArray(
-          ceil((GRID.cellCount - 1) * initialCoverage),
-          range(0, GRID.cellCount - 1)
-        ).unique()
-      )
-    } else {
+    // if (FTS.x < 4) {
+    //   group0 = GRID.groupFromIndices(
+    //     OpArray.randomIntArray(
+    //       ceil((GRID.cellCount - 1) * initialCoverage),
+    //       range(0, GRID.cellCount - 1)
+    //     ).unique()
+    //   )
+    // } else {
 
-      group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh', mode: 5 })
+    //   group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh', mode: 0 })
 
-    }
+    // }
 
     //NOTE: Rectangles
     // group1 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', mode: 1 })
 
     //NOTE: Noise
-    // group1 = GRID.randGroup({ amount: initialCoverage })
+    group1 = GRID.randGroup({ amount: initialCoverage })
 
-    group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .5 })
+    // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .5 })
     // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .5 })
 
     // group1 = GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(R.random_int(1, 8)), newGroup: true, amount: R.random_int(1, 1) })
@@ -721,15 +723,16 @@ function gridTests2() {
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.Cardinal.random(1), newGroup: false, amount: R.random_int(0, 2) })
 
     const grp1Dir = Direction.All.random(R.random_int(1, 8))
-    const grp1Amount = R.random_int(1, 2)
+    const grp1Amount = 1
+    // const grp1Amount = R.random_int(1, 2)
     DeBug.log(`grp1Dir`, grp1Dir.name)
     DeBug.log(`grp1Amount`, grp1Amount)
 
     DeBug.log(GRID)
 
-    group1 = GRID.outlineGroup({
+    group2 = GRID.outlineGroup({
       groupID: GRID.lastGroup?.id,
-      // direction: Direction.All,
+      direction: Direction.All,
       direction: grp1Dir,
       newGroup: true,
       amount: grp1Amount
@@ -739,22 +742,22 @@ function gridTests2() {
     // group3 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .5 })
     // group1 = GRID.squares({ coverage: 0.5, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'meh' })
 
-    group4 = GRID.outlineGroup({
-      groupID: GRID.lastGroup.id,
-      direction: Direction.All.random(R.random_int(2, 8)),
-      newGroup: true,
-      amount: R.random_int(1, 2)
-    })
+    // group4 = GRID.outlineGroup({
+    //   groupID: GRID.lastGroup.id,
+    //   direction: Direction.All.random(R.random_int(2, 8)),
+    //   newGroup: true,
+    //   amount: R.random_int(1, 2)
+    // })
 
     const grp3Amount = R.random_int(1, 3)
 
-    group5 = GRID.outlineGroup({
-      groupID: GRID.lastGroup?.id,
-      // groupID: group1?.id || GRID.lastGroup.id,
-      // direction: Direction.All.random(R.random_int(1, 4)), 
-      newGroup: true,
-      amount: grp3Amount
-    })
+    // group5 = GRID.outlineGroup({
+    //   groupID: GRID.lastGroup?.id,
+    //   // groupID: group1?.id || GRID.lastGroup.id,
+    //   // direction: Direction.All.random(R.random_int(1, 4)), 
+    //   newGroup: true,
+    //   amount: grp3Amount
+    // })
 
     // DeBug.log('right adj', Direction.Right.adjacents)
     // DeBug.log('right and adj', Direction.Right.andAdjacents)
@@ -762,6 +765,9 @@ function gridTests2() {
 
 
     // group3 = GRID.randGroup({ amount: 0.5 })
+    // group4 = GRID.randGroup({ amount: 0.5 })
+    // group5 = GRID.randGroup({ amount: 0.5 })
+    // group6 = GRID.randGroup({ amount: 0.5 })
     // group3 = GRID.groupAvail()
     // group6 = GRID.squares({ coverage: .8, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', mode: 5 })
 
@@ -886,31 +892,38 @@ function gridTests2() {
 
   GRID.groups.forEach((g, i) => {
     let makeInCut = R.random_bool(.2)
+    makeInCut = true
     let inCut, dilAmount = 1
     // let inCut
     if (makeInCut) {
       dilAmount = R.random_choice([.25, .5, .75,])
-      inCut = R.random_choice([Direction.Horizontal, Direction.Vertical, Direction.None, Direction.Cardinal])
+      // dilAmount = .5
+      // dilAmount = R.random_choice([.125, .25, .375, .5, .625, .75, .875])
+      // inCut = R.random_choice([Direction.Horizontal, Direction.Vertical, Direction.None, Direction.Cardinal])
+      inCut = R.random_choice([Direction.Horizontal, Direction.Vertical, Direction.None])
     }
     g.cutIslands({
-      // profile: R.random_choice([
-      //   Profile.rOut,
-      //   Profile.jIn,
-      //   Profile.rIn,
-      //   Profile.jOut
-      // ]),
-      profile: Profile.rOut,
+      profile: R.random_choice([
+        Profile.rOut,
+        // Profile.jIn,
+        // Profile.rIn,
+        // Profile.jOut
+      ]),
+      // profile: Profile.rOut,
       // isOutsetCut: false,
       isOutsetCut: outsetIndex === i,
       // layerStart: min(60 / 64, minInsetScale),
+      // layerStart: minInsetScale - R.random_num(0, minInsetScale / 5),
       layerStart: minInsetScale,
       // layerEnd: 0.5,
-      dilationStart: 0,
+      // dilationStart: 0,
+      // dilationEnd: R.random_int(0, round(1 / dilAmount) * -4),
       dilationEnd: dilAmount,
       // amount: outsetIndex === i ? R.random_int(1, ceil(1 / (1 - GRID.cellOutset)) + 1) : 1,
       amount: 1,
       loftScale: 1 / 1,
-      direction: outsetIndex === i ? Direction.All : Direction.Cardinal
+      direction: outsetIndex === i ? Direction.All : Direction.Cardinal,
+      // direction: Direction.Horizontal
       // addBacking: true,
     })
     if (makeInCut) {
@@ -918,31 +931,34 @@ function gridTests2() {
         profile: R.random_choice([
           Profile.rOut,
           Profile.jIn,
-          Profile.rIn,
-          Profile.jOut
+          // Profile.rIn,
+          // Profile.jOut
         ]),
-        // profile: Profile.jIn,
+        // profile: Profile.rOut,
         isOutsetCut: false,
+        // layerStart: minInsetScale - R.random_num(0, minInsetScale / 5),
         layerStart: minInsetScale,
         // dilationStart: R.random_num(.25, .9),
         dilationStart: dilAmount,
         dilationEnd: 1,
-        // amount: R.random_int(1, round(1 / dilAmount) * 2),
+        // dilationEnd: R.random_int(-2, round(1 / dilAmount) * 4),
+        // amount: R.random_int(1, round(1 / dilAmount) * 4),
+        amount: R.random_int(1, ceil(1 / (1 - GRID.cellOutset)) + 1),
         direction: inCut
       })
     }
     // if (!inCut.isNone && dilAmount < 0.75) {
-    //   g.cutIslands({
-    //     profile: Profile.jIn,
-    //     isOutsetCut: false,
-    //     layerStart: minInsetScale,
-    //     // dilationStart: R.random_num(.25, .9),
-    //     dilationStart: 1 - dilAmount / 2,
-    //     dilationEnd: 1,
-    //     amount: 1,
-    //     direction: Direction.None,
-    //   })
-    // }
+    // g.cutIslands({
+    //   profile: Profile.rOut,
+    //   isOutsetCut: false,
+    //   layerStart: minInsetScale,
+    //   // dilationStart: R.random_num(.25, .9),
+    //   dilationStart: 1 - dilAmount / 2,
+    //   dilationEnd: 1,
+    //   amount: 1,
+    //   direction: Direction.None,
+    // })
+    // // }
 
 
     //NOTE: layers on layers on layers
@@ -1211,6 +1227,7 @@ function gridTests2() {
   // GRID.showCellsDebug()
   // GRID.showShapesDebug()
   // GRID.showShapeGroupsDebug(false)
+  GRID.showFrameRate(animationController)
 
   // globalAnimation()
   // GRID.maxCuddle()
@@ -1246,13 +1263,14 @@ function startAnimationLoop() {
   let previousTime = 0
   let desiredFrameRate = frameRate // The frame rate you wish to achieve
   let frameDuration = 1000 / desiredFrameRate
+  console.log(`animationController`, animationController)
+  console.log(`globalControls`, globalControls)
 
   // ARROW: animate()
   function animate(currentTime) {
     if (globalControls.animated) {
       if (currentTime - previousTime >= frameDuration) {
-        globalAnimation() // Call your animation logic
-
+        animationController.globalAnimation() // Call global animation logic
         previousTime = currentTime
       }
       requestAnimationFrame(animate) // Request the next frame
@@ -1267,20 +1285,6 @@ function stopAnimationLoop() {
   globalControls.animated = false
 }
 
-// FUNC: globalAnimation()
-function globalAnimation() {
-  globalControls.shadAngle = (millis() / (1000 * ROT)) * 360 % 360
-  const shadeVect = createVector(1, 0).rotate(radians(globalControls.shadAngle))
-
-  S.Effects.db.forEach((filter) => {
-    filter = filter[1]
-    filter.updateOffsets(shadeVect)
-  })
-
-  //create new shadows for every filter
-  // update every filter with new shadows
-  // updateDisplay for every shapeGroup
-}
 
 // FUNC: drawObjects()
 function drawObjects() {
