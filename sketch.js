@@ -303,7 +303,7 @@ class ProtoMill {
     // if(jOut->rOut)             { BAN or inset between or blur to make sOut } // cyma reversa
     // if(rIn->iIn)               { BAN or inset between or combine shadows }   // 
     // if(rIn->jIn)               { BAN or inset between or blur to make sIn }  // cyma reversa
-    // if(rIn->rOut)              { inset or scoop between }
+    // if(rIn->rOut)              { inset or scoop between
 
 
 
@@ -892,7 +892,7 @@ function gridTests2() {
 
   GRID.groups.forEach((g, i) => {
     let makeInCut = R.random_bool(.2)
-    makeInCut = true
+    makeInCut = false
     let inCut, dilAmount = 1
     // let inCut
     if (makeInCut) {
@@ -905,9 +905,9 @@ function gridTests2() {
     g.cutIslands({
       profile: R.random_choice([
         Profile.rOut,
-        // Profile.jIn,
-        // Profile.rIn,
-        // Profile.jOut
+        Profile.jIn,
+        Profile.rIn,
+        Profile.jOut
       ]),
       // profile: Profile.rOut,
       // isOutsetCut: false,
@@ -947,257 +947,8 @@ function gridTests2() {
         direction: inCut
       })
     }
-    // if (!inCut.isNone && dilAmount < 0.75) {
-    // g.cutIslands({
-    //   profile: Profile.rOut,
-    //   isOutsetCut: false,
-    //   layerStart: minInsetScale,
-    //   // dilationStart: R.random_num(.25, .9),
-    //   dilationStart: 1 - dilAmount / 2,
-    //   dilationEnd: 1,
-    //   amount: 1,
-    //   direction: Direction.None,
-    // })
-    // // }
-
-
-    //NOTE: layers on layers on layers
-    // if (outsetIndex === i) {
-    //   g.cutIslands({
-    //     profile: Profile.rOut,
-    //     isOutsetCut: false,
-    //     layerStart: minInsetScale,
-    //     dilationStart: 0,
-    //     dilationEnd: 7 / 8,
-    //     amount: 1,
-    //     // amount: R.random_int(2, ceil(1 / (1 - GRID.cellOutset)) + 2),
-    //     // direction: outsetIndex === i ? Direction.All : Direction.Vertical
-    //   })
-    //   g.cutIslands({
-    //     profile: Profile.jIn,
-    //     isOutsetCut: false,
-    //     layerStart: minInsetScale,
-    //     dilationStart: 7 / 8,
-    //     dilationEnd: 1,
-    //     amount: 1,
-    //     direction: Direction.Horizontal
-    //   })
-    // } else {
-    //   g.cutIslands({
-    //     profile: R.random_choice([
-    //       Profile.rOut,
-    //       Profile.jIn,
-    //       Profile.rIn,
-    //       Profile.jOut
-    //     ]),
-    //     isOutsetCut: false,
-    //     layerStart: minInsetScale,
-    //     dilationStart: 0,
-    //     dilationEnd: .5,
-    //     // amount: GRID.cellOutset < 0.5 ? R.random_int(2, ceil(1 / (1 - GRID.cellOutset))) : 1,
-    //     amount: 1,
-    //   })
-    //   g.cutIslands({
-    //     profile: R.random_choice([
-    //       Profile.rOut,
-    //       Profile.jIn,
-    //       Profile.rIn,
-    //       Profile.jOut
-    //     ]),
-    //     isOutsetCut: false,
-    //     layerStart: minInsetScale,
-    //     dilationStart: 0.5,
-    //     dilationEnd: 7 / 8,
-    //     // amount: GRID.cellOutset < 0.5 ? R.random_int(2, ceil(1 / (1 - GRID.cellOutset))) : 1,
-    //     amount: 1,
-    //   })
-    //   g.cutIslands({
-    //     profile: Profile.jIn,
-    //     isOutsetCut: false,
-    //     layerStart: minInsetScale,
-    //     dilationStart: 7 / 8,
-    //     dilationEnd: 1,
-    //     amount: 1,
-    //     direction: Direction.Vertical,
-    //   })
-    // }
 
   })
-
-  //MARK: group0
-  // group0?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex === 0,
-  //   layerStart: 64 / 64,
-  //   // layerEnd: 0 / 48,
-  //   dilationStart: 0.,
-  //   dilationEnd: 1 / 3,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  //   // addBacking: true,
-  // })
-  // group0?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex === 0,
-  //   // layerStart: min(60 / 64, minInsetScale),
-  //   layerStart: minInsetScale,
-  //   // layerEnd: 0.5,
-  //   // dilationStart: 0 / 3,
-  //   // dilationEnd: 2 / 4,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.All
-  //   // addBacking: true,
-  // })
-  // group0?.cutIslands({
-  //   profile: Profile.jIn,
-  //   isOutsetCut: outsetIndex===0,
-  //   layerStart: .25,
-  //   layerEnd: 0 / 48,
-  //   // dilationStart: 3 / 4,
-  //   // dilationEnd: 3 / 3,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   direction: Direction.Horizontal
-  //   // addBacking: true,
-  // })
-
-  // group0?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex===0,
-  //   layerStart: -8 / 64 - globalOutset,
-  //   layerEnd: -16 / 64 - globalOutset,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   direction: Direction.None
-  //   // addBacking: true,
-  // })
-
-
-  //MARK: group1
-  // group1?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex === 1,
-  //   layerStart: minInsetScale,
-  //   // layerEnd: .6,
-  //   // dilationStart: 0,
-  //   // dilationEnd: 1 / 2,
-  //   amount: 1,
-  //   // loftScale: 8 / 8,
-  //   // direction: Direction.Vertical,
-  //   // addBacking: true,
-  // })
-  // group1?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex === 1,
-  //   // layerStart: minInsetScale,
-  //   // layerStart: .6,
-  //   // layerEnd: 0.2,
-  //   dilationStart: 1 / 2,
-  //   dilationEnd: 1,
-  //   amount: 1,
-  //   // loftScale: 8 / 8,
-  //   // direction: Direction.Horizontal,
-  //   // addBacking: true,
-  // })
-  // group1?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex===1,
-  //   layerStart: minInsetScale,
-  //   // layerEnd: 24 / 48,
-  //   dilationStart: 0.75,
-  //   dilationEnd: 1,
-  //   amount: 1,
-  //   loftScale: 8 / 8,
-  //   // direction: Direction.None,
-  //   // addBacking: true,
-  // })
-
-  //MARK: group2
-  // group2?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex === 2,
-  //   // layerStart: ,
-  //   layerStart: minInsetScale,
-  //   // layerEnd: 0 / 20,
-  //   // dilationStart: 0 / 3,
-  //   // dilationEnd: 1 / 3,
-  //   amount: 1,
-  //   // loftScale: 2,
-  //   // direction: Direction.Horizontal
-  //   // addBacking: true,
-  // })
-  // group2?.cutIslands({
-  //   profile: Profile.rOut,
-  //   // isOutsetCut: outsetIndex===2,
-  //   layerStart: minInsetScale,
-  //   // layerEnd: 0 / 20,
-  //   dilationStart: 1 / 3,
-  //   dilationEnd: 5 / 6,
-  //   amount: 1,
-  //   loftScale: 1,
-  //   // direction: Direction.None
-  //   // addBacking: true,
-  // })
-  // group2?.cutIslands({
-  //   profile: Profile.jIn,
-  //   // isOutsetCut: outsetIndex===2,
-  //   layerStart: minInsetScale,
-  //   // layerEnd: 0 / 20,
-  //   dilationStart: 5 / 6,
-  //   dilationEnd: 3 / 3,
-  //   amount: 1,
-  //   loftScale: 1,
-  //   direction: Direction.Vertical
-  //   // addBacking: true,
-  // })
-
-  //MARK: group3
-  // group3?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex === 3,
-  //   // layerStart: min(60 / 64, minInsetScale),
-  //   layerStart: minInsetScale,
-  //   // layerEnd: 0.,
-  //   amount: 1,
-  //   loftScale: 1,
-  //   // direction: Direction.Horizontal
-  //   // addBacking: true,
-  // })
-  // group3?.cutIslands({
-  //   profile: Profile.rOut,
-  //   // isOutsetCut: outsetIndex===3,
-  //   layerStart: 40 / 64,
-  //   // layerEnd: 16 / 64,
-  //   amount: 1,
-  //   loftScale: 1,
-  //   // direction: Direction.None
-  //   // addBacking: true,
-  // })
-
-  //MARK: group4
-  // group4?.cutIslands({
-  //   profile: Profile.rOut,
-  //   isOutsetCut: outsetIndex === 4,
-  //   layerStart: 1,
-  //   // layerStart: minInsetScale,
-  //   // layerEnd: 16 / 64,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   // direction: Direction.Vertical
-  // })
-  // group4?.cutIslands({
-  //   profile: Profile.jIn,
-  //   // isOutsetCut: outsetIndex===4,
-  //   layerStart: 24 / 64,
-  //   // layerStart: minInsetScale,
-  //   // layerEnd: -8 / 64,
-  //   amount: 1,
-  //   loftScale: 1 / 1,
-  //   direction: Direction.Horizontal
-  // })
-
 
   // DeBug.log(`takenCells`, GRID.takenCells.map(c => c.index))
   DeBug.groupEnd()
@@ -1260,24 +1011,13 @@ function gridTests2() {
 // MARK: DRAWING FUNCS
 // FUNC: startAnimationLoop()
 function startAnimationLoop() {
-  let previousTime = 0
-  let desiredFrameRate = frameRate // The frame rate you wish to achieve
-  let frameDuration = 1000 / desiredFrameRate
-  console.log(`animationController`, animationController)
-  console.log(`globalControls`, globalControls)
-
-  // ARROW: animate()
-  function animate(currentTime) {
-    if (globalControls.animated) {
-      if (currentTime - previousTime >= frameDuration) {
-        animationController.globalAnimation() // Call global animation logic
-        previousTime = currentTime
-      }
-      requestAnimationFrame(animate) // Request the next frame
-    }
+  if (globalControls.animated) {
+    // Don't start if already running
+    return
   }
 
-  requestAnimationFrame(animate) // Start the animation loop
+  globalControls.animated = true
+  animationController.globalAnimation()
 }
 
 // FUNC: stopAnimationLoop()
@@ -1285,6 +1025,15 @@ function stopAnimationLoop() {
   globalControls.animated = false
 }
 
+// // FUNC: shadeAnimation()
+function shadeAnimation() {
+  if (globalControls.animated) {
+    stopAnimationLoop()
+  } else {
+    // globalControls.animated = true
+    startAnimationLoop()
+  }
+}
 
 // FUNC: drawObjects()
 function drawObjects() {
