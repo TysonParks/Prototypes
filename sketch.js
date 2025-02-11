@@ -648,9 +648,9 @@ function gridTests2() {
     //NOTE: Snake
     group0 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
 
-    group1 = GRID.snake({ direction: Direction.Cardinal })
+    group1 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(1).andAdjacents, newGroup: false, amount: 1 })
-    // group2 = GRID.snake({ direction: Direction.Ordinal })
+    group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
     // group3 = GRID.snake()
     // group0 = GRID.groupFromIndices([0, 2, 10, 13, 16, 24, 26])
 
@@ -733,7 +733,7 @@ function gridTests2() {
 
     DeBug.log(GRID)
 
-    group2 = GRID.outlineGroup({
+    group3 = GRID.outlineGroup({
       groupID: GRID.lastGroup?.id,
       direction: Direction.All,
       direction: grp1Dir,
