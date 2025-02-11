@@ -658,10 +658,12 @@ class Frame extends ProtoLayer {
       .viewBox(-5, -10, 110, 220)
       .attribute('width', `${frameSize.x}`)
       .attribute('height', `${frameSize.y}`)
+    // .style('pointer-events', 'none')
 
     this.bleedRect = createSVGElt('rect').id(`${this.id}-bleedRect`)
       .parent(this.bleed)
       .layout(-15, -10, 130, 220)
+    // .style('pointer-events', 'none')
 
     super.assignElement()
 
@@ -675,6 +677,7 @@ class Frame extends ProtoLayer {
         .parent(this.bleed)
         .addToClassList(this.id)
         .layout(this.anchor, this.size)
+      // .style('pointer-events', 'none')
     }
 
   }
@@ -3102,7 +3105,7 @@ class Shape extends ProtoLayer {
   // get canCurveMore() { return this.allSimpleSegs.some(s => s.canCurveMore) }                             //UNUSED:
   // get segsThatCanCurveMore() { return this.allSimpleSegs.filter(s => s.canCurveMore) }                   //UNUSED:
   get hasSingleWidth() { return this.cells.some(c => c.hasOppositeCardinalGroupNeighbors) }
-  get hasOrdinalConnections() { return !this.island.ordinalConnections.isEmpty }
+  get hasOrdinalConnections() { return this.island.hasOrdinalConnections }
   get hasOffsetConnections() { return this.island.hasOffsetConnections }
 
   get minCornerRadius() { return min(this.allSimpleSegs.map(s => s.arcRadius)) }
