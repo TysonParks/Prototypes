@@ -47,7 +47,6 @@ class SVG {
 //FUNC: addElement(elt, pInst, media) allows for the creation of p5.Elements without using instance mode
 function addElement(elt, pInst, media) {
   const node = pInst._userNode ? pInst._userNode : document.body
-  // console.log(`addElement node:`, node)
   node.appendChild(elt)
   const c = media
     ? new p5.MediaElement(elt, pInst)
