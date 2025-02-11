@@ -37,7 +37,6 @@ class FeatureSet {
 
   modifierStyle           // TODO: DEPRECATE
   symmetryStyle           // TODO: DEPRECATE
-  pyramidal               // TODO: DEPRECATE
 
   // underlying storage (could be private?)
   r
@@ -120,7 +119,6 @@ class FeatureSet {
     this.secondarySeed = this.enums.secondarySeed.feature(r)
     this.modifierStyle = this.enums.modifierStyle.feature(r)
 
-    this.pyramidal = this.enums.pyramidal.feature(r) === 'True'
     // shape dependencies
     this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
 
@@ -150,7 +148,6 @@ class FeatureSet {
     // }
 
     if (x < 4) {
-      this.enums.pyramidal.replaceOptions([['True', 0.5], ['False', 0.5]])
       // this.enums.primarySeed.reduceOptions(['Noise', 'Thin Random Comb']) // not enough cells to support other styles
       // this.enums.symmetryStyle.replaceOptions([['None', 1.2]])
     }
@@ -161,7 +158,6 @@ class FeatureSet {
 
       this.enums.density.replaceOptions([['So Lonely', 0.2], ['Some Availability', 0.4], ['At Capacity', 0.4],])
       // this.enums.insetRatio.removeOptions(['3:2', '2:1'])
-      this.enums.pyramidal.replaceOptions([['True', 0.2], ['False', 0.8]])
       // this.enums.symmetryStyle.replaceOptions([['None', 0.4], ['Quadrant Reflection', .1], ['Quadrant Rotation', .1]])
     }
     return x
@@ -243,20 +239,28 @@ class FeatureSet {
   // #region Group Methods
   //METH:
   #calcGroupCounts(r) {
+    const x = this.x
     let adds = 0
     let subs = 0
     const types = this.cutDirections
-    let extra = this.enums.extraGroups.feature(r)
 
-    if (types.includes('Additive')) { adds = 1 }
-    if (types.includes('Subtractive')) {
+
+    if (types.includes('Additive')) { adds = 1 }          // if Additive is present, set adds to 1
+    if (types.includes('Subtractive')) {                  // if Subtractive is present, set subs to 1
       if (types === 'Subtractive') {
         // this.enums.insetScale.removeOptions(['Maximum'])
         // this.enums.insetRatio.replaceOptions([['1:1', 0.75]], false)
       }
       subs = 1
     }
-    if (extra !== 'None') {
+
+    if (x < 9) this.enums.extraGroups.removeOptions(['4']) // remove '4' from extraGroups
+    if (x < 7) this.enums.extraGroups.removeOptions(['3']) // remove '3' from extraGroups
+    if (x < 5) this.enums.extraGroups.removeOptions(['2']) // remove '2' from extraGroups
+    if (x < 3) this.enums.extraGroups.removeOptions(['1']) // remove '1' from extraGroups
+    let extra = this.enums.extraGroups.feature(r)
+
+    if (extra !== 'None') {                                // if extra is not 'None', add extra groups
       extra = parseInt(extra)
       if (adds && subs) {
         for (let i = 0; i < extra; i++) {
@@ -573,14 +577,6 @@ const publicOptions = {
       ['At Capacity', 0.7],
     ]
   },
-  // Public: pyramidal options
-  pyramidal: {
-    name: 'Pyramidal',
-    options: [
-      ['True', 0.3],
-      ['False', 0.7],
-    ]
-  },
   // #endregion
   // MARK: Group Dependencies
   // #region Group Dependencies
@@ -588,14 +584,14 @@ const publicOptions = {
   primarySeed: {
     name: 'Primary Seed Style',
     options: [
-      ['Noise', 0.05],                  // 15 / 300 (Total)
+      ['Noise', 0.1],                   // 30 / 300 (Total)
       ['Random Comb', 0.1],             // 30 / 300 (Total)
-      ['Rectangles', 0.15],             // 45 / 300 (Total)   // Pills
-      ['Squares', 0.2],                 // 60 / 300 (Total)   // Spheres
-      ['Simple Pattern', 0.05],         // 15 / 300 (Total)
-      ['Complex Pattern', 0.25],        // 90 / 300 (Total)
-      ['Snake', 0.1],                   // 30 / 300 (Total)
-      ['Snakes', 0.1],                  // 30 / 300 (Total)
+      ['Rectangles', 0.2],              // 60 / 300 (Total)   // Pills
+      ['Squares', 0.15],                // 45 / 300 (Total)   // Spheres
+      ['Simple Pattern', 0.1],          // 30 / 300 (Total)
+      ['Complex Pattern', 0.2],         // 60 / 300 (Total)
+      ['Snake', 0.15],                  // 45 / 300 (Total)
+      // ['Snakes', 0.1],                  // 30 / 300 (Total)
       // ['Triangles', 0.1],
     ]
   },
@@ -614,13 +610,22 @@ const publicOptions = {
     ]
   },
   // Public: style of modifier
+  modifiers: {
+    name: 'Modifiers',
+    options: [
+      ['None', 0.3],                    // 20 / 100
+      ['Some', 0.5],                    // 50 / 100
+      ['Every', 0.2],                   // 20 / 100
+    ]
+  },
+  // Public: style of modifier
   modifierStyle: {
     name: 'Modifier Style',
     options: [
       ['Inflate Single Direction', 0.2], // 20 / 100
       ['Inflate Some Directions', 0.5],  // 50 / 100
       ['Concentric', 0.2],               // 20 / 100
-      ['Concentric Thick', 0.1],         // 10 / 100
+      ['Double Concentric', 0.1],        // 10 / 100
     ]
   },
 
@@ -801,7 +806,7 @@ const publicOptions = {
       ['All', 0.05],
     ]
   },
-  // Private: (INSTANCE USE) pyramidal group count options
+  // Private: (INSTANCE USE) cascade step count options
   cascadeSteps: {
     name: 'Cascade Step Amount',
     options: [
