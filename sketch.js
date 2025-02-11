@@ -635,6 +635,9 @@ function gridTests2() {
   let group0, group1, group2, group3, group4
   //                                                                    //NOTE: 8. Calculate Each Group (Populate Cells) 
   DeBug.groupCollapsed(`Populate Groups`)
+
+
+
   // DeBug.group(`Populate Groups`)
   // DeBug.group(`Populate Groups`)
   if (GRID.cellCount === 1) {
@@ -645,7 +648,7 @@ function gridTests2() {
     //NOTE: Snake
     group0 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
 
-    // group1 = GRID.snake({ direction: Direction.Cardinal })
+    group1 = GRID.snake({ direction: Direction.Cardinal })
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(1).andAdjacents, newGroup: false, amount: 1 })
     // group2 = GRID.snake({ direction: Direction.Ordinal })
     // group3 = GRID.snake()
@@ -705,7 +708,7 @@ function gridTests2() {
     // group1 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', mode: 1 })
 
     //NOTE: Noise
-    group1 = GRID.randGroup({ amount: initialCoverage })
+    // group1 = GRID.randGroup({ amount: initialCoverage })
 
     // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .5 })
     // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .5 })
@@ -978,7 +981,7 @@ function gridTests2() {
   // GRID.showCellsDebug()
   // GRID.showShapesDebug()
   // GRID.showShapeGroupsDebug(false)
-  GRID.showFrameRate(animationController)
+  // GRID.showFrameRate(animationController)
 
   // globalAnimation()
   // GRID.maxCuddle()
