@@ -261,10 +261,10 @@ class ProtoLayer {
   //METH: setFilterLoft()
   setFilterLoft(loft) { this._filterLoft = loft }
   //METH: updateDisplay()
-  updateDisplay() {
-    this.drawElement()
-    this.showDeBug()
-  }
+  // updateDisplay() {
+  //   this.drawElement()
+  //   this.showDeBug()
+  // }
   // #endregion
   // MARK: Setup Methods
   // #region 
@@ -684,17 +684,8 @@ class Frame extends ProtoLayer {
 
   //METH: drawElement()
   drawElement() {
-    this.bleed
-    // .attribute('fill', '#e24')
-    // .attribute('width', `${frameSize.x}`)
-    // .attribute('height', `${frameSize.y}`)
-
-    this.bleedRect
-    // .attribute('fill', frameColor)
-    // .attribute('fill', '#e24')
-    // .attribute('fill', 'black')
-    // .attribute(`fill`, `white`)
-
+    // this.bleed
+    // this.bleedRect
 
     super.drawElement()
 
@@ -1658,16 +1649,6 @@ class CellGroup extends ProtoLayer {
 
   drawElement() {
     super.drawElement()
-    if (this.drawRect) {
-      this.rect
-        // .attribute('fill', protoColor(0, 127))
-        .attribute('fill-opacity', 0)
-        .attribute('stroke', 'black')
-        .attribute('stroke-width', `.125`)
-        .attribute('rx', 2)
-        .attribute('ry', 2)
-        .attribute('stroke-dasharray', `.25 1`)
-    }
     if (this.drawSVG) {
       this.svgElt
         .viewBox(this.anchor, this.size, this.padding)
