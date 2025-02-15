@@ -1799,10 +1799,17 @@ class Grid extends ProtoLayer {
 
   }
   //METH:
-  squares({ coverage, direction = Direction.DownRight, minSize = 1, uniform = false, overlapping = true, rect = false, mode = 0 } = {}) {
+  squares({
+    coverage,
+    direction = Direction.DownRight,
+    minSize = 1,
+    uniform = false,
+    overlapping = 0,        // 0: never, 1: always, 2: sometimes     
+    rectMode = 0            // 0: none, 1: someVert, 2: allVert, 3: someHor, 4: allHor, 5: someMixed, 6: allMixed
+  } = {}) {
     // DeBug.groupCollapsed(`Squares`)
     let maxSize // allowable max square based on 'Square and Rect Generation' study
-    if (mode > 0) {
+    if (rectMode > 0) {
       coverage *= 1.5
       minSize = minSize + 1
     }
@@ -1842,9 +1849,8 @@ class Grid extends ProtoLayer {
       // DeBug.log('inlineSelection', inlineSelection.map(e => e.id))
       const padding = this.tempOutlineSelection(selection)
       inlineSelection = inlineSelection.union(selection, 'id')
-      if (overlapping !== 'always') {
-        inlineSelection = inlineSelection.union(padding, 'id')
-      }
+      if (overlapping !== 1) inlineSelection = inlineSelection.union(padding, 'id')
+
       // DeBug.log('inlineSelection', inlineSelection.map(e => e.id))
       let shrunkSelection = availables.exclude(inlineSelection, 'id') //shrunk selection by excluding inline
       // DeBug.log('shrunkSelection', shrunkSelection.map(e => e.id))
@@ -1862,17 +1868,17 @@ class Grid extends ProtoLayer {
           const outline = this.tempOutlineSelection(cell, size - 1, direction.andAdjacents) //create square outline
           square = cell.copy.union(outline, 'id') //union cell with outline to create square
           // DeBug.log(`square`, square)
-          if (mode > 0) {
+          if (rectMode > 0) {
             // 0. none, 1. someVert, 2. allVert, 3. someHor, 4. allHor, 
             // 5. someMixed, 6. allMixed, 
             // TODO: 7.someTriangle, 8. allTriangle
-            const useRect = mode % 2 === 0 ? true : R.random_bool(0.5)            // all=>true, some =>random
+            const useRect = rectMode % 2 === 0 ? true : R.random_bool(0.5)            // all=>true, some =>random
             if (useRect) {
               let dir                                                             // choose inline direction
-              if (mode < 3) { dir = Direction.Horizontal.random() }               // vert uses hor
-              if (mode > 2 && mode < 5) { dir = Direction.Vertical.random() }     // hor uses vert
-              if (mode > 4 && mode < 7) { dir = Direction.Cardinal.random() }     // rand cardinal
-              // if (mode > 6) { dir = Direction.Ordinal.random() }                  // triangle
+              if (rectMode < 3) { dir = Direction.Horizontal.random() }               // vert uses hor
+              if (rectMode > 2 && rectMode < 5) { dir = Direction.Vertical.random() }     // hor uses vert
+              if (rectMode > 4 && rectMode < 7) { dir = Direction.Cardinal.random() }     // rand cardinal
+              // if (rectMode > 6) { dir = Direction.Ordinal.random() }                  // triangle
               const inlineAmount = min(R.random_int(1, ceil(size - 1)), size - minSize + 1)
               const inlined = this.inline(square, inlineAmount, dir)
               // DeBug.log(`inlined`, inlined)
@@ -1887,13 +1893,13 @@ class Grid extends ProtoLayer {
           // DeBug.log('padding length', padding.length)
           // DeBug.log('square overlaps', overlaps)
           switch (overlapping) {
-            case 'always':
-              isValid = padding.length > 0 ? overlaps : true
-              break
-            case 'never':
+            case 0:                                             // 0: never    
               isValid = !overlaps
               break
-            default:
+            case 1:                                             // 1: always  
+              isValid = padding.length > 0 ? overlaps : true
+              break
+            default:                                            // 2: sometimes
               isValid = true
           }
           // DeBug.log('square is valid', isValid)
@@ -1921,14 +1927,14 @@ class Grid extends ProtoLayer {
   //METH:
   snake({
     selection = this.availableCells,
-    groupID,
-    islandID,
-    direction = Direction.All,
+    direction = Direction.Cardinal,
     cornerStart = false,
-    turns = 6,
+    turns = 12,
     size = 1,
-    newGroup = true,
-    coverage,
+    coverage = 0.3,
+    // groupID,
+    // islandID,
+    // newGroup = true,
   } = {}) {
     // DeBug.groupCollapsed(`new snake`)
     if (selection.isEmpty) {
@@ -2337,58 +2343,66 @@ class Grid extends ProtoLayer {
   // MARK: Grid Grammar Enum Methods
   // #region Grammar Enum Methods
   //METH:
-  useSeed(named, coverage, selection = this.availableCells) {
+  seed(named, coverage = 0.3, selection = this.availableCells) {
     const target = round(coverage * this.cellCount)
     const fillsColumn = target >= this.rowCount
     const fillsRow = target >= this.rowCount
-    const range = vert(round(target * 0.5), round(target * 1.5))
-    const divisors = primeDivisors(this.cellCount)
+    // const range = vert(round(target * 0.5), round(target * 1.5))
+    // const divisors = primeDivisors(this.cellCount)
     const maxWidth = this.columnCount - 1
 
     switch (named) {
       case 'Noise':
-        this.randGroup(coverage)
+        this.randGroup({ amount: coverage })
         break
-      case 'Thick Random Comb':
+      case 'Random Comb':
         this.randomComb({
-          selection: this.randTransCells(),
+          selection: this.cellRows
+            .rotated2D(R.random_int(0, 3) * 90)
+            .flipped2D(Direction.Cardinal.random(1).andOpposites)
+            .flat()
+            .intersect(selection, `id`),
           keepRange: range(2, ceil(this.rowCount * coverage)),
           dropRange: range(1, this.rowCount),
           start: R.random_int(0, this.cellCount - 1)
         })
         break
-      case 'Thin Random Comb':
-        this.randomComb({
-          selection: this.randTransCells(),
-          keepRange: range(1, floor(this.columnCount)),
-          dropRange: range(2, this.columnCount / coverage),
+      case 'Squares':
+        this.squares({ coverage: coverage })
+        break
+      case 'Rectangles':
+        this.squares({ coverage: coverage, rectMode: R.random_choice([2, 4, 6]) })
+        break
+      case 'Squares and Rectangles':
+        this.squares({ coverage: coverage, rectMode: R.random_choice([1, 3, 5]) })
+        break
+      case 'Simple Pattern':
+        this.comb({
+          selection: GRID.cellRows
+            .rotated2D(R.random_int(0, 3) * 90)
+            .flipped2D(Direction.Cardinal.random(1).andOpposites)
+            .flat()
+            .intersect(selection, `id`),
+          keep: R.random_int(1, 3), drop: R.random_int(12, 16),
           start: R.random_int(0, this.cellCount - 1)
         })
         break
-      case 'Rectangles':
-
-
-        break
-      case 'Squares':
-
-        break
-      case 'Vertical Pattern':
-        const keep = R.random_num(1, this.columnCount)
-        const dropBase = this.columnCount - keep
-
-        this.comb({
-          keep: keep,
-          drop: dropBase,
-          start: R.random_num(0, this.cellCount / 2 - 1)
+      case 'Complex Pattern':
+        this.comb2({
+          selection: GRID.cellRows
+            .rotated2D(R.random_int(0, 3) * 90)
+            .flipped2D(Direction.Cardinal.random(1).andOpposites)
+            .flat()
+            .intersect(selection, `id`),
+          dashArray: OpArray.randomIntArray(R.random_int(3, 12), range(1, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
         })
-        break
-      case 'Horizontal Pattern':
-
         break
       case 'Ordinal Pattern':
 
         break
       case 'Snake':
+        this.snake({ coverage: coverage, selection: selection })
+        break
 
     }
   }
@@ -2500,13 +2514,6 @@ class Grid extends ProtoLayer {
           .addToClassList(this.svgParent.elt.classList.value)
       })
     }
-    // else {
-    //   this.backElt = this.frontGrid.backElt
-    //   this.comboElt = this.frontGrid.comboElt
-    //   this.highElt = this.frontGrid.highElt
-    //   this.shadElt = this.frontGrid.shadElt
-    //   this.shaderElts = this.frontGrid.shaderElts
-    // }
   }
   //METH: drawElement() override
   drawElement() {
@@ -2528,13 +2535,11 @@ class Grid extends ProtoLayer {
 
       this.comboElt
         // .attribute(`display`, `none`)
-        // .style(`visibility`, `hidden`)
         .attribute(`opacity`, 1)
       // .attribute(`fill`, `red`)
 
       this.highElt
         // .attribute(`display`, `none`)
-        // .style(`visibility`, `hidden`)
         .attribute(`opacity`, 1)
       this.shadElt
         // .attribute(`display`, `none`)
