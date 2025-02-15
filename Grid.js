@@ -2397,9 +2397,6 @@ class Grid extends ProtoLayer {
           dashArray: OpArray.randomIntArray(R.random_int(3, 12), range(1, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
         })
         break
-      case 'Ordinal Pattern':
-
-        break
       case 'Snake':
         this.snake({ coverage: coverage, selection: selection })
         break
