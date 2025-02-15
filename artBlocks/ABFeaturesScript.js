@@ -24,18 +24,8 @@
 // FUNC: calculateFeatures
 // SIZE: 832 lines
 function calculateFeatures(token = tokenData) {
-  let featureSet
 
-  function calcFeatures() {
-
-  }
-
-  function calculateAll() {
-    featureSet = new FeatureSet(R)
-    if (FTS) { FTS = featureSet }
-    calcFeatures()
-    return
-  }
+  function calculateAll() { return new FeatureSet(R) }
 
   //TODO: Paste in final FeatureSet class before submission!!!
   // class FeatureSet {
