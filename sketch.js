@@ -19,15 +19,15 @@ let backgroundColor, frameColor, accentColor, acHiCol, acShCol
 let bgCol, acCol, hiCol, shCol
 
 //Variables
-let TestMode, frameSize
-let FTS = {}// Feature Set
-let BG, FRAME, BGRID, GRID // Background, Frame, Background Grid, Grid
+let frameSize
+// let FTS                     // Feature Set
+let BG, FRAME, BGRID, GRID  // Background, Frame, Background Grid, Grid
 let ROT, frameRate
-let R, S, RuID // Random, Store, Random UID
+let R, S, RuID              // Random, Store, Random UID
 let animationController
 
 //Graphics constants
-const expSeries = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+// const expSeries = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 
 // MARK: setup
 // FUNC: setup()
@@ -42,10 +42,10 @@ function setup() {
   setupBackground()
   // DeBug.groupCollapsed(`setupFeatures`)
   DeBug.group(`setupFeatures`)
-  setupFeatures()
+  const features = setupFeatures()
   DeBug.log('random R useage', R.useage)
   DeBug.groupEnd()
-  gridTests2()
+  gridTests2(features)
 
   // areciboMonolith()
   // const mill = new ProtoMill()
@@ -84,7 +84,6 @@ function setupPrefs() {
   R = new Random()
   S = new Store()
   RuID = new Random()
-  TestMode = true
   frameRate = 12
   ROT = 10 * PI
   animationController = new AnimationController(frameRate)
@@ -92,9 +91,10 @@ function setupPrefs() {
 
 // FUNC: setupFeatures()
 function setupFeatures() {
-  calculateFeatures(tokenData)
-  DeBug.log('FTS: FeatureSet', FTS)
-  DeBug.log('groups', FTS.groups)
+  const features = calculateFeatures(tokenData)
+  DeBug.log('FeatureSet', features)
+  DeBug.log('groups', features.groups)
+  return features
 }
 
 // FUNC: setupColors()
@@ -117,16 +117,16 @@ function setupColors() {
 function setupBackground() {
   BG = createDiv().id('BG')
     .size(windowWidth, windowHeight)
-    .look(Look.centeredFlex(backgroundColor, 'column'))
+    .look(Look.centeredFlex(backgroundColor, 'column'))      // FIXME: deprecating Look, assign CSS styling directly
   FRAME = new Frame(BG)
 }
 
 //CLASS: ProtoMill
 // SIZE: 134 lines
 class ProtoMill {
+  F                     // Features
   grid
   minCellSize
-  baseShader
   shaders
   groups
 
@@ -134,7 +134,9 @@ class ProtoMill {
   gridRatio
   gridInsetScale
 
-  constructor() { }
+  constructor(features) {
+    this.F = features
+  }
   //METH: 
   mkProtoType() {
     DeBug.log(':::PROTOMILL RUNNING:::')
@@ -149,23 +151,23 @@ class ProtoMill {
   mkGrid() {
     //TODO: Tidy up path from setting inset multiplier to setting Frame style / cut size
     //TODO: Make Frame style feature that includes "thick", "thin" ???
-    const isFlexiblestyle = FTS.gridStyle === `Flexible`
-    const x = FTS.x
+    const isFlexiblestyle = this.F.gridStyle === `Flexible`
+    const x = this.F.x
     // x = 7
-    const y = FTS.y
+    const y = this.F.y
     const gridYMult = y / x
     let gridRatio, ratio
     // globalOutset = 0.
-    // globalOutset = FTS.enums.cellOutset.value
-    const cellOutset = FTS.enums.cellOutset.value
+    // globalOutset = this.F.enums.cellOutset.value
+    const cellOutset = this.F.enums.cellOutset.value
     let gridInsetTarget = 0.9
 
     //ARROW: calcFrameWidth() : 
     const calcFrameWidth = () => {
       // DeBug.log(`frameWidth`,)
       const widths = () => {
-        DeBug.log(`frameWidth:`, FTS.frameWidth)
-        switch (FTS.frameWidth) {
+        DeBug.log(`frameWidth:`, this.F.frameWidth)
+        switch (this.F.frameWidth) {
           case `Minimum`:
             return [40]
           case `Small`:
@@ -267,7 +269,7 @@ class ProtoMill {
       protoParent: FRAME,
       gridSize: vert(x, y),
       insetScale: this.gridInsetScale,
-      gridStyle: FTS.gridStyle,
+      gridStyle: this.F.gridStyle,
       cellOutset: cellOutset
     })
     GRID = this.grid
@@ -278,9 +280,9 @@ class ProtoMill {
     // const minInsetAmount = 1 / GRID.minCellWidth
     const minInsetAmount = 1 / GRID.minCellWidth
     this.minInsetScale = 1 - minInsetAmount
-    // const maxGlobalOutset = FTS.gridStyle === `Flexible` ? globalOutset : min(this.minInsetScale - minInsetAmount, max(GRID.minCellWidth - 5, 0))
+    // const maxGlobalOutset = this.F.gridStyle === `Flexible` ? globalOutset : min(this.minInsetScale - minInsetAmount, max(GRID.minCellWidth - 5, 0))
     DeBug.log(`cellOutset`, cellOutset)
-    const maxCellOutset = FTS.gridStyle === `Flexible` ? cellOutset : min(this.minInsetScale - minInsetAmount, max(GRID.minCellWidth - 5, 0))
+    const maxCellOutset = this.F.gridStyle === `Flexible` ? cellOutset : min(this.minInsetScale - minInsetAmount, max(GRID.minCellWidth - 5, 0))
 
     DeBug.log(`maxCellOutset`, maxCellOutset)
     // cellOutset = min(cellOutset, maxCellOutset)
@@ -307,9 +309,9 @@ class ProtoMill {
 
 
 
-    DeBug.warn(`FeatureSet`, FTS)
-    DeBug.log(`frameWidth:`, FTS.frameWidth)
-    const widthVal = FTS.enums.frameWidth.value
+    DeBug.warn(`FeatureSet`, this.F)
+    DeBug.log(`frameWidth:`, this.F.frameWidth)
+    const widthVal = this.F.enums.frameWidth.value
 
     //ARROW: randInset
     const randInset = (minDenom = 3, maxDenom = widthVal * 4) => {
@@ -320,17 +322,17 @@ class ProtoMill {
     }
 
     // profiles
-    let profiles = new OpArray(+FTS.frameDivs).fill(0)      // create array from frameDivs amount
+    let profiles = new OpArray(+this.F.frameDivs).fill(0)      // create array from frameDivs amount
       .map((u, i, a) => {
-        if (i === a.lastIndex) { FTS.enums.frameProfiles.removeOptions([`iIn`, `iOut`, `Flat`]) }
-        return FTS.enums.frameProfiles.feature(R)
+        if (i === a.lastIndex) { this.F.enums.frameProfiles.removeOptions([`iIn`, `iOut`, `Flat`]) }
+        return this.F.enums.frameProfiles.feature(R)
       })         // randomly populate with Profiles from frameProfiles
     DeBug.log(`profiles:`, profiles)
     const profCount = profiles.length
     DeBug.log(`profCount:`, profCount)
 
     //spacing
-    let spacing = FTS.enums.frameSpacing.value              // get frameSpacing value
+    let spacing = this.F.enums.frameSpacing.value              // get frameSpacing value
     DeBug.log(`spacing initial:`, spacing)
     if (spacing === 1 || spacing < profCount) {             // if spacing = 'Whole' then use frameDivs amount
       spacing = profCount
@@ -379,12 +381,12 @@ class ProtoMill {
     DeBug.log(`spaces after:`, spaces)
 
     //cascades
-    const cascadeCount = FTS.enums.frameCascades.value          // get frameCascades value
+    const cascadeCount = this.F.enums.frameCascades.value                 // get frameCascades value
     let cascades
-    if (cascadeCount > 0) {                                     // create cascades [[index,amount]]
-      cascades = range(0, profCount - 1).array()                // create index array from profiles
-        .randReduce(cascadeCount / profCount)                   // randomly reduce to cascadeCount amount
-        .map(e => [e, R.random_int(2, floor(3 * widthVal / profCount))])                      // randomly add stairCounts
+    if (cascadeCount > 0) {                                               // create cascades [[index,amount]]
+      cascades = range(0, profCount - 1).array()                          // create index array from profiles
+        .randReduce(cascadeCount / profCount)                             // randomly reduce to cascadeCount amount
+        .map(e => [e, R.random_int(2, floor(3 * widthVal / profCount))])  // randomly add stairCounts
     }
 
     DeBug.log(`cascadeCount:`, cascadeCount)
@@ -526,56 +528,48 @@ class ProtoMill {
 
   //METH:
   mkGroups() {
-    // #groups
-    const coverage = roundToDec(1 / FTS.weight)
-    DeBug.log('density:', FTS.density)
-    DeBug.log('total weight:', FTS.weight)
-    DeBug.log('groupWeight:', FTS.groupWeight)
-    DeBug.log('emptyWeight:', FTS.emptyWeight)
-    DeBug.log('coverage:', coverage)
+    DeBug.log('density:', this.F.density)
+    DeBug.log('total weight:', this.F.weight)
+    DeBug.log('groupWeight:', this.F.groupWeight)
+    DeBug.log('emptyWeight:', this.F.emptyWeight)
 
-    let count = FTS.groupWeight
+    let count = this.F.groupWeight
     let full = true
-    let emptyCvrg = 0
-    if (FTS.density !== 'At Capacity') {
-      count = max(2, FTS.groupWeight * 2 - 1)
-      full = false
-      emptyCvrg = roundToDec(FTS.emptyWeight / FTS.weight * (1 / max(1, (FTS.groupWeight - 1))))
-    }
-    let cvrg = { empty: emptyCvrg, layer: coverage, total: 0 }
-    DeBug.log('emptyCvrg', emptyCvrg)
-    DeBug.log('count', count)
-    DeBug.log('full', full)
+    if (count < this.F.weight) full = false
+    console.log('count', count)
+    console.log('full', full)
+    console.log('')
+
     let groups = []
     for (let i = 1; i <= count; i++) {
-      const group = this.mkGroup(i, count, full, cvrg)
-      DeBug.log('group', i, group)
+      const group = this.mkGroup(i, count, full)
+      // DeBug.log('group', i, group)
       groups.push(group)
     }
     this.groups = groups
   }
   //METH:
-  mkGroup(i, count, full, cvrg) {
-    let methods
-    let coverage = cvrg.layer
+  mkGroup(i, count, full) {
+    const emptyGroup = { type: 'empty', style: 'empty', loft: 0, method: 'empty' }
+    const group = this.F.groups[i - 1] || emptyGroup
+    // DeBug.log('groupWeight', this.F.groupWeight)
+    // DeBug.log('groups', this.F.groups)
+    // DeBug.log('count', count)
+    let method = 'empty'
+    if (i === 1) method = this.F.seed1
+    if (i === 2 && count > 2) {
+      method = this.F.seed2 === 'Modifier' ? this.F.enums.modifierStyle.feature(R) : this.F.seed2
+    }
     if (i === count) {
-      methods = ['groupAvail', FTS.modifierStyle]
-      coverage = roundToDec((1 - cvrg.total))
+      if (this.F.density === 'At Capacity') method = 'groupAvail'
     }
-    if (1 < i && i < count) {
-      if (!full && i % 2 === 0) {
-        methods = ['empty', FTS.modifierStyle]
-        coverage = cvrg.empty
-      } else { methods = FTS.modifierStyle }
-    }
-    if (i === 1) { methods = [FTS.seedStyle] }
-    cvrg.total += coverage
+    else if (i > 2 && i <= count) method = this.F.enums.modifierStyle.feature(R)
 
-    return { methods: methods, coverage: coverage }
+    return { type: group.type, style: group.style, loft: group.loft, method: method }
   }
   //METH:
   mkShaders() {
-    let shaders = FTS.groups.map(l => {
+    let shaders = this.F.groups.map(l => {
       //TODO: INSET MIGRATION: test this
       const insetAmount = 2 * (1 - l.inset)
       //TODO: INSET MIGRATION: test this
@@ -616,9 +610,9 @@ class ProtoMill {
 
 // MARK: Testing Functions
 // FUNC: gridTests2()
-function gridTests2() {
+function gridTests2(features) {
   DeBug.groupCollapsed(`mkGrid()`)
-  const mill = new ProtoMill()
+  const mill = new ProtoMill(features)
   mill.mkGrid()
   const minInsetScale = mill.minInsetScale
   DeBug.groupEnd()
@@ -646,28 +640,49 @@ function gridTests2() {
     const initialCoverage = 0.3
 
     //NOTE: Snake
-    group0 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
 
-    group1 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
+    // GRID.seed(`Noise`)
+    // GRID.seed(`Random Comb`)
+    // GRID.seed(`Squares`)
+    // GRID.seed(`Rectangles`)
+    // GRID.seed('Squares and Rectangles')
+    // GRID.seed(`Simple Pattern`)
+    // GRID.seed(`Complex Pattern`)
+    // GRID.seed(`Snake`)
+
+    // GRID.seed(`Random Comb`)
+    GRID.seed(`Snake`)
+    // GRID.seed(`Complex Pattern`)
+    // GRID.seed(`Snake`)
+    // GRID.seed(`Snake`)
+    // GRID.seed(`Snake`)
+    // GRID.seed(`Snake`)
+
+
+    GRID.groupAvail()
+
+    // group0 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
+
+    // group1 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.All.random(1).andAdjacents, newGroup: false, amount: 1 })
-    group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
-    // group3 = GRID.snake()
+    // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
+    // group3 = GRID.snake({ direction: Direction.Cardinal, cornerStart: false, size: 1, turns: 12, coverage: .3 })
     // group0 = GRID.groupFromIndices([0, 2, 10, 13, 16, 24, 26])
 
     //NOTE: Random Comb
     // group0 = GRID.randomComb({
-    //   selection: (GRID.cellRows
+    //   selection: GRID.cellRows
     //     // .rotated2D(90)
     //     .rotated2D(R.random_int(0, 3) * 90)
     //     .flipped2D(Direction.Cardinal.random(1).andOpposites)
     //     .flat()
-    //     .intersect(GRID.availableCells, `id`)),
-    //   keepRange: range(1, round(FTS.x / .5)),
-    //   dropRange: range(round(FTS.x * .5), FTS.x * 2),
+    //     .intersect(GRID.availableCells, `id`),
+    //   keepRange: range(1, round(features.x / .5)),
+    //   dropRange: range(round(features.x * .5), features.x * 2),
     //   start: 0
     // })
 
-    // group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never', mode: 6 })
+    // group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 2, uniform: false, overlapping: 'never', rectMode: 6 })
     // group1 = GRID.randGroup({ amount: initialCoverage })
 
     //NOTE: Complex Pattern
@@ -691,7 +706,7 @@ function gridTests2() {
     // })
 
     //NOTE: Squares
-    // if (FTS.x < 4) {
+    // if (features.x < 4) {
     //   group0 = GRID.groupFromIndices(
     //     OpArray.randomIntArray(
     //       ceil((GRID.cellCount - 1) * initialCoverage),
@@ -700,12 +715,12 @@ function gridTests2() {
     //   )
     // } else {
 
-    //   group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh', mode: 0 })
+    //   group0 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'meh', rectMode: 0 })
 
     // }
 
     //NOTE: Rectangles
-    // group1 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', mode: 1 })
+    // group1 = GRID.squares({ coverage: initialCoverage, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', rectMode: 1 })
 
     //NOTE: Noise
     // group1 = GRID.randGroup({ amount: initialCoverage })
@@ -733,13 +748,13 @@ function gridTests2() {
 
     DeBug.log(GRID)
 
-    group3 = GRID.outlineGroup({
-      groupID: GRID.lastGroup?.id,
-      direction: Direction.All,
-      direction: grp1Dir,
-      newGroup: true,
-      amount: grp1Amount
-    })
+    // group5 = GRID.outlineGroup({
+    //   groupID: GRID.lastGroup?.id,
+    //   direction: Direction.All,
+    //   direction: grp1Dir,
+    //   newGroup: true,
+    //   amount: grp1Amount
+    // })
 
     // group2 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 2, turns: 12, coverage: .5 })
     // group3 = GRID.snake({ direction: Direction.Cardinal, cornerStart: true, size: 1, turns: 12, coverage: .5 })
@@ -772,11 +787,11 @@ function gridTests2() {
     // group5 = GRID.randGroup({ amount: 0.5 })
     // group6 = GRID.randGroup({ amount: 0.5 })
     // group3 = GRID.groupAvail()
-    // group6 = GRID.squares({ coverage: .8, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', mode: 5 })
+    // group6 = GRID.squares({ coverage: .8, direction: Direction.DownRight, minSize: 1, uniform: false, overlapping: 'never', rectMode: 5 })
 
 
     // group5 = GRID.randGroup({ amount: 0.5 })
-    group7 = GRID.groupAvail()
+    // group7 = GRID.groupAvail()
 
     // GRID.outlineGroup({ groupID: GRID.lastGroup.id, direction: Direction.UpRight.adjacents, newGroup: false, amount: 2 })
     // DeBug.log(group3)
@@ -990,11 +1005,12 @@ function gridTests2() {
   console.error(`GRID`, GRID.shapeGroups)
   console.error(`backGrid`, BGRID.shapeGroups)
   console.log('hash', tokenData.hash)
-  console.log(`Features`, FTS)
+  console.log(`Features`, features)
+  console.log(`Mill`, mill)
   console.log('all ProtoLayers', S.allLayers)
   console.log(`GRID`, GRID)
   DeBug.warn(`cellSize`, GRID.cellSize)
-  DeBug.warn(`GRID cells`, FTS.x, FTS.y)
+  DeBug.warn(`GRID cells`, features.x, features.y)
   // DeBug.warn(`GRID cells`, gridSize)
   DeBug.warn(`minInsetScale`, minInsetScale)
   // DeBug.warn(`maxGlobalOutset`, maxGlobalOutset)
@@ -1038,10 +1054,6 @@ function shadeAnimation() {
   }
 }
 
-// FUNC: drawObjects()
-function drawObjects() {
-  redrawAll()
-}
 
 // MARK: GLOBAL FUNCS
 
@@ -1049,16 +1061,8 @@ function drawObjects() {
 function windowResized() {
   sizeFrame()
   BG.size(windowWidth, windowHeight)
-  redrawAll()
 }
 
-// FUNC: redrawAll()
-function redrawAll() {
-  // print('REDRAW ALL called')
-  // BG.size(windowWidth, windowHeight)
-  S.ShapeGroups.db.forEach(sg => sg[1].updateDisplay())
-  // S.allLayers.forEach(e => e.resize())
-}
 
 // FUNC: globalShadowVector()
 function globalShadowVector() {
