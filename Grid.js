@@ -2342,63 +2342,82 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: Grid Grammar Enum Methods
   // #region Grammar Enum Methods
-  //METH:
-  seed(named, coverage = 0.3, selection = this.availableCells) {
-    const target = round(coverage * this.cellCount)
-    const fillsColumn = target >= this.rowCount
-    const fillsRow = target >= this.rowCount
-    // const range = vert(round(target * 0.5), round(target * 1.5))
-    // const divisors = primeDivisors(this.cellCount)
-    const maxWidth = this.columnCount - 1
+  randTransformedCells({ selection = this.cellRows, rotate = true, flip = true } = {}) {
+    if (rotate) selection = selection.rotated2D(R.random_int(0, 3) * 90)
+    if (flip) selection = selection.flipped2D(Direction.Cardinal.random(1).andOpposites)
+    return selection.flat()
+  }
 
-    switch (named) {
+  //METH:
+  seed(name, options) {
+    const coverage = options?.coverage || 0.3,
+      selection = options?.selection || this.availableCells
+
+    const minSize = options?.minSize || 1,
+      uniform = options?.uniform || false,
+      overlapping = options?.overlapping || 0
+
+    switch (name) {
       case 'Noise':
         this.randGroup({ amount: coverage })
         break
       case 'Random Comb':
         this.randomComb({
-          selection: this.cellRows
-            .rotated2D(R.random_int(0, 3) * 90)
-            .flipped2D(Direction.Cardinal.random(1).andOpposites)
-            .flat()
-            .intersect(selection, `id`),
+          selection: this.randTransformedCells().intersect(selection, `id`),
           keepRange: range(2, ceil(this.rowCount * coverage)),
           dropRange: range(1, this.rowCount),
           start: R.random_int(0, this.cellCount - 1)
         })
         break
       case 'Squares':
-        this.squares({ coverage: coverage })
+        this.squares({
+          coverage: coverage,
+          minSize: minSize,
+          uniform: uniform,
+          overlapping: overlapping,
+        })
         break
       case 'Rectangles':
-        this.squares({ coverage: coverage, rectMode: R.random_choice([2, 4, 6]) })
+        this.squares({
+          coverage: coverage,
+          rectMode: R.random_choice([2, 4, 6]),
+          minSize: minSize,
+          uniform: uniform,
+          overlapping: overlapping,
+        })
         break
       case 'Squares and Rectangles':
-        this.squares({ coverage: coverage, rectMode: R.random_choice([1, 3, 5]) })
+        this.squares({
+          coverage: coverage,
+          rectMode: R.random_choice([1, 3, 5]),
+          minSize: minSize,
+          uniform: uniform,
+          overlapping: overlapping,
+        })
         break
       case 'Simple Pattern':
         this.comb({
-          selection: GRID.cellRows
-            .rotated2D(R.random_int(0, 3) * 90)
-            .flipped2D(Direction.Cardinal.random(1).andOpposites)
-            .flat()
-            .intersect(selection, `id`),
+          selection: this.randTransformedCells().intersect(selection, `id`),
           keep: R.random_int(1, 3), drop: R.random_int(12, 16),
           start: R.random_int(0, this.cellCount - 1)
         })
         break
       case 'Complex Pattern':
         this.comb2({
-          selection: GRID.cellRows
-            .rotated2D(R.random_int(0, 3) * 90)
-            .flipped2D(Direction.Cardinal.random(1).andOpposites)
-            .flat()
-            .intersect(selection, `id`),
-          dashArray: OpArray.randomIntArray(R.random_int(3, 12), range(1, 9)).map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
+          selection: this.randTransformedCells().intersect(selection, `id`),
+          dashArray: OpArray.randomIntArray(R.random_int(3, 12), range(1, 9))
+            .map((n, i) => i % 2 === 0 ? R.random_int(1, 3) : n)
         })
         break
       case 'Snake':
-        this.snake({ coverage: coverage, selection: selection })
+        this.snake({
+          coverage: coverage,
+          selection: selection,
+          direction: options?.direction || Direction.Cardinal,
+          cornerStart: options?.cornerStart || false,
+          size: options?.size || 1,
+          turns: options?.turns || this.columnCount,
+        })
         break
 
     }
