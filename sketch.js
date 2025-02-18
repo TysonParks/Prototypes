@@ -651,9 +651,10 @@ function gridTests2(features) {
     // GRID.seed(`Snake`)
 
     // GRID.seed(`Random Comb`)
-    GRID.seed(`Snake`)
-    // GRID.seed(`Complex Pattern`)
     // GRID.seed(`Snake`)
+    // GRID.seed(`Complex Pattern`)
+    GRID.seed(`Snake`, { direction: Direction.Cardinal, cornerStart: true, size: 1 })
+    GRID.seed(`Complex Pattern`)
     // GRID.seed(`Snake`)
     // GRID.seed(`Snake`)
     // GRID.seed(`Snake`)
@@ -923,9 +924,9 @@ function gridTests2(features) {
     g.cutIslands({
       profile: R.random_choice([
         Profile.rOut,
-        Profile.jIn,
-        Profile.rIn,
-        Profile.jOut
+        // Profile.jIn,
+        // Profile.rIn,
+        // Profile.jOut
       ]),
       // profile: Profile.rOut,
       // isOutsetCut: false,
