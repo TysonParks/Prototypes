@@ -806,9 +806,9 @@ class Grid extends ProtoLayer {
     //MARK: wrapInterferenceCorners()
     const allInterferenceWrapped = defaultPool
       .filter(s => s.hasInterference && !s.isMinCorner)
-    // .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
-    // .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
-    // .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
+      .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
+      .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
+      .sort((a, b) => b.hasDoubleInterference - a.hasDoubleInterference)
 
     const allInterferenceWrappers = allInterferenceWrapped.flat()
       .map(s => Object.values(s.interferenceWrappers)).flat().compacted
