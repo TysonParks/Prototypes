@@ -3061,10 +3061,12 @@ class ProtoSegment extends Segment {
           const wrapper = outWrappers.shift()
           // DeBug.log(`wrapper`, wrapper)
           // DeBug.log(`wrapper.inWrapper`, wrapper.inWrapper)
+          // DeBug.log(`radiants.last`, radiants.last)
           if (wrapper.canRadiateTo(this)
             && wrapper.inWrapper?.canRadiateTo(wrapper)
             && this.hasDiagonalCorner(wrapper)
-            && wrapper.inWrapper.id === radiants.last) {
+            && (wrapper.inWrapper.id === radiants.last?.id || radiants.isEmpty)
+          ) {
             // DeBug.error(`It's Good!`)
             radiants.push(wrapper)
           } else {
