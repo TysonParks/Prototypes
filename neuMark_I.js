@@ -15,6 +15,12 @@ class Profile {
   }
 
   //MARK: Static 
+  static breed(breed) {
+    const type = breed[0]
+    const cutIn = breed.slice(1) === 'In'
+    return new Profile(type, cutIn)
+  }
+
   static iIn = new Profile(`i`)
   static iOut = new Profile(`i`, false)
   static jIn = new Profile(`j`)
@@ -31,6 +37,7 @@ class Profile {
   static FlatTypes = [`i`]              // Add `v` when implemented
 
   static CurveOptions = [Profile.jIn, Profile.jOut, Profile.rIn, Profile.rOut]
+
 
   //MARK: Computed
   get isI() { return this.type === `i` }                    // is `i` type
@@ -59,6 +66,10 @@ class Profile {
   }
   get isInset() { return this.isRType ? !this.cutIn : this.cutIn }       // filter insets from shape border (use cutRange.start)
 
+  get wave() { return new Profile(this.type === `r` ? `j` : `r`, !this.cutIn) }
+  get channel() { return new Profile(this.type, !this.cutIn) }
+  get cyma() { return new Profile(this.type === `r` ? `j` : `r`, this.cutIn) }
+
   get insetDepth() {
     if (this.isR) {
       return this.cutIn ? 0.35 : 0.45
@@ -70,10 +81,9 @@ class Profile {
     if (isSingleDepth) { return 0 }
     else { return 1 }
   }
-
   get description() {
     const inOut = this.cutIn ? `In` : `Out`
-    return `${this.type}${inOut}`
+    return this.type + inOut
   }
   //METH: equals()
   equals(profile) {
@@ -135,6 +145,7 @@ class ProtoCut {
     let [xMax, yMax, widthMax, heightMax] = [0, 0, 0, 0]
     this.shapeGroups.forEach(grp => {
       const [size, padding] = [grp.insetSize, grp.padding]
+      // const finalSize = grp.finalSize
       const padSize = Vertex.div(padding, size)
       const anchor = Vertex.mult(padSize, -100)
       const newSize = Vertex.mult(padSize, 200).add(vert(100))
@@ -149,9 +160,9 @@ class ProtoCut {
 
   //MARK: Public Methods
   setLayouts() {
-    console.warn(`setLayouts`, this)
+    // console.warn(`setLayouts`, this)
     const layout = this.maxLayout
-    console.log(`maxLayout`, layout)
+    // console.log(`maxLayout`, layout)
     this.filters.forEach(f => {
       f.filter
         .attribute("x", `${layout.x}%`)
@@ -277,8 +288,8 @@ class Shade {
     // highCol = randomLCH(.98)
     // shadCol = randomLCH(0.5)
 
-    highCol = achromic(1)
-    shadCol = achromic(0.7)
+    // highCol = achromic(1)
+    // shadCol = achromic(0.7)
 
     const invert = curve === `r`
     // DeBug.log('components', vector.x, vector.y, blurRad)
@@ -412,11 +423,11 @@ class Shade {
       if (root >= 44) { return 12 }         // mag >= 1936
       if (root >= 31) { return 11 }         // mag >= 961
       if (root >= 22) { return 10 }         // mag >= 484
-      if (root >= 16) { return 9 }          // mag >= 256
-      if (root >= 11) { return 8 }          // mag >= 121
-      if (root >= 8) { return 7 }           // mag >= 64
-      if (root >= 6) { return 6 }           // mag >= 36
-      if (root >= 3) { return floor(root) } // mag >= 9
+      if (root >= 16) { return 9 + 1 }          // mag >= 256
+      if (root >= 11) { return 8 + 1 }          // mag >= 121
+      if (root >= 8) { return 7 + 1 }           // mag >= 64
+      if (root >= 6) { return 6 + 1 }           // mag >= 36
+      if (root >= 3) { return floor(root) + 1 } // mag >= 9
       return 3
     }
     //ARROW: rounding(): [number] : preserve precision of lower offsets, reduce duplicates for larger offsets
@@ -427,8 +438,21 @@ class Shade {
         return floor(e)       // floor values at 4 and above to reduce duplicate shades for larger depths
       }
     }
-
-    let offsets = OpArray.from([    // offsets for shade layers
+    // console.warn(`mag`, mag)
+    //ARROW: createOffsets() : [OpArray] : create offsets for shade layers
+    const createOffsets = () => {
+      let current = mag,
+        array = OpArray.from([mag * .75])
+      array = OpArray.from([current, mag * .75])
+      while (current > 1) {
+        current = floor(current / 2)
+        array.push(current)
+      }
+      // array.push(mag * .75)
+      return array
+    }
+    let offsets
+    offsets = OpArray.from([    // offsets for shade layers
       1,            // these fixed magnitudes insure edge remains crisp and poppy at higher resolutions
       mag,          // these first 3
       mag / 2,      // these first 3
@@ -445,17 +469,18 @@ class Shade {
       mag / 512,    //
     ])
       .slice(start, keep())       // reduce layers based upon start and keep()
+    // offsets = createOffsets()
+
     // .filter(e=> )
     // .slice(start, 2)       // reduce layers based upon start and keep()
-    DeBug.error('offsets', offsets)
+    // console.error('offsets', offsets)
     offsets = offsets
-      .map(e => { return rounding(e) }) // round offsets
+      .map(e => rounding(e)) // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
-      // .sort((a, b) => b - a)
       .numSorted                  // sort small-large
       .unique()                   // remove duplicates
 
-    DeBug.error('offsets', offsets)
+    // console.error('offsets filter-sort', offsets)
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
@@ -556,7 +581,7 @@ class Shade {
         neuShades = offsets
           .map(offset => {
             let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
-            mag = curve === 'j' ? mag * 1 : mag * (cutIn ? .75 : .75)
+            mag = curve === 'j' ? mag * 1 : mag * (cutIn ? .65 : .65)
             // mag = curve === 'j' ? mag : mag * mag * .4
             let isSCurve = false
 
