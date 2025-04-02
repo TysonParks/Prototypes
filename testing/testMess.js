@@ -5,6 +5,9 @@ function functionTestPrint() {
 
   DeBug.groupCollapsed(`TestMess`)
 
+  //NOTE: Range tests
+  // let spaces = range().subRanges(1)
+  // DeBug.log(`spaces`, spaces)
 
   //NOTE: p5.js vector tests
   // const vert1 = vert(1, 0)
