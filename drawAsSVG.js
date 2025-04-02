@@ -18,9 +18,9 @@ class SVGPath {
 
     segPath.forEach((seg, i) => {
       let report = false                                                                                  //LOGGING:
-      if (seg.id.includes(`cell000`)
-        // || seg.id.includes(`cell122`)
-      ) { report = true }                                                //LOGGING:
+      // if (seg.id.includes(`cell000`)
+      //   // || seg.id.includes(`cell122`)
+      // ) { report = true }                                                //LOGGING:
       if (report) {                                                                                       //LOGGING:
         DeBug.log(`svg creation, seg:`, seg)                                                            //LOGGING:
         DeBug.log(`cornerVerts`, seg.cornerVerts)
@@ -898,70 +898,70 @@ class ProtoSVG {
   }
   // NOTE: Made with ClaudeAI on Oct 5, 2023
   //METH:
-  static async exportPNG16(svgMarkup, fileName, width, height) {
-    // Load SVG image
-    async function loadImage(svgMarkup) {
-      const img = await new Promise(resolve => {
-        const img = new Image()
-        img.onload = () => {
-          resolve(img)
-        }
-        img.src = URL.createObjectURL(new Blob([svgMarkup], { type: 'image/svg+xml' }))
-      })
-      return img
-    }
+  // static async exportPNG16(svgMarkup, fileName, width, height) {
+  //   // Load SVG image
+  //   async function loadImage(svgMarkup) {
+  //     const img = await new Promise(resolve => {
+  //       const img = new Image()
+  //       img.onload = () => {
+  //         resolve(img)
+  //       }
+  //       img.src = URL.createObjectURL(new Blob([svgMarkup], { type: 'image/svg+xml' }))
+  //     })
+  //     return img
+  //   }
 
-    // Encode 16-bit PNG
-    function encodePNG16(data, width, height) {
-      const header = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+  //   // Encode 16-bit PNG
+  //   function encodePNG16(data, width, height) {
+  //     const header = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
 
-      const buf = new Uint16Array(width * height * 4)
+  //     const buf = new Uint16Array(width * height * 4)
 
-      for (let i = 0; i < data.length; i++) {
-        const high = (data[i] >> 8) & 0xFF
-        const low = data[i] & 0xFF
-        buf[i * 2] = low
-        buf[i * 2 + 1] = high
-      }
+  //     for (let i = 0; i < data.length; i++) {
+  //       const high = (data[i] >> 8) & 0xFF
+  //       const low = data[i] & 0xFF
+  //       buf[i * 2] = low
+  //       buf[i * 2 + 1] = high
+  //     }
 
-      const png = new Uint8Array(header.length + buf.length * 2)
-      png.set(header)
-      png.set(buf, header.length)
+  //     const png = new Uint8Array(header.length + buf.length * 2)
+  //     png.set(header)
+  //     png.set(buf, header.length)
 
-      return png
-    }
+  //     return png
+  //   }
 
-    // Export PNG file  
-    function downloadBlob(data, filename) {
-      const url = URL.createObjectURL(new Blob([data]))
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
-    }
+  //   // Export PNG file  
+  //   function downloadBlob(data, filename) {
+  //     const url = URL.createObjectURL(new Blob([data]))
+  //     const a = document.createElement('a')
+  //     a.href = url
+  //     a.download = filename
+  //     a.click()
+  //     URL.revokeObjectURL(url)
+  //   }
 
-    const canvas = new OffscreenCanvas(width, height)
-    // canvas.style('image-rendering', `high-quality`)
-    const gl = canvas.getContext('webgl2', { pixelFormat: 'float16' })
+  //   const canvas = new OffscreenCanvas(width, height)
+  //   // canvas.style('image-rendering', `high-quality`)
+  //   const gl = canvas.getContext('webgl2', { pixelFormat: 'float16' })
 
-    if (!gl) {
-      throw new Error('WebGL 2 not supported')
-    }
+  //   if (!gl) {
+  //     throw new Error('WebGL 2 not supported')
+  //   }
 
-    const texture = gl.createTexture()
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.UNSIGNED_SHORT, null)
+  //   const texture = gl.createTexture()
+  //   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.UNSIGNED_SHORT, null)
 
-    const img = await loadImage(svgMarkup)
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_SHORT, img)
+  //   const img = await loadImage(svgMarkup)
+  //   gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_SHORT, img)
 
-    const data = new Uint16Array(width * height * 4)
-    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_SHORT, data)
+  //   const data = new Uint16Array(width * height * 4)
+  //   gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_SHORT, data)
 
-    const png = await encodePNG16(data, width, height)
+  //   const png = await encodePNG16(data, width, height)
 
-    downloadBlob(png, fileName)
-  }
+  //   downloadBlob(png, fileName)
+  // }
 
   // NOTE: Made with GPT-4 on April 14, 2023
   //METH:
@@ -1047,6 +1047,8 @@ class Vertex extends p5.Vector {
     }
 
   }
+
+  get abs() { return vert(abs(this.x), abs(this.y)) }
 
   roundedMag(decimal = 4) { return roundToDec(this.mag(), decimal) }
 
@@ -1262,7 +1264,7 @@ class Segment {
     let report = false
     // if (equalsRoundedDec(vert.x, 54.444)) { report = true }                                        //LOGGING:
     // if (
-    //   this.id.includes('cell180')                                                                       //LOGGING:
+    //   this.id.includes('cel027')                                                                       //LOGGING:
     //   // || this.id.includes('cell185')                                                                    //LOGGING:
     //   // || this.id.includes('cell001')                                                                    //LOGGING:
     // ) { report = true }
@@ -1861,8 +1863,9 @@ class ProtoSegment extends Segment {
     const radWrappers = out ? this.radiantOutWrappers : this.radiantInWrappers
     const allWrappers = out ? this.outWrappers : this.inWrappers
     radWrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, replace, start))
-    if (allWrappers?.length > radWrappers?.length) {
+    if (allWrappers?.length > radWrappers?.length && replace) {
       const last = radWrappers.last
+      console.log(`setRadiantOrigin last`, last)
       if (last.flushOutWrapper) {
         last.flushWrap(true)
       } else {
@@ -1903,6 +1906,8 @@ class ProtoSegment extends Segment {
   }
   //METH: #addCubicVert()
   #addCubicVert(vert, replace = false, start = false, usePoints = false) {
+    // console.error("CUBIC VERT CREATED!", start ? "start" : "end");
+    // console.trace(); // This will show the call stack
     let report = false
     const mode = start ? 'Start' : `End`
     if (
@@ -2229,6 +2234,9 @@ class ProtoSegment extends Segment {
   get isUsingMiddleOrigin() { return this.arcOrigin.equals(this.middleArcOrigin, 1) }
   get canCurveToMiddleOrigin() { return this.canCurveTo(this.middleArcOrigin) }
 
+  get maxCornerBounds() {
+    return segment(this.start, this.endNeighbor.end).bounds
+  }
   //MEMO: maxArcRadius
   get maxArcRadius() {
     return memoize(() => {
@@ -2332,7 +2340,13 @@ class ProtoSegment extends Segment {
       let projectedPoints = refPoints.map(p => {
         const projEnd = Vertex.add(refSeg.direction.toLeft.lineVector, p)
         const projSeg = segment(p, projEnd)
-        return this.viableArcOriginsSeg.intersectionWith(projSeg, true)
+        // console.log(`projEnd`, projEnd)                                                            //LOGGING:
+        // console.log(`projSeg`, projSeg)                                                            //LOGGING:
+        const points = this.viableArcOriginsSeg.intersectionWith(projSeg, true)
+        // console.log(`points`, points)
+        if (points instanceof Vertex) return points
+        if (points instanceof Segment) return points.start
+        // return points
       })
       // DeBug.log(`viableArcOrigins projectedPoints`, projectedPoints)                               //LOGGING:
       const viables = projectedPoints
@@ -2438,6 +2452,10 @@ class ProtoSegment extends Segment {
   //METH: minArcIsWithinThatMaxArc()
   minArcIsWithinThatMaxArc(thatSeg) {
     return boundsIsWithinTestBounds(this.minArcBounds, thatSeg.maxArcBounds)
+  }
+  //METH: minArcIsWithinThatCornerBounds()
+  minArcIsWithinThatCornerBounds(thatSeg) {
+    return boundsIsWithinTestBounds(this.minArcBounds, thatSeg.maxCornerBounds)
   }
   //METH: hasSameFacingCorner()
   hasSameFacingCorner(seg) { return this.endCorner.equals(seg.endCorner) }
@@ -2548,9 +2566,18 @@ class ProtoSegment extends Segment {
   //MEMO: viableOutWrappers :                            arcsContainingThisArc
   get viableOutWrappers() {                           // arcsContainingThisArc
     return memoize(() => {
-      return this.andNeighborSameFacingCorners.filter(s => {
+      // console.log(`viableOutWrappers`, this)
+      // const segs = this.andNeighborSameFacingCorners
+      const segs = this.grid.isFull ?
+        this.andNeighborSameFacingCorners :
+        this.grid.allSimpleSubShapesSegs
+          .exclude(this, 'id')
+          .filter(s => this.hasSameFacingCorner(s))
+      // console.log(`viableOutWrappers segs`, segs)
+      return segs.filter(s => {
         if (
           this.minArcIsWithinThatMaxArc(s)
+          || this.minArcIsWithinThatCornerBounds(s)
           // boundsOverlap({ geo: [this.maxArcBounds, s.maxArcBounds] })
         ) {  // 1. test bounds overlap
           return true
@@ -2757,7 +2784,9 @@ class ProtoSegment extends Segment {
     const outside = !this.isOutsideCorner             // opposite isOutsideCorner value of this
     //ARROW: canHaveCorrectBounds()
     const canHaveCorrectBounds = (seg) => {
-      return this.isOutsideCorner ? seg.minArcIsWithinThatMaxArc(this) : this.minArcIsWithinThatMaxArc(seg)
+      // return seg.minArcIsWithinThatCornerBounds(this) || this.minArcIsWithinThatCornerBounds(seg)
+      if (this.shape.neighborShapes.isEmpty) { return seg.minArcIsWithinThatCornerBounds(this) || this.minArcIsWithinThatCornerBounds(seg) }
+      else { return this.isOutsideCorner ? seg.minArcIsWithinThatCornerBounds(this) : this.minArcIsWithinThatCornerBounds(seg) }
     }
     //ARROW: canHaveCorrectSize()
     const canHaveCorrectSize = (seg) => {             // this radius should be either larger or smaller than adjWrap
@@ -2868,10 +2897,11 @@ class ProtoSegment extends Segment {
   adjWrap(replace = false, wrapOut = true) { return this.#wrap(false, replace, wrapOut) }
   //METH: #wrap() :
   #wrap(flush, replace = false, wrapOut = true) {
+    // DeBug.log(`wrap called`, this.id, flush, replace, wrapOut)                               //LOGGING:
     let wrapper = flush ? this.flushWrapper : this.adjacentWrapper
     const wrapType = flush ? `flushWrap()` : `adjWrap()`                                        //LOGGING:
     let report = false                                                                            //LOGGING:
-    if (this.id.includes('cel210')                                                               //LOGGING:
+    if (this.id.includes('cel152')                                                               //LOGGING:
       || this.id.includes('cel027')                                                              //LOGGING:
     ) {                                                                                           //LOGGING:
       report = true                                                                               //LOGGING:
@@ -3016,7 +3046,22 @@ class ProtoSegment extends Segment {
     //   if (wraps[0]) { return wraps[0] }
     //   if (wraps[1]) { return wraps[1] }
     // }
-
+    // const flushDist = this.flushDistanceObjs[0]?.dist
+    // const adjDist = this.adjDistanceObjs[0]?.dist
+    // if (flushDist < adjDist) {
+    //   return this.flushOutWrapper
+    // } else {
+    //   return this.adjOutWrapper
+    // }
+    if (this.flushOutWrapper && this.adjOutWrapper) {
+      const flushDist = this.end.dist(this.flushOutWrapper?.end)
+      const adjDist = this.end.dist(this.adjOutWrapper?.end)
+      if (flushDist < adjDist) {
+        return this.flushOutWrapper
+      } else {
+        return this.adjOutWrapper
+      }
+    }
     return this.flushOutWrapper || this.adjOutWrapper
   }
   get inWrapper() {
@@ -3027,7 +3072,18 @@ class ProtoSegment extends Segment {
     //   if (wraps[0]) { return wraps[0] }
     //   if (wraps[1]) { return wraps[1] }
     // }
+    // console.log(`this.end`, this.end)
+    // console.log(`this.flushInWrapper`, this.flushInWrapper)
 
+    if (this.flushInWrapper && this.adjInWrapper) {
+      const flushDist = this.end.dist(this.flushInWrapper?.end)
+      const adjDist = this.end.dist(this.adjInWrapper?.end)
+      if (flushDist < adjDist) {
+        return this.flushInWrapper
+      } else {
+        return this.adjInWrapper
+      }
+    }
     return this.flushInWrapper || this.adjInWrapper
   }
   //MEMO: outWrappers
@@ -3100,6 +3156,7 @@ class ProtoSegment extends Segment {
   //MEMO: inWrappers
   get inWrappers() {
     return memoize(() => {
+      // DeBug.log(`inWrappers`, this)
       // DeBug.log(`this.inWrapper`, this.inWrapper)
       if (this.inWrapper) { return OpArray.format(this.inWrapper).union(this.inWrapper.inWrappers, `id`) }
     }, `inWrappers`).call(this)
@@ -3299,7 +3356,7 @@ class ProtoSegment extends Segment {
   }
   //MARK: INTERFERENCE WRAPPING
   get interferenceWrappers() {
-    if (this.isInnerMostRadiantWrapper && this.radiantOutWrappers.length > 1) {
+    if (this.isInnerMostRadiantWrapper && this.radiantOutWrappers?.length > 1) {
       const segs = this.outerMostRadiantWrapper.neighborsArray.flat()
         .filter(s =>
           s.arcNormalDirection.equals(this.arcNormalDirection.opposites)
@@ -3489,58 +3546,8 @@ class ProtoSegment extends Segment {
         } else {
           return 2
         }
-
-        // const distObj = outer.minAdjWrapperDistanceObj(inner)
-        // // const [startObj, endObj] = [true, false].map(isStart => outer.intersectObj(inner, isStart))
-
-        // const startIsLess = startObj.dist < endObj.dist
-        // const [startOverlap,endOverlap] = [
-        //   inner.arcOriginToStart.isCollinearWith(outer.arcOriginToEnd),
-        //   inner.arcOriginToEnd.isCollinearWith(outer.arcOriginToStart)
-        // ]
-
-        // if(startIsLess===)
-
-        // if (inner.arcOriginToStart.vertIsOnLine(outer.arcEndCorner)
-        //   || inner.arcOriginToEnd.vertIsOnLine(outer.arcStartCorner)
-        // ) {
-        //   // return 0
-        // }
-
-
-
-
-
-        // const
-        // if(startObj.dist <)
-
       }
-
     }
-
-
-
-
-    // if (flush) {
-    //   if (this.hasCompleteFlushWrap) {
-    //     const inOuts = this.inOutFlushWrappers
-    //     const outCorner = inOuts[1].end
-    //     const [inRadius, outRadius] = this.inOutFlushWrappers.map(w => roundToDec(w.arcRadius, 2))  // arcRadius of in and out wrappers
-    //     if (inRadius === outRadius) { return 0 }                              // EQUIDISTANT: radii are equal
-    //     if (inRadius < outRadius) { return 1 }                                // DIVERGING: inRadius < outRadius
-    //     if (inRadius > outRadius) { return 2 }                                // CONVERGING: inRadius > outRadius
-    //   }
-    // } else {
-    //   if (this.hasCompleteAdjWrap) {
-    //     const inOuts = this.inOutAdjWrappers
-    //     const outCorner = inOuts[1].end
-    //     const [inDist, outDist] = inOuts.map(w => roundToDec(w.arcOrigin.dist(outCorner), 2))
-
-    //     if (inDist === outDist) { return 0 }                                  // EQUIDISTANT: dists to corner are equal
-    //     if (inDist > outDist) { return 1 }                                    // DIVERGING: inDist > outDist
-    //     if (inDist < outDist) { return 2 }                                    // CONVERGING: inDist < outDist
-    //   }
-    // }
   }
 
   get flushWrapState() { return this.wrapState(true) }
