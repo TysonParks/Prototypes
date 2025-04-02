@@ -139,6 +139,7 @@ class ProtoFilter {
 
         let useBlur = blur > 0
         // useBlur = false
+        blur = blur * 1
 
         //NOTE: NEW BLOCK START-------------------------------------------
         if (useBlur) {
@@ -339,7 +340,7 @@ class ProtoFilter {
   //MARK: Utility methods
   applyFilterToElement({ element, size, padding = vert(40), time = 0, applyToGroup = true } = {}) {
     if (!this.type) { return this }
-    DeBug.warn(`applyFilter`, element)
+    // DeBug.warn(`applyFilter`, element)
     // DeBug.warn(`applyFilter sizeX: ${size.x}, sizeY: ${size.y}`)
     // DeBug.warn(`applyFilter paddingX: ${padding.x}, paddingY: ${padding.y}`)
 
@@ -701,8 +702,10 @@ p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
 //PROTOTYPE: p5.Element extension blur(radius)
 p5.Element.prototype.blur = function (radius) {
-  const viewBox = this.parent().getAttribute('viewBox').split(' ').map(Number)
-  const [x, y, width, height] = viewBox
+  // console.log(`parent`, this.parent())
+  const parent = this.parent()
+  const viewBox = parent.getAttribute('viewBox')
+  const [x, y, width, height] = viewBox ? viewBox.split(' ').map(Number) : [parent.x, parent.y, parent.width, parent.height]
   const padding = Math.ceil(radius * 3)
   const newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' ')
   const filterID = 'blur-' + Math.floor(Math.random() * 100000)
