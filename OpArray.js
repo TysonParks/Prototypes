@@ -306,9 +306,9 @@ class OpArray extends Array {
     return this
   }
 
-  randShuffle() {
+  randShuffle(r = R) {
     for (let i = this.lastIndex; i > 0; i--) {
-      const j = floor(R.random_dec() * (i + 1))
+      const j = floor(r.random_dec() * (i + 1))
       let temp = this[i]
       this[i] = this[j]
       this[j] = temp
