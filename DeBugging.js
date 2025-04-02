@@ -149,30 +149,43 @@ const Debuggable = {
     if (this.isShapeGroup && this.cut?.profile) {
       this.debugStartElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugStart`)
       this.debugEndElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugEnd`)
-      const debugElts = OpArray.format([this.debugStartElt, this.debugEndElt])
-      debugElts.forEach(elt => {
+      const debugElts = OpArray.format([
+        this.debugStartElt,
+        this.debugEndElt
+      ])
+      debugElts.forEach((elt, i) => {
         const lowHue = protoColor(randHue.red, randHue.green, randHue.blue, 10)
 
         elt
           .parent(this.svgElt)
           .attribute('fill', protoColor(0, 0))
+          // .attribute('fill', i === 1 ? protoColor(1, 100) : protoColor(0, 0))
+          // .attribute('fill', frameColor)
           .attribute('stroke-width', `.125`)
           .attribute('stroke-dasharray', `.5`)
+          .attribute('stroke-linecap', `round`)
+        // .blur(.1)
       })
 
       this.shapes.forEach(sh => {
         DeBug.log(`this.cut`, this.cut)
-        DeBug.log(`cut values`, this.cut.start, this.cut.depth, sh.insetScale)
+        DeBug.log(`cut start`, this.cut.start)
+        DeBug.log(`cut depth`, this.cut.depth)
+        DeBug.log(`cut insetScale`, sh.insetScale)
         const depthScale = vert(this.cut.depth / this.grid.cellRadius / 2)
         DeBug.log(`depthScale`, depthScale)
-        let startScale, endScale
-        if (this.cut.profile.hasOutsetShade) {
+        let startScale, endScale, hasOutsetShade = this.cut.profile.hasOutsetShade
+        if (hasOutsetShade) {
+          console.log(`hasOutsetShade`)
+          // startScale = Vertex.add(sh.insetScale, depthScale)
           startScale = Vertex.add(sh.insetScale, depthScale)
-          endScale = sh.insetScale
+          endScale = this.cut.start < 0 ? sh.insetScale : sh.insetScale
         } else {
+          console.log(`no outsetShade`)
           startScale = sh.insetScale
-          endScale = Vertex.sub(vert(this.cut.start), vert(this.cut.depth / this.grid.cellRadius / 2))
+          endScale = Vertex.sub(sh.insetScale, depthScale)
         }
+
 
         const newScales = [startScale, endScale]
         DeBug.log(`newScales`, newScales)
@@ -185,8 +198,12 @@ const Debuggable = {
           const path = createSVGElt('path').id(`${shape.id}-debugStartPath`)
             .attribute(`d`, shape.svg)
             .layout(shape.anchor, shape.size, shape.padding)
-            .parent(i = 0 ? this.debugStartElt : this.debugEndElt)
+            .parent(i === 0 ? this.debugStartElt : this.debugEndElt)
             .attribute(`stroke`, i = 0 ? lightHue : lightHue)
+          // .attribute('fill', protoColor(1, 100))
+          // .attribute('fill', i === 1 ? frameColor : protoColor(0, 0))
+          // .attribute('fill', i === 1 ? `red` : protoColor(0, 0))
+          // .blur(.1)
         })
       })
 
@@ -225,35 +242,54 @@ const Debuggable = {
 //MARK: DeBug Class
 //CLASS: replace calls to console methods with these in order to have global control over logging
 class DeBug {
-  static enableLogging = false // Set to false to disable all logging
+  static enableLogging = true // Set to false to disable all logging
+
+  static getCallerInfo() {
+    const error = new Error()
+    const stack = error.stack.split('\n')
+    // Adjust the index based on the stack trace format
+    const callerLine = stack[3] || stack[2]
+    const match = callerLine.match(/at (.+):(\d+):(\d+)/)
+    if (match) {
+      const filePath = match[1]
+      const fileName = filePath.split('/').pop() // Extract file name
+      return `${fileName}:${match[2]}`
+    }
+    return 'unknown'
+  }
 
   static log(...args) {
     if (this.enableLogging) {
-      console.log(...args)
+      const callerInfo = this.getCallerInfo()
+      console.log(`[${callerInfo}]`, ...args)
     }
   }
 
   static error(...args) {
     if (this.enableLogging) {
-      console.error(...args)
+      const callerInfo = this.getCallerInfo()
+      console.error(`[${callerInfo}]`, ...args)
     }
   }
 
   static warn(...args) {
     if (this.enableLogging) {
-      console.warn(...args)
+      const callerInfo = this.getCallerInfo()
+      console.warn(`[${callerInfo}]`, ...args)
     }
   }
 
   static group(...args) {
     if (this.enableLogging) {
-      console.group(...args)
+      const callerInfo = this.getCallerInfo()
+      console.group(`[${callerInfo}]`, ...args)
     }
   }
 
   static groupCollapsed(...args) {
     if (this.enableLogging) {
-      console.groupCollapsed(...args)
+      const callerInfo = this.getCallerInfo()
+      console.groupCollapsed(`[${callerInfo}]`, ...args)
     }
   }
 
