@@ -1,7 +1,7 @@
 let gui
 
 let testingControls = {
-  hashNumber: 807,
+  hashNumber: 1090,
   lastHash: false,
   blackMode: false,
 }
@@ -33,7 +33,7 @@ function createGUI() {
 //FUNC: keyPressed() p5js overload for PNG saving
 function keyPressed() {
   if (key === 's') {
-    // console.log('s pressed')
+    console.log('s pressed')
     const scale = 1
     // const rez = vert(500, 900)
     // const rez = vert(569, 1024)
@@ -41,7 +41,7 @@ function keyPressed() {
     // const rez = vert(1138, 2048)
     // const rez = vert(2000, 3600)
     // const rez = vert(2276, 4096)
-    const rez = vert(4000, 7200)
+    const rez = vert(4000, 7200) // MY DEFAULT
     // const rez = vert(4551, 8192)
     // const rez = vert(8000, 14400)
     // const rez = vert(9102, 16384) 
