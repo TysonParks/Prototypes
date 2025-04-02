@@ -1057,7 +1057,7 @@ function equalsRoundedDec(num1, num2, accuracy) {
 
 // TODO: consider the intersection with the DOM Range interface
 // CLASS: Range
-// SIZE: 27 lines
+// SIZE: 45 lines
 function range(start = 0, end = 1) { return new Range(start, end) }
 class Range {
   start
@@ -1097,10 +1097,13 @@ class Range {
   }
   cycle(x) { return ((x - this.start) % this.cycleSize + this.cycleSize) % this.cycleSize + this.start }
   subRanges(amount) {
+    // if (amount === 1) { return OpArray.from([this]) }
     const subSize = this.size / amount
+    // DeBug.log(`subRanges subSize`, subSize)
     return new OpArray(amount).fill(0).map((u, i) => {
       const start = this.start + i * subSize
       const end = start + subSize
+      DeBug.log(`subRanges start/end`, start, end)
       return range(start, end)
     })
   }
