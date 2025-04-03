@@ -556,7 +556,7 @@ class Grid extends ProtoLayer {
     groupID,
     islandID,
     filter,
-    // cut,
+    cut,
     direction = Direction.Cardinal,
     maxCorners = true,
     protoParent = this,
@@ -662,6 +662,7 @@ class Grid extends ProtoLayer {
         maxCorners: maxCorners,
         stored: stored,
         drawFilter: drawFilter,
+        cut: cut,
       })
 
       if (stored) {
@@ -713,7 +714,8 @@ class Grid extends ProtoLayer {
 
   //MARK: MAXIMIZE CUDDLES
   inWrapPerimeter(simpleSegs, parentSegs) {
-    DeBug.log(`inWrapPerimeter`)
+    DeBug.warn(`inWrapPerimeter`)
+    DeBug.log(`simpleSegs`, simpleSegs)
     let unmatched = new OpArray
     simpleSegs.forEach(simp => {
       DeBug.log(`current Seg`, simp)
@@ -725,7 +727,12 @@ class Grid extends ProtoLayer {
         unmatched.push(simp)
       }
     })
-    unmatched.forEach(s => s.matchEndCorner())
+    DeBug.warn(`unmatched`, unmatched)
+    unmatched.forEach(s => {
+      DeBug.warn(`current unmatched`, s)
+      if (s.inWrapper) s.setEndCurveOrigin(s.inWrapper.arcOrigin)
+      else s.matchEndCorner()
+    })
   }
 
   get allMinRadiusCorners() {
@@ -743,6 +750,7 @@ class Grid extends ProtoLayer {
     DeBug.log(`this.allMinRadiusCorners`, this.allMinRadiusCorners)
     DeBug.log(`corners`, corners)
     // if (!all) { DeBug.log(`allMinRadiusCorners`, corners) }
+    // corners = corners.slice(0, 5)
     corners.forEach(s => {
       // if (s.id.includes('cell081')                                                                   //LOGGING:
       //   // || s.id.includes('cell008')                                                               //LOGGING:
@@ -751,7 +759,7 @@ class Grid extends ProtoLayer {
       // let report = false                                                                             //LOGGING:
       // if (report) {                                                                                  //LOGGING:
       //   DeBug.log(``)                                                                              //LOGGING:
-      //   DeBug.log(s.id)                                                                            //LOGGING:
+      // DeBug.log(s.id)                                                                            //LOGGING:
       //   DeBug.log(`this before`, s.cubicVerts)                                                     //LOGGING:
       // }                                                                                              //LOGGING:
       if (s.isMinCorner) {
@@ -760,7 +768,10 @@ class Grid extends ProtoLayer {
         s.setMinEndCorner()
       }
       // if (report) { DeBug.log(`this after`, s.cubicVerts) }                                        //LOGGING:
-      if (!all && !s.flushWrapper?.isMinCorner) {
+      if (!all
+        && !s.flushWrapper?.isMinCorner
+        && s.flushWrapper?.isCoinOutWrapper
+      ) {
         s.flushWrap()
 
         // if (report) {                                                                                //LOGGING:
@@ -770,6 +781,32 @@ class Grid extends ProtoLayer {
         // }                                                                                            //LOGGING:
       }
     })
+  }
+  //METH: completeEnds()
+  completeEnds = (testPool, wrap = true) => {
+    testPool = testPool
+      .filter(s => !s.hasCompleteEndCorner)
+      .sort((a, b) => a.arcRadius - b.arcRadius)
+
+    DeBug.warn(`allIncompleteEnds`, testPool)
+    DeBug.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
+    // testPool = testPool.slice(0, 16)
+    testPool.forEach(s => {
+      s.matchEndCorner()
+      if (wrap) {
+        s.flushWrap()
+        // if (s.shape.neighborShapes.isEmpty
+        //   // && s.adjacentWrapper?.adjInWrapper?.equals(s)
+        // ) {
+        //   s.adjWrap()
+        // }
+      }
+      // if (wrap && (s.isOutsideCorner || s.coinInWrapper)) { s.flushWrap() }
+    })
+    // testPool.forEach(s => {
+    //   // s.matchEndCorner()
+    //   // if (wrap) { s.flushWrap() }
+    // })
   }
 
   //MARK: maximizeCuddles()
@@ -783,25 +820,24 @@ class Grid extends ProtoLayer {
     respectAdjacents = true,
     interGrid = false) {
     DeBug.log(`defaultPool`, defaultPool)
-    //MARK: completeEnds()
     //ARROW: completeEnds()
-    const completeEnds = (testPool = defaultPool, wrap = true) => {
-      testPool = testPool
-        .filter(s => !s.hasCompleteEndCorner)
-        .sort((a, b) => a.arcRadius - b.arcRadius)
+    // const completeEnds = (testPool = defaultPool, wrap = true) => {
+    //   testPool = testPool
+    //     .filter(s => !s.hasCompleteEndCorner)
+    //     .sort((a, b) => a.arcRadius - b.arcRadius)
 
-      DeBug.warn(`allIncompleteEnds`, testPool)
-      DeBug.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
-      testPool.forEach(s => {
-        s.matchEndCorner()
-        if (wrap) { s.flushWrap() }
-        // if (wrap && (s.isOutsideCorner || s.coinInWrapper)) { s.flushWrap() }
-      })
-      // testPool.forEach(s => {
-      //   // s.matchEndCorner()
-      //   // if (wrap) { s.flushWrap() }
-      // })
-    }
+    //   DeBug.warn(`allIncompleteEnds`, testPool)
+    //   DeBug.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
+    //   testPool.forEach(s => {
+    //     s.matchEndCorner()
+    //     if (wrap) { s.flushWrap() }
+    //     // if (wrap && (s.isOutsideCorner || s.coinInWrapper)) { s.flushWrap() }
+    //   })
+    //   // testPool.forEach(s => {
+    //   //   // s.matchEndCorner()
+    //   //   // if (wrap) { s.flushWrap() }
+    //   // })
+    // }
 
     //MARK: wrapInterferenceCorners()
     const allInterferenceWrapped = defaultPool
@@ -863,7 +899,7 @@ class Grid extends ProtoLayer {
       removeDuplicates()
 
       // return
-      // testPool = testPool.slice(0, 3)
+      // testPool = testPool.slice(0, 1)
 
       testPool.forEach(s => {
         //ARROW: setCurve()
@@ -879,7 +915,7 @@ class Grid extends ProtoLayer {
           const perpEnd = Vertex.add(dir.lineVector, origin)                    // calculate end of perpendicular seg
           const perpSeg = segment(origin, perpEnd)                              // calculate perpendicular seg
           const projected = perpSeg.intersectionWith(seg.maxArcBoundsSeg, true) // calculate intersect
-          DeBug.log(`seg`, seg.id)                                                                      //LOGGING:
+          DeBug.log(`seg`, seg)                                                                      //LOGGING:
           DeBug.log(`wrapped direction`, s.direction.name)                                              //LOGGING:
           DeBug.log(`wrapper direction`, seg.direction.name)                                            //LOGGING:
           DeBug.log(`perp direction`, dir.name)                                                         //LOGGING:
@@ -891,7 +927,9 @@ class Grid extends ProtoLayer {
             DeBug.error(`changed seg`, seg.id)                                                          //LOGGING:
             DeBug.log(seg)                                                                              //LOGGING:
           }
-          if (seg.currentViableArcOrigins.some(o => o.equals(projected, 0))) {
+          if (seg.currentViableArcOrigins.some(o => o.equals(projected, 0))
+            && seg.inWrappers ? seg.inWrappers.every(i => i.canCurveTo(projected, true)) : true        // prevent from curving to self 
+          ) {
             DeBug.log(`curving ${wrapType}wrapper!`)                                                    //LOGGING:
 
             seg.setEndRadiantOutWrapsOrigin(projected)
@@ -915,7 +953,7 @@ class Grid extends ProtoLayer {
         const viables = s.viableInterferenceOrigins
         let origin
         if (viables) {
-          // DeBug.log(`viables`, viables)
+          DeBug.log(`viables`, viables)
           if (preserveQuads && s.isEdgeOfQuad && viables.some(v => v.equals(s.shape?.center, 1))) {
             origin = s.shape.center
           } else {
@@ -925,7 +963,10 @@ class Grid extends ProtoLayer {
         } else {
           DeBug.log(`NO viableInterferenceOrigins found!`)
         }
-        if (origin && s.outerMostRadiantWrapper.canCurveTo(origin, true)) {
+        if (origin
+          && s.outerMostRadiantWrapper.canCurveTo(origin, true)
+          // && Object.values(s.interferenceWrappers).every(i => i.canCurveTo(origin, true))
+        ) {
           DeBug.log(`origin found!`, origin)
           s.setEndRadiantOutWrapsOrigin(origin)
           let { start, end } = s.interferenceWrappers
@@ -951,7 +992,7 @@ class Grid extends ProtoLayer {
           &&
           s.isInnerMostRadiantWrapper                               // only wrapping innerMostWrappers
           && !s.hasArc                                              // prevent from re-wrapping
-          && (s.coinOutWrapper ? s.radiantOutWrappers.length > 1 : !!s) // filter out potential flushWrap only
+          && (s.coinOutWrapper ? s.radiantOutWrappers?.length > 1 : !!s) // filter out potential flushWrap only
         )
         .sort((a, b) => a.maxArcRadius - b.maxArcRadius)
         .sort((a, b) => b.radiantOutWrappers.length - a.radiantOutWrappers.length)
@@ -1007,7 +1048,7 @@ class Grid extends ProtoLayer {
               DeBug.log(`outerMostRadiantWrapper`, s.outerMostRadiantWrapper)
               s.outerMostRadiantWrapper.adjWrap()
             }
-            // completeEnds(s.neighborsArray)
+            // this.completeEnds(s.neighborsArray)
           }
 
           // DeBug.groupEnd()                                                                             //LOGGING:
@@ -1029,7 +1070,7 @@ class Grid extends ProtoLayer {
       DeBug.log(`badAdjWraps`, testPool)
 
       // return
-      // testPool = testPool.slice(0, 3)
+      // testPool = testPool.slice(0, 1)
       //FIXME: Implement this in a while loop as used in fixLoosies(), can we reuse finishing testPool code?
       testPool.forEach(s => {
         DeBug.error(`badAdjWrap in queue:`, s)                                                          //LOGGING:
@@ -1062,18 +1103,25 @@ class Grid extends ProtoLayer {
             DeBug.log(`inWrapper is inWrapped to radiants`)                                           //LOGGING:
             // DeBug.log(`neighbors`, s.neighborsArray.map(n => n.isInWrappedToRadiants))                //LOGGING:
             const inner = s.inWrapper.innerMostRadiantWrapper
+            DeBug.log(`inner`, inner)
             if (s.neighborsArray.every(n => !n.isInWrappedToRadiants)) {          // fixes: #453, #472
 
               DeBug.log(`inner.viableRadiantOrigins`, inner.viableRadiantOrigins)
-              DeBug.log(`inner`, inner)
+
               // s.adjWrap(true, false)                                              // fixes #645
               // inner.replaceEndCurveOrigin(inner.viableRadiantOrigins?.last)
               inner.replaceEndRadiantOutWrapsOrigin(inner.viableRadiantOrigins?.last)
               // inner.outerMostRadiantWrapper
-              completeEnds(inner.andNeighborsArray)
+              this.completeEnds(inner.andNeighborsArray)
             } else if (s.neighborsArray.some(n => !n.isInWrappedToRadiants)) {    // fixes: #493
               // inner.replaceEndCurveOrigin(inner.viableRadiantOrigins?.last)
+              // DeBug.log(`inner.viableRadiantOrigins`, inner.viableRadiantOrigins)
             }
+            if (!s.inWrapper.isProximalWrapped(s)) {
+              s.inWrapper.adjWrap(true)
+              s.replaceEndRadiantOutWrapsOrigin()
+            }
+            // if (s.canRadiateTo(inner.arcOrigin)) inner.replaceEndRadiantOutWrapsOrigin(inner.arcOrigin)
           }
           return
         }
@@ -1104,7 +1152,7 @@ class Grid extends ProtoLayer {
             DeBug.log(`no fix`)
           }
         }
-        completeEnds(s.andNeighborsArray)
+        this.completeEnds(s.andNeighborsArray)
         // DeBug.groupEnd()                                                                              //LOGGING:
       })
     }
@@ -1122,22 +1170,24 @@ class Grid extends ProtoLayer {
       DeBug.log(`badFlushWraps`, testPool)
 
       // return
-      // testPool = testPool.slice(0, 0)
+      // testPool = testPool.slice(0, 1)
 
       testPool.forEach(s => {
         //ARROW: wrapOutFix()
         const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
-          DeBug.log(`using wrapOutFix on:`, s.inWrapper)
-          s.inWrapper.flushWrap(true)                           // adding true fixes collinear convergences #304
-          s.inWrapper.replaceEndRadiantOutWrapsOrigin()
-          s.replaceEndRadiantOutWrapsOrigin()
-          if (s.adjWrapIsNonEquidistant) { s.adjWrap(true) }    //TODO: fixes hor aspect cell bug, remove if problematic
-          // s.inWrapper.radiantOutWrappers.forEach(w => {
-          //   // if (!w.startNeighbor.isInWrappedToRadiants       // avoid possible off-axis interference wrap
-          //   //   && !w.endNeighbor.isInWrappedToRadiants) {     // avoid possible off-axis interference wrap
-          //   w.replaceEndCurveOrigin(s.inWrapper.arcOrigin)
-          //   // }
-          // })
+          if (s.inWrapper) {
+            DeBug.log(`using wrapOutFix on:`, s.inWrapper)
+            s.inWrapper.flushWrap(true)                           // adding true fixes collinear convergences #304
+            s.inWrapper.replaceEndRadiantOutWrapsOrigin()
+            s.replaceEndRadiantOutWrapsOrigin()
+            if (s.adjWrapIsNonEquidistant) { s.adjWrap(true) }    //TODO: fixes hor aspect cell bug, remove if problematic
+            // s.inWrapper.radiantOutWrappers.forEach(w => {
+            //   // if (!w.startNeighbor.isInWrappedToRadiants       // avoid possible off-axis interference wrap
+            //   //   && !w.endNeighbor.isInWrappedToRadiants) {     // avoid possible off-axis interference wrap
+            //   w.replaceEndCurveOrigin(s.inWrapper.arcOrigin)
+            //   // }
+            // })
+          }
         }
         //ARROW: wrapInFix()
         const wrapInFix = () => {
@@ -1205,7 +1255,7 @@ class Grid extends ProtoLayer {
       // const action = () => {
 
       // return
-      // testPool = testPool.slice(0, 1)
+      // testPool = testPool.slice(0, 4)
 
       while (testPool.length > 0) {
         const s = testPool.shift()
@@ -1267,7 +1317,9 @@ class Grid extends ProtoLayer {
         // case: s.hasNoWrappers
         if (s.hasNoWrappers && loners) {
           DeBug.log(`loners fix`)
-          if (s.isOutsideCorner && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)) {
+          if (s.isOutsideCorner
+            && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)
+            && s.neighborsArray.every(n => !n.isOutWrappedToRadiants)) {
             minRadFix()
           } else {
             s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
@@ -1304,7 +1356,7 @@ class Grid extends ProtoLayer {
             }
           }
 
-          if (s.id !== s.outWrapper.inWrapper.id) {  // case: this isn't the inWrapper to this outWrapper
+          if (s.id !== s.outWrapper.inWrapper?.id) {  // case: this isn't the inWrapper to this outWrapper
             DeBug.log(`this isn't the inWrapper to this outWrapper`)
             s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
             s.flushWrap(true)
@@ -1569,7 +1621,7 @@ class Grid extends ProtoLayer {
           }
         }
       })
-      completeEnds()
+      this.completeEnds(defaultPool)
     }
 
 
@@ -1610,7 +1662,7 @@ class Grid extends ProtoLayer {
     //     // }
 
     //     DeBug.log(`changed loosies`, changed)
-    //     completeEnds()
+    //     this.completeEnds(defaultPool)
 
     //     testPool = testPool
     //       .union(changed.outside, [`id`])
@@ -1624,21 +1676,22 @@ class Grid extends ProtoLayer {
     //MARK: fixIssues()
     //ARROW: fixIssuess()
     const fixIssues = (mode = nestleMode) => {
-      // maximizeOuterCorners()
+
+      // this.curveMinRadiusCorners()
       if (mode === 0) {
         DeBug.warn(`wrapInterferenceCorners`)                                                   //LOGGING:
         wrapInterferenceCorners()
         DeBug.warn(`wrapInnerMost`)                                                             //LOGGING:
         wrapInnerMost()
       }
-      // maximizeOuterCorners()
+
       DeBug.warn(`curveMinRadiusCorners`)                                                     //LOGGING:
       this.curveMinRadiusCorners()
-      // maximizeOuterCorners()
-      DeBug.warn(`completeEnds`)                                                              //LOGGING:
-      completeEnds()
 
-      // maximizeOuterCorners()
+      DeBug.warn(`completeEnds`)                                                              //LOGGING:
+      this.completeEnds(defaultPool)
+
+
 
       DeBug.warn(`fixBadAdjWraps`)
       fixBadAdjWraps()
@@ -1647,7 +1700,7 @@ class Grid extends ProtoLayer {
       DeBug.warn(`fixLoosies`)
       fixLoosies()
 
-      // maximizeOuterCorners()
+
 
       DeBug.warn(`roundQuads`)                                                                //LOGGING:
       // roundQuads()
@@ -2112,6 +2165,7 @@ class Grid extends ProtoLayer {
 
     while (amount > 0 && !this.isFull) {
       if (selection?.length > 0) {
+        // console.log(`outline direction`, direction)
         const outline = this.validNeighbors({ selection: selection, direction: direction })
           .filter(cell => cell.isAvailable)
         // DeBug.log(`${groupID} outline ${amount}:`, outline.map(c => c.isAvailable))
@@ -2355,7 +2409,8 @@ class Grid extends ProtoLayer {
 
     const minSize = options?.minSize || 1,
       uniform = options?.uniform || false,
-      overlapping = options?.overlapping || 0
+      overlapping = options?.overlapping || 0,
+      taken = options?.useAllTaken ? this.takenCells : this.lastGroup?.cells
 
     switch (name) {
       case 'Noise':
@@ -2419,7 +2474,38 @@ class Grid extends ProtoLayer {
           turns: options?.turns || this.columnCount,
         })
         break
+      case 'Group Available':
+        this.groupAvail()
+        break
+      case 'Outline':
+        this.outline({ selection: taken })
+        break
+      case 'Outline Single Direction':
+        this.outline({ selection: taken, direction: Direction.All.random(1) })
+        break
+      case 'Outline Some Directions':
+        const count = R.random_int(2, 7)
+        let dirs
+        switch (count) {
+          case 2:
+            const dir = Direction.All.random(1)
+            dirs = R.random_choice([dir.andAdjacents, dir.opposites])
+            break
+          case 3: dirs = Direction.All.random(1).andAdjacents
+            break
+          default: dirs = Direction.All.random(count)
 
+        }
+        // console.log('dirs', dirs)
+        // console.log('dirs', dirs.vals)
+        this.outline({ selection: taken, direction: dirs })
+        break
+      // case 'Outlines':
+
+      //   break
+      case 'Empty':
+        break
+      default: console.error(`Grid.seed: ${name} not found`)
     }
   }
   // #endregion
