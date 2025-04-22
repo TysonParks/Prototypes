@@ -1064,6 +1064,7 @@ class Range {
   end
 
   constructor(start = 0, end = 1) {
+    // DeBug.log(`Range start/end`, start, end)
     if (arguments.length === 1) {
       if (start instanceof Array) {
         this.start = start[0], this.end = start[1]
