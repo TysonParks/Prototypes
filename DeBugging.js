@@ -212,6 +212,59 @@ const Debuggable = {
     DeBug.groupEnd()
   },
 
+  // METH: showSizeGrid()
+  showSizeGrid(x = 10, y = x) {
+    // if (!this.drawSVG || !this.drawGrid) return
+
+    // Create grid group if it doesn't exist
+    if (!this.deBugGridElt) {
+      this.deBugGridElt = createElementNS(SVG.xmlns, 'g')
+        .id(`${this.id}-debugGrid`)
+        .parent(this.svgElt)
+    }
+
+    const spacing = vert(x, y)
+    if (!this.gridSpacing?.equals(spacing)) {
+      this.gridSpacing = spacing
+      this.deBugGridElt.innerHTML = '' // Clear existing grid
+
+      const randHue = ProtoColor.randomShadHue()
+      const lines = []
+
+      // Vertical lines
+      for (let x = 0; x <= 100; x += spacing.x) {
+        lines.push(
+          createSVGElt('line')
+            .attribute('x1', x)
+            .attribute('y1', 0)
+            .attribute('x2', x)
+            .attribute('y2', 200)
+        )
+      }
+
+      // Horizontal lines
+      for (let y = 0; y <= 200; y += spacing.y) {
+        lines.push(
+          createSVGElt('line')
+            .attribute('x1', 0)
+            .attribute('y1', y)
+            .attribute('x2', 100)
+            .attribute('y2', y)
+        )
+      }
+
+      // Apply styles to all lines
+      lines.forEach(line => {
+        line
+          .parent(this.deBugGridElt)
+          .attribute('stroke', randHue)
+          .attribute('stroke-width', '0.25')
+          .attribute('stroke-dasharray', '8 1')
+          .attribute('vector-effect', 'non-scaling-stroke')
+      })
+    }
+  },
+
   // METH: showFrameRate()
   showFrameRate(animationController) {
     // Create display element once if it doesn't exist
