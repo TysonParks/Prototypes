@@ -123,7 +123,10 @@ class ProtoCut {
     this.angleOffset = angleOffset
     this.breed = this.description
     const match = S.Cuts.find(item => item.breed === this.breed)  // use equivalent cut if already exists
-    if (match) { return match }
+    if (match) {
+      DeBug.warn(`USING EXISTING CUT!!`, match)
+      return match
+    }
     this.storeObject(S.Cuts, true)
     this.#createFilters()
     // this.storeObject(S.Cuts)
@@ -139,7 +142,8 @@ class ProtoCut {
     const edge = p.frameEdge ? `-frameEdge` : ``
     const dep = roundToDec(this.depth / GRID.cellRadius, 4)
     const start = roundToDec(this.start, 4)
-    return `${prime}${half}${edge}-${dep}xCellRadius-${start}start`
+    return `${prime}${half}${edge}-${dep}xCellRadius`
+    // return `${prime}${half}${edge}-${dep}xCellRadius-${start}start`
   }
   get maxLayout() {
     let [xMax, yMax, widthMax, heightMax] = [0, 0, 0, 0]
@@ -445,10 +449,20 @@ class Shade {
         array = OpArray.from([mag * .75])
       array = OpArray.from([current, mag * .75])
       while (current > 1) {
-        current = floor(current / 2)
+        current = max(.5, floor(current / 2))
         array.push(current)
       }
-      // array.push(mag * .75)
+      // array = array.numSorted.reversed
+      DeBug.warn(`full array`, array)
+      let mod = floor(array.length / 2)
+      // if (array.length > 4) array = OpArray.from([...array.slice(0, mod), mod, 1]) // reduce layers to 4, keeping first and last 3 layers
+
+      if (array.length > 4) {
+        array = OpArray.from([...array.slice(0, mod), mod]) // reduce layers to 4, keeping first and last 3 layers
+        if (curve === 'j') array.push(1)
+      }
+
+      DeBug.warn(`reduced array`, array)
       return array
     }
     let offsets
@@ -473,14 +487,14 @@ class Shade {
 
     // .filter(e=> )
     // .slice(start, 2)       // reduce layers based upon start and keep()
-    // console.error('offsets', offsets)
+    console.error('offsets', offsets)
     offsets = offsets
       .map(e => rounding(e)) // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
       .numSorted                  // sort small-large
       .unique()                   // remove duplicates
 
-    // console.error('offsets filter-sort', offsets)
+    console.error('offsets filter-sort', offsets)
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
@@ -581,8 +595,7 @@ class Shade {
         neuShades = offsets
           .map(offset => {
             let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
-            mag = curve === 'j' ? mag * 1 : mag * (cutIn ? .65 : .65)
-            // mag = curve === 'j' ? mag : mag * mag * .4
+            mag = curve === 'j' ? mag * 1 : mag * .65
             let isSCurve = false
 
             let highBlurRad = mag * 1
