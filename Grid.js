@@ -730,8 +730,11 @@ class Grid extends ProtoLayer {
     DeBug.warn(`unmatched`, unmatched)
     unmatched.forEach(s => {
       DeBug.warn(`current unmatched`, s)
-      if (s.inWrapper) s.setEndCurveOrigin(s.inWrapper.arcOrigin)
-      else s.matchEndCorner()
+      if (s.inWrapper
+        && s.canCurveTo(s.inWrapper.arcOrigin)
+      ) s.setEndCurveOrigin(s.inWrapper.arcOrigin)
+      else
+        s.matchEndCorner()
     })
   }
 
@@ -792,6 +795,7 @@ class Grid extends ProtoLayer {
     DeBug.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
     // testPool = testPool.slice(0, 16)
     testPool.forEach(s => {
+      // DeBug.log(`current Seg`, s)
       s.matchEndCorner()
       if (wrap) {
         s.flushWrap()
@@ -820,24 +824,6 @@ class Grid extends ProtoLayer {
     respectAdjacents = true,
     interGrid = false) {
     DeBug.log(`defaultPool`, defaultPool)
-    //ARROW: completeEnds()
-    // const completeEnds = (testPool = defaultPool, wrap = true) => {
-    //   testPool = testPool
-    //     .filter(s => !s.hasCompleteEndCorner)
-    //     .sort((a, b) => a.arcRadius - b.arcRadius)
-
-    //   DeBug.warn(`allIncompleteEnds`, testPool)
-    //   DeBug.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
-    //   testPool.forEach(s => {
-    //     s.matchEndCorner()
-    //     if (wrap) { s.flushWrap() }
-    //     // if (wrap && (s.isOutsideCorner || s.coinInWrapper)) { s.flushWrap() }
-    //   })
-    //   // testPool.forEach(s => {
-    //   //   // s.matchEndCorner()
-    //   //   // if (wrap) { s.flushWrap() }
-    //   // })
-    // }
 
     //MARK: wrapInterferenceCorners()
     const allInterferenceWrapped = defaultPool
@@ -1173,6 +1159,11 @@ class Grid extends ProtoLayer {
       // testPool = testPool.slice(0, 1)
 
       testPool.forEach(s => {
+        const checkNeighbors = (neighbors) => {
+          neighbors = neighbors.filter(n => n.adjWrapIsNonEquidistant)
+          if (!neighbors.isEmpty) fixBadAdjWraps(neighbors)
+        }
+
         //ARROW: wrapOutFix()
         const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
           if (s.inWrapper) {
@@ -1187,6 +1178,7 @@ class Grid extends ProtoLayer {
             //   w.replaceEndCurveOrigin(s.inWrapper.arcOrigin)
             //   // }
             // })
+            checkNeighbors(s.neighborsArray)
           }
         }
         //ARROW: wrapInFix()
@@ -1196,6 +1188,7 @@ class Grid extends ProtoLayer {
           if (s.inWrapper.radiantOutWrappers?.some(o => !s.isRadiantWrapped(o) && s.canRadiateTo(o))) {
             s.inWrapper.replaceEndRadiantOutWrapsOrigin()
           }
+          checkNeighbors(s.neighborsArray)
         }
 
         DeBug.error(`current badFlushWrap: `, s)
@@ -1216,6 +1209,7 @@ class Grid extends ProtoLayer {
           }
         }
       })
+
     }
 
     //MARK: fixLoosies()
@@ -1255,7 +1249,7 @@ class Grid extends ProtoLayer {
       // const action = () => {
 
       // return
-      // testPool = testPool.slice(0, 4)
+      // testPool = testPool.slice(0, 1)
 
       while (testPool.length > 0) {
         const s = testPool.shift()
@@ -1687,7 +1681,6 @@ class Grid extends ProtoLayer {
 
       DeBug.warn(`curveMinRadiusCorners`)                                                     //LOGGING:
       this.curveMinRadiusCorners()
-
       DeBug.warn(`completeEnds`)                                                              //LOGGING:
       this.completeEnds(defaultPool)
 
