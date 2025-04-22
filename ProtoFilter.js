@@ -110,9 +110,9 @@ class ProtoFilter {
     //ARROW: buildFilter()
     const buildFilter = (shades, filter, inset) => {
       let prevMode = 'normal'
-      DeBug.warn(`building shades`)
+      // DeBug.warn(`building shades`)
       for (const shade of shades) {
-        DeBug.log(`current shade:`, shade)
+        // DeBug.log(`current shade:`, shade)
         // const { dx, dy, blur, color, lighten } = shade
         let { invert, blur, color, lighten } = shade
         const vector = Shade.shadVect()
