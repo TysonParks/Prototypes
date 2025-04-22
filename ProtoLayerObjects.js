@@ -442,7 +442,7 @@ class Frame extends ProtoLayer {
     grid.svgElt.parent(this.svgElt)                                  // re-parent grid to put layer on top of backGrid
   }
   //METH: setBackGridCells()
-  setBackGridGroup(mode = 1, wrap = true, cuts) {
+  setBackGridGroup(mode = 1, wrap = true, cuts, minInsetAmount) {
     const [grid, backGrid] = [this.grid, this.backGrid]
 
     if (mode === 0) {
@@ -555,11 +555,13 @@ class Frame extends ProtoLayer {
     DeBug.log(`grid.insetAmount.x`, grid.insetAmount.x)
     DeBug.log(`grid.cellRadius`, grid.cellRadius)
     // const padWidth = ((grid.insetAmount.x / grid.cellRadius || grid.cellRadius)) / 2
-    const padWidth = (1 + (grid.insetAmount.x / grid.cellRadius || grid.cellRadius)) / 2
+    const padWidth = ((1 + (grid.insetAmount.x / grid.cellRadius || grid.cellRadius))) / 2
+    const gridWidth = 1 + (1 * grid.cellOutset) + minInsetAmount
+    const actual = range(gridWidth, padWidth * 2)
     //ARROW: scaled()
     const scaled = (amount) => {
       // const padWidth = (1 + (grid.insetAmount.x / grid.cellRadius || grid.cellRadius)) / 2
-      const actual = range(1 + grid.cellOutset, padWidth * 2)
+      // const actual = range(gridWidth, padWidth * 2)
       const useful = range()
       return useful.convertRange(amount, actual)
     }
@@ -595,10 +597,11 @@ class Frame extends ProtoLayer {
       // sg.drawFilter = false
 
       sg.svgGroupElt
-        .attribute(`fill`, frameColor)
+      // .attribute(`fill`, frameColor)
+
       // .attribute('fill', protoColor(130))
       // .attribute('fill', `green`)
-      // .attribute('opacity', 1)
+      // .attribute('opacity', .5)
       // sg.drawElement()
       // .attribute('opacity', 0)
       // .attribute('stroke', 'white')
@@ -789,6 +792,13 @@ class SelectionBounds {
     }, `cellsBounds`).call(this)
   }
 
+  get selectionRows() {
+    return this.boundCellRows.map(r => r.filter(c => this.selection.some(s => s.id === c.id)))
+  }
+  get selectionColumns() {
+    return this.boundCellColumns.map(c => c.filter(r => this.selection.some(s => s.id === r.id)))
+  }
+
   // get upRowCells() {
   //   return memoize(() => {
   //     return this.selection.filter(e => e.y === this.yCellMin).flat()
@@ -867,6 +877,9 @@ class SelectionBounds {
   get minVertCellThickness() { return this.#checkCellThickness(true, false) }
   get maxHorCellThickness() { return this.#checkCellThickness(false, true) }
   get maxVertCellThickness() { return this.#checkCellThickness(false, false) }
+
+  get minCellThickness() { return min(this.minHorCellThickness, this.minVertCellThickness) }
+  get maxCellThickness() { return max(this.maxHorCellThickness, this.maxVertCellThickness) }
 
   #checkCellThickness(minimum, hor) {
     const minName = minimum ? `min` : `max`
@@ -1185,6 +1198,7 @@ class CellGroup extends ProtoLayer {
   }
 
   get ordinalConnections() { return this.cells.filter(c => !c.ordinalOnlyNeighbors.isEmpty) }
+  get hasOrdinalConnections() { return !this.ordinalConnections.isEmpty }
 
   get exposedSegments() {
     return this.grid.allExposedSides({ selection: this.cells, groupID: this.id })
@@ -1267,10 +1281,9 @@ class CellGroup extends ProtoLayer {
     dilationStart,        // overrides layerStart and crops into the dilationRadius
     dilationEnd,          // overrides layerEnd and stretches to the minOutsideCorner radius
     loftScale = 1,
-    outsetLoft = true,
     angleOffset,
     amount = 1,
-    cascadeStyle,         // TODO: implement irrational(squareRoot) & rational(harmonic) canonical series
+    insideCutStyle,         // TODO: implement irrational(squareRoot) & rational(harmonic) canonical series
     perimeter = false,    // setting for making channels/walls
     isFrame = false,
     addBacking = false,
@@ -1280,17 +1293,30 @@ class CellGroup extends ProtoLayer {
     selOps = []
   } = {}) {
     const cutObj = {
-      profile: profile,
+      profile: layerEnd ? profile?.breed || 'Flat' : 'Backing',
+      amount: amount,
       layerStart: layerStart,
       layerEnd: layerEnd,
       dilationStart: dilationStart,
       dilationEnd: dilationEnd,
     }
     this.cuts.push(cutObj)
+
     const outset = this.grid.cellOutset
 
     DeBug.groupCollapsed(`${this.id}.cutIslands: ${profile?.description || `frameBase`}`)
+    DeBug.warn(`cuts`, this.cuts)
+    DeBug.warn(`perimeterIslands`, this.perimeterIslands)
+    const prmIsle = this.perimeterIslands.find(pi => pi.cells.includesMany(selection, 'id'))
+    const parentIsle = prmIsle?.subIslands?.findLast(si => si.cells.includesMany(selection, 'id'))
+    const prevCut = parentIsle?.cut
+    DeBug.warn(`prmIsle`, prmIsle)
+    DeBug.warn(`parentIsle`, parentIsle)
+    DeBug.warn(`prevCut`, prevCut)
+    // if (prevCut) isOutsetCut = prevCut.isOutsetCut
+
     DeBug.log(`layer start/end`, layerStart, layerEnd)
+    DeBug.log(`dilation start/end`, dilationStart, dilationEnd)
     if (layerStart < layerEnd || layerStart === undefined) {            // layerStart should be larger, outside fx radius
       [layerStart, layerEnd] = [layerEnd, layerStart]                   // swap if needed
     }
@@ -1317,16 +1343,19 @@ class CellGroup extends ProtoLayer {
     DeBug.log(`useDilation elements:`, layerEnd, dilationStart, dilationEnd)
     let useDilation = layerEnd === undefined || !!dilationStart || !!dilationEnd //  4 cases => useDilation
     if (isFrame) { useDilation = false }
-    DeBug.log(`useDilation:`, useDilation)
+    DeBug.warn(`useDilation:`, useDilation)
 
     //calculate maxLofts per shape
 
     DeBug.log(`cutIslands perimeterShapes:`, this.perimeterShapes)
+    const cellRadius = this.grid.cellRadius
+
+    //MARK: Create Shape Groups
     let shapeGroups = new OpArray
     this.perimeterShapes.forEach(sh => {                                  // create shapeGroups from common shape minRads
       DeBug.error(`current shape in queue`, sh)
       // const minInset = profile?.hasOutsetShade ? layerEnd : layerStart
-      // let minRad = useDilation ? sh.minOutsideCornerRadius : minInset * this.grid.cellRadius
+      // let minRad = useDilation ? sh.minOutsideCornerRadius : minInset * cellRadius
       DeBug.log(`minOutsideCornerRadius`, sh.minOutsideCornerRadius)
       let minRad = sh.minOutsideCornerRadius
       if (amount > 1) {
@@ -1337,31 +1366,44 @@ class CellGroup extends ProtoLayer {
         if (!this.grid.cellAspect.isSquare) {
           if (sh.minInsideCornerRadius < sh.minOutsideCornerRadius) { minRad = sh.minInsideCornerRadius }
         }
+        // DeBug.warn(`amount minRad`, minRad)
+        // DeBug.warn(`amount minCellThickness`, sh.cellBounds.minCellThickness)
+        // if (sh.cellBounds.minCellThickness * cellRadius < minRad) { minRad = sh.cellBounds.minCellThickness * cellRadius }
       } else {
         if (sh.isPizzaSlice) { minRad = sh.minCornerRadius }
-        if (sh.isPointedLeaf) { minRad = sh.maxCornerRadius }
+        if (sh.isTurnip) { minRad = sh.maxCornerRadius }
+        if (profile?.hasInsetShade && sh.isLemon) minRad = sh.lemonLoftRadius
         if (sh.hasOffsetConnections) {
           const start = isOutsetCut ? layerStart - outset : layerStart + outset
-          minRad = start * this.grid.cellRadius
-        }
-      }
-      if (sh.hasSingleWidth || sh.hasOrdinalConnections) {
-        if (profile?.hasOutsetShade
-          || (outset > 0.5 || amount > 1)
-        ) {
-          minRad = this.grid.cellRadius
+          minRad = start * cellRadius
         }
       }
 
-      //TODO: hierarchy downgrade - use once interGrids are implemented
-      // if (this.perimeterIslands.last.direction.hierarchy > direction.hierarchy) {  // hierarchy downgrade - use
-      //   minRad = this.grid.cellRadius
-      // }
+      if (sh.hasSingleWidth || sh.hasOrdinalConnections) {
+        if (
+          profile?.hasOutsetShade
+          ||
+          (outset > 0.5 || amount > 1)
+        ) {
+          minRad = cellRadius
+        }
+      }
+      if (sh.hasInsideCorners) {
+        if (profile?.hasOutsetShade) minRad = cellRadius
+        if (sh.cellBounds.minCellThickness * cellRadius < minRad) { minRad = sh.cellBounds.minCellThickness * cellRadius }
+      }
+
+
+      if (direction.hierarchy < 2) minRad = cellRadius
+
+      if (minRad < cellRadius) minRad = cellRadius
+      if (minRad <= 0) { return }
 
       minRad = roundToDec(minRad, 4)
-      if (minRad <= 0) { return }
+
       const neighbors = sh.neighborShapesCardinal
       DeBug.warn(`minRad`, minRad)
+      DeBug.warn(`cellRadius`, cellRadius)
       DeBug.warn(`neighbors`, neighbors)
       let group = shapeGroups.find(g =>
         equalsRoundedDec(g.minRad, minRad, 1)
@@ -1384,35 +1426,37 @@ class CellGroup extends ProtoLayer {
     }
     if (loftScale > 1) { loftScale = 1 }                                  // loftScale cant be greater than 1
 
-    const extHighDepth = 1 - layerStart * this.grid.cellRadius / this.grid.cellRadius * 4
+    let extHighDepth = 1 - layerStart * .25
+    DeBug.error(`initial extHighDepth`, extHighDepth)
     // shapeGroups = shapeGroups.slice(0, 1)
     //FIXME: FINAL ISSUE: layerStart/layerEnd need to be reset for every Cutting Loop 
-    //MARK: Cutting Loop
+    //MARK: ShapeGroups Loop
     shapeGroups.forEach(grp => {
       DeBug.log(``)
       DeBug.warn(`current shapegroup`, grp)
       DeBug.log(`minRad`, grp.minRad)
-      DeBug.log(`cellRadius`, this.grid.cellRadius)
-      // DeBug.error(`layerEnd`, 1 - grp.minRad / this.grid.cellRadius)
+      DeBug.log(`cellRadius`, cellRadius)
+      // DeBug.error(`layerEnd`, 1 - grp.minRad / cellRadius)
       let [grpLayerStart, grpLayerEnd] = [layerStart, layerEnd]
       DeBug.log(`current start/end`, layerStart, layerEnd)
       DeBug.log(`current grp start/end`, grpLayerStart, grpLayerEnd)
-      let maxDilationAmount = roundToDec(1 - (grp.minRad / this.grid.cellRadius), 4)
-      let maxDilationRadius = 1 - maxDilationAmount
+      // let maxDilationAmount = roundToDec(1 - (grp.minRad / cellRadius), 4)
+      let maxDilationAmount = -roundToDec(1 - (grp.minRad / cellRadius), 4)
+      let maxDilationRadius = grpLayerStart + maxDilationAmount
 
       // let dilationRange = range(maxDilationAmount, grpLayerStart)
       // maxDilationAmount = isOutsetCut ? maxDilationAmount - outset : maxDilationAmount + outset
       DeBug.log(`maxDilationAmount`, maxDilationAmount)
       DeBug.log(`maxDilationRadius`, maxDilationRadius)
       // DeBug.log(`dilationRange`, dilationRange)
-      if (maxDilationAmount > 0) { maxDilationAmount = 0 }
+      // if (maxDilationAmount < 0) { maxDilationAmount = 0 }
       let dilationAmount, dilationStartRadius, dilationEndRadius
       let cut, insetScale
 
       if (useDilation) {                                        // extend cutRad into shape based upon grp.minRad
         DeBug.error(`using Dilation!`)
-        if (!dilationStart) { dilationStart = 0 }                          // !dilationStart => dilationStart = 0
-        if (!dilationEnd) { dilationEnd = 1 }                              // !dilationEnd   => dilationEnd = 1
+        if (!dilationStart) { dilationStart = 1 }                          // !dilationStart => dilationStart = 0
+        if (!dilationEnd) { dilationEnd = 0 }                              // !dilationEnd   => dilationEnd = 1
         // dilationStartRadius = dilationStart * maxDilationRadius + maxDilationAmount
         // dilationEndRadius = dilationEnd * maxDilationRadius + maxDilationAmount
         dilationStartRadius = dilationStart * maxDilationAmount
@@ -1427,32 +1471,80 @@ class CellGroup extends ProtoLayer {
 
         if (profile?.hasInsetShade) {
           DeBug.error(`this hasInsetShade`)
-          grpLayerEnd = isOutsetCut ? maxDilationAmount + outset : maxDilationAmount
-          grpLayerEnd = maxDilationAmount
+          // grpLayerEnd = isOutsetCut ? maxDilationAmount + outset : maxDilationAmount
+
+
+          // grpLayerEnd = maxDilationAmount
+          grpLayerEnd = grpLayerStart - maxDilationRadius
+          // grpLayerStart = maxDilationAmount
         } else {                                                // profile?.hasOutsetShade
           DeBug.error(`this hasOutsetShade`)
           maxDilationAmount = isOutsetCut ? maxDilationAmount + outset : maxDilationAmount - outset
+          // maxDilationAmount = isOutsetCut ? maxDilationAmount + outset : maxDilationAmount - outset
           DeBug.log(`maxDilationAmount`, maxDilationAmount)
           // const fullRadius = 1 - maxDilationAmount
-          // grpLayerEnd = fullRadius / (amount + 1)
-          grpLayerEnd = maxDilationRadius / (amount + 1) + maxDilationAmount
+          // grpLayerEnd = fullRadius / (amount + 1) + maxDilationAmount
+          // if (minRad > cellRadius) {
+          // if (amount > 1) grpLayerEnd = maxDilationRadius / (amount + 1) + maxDilationAmount
+          if (amount > 1) {
+            // grpLayerStart = 3
+            // grpLayerEnd = 0
+            // grpLayerEnd = maxDilationRadius / ((amount + .5) * 2)
+            // grpLayerEnd = grpLayerStart - maxDilationRadius / (amount + 1) + maxDilationAmount
+
+            // grpLayerEnd = maxDilationRadius / (amount + 1)
+            grpLayerEnd = grpLayerStart - maxDilationRadius
+            grpLayerEnd = grpLayerEnd + maxDilationRadius / (amount)
+            // grpLayerStart = maxDilationRadius / (amount + 1)
+
+          } else {
+            // grpLayerStart = maxDilationAmount 
+
+            // grpLayerEnd = grpLayerStart
+            // grpLayerStart = grpLayerEnd - maxDilationRadius
+            // grpLayerEnd = maxDilationRadius / (amount + 1)
+            // const tempDilStart = dilationStart
+            // dilationStart = dilationEnd
+            // dilationEnd = tempDilStart
+
+            grpLayerEnd = grpLayerStart - maxDilationRadius / (amount + 1)
+            grpLayerEnd = grpLayerStart - maxDilationRadius / 2
+            // grpLayerStart = grpLayerEnd + maxDilationRadius / 2
+          }
+          // grpLayerStart = maxDilationAmount
+          // } else {
+          // grpLayerEnd = maxDilationAmount
+          // }
+
+
+
+          DeBug.log(`grpLayerEnd`, grpLayerEnd)
+          DeBug.log(`grpLayerStart`, grpLayerStart)
+          // DeBug.log(`hasInsideCorners`, grp.shapes.some(sh => sh.hasInsideCorners))
           if (
             // grpLayerEnd > 0 
             // &&
-            2 * grpLayerEnd < grpLayerStart) { grpLayerEnd = grpLayerStart / 2 }
+            grp.shapes.some(sh => sh.hasInsideCorners) &&
+            2 * grpLayerEnd < grpLayerStart) {
+            DeBug.warn('reducing grpLayerEnd')
+            grpLayerEnd = grpLayerStart / 2
+          }
         }
 
-
+        // if (2 * grpLayerEnd < grpLayerStart) { grpLayerEnd = grpLayerStart / 2 }
         // if (grpLayerEnd > 0 && 2 * grpLayerEnd < grpLayerStart) { grpLayerEnd = grpLayerStart / 2 }
         DeBug.log(`current grp start/end`, grpLayerStart, grpLayerEnd)
+        DeBug.log(`current dil start/end`, dilationStart, dilationEnd)
+        // const dilationRange = range(grpLayerEnd, grpLayerStart)
         const dilationRange = range(grpLayerStart, grpLayerEnd)
-        grpLayerStart = range().convertRange(dilationStart, dilationRange)
-        grpLayerEnd = range().convertRange(dilationEnd, dilationRange)
-        let newStart = range().convertRange(dilationStart, dilationRange)
-        let newEnd = range().convertRange(dilationEnd, dilationRange)
+
+        grpLayerStart = range(1, 0).convertRange(dilationStart, dilationRange)
+        grpLayerEnd = range(1, 0).convertRange(dilationEnd, dilationRange)
+        // let newStart = range().convertRange(dilationStart, dilationRange)
+        // let newEnd = range().convertRange(dilationEnd, dilationRange)
         DeBug.log(`dilationRange`, dilationRange)
-        DeBug.log(`newStart`, newStart)
-        DeBug.log(`newEnd`, newEnd)
+        DeBug.log(`newStart`, grpLayerStart)
+        DeBug.log(`newEnd`, grpLayerEnd)
 
 
         // DeBug.warn(`this`, this)
@@ -1505,53 +1597,88 @@ class CellGroup extends ProtoLayer {
       DeBug.log(`firstLayerRange`, firstLayerRange)
       DeBug.log(`subLayerRange`, subLayerRange)
 
+      DeBug.error(`Inset Cuts amount`, amount)
+
+      //MARK: Cutting Loop
       let cutStart, cutEnd
       for (let i = 0; i < amount; i++) {                                    // if amount>1, calc cutStart/End for each step
+        DeBug.warn(`cutting loop ${i + 1}`)
+        DeBug.groupCollapsed(`cutting loop ${i + 1}`)
+        const isLemonTop = i === amount - 1 && grp.shapes.every(sh => sh.isLemon)
         const layerRange = i === 0 ? firstLayerRange : subLayerRange
         const stepWidth = i === 0 ? firstStepWidth : subStepWidth
         let loft = i === 0 ? min(layerRange.size, stepWidth) : layerRange.size * loftScale / amount                     // calc loft
-
+        DeBug.warn(`isLemonTop`, isLemonTop)
+        DeBug.warn(`lemonLoftRadius`, grp.shapes[0].lemonLoftRadius)
+        if (amount > 1
+          && i === amount - 1
+          && grp.shapes.every(sh => sh.isLemon)) loft = (grp.shapes[0].lemonLoftRadius - (grp.minRad * (amount - 1) / amount)) / cellRadius
+        DeBug.log(`loft`, loft)
+        DeBug.log(`stepWidth`, stepWidth)
         if (loft === 0) { continue }
         // cutStart = profile.hasInsetShade ? grpLayerStart - i * stepWidth : grpLayerStart - i * stepWidth
         // cutEnd = profile.hasInsetShade ? cutStart - stepWidth : cutStart - stepWidth
         cutStart = grpLayerStart - i * stepWidth
         cutEnd = cutStart - stepWidth
-        if (loftScale < 1) {                                              // process outSetLoft
-          if (outsetLoft) {
-            DeBug.log(`using outsetLoft`)
-            cutEnd = cutStart - loft
-          } else {
-            DeBug.log(`using insetLoft`)
-            cutStart = cutEnd + loft
-          }
-        }
+        DeBug.log(`cut start/end`, cutStart, cutEnd)
+
         const cutRange = range(cutStart, cutEnd)
+
         if (profile) {
           // insetScale = grpLayerStart
           // insetScale = cutEnd
           insetScale = profile.hasInsetShade ? cutStart : cutEnd
-          // insetScale = profile.isCutOut ? insetScale + loft : insetScale //FIXME: THIS FIXES jOut cuts!!! But not rIn cuts??
+          // insetScale = profile.hasInsetShade ? cutEnd : cutStart
+          // insetScale = profile.hasOutsetShade ? insetScale + loft : insetScale //FIXME: THIS FIXES jOut cuts!!! But not rIn cuts??
         } else {
           insetScale = grpLayerStart
         }
-
 
         DeBug.log(`layerRange`, layerRange)
         DeBug.log(`cutRange`, cutRange)
         DeBug.log(`insetScale`, insetScale)
 
-        // if (loft > 2 * insetScale) { loft = 2 * insetScale }
+        if (profile && !isFrame) {
+          if (i > 0) {
+            switch (insideCutStyle) {
+              case 'Waves':
+                profile = profile.wave
+                break
+              case 'Cyma Recta':
+                profile = profile.cyma
+                break
+            }
 
+            // if (i % 2 === 0) { continue }
+            // profile = profile.channel
+            // profile = profile.wave
+            // profile = R.random_choice([profile.wave, profile])
+            // if (insetScale < 1.4) direction = Direction.None
+            // if (insetScale < .8
+            //   && roundToDec(grp.minRad) <= roundToDec(cellRadius)
+            // ) {
+            // direction = R.random_choice([Direction.Horizontal, Direction.Vertical])
+            // loft = .125 * this.grid.minCellWidth / (amount + 1)
+            // }
+          }
+        }
+
+        extHighDepth = loft / 8
+        // extHighDepth = loft * cellRadius / 8
+        DeBug.error(`final extHighDepth`, extHighDepth)
+
+        //MARK: Cut Assignment
         if (profile) {
           cut = new ProtoCut({
             profile: profile,
             depth: loft * this.grid.minCellWidth,
             start: insetScale,
             extHighDepth: extHighDepth,
-            useExtHighDepth: profile.isR ? amount < 2 : true,   //FIXME: also check 'cuts' for consecutive rCuts!
+            // useExtHighDepth: profile.isR ? amount < 2 : true,   //FIXME: also check 'cuts' for consecutive rCuts!
+            useExtHighDepth: !isFrame,
             angleOffset: angleOffset,
           })
-        }
+        } else { console.error(`cut profile is undefined!`) }
 
         DeBug.log(`loft`, loft)
         DeBug.log(`cut`, cut)
@@ -1566,14 +1693,20 @@ class CellGroup extends ProtoLayer {
         let newIslands = this.createSubIslands({ cut: cut, islands: islands, selection: selection, direction: direction, insetScale: insetScale })
         DeBug.groupEnd()
         DeBug.groupCollapsed(`islandsToShapeGroups`)
-        if (!newIslands.flat().isEmpty) { this.islandsToShapeGroups(newIslands, cut, direction, isFrame) }
+        if (!newIslands.flat().isEmpty) {
+          this.islandsToShapeGroups(newIslands, cut, direction, isFrame
+            // , insetScale
+          )
+        }
         DeBug.groupEnd()
         DeBug.log(``)
+        DeBug.groupEnd()
       }
 
 
       // }
     })
+
     DeBug.groupEnd()
     // else if (layerEnd === `max`) {
     //   const squareIslands = newIslands.filter(i => i.isSquare)
@@ -1597,7 +1730,9 @@ class CellGroup extends ProtoLayer {
     return newIslands
   }
   //METH: assignToShapeGroups()
-  islandsToShapeGroups(islands, cut, direction, isFrame = false) {
+  islandsToShapeGroups(islands, cut, direction, isFrame = false
+    // , insetScale
+  ) {
     DeBug.log(`islandsToShapeGroups`)
     DeBug.log(`islands`, islands)
     DeBug.log(`cut`, cut)
@@ -1618,7 +1753,7 @@ class CellGroup extends ProtoLayer {
         islandLevel: this.islandLevel,
         direction: direction,
         isFrame: isFrame,
-        // insetScale: insetScale,
+        // insetScale: insetScale || 1,
       })
       cut?.shapeGroups.push(shapeGroup)
       DeBug.log(`new shapeGroup`, shapeGroup)
@@ -1713,8 +1848,10 @@ class ShapeGroup extends ProtoLayer {
   }
 
   // MARK: ShapeGroup Computed Properties
-  get cellBounds() { return this.cellGroup.cellBounds }
-  get boundsRect() { return this.cellGroup.boundsRect }
+  // get cellBounds() { return this.cellGroup.cellBounds }
+  // get boundsRect() { return this.cellGroup.boundsRect }
+  get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
+  get boundsRect() { return this.cellBounds.boundsRect }
   get padding() {
     const backGroupPadding = Vertex.mult(this.grid.insetAmount, 2)
     const defaultPadding = Vertex.mult(this.cut?.padding || backGroupPadding, 2)
@@ -1739,6 +1876,7 @@ class ShapeGroup extends ProtoLayer {
     }
   }
 
+  get cells() { return this.islands.map(i => i.cells).flat().gridVertSorted }
   get shapes() { return this.islands.map(i => i.shape) }
 
   get shadeElt() {
@@ -1852,7 +1990,7 @@ class ShapeGroup extends ProtoLayer {
         // .layout(this.insetAnchor, this.insetSize, this.padding)
         .viewBox(this.anchor, this.size, this.padding)
         .layout(this.anchor, this.size, this.padding)
-      DeBug.log(`drawElement() layout vals`, this.anchor.string, this.size.string, this.padding.string)
+      // DeBug.log(`drawElement() layout vals`, this.anchor.string, this.size.string, this.padding.string)
     }
 
 
@@ -1860,6 +1998,8 @@ class ShapeGroup extends ProtoLayer {
     // const length = path.elt.getTotalLength()
 
     this.svgGroupElt
+      // .viewBox(this.insetAnchor, this.insetSize, this.padding)
+      // .layout(this.insetAnchor, this.insetSize, this.padding)
       .viewBox(this.anchor, this.size, this.padding)
       .layout(this.anchor, this.size, this.padding)
       .attribute(`fill`, frameColor)
@@ -1884,10 +2024,10 @@ class ShapeGroup extends ProtoLayer {
     // .attribute('stroke-width', this.cellGroup.isBackGroup ? 0 : this.grid.cellRadius * .25)
     // .attribute('stroke-opacity', this.cellGroup.isBackGroup ? 0 : 1)
     // .attribute('fill-opacity', this.cellGroup.isBackGroup ? 1 : 0)
-    console.warn(`ShapeGroup`, this.id)
-    console.warn(`this.padding`, this.padding)
-    console.warn(`this.cut`, this.cut)
-    console.warn(`this.drawFilter`, this.drawFilter)
+    // console.warn(`ShapeGroup`, this.id)
+    // console.warn(`this.padding`, this.padding)
+    // console.warn(`this.cut`, this.cut)
+    // console.warn(`this.drawFilter`, this.drawFilter)
 
 
     const vintage = [
@@ -1987,14 +2127,14 @@ class ShapeGroup extends ProtoLayer {
     }
 
     if (this.drawFilter) {
-      DeBug.error(`shapeGroup.drawFilter`, this.filter)
+      // DeBug.error(`shapeGroup.drawFilter`, this.filter)
       this.svgGroupElt
         .applyFilter({
           filter: this.filter,
           // size: this.insetSize,
-          size: Vertex.mult(this.insetSize, 1),
+          // size: Vertex.mult(this.insetSize, 1),
           // padding: Vertex.mult(this.insetSize, 2)
-          padding: Vertex.mult(this.padding, 1),
+          // padding: Vertex.mult(this.padding, 1),
           // padding: this.padding,
           // padding: Vertex.mult(this.grid.cellSize, 4)
         })
@@ -2240,6 +2380,7 @@ class Cell extends ProtoLayer {
   //FIXME: check to see if this method is being used. Seems like no, because bounds was not properly assigned before!
   //METH:
   validNeighborsCoords(direction = Direction.All, bounds = this.grid.gridCellBounds,) {
+    // console.log(`cell.validNeighborsCoords direction`, direction.vals)
     return this.allNeighborsCoords(direction).filter(e => this.grid.coordsAreInBounds(e.x, e.y, bounds))
   }
   //METH: validNeighbors()
@@ -2321,7 +2462,7 @@ class Island extends ProtoLayer {
 
   constructor({
     cells,
-    // cut,
+    cut,
     protoParent,
     svgParent,
     grid,
@@ -2346,14 +2487,17 @@ class Island extends ProtoLayer {
     })
     DeBug.log(`New Island! with arguments:`, arguments[0])
     this.cells = cells
-    // this.cut = cut
+    this.cut = cut
     this.grid = grid
     this.groupID = groupID
     this.direction = direction
     this.maxCorners = maxCorners
     this.parentIslandID = parentIslandID
     this.islandLevel = parentIslandID ? protoParent.islandLevel + 1 : 0 // perimeterIslands should be 0, the rest above
-
+    // if (this.islandLevel > 0) {
+    //   const islands = this.cellGroup.islands
+    //   islands.forEach(i => resetMemoized(i, `allSubIslands`))
+    // }
     // this.drawLabel = true
     // this.drawDeBugRect = true
     // this.drawPerimeter = true
@@ -2369,28 +2513,33 @@ class Island extends ProtoLayer {
   // #region Computed Properties
   get testLook() { return Look.test(this.size, 'island') }
   get testColor() { return protoColor(255, 230, 0, 1) }
+  // get cellGroup() {
+  //   return memoize(() => {
+  //     return this.grid.groupNamed(this.groupID)
+  //   }, `cellGroup`).call(this)
+  // }
   //MEMO: allSubIslands
   get allSubIslands() {
     //FIXME: using resetMemoized() when islands are added, memoize should be reinstated here
-    return memoize(() => {
-      let allSubs = new OpArray
-      const collectSubIslands = (island) => {
-        if (island.subIslands) {
-          island.subIslands.forEach(sub => {
-            allSubs.push(sub)
-            collectSubIslands(sub)
-          })
-        }
+    // return memoize(() => {
+    let allSubs = new OpArray
+    const collectSubIslands = (island) => {
+      if (island.subIslands) {
+        island.subIslands.forEach(sub => {
+          allSubs.push(sub)
+          collectSubIslands(sub)
+        })
       }
-      collectSubIslands(this)
-      return allSubs
-    }, `allSubIslands`).call(this)
+    }
+    collectSubIslands(this)
+    return allSubs
+    // }, `allSubIslands`).call(this)
   }
 
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.groupID, islandID: this.id }) }
   get cellAnchor() { return this.cellBounds.cellAnchor }
-  get insetAnchor() { return this.anchor }
-  get insetSize() { return this.size }
+  // get insetAnchor() { return this.anchor }
+  // get insetSize() { return this.size }
 
   get boundsRect() { return this.cellBounds.boundsRect }
 
@@ -2499,10 +2648,10 @@ class Island extends ProtoLayer {
     let shapeCorners = shape.insetSubShapes.map(sub => {
       DeBug.log(`sub`, sub)
       return sub
-        .filter(seg =>                                  // filter corners with minimum curvature
-          roundToDec(seg.startNeighbor.availableEndLength, 1) > roundToDec(cellRadius, 1)
-          || roundToDec(seg.availableStartLength, 1) > roundToDec(cellRadius, 1)
-        )
+      // .filter(seg =>                                  // filter corners with minimum curvature
+      //   roundToDec(seg.startNeighbor.availableEndLength, 1) > roundToDec(cellRadius, 1)
+      //   || roundToDec(seg.availableStartLength, 1) > roundToDec(cellRadius, 1)
+      // )
     }).flat(1)
     DeBug.log(`shapeCorners`, shapeCorners)
     if (shapeCorners.isEmpty) {
@@ -2514,7 +2663,7 @@ class Island extends ProtoLayer {
       let addCells = new OpArray                        // cells to add
       shapeCorners.forEach(seg => {
         //FIXME: it appears that arcRadius is not correct
-        const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner
+        const isOutsideCorner = seg.turns.start.isRight // isOutsideCorner (opposite for inside shapes)
         const cornerPos = seg.corners.start             // position of normalCorner
         const neighbor = seg.startNeighbor
         //NOTE: arcRadius: only correct if corner is circular arc and cell aspect is square
@@ -2547,7 +2696,7 @@ class Island extends ProtoLayer {
           return cell.center                            // isSquare
         }
 
-        let cornerCells = this.grid.cells.filter(cell => {// find cells within arc square
+        let cornerCells = this.cells.filter(cell => {// find cells within arc square
           const origin = cell.center
           // const origin = cellOrigin(cell)
           // DeBug.log(`${cell.id}: cellCenter: ${cell.center.string}, origin: ${origin.string}, squareVerts: `, [squareVerts[0].string, squareVerts[2].string])
@@ -2619,6 +2768,7 @@ class Island extends ProtoLayer {
         direction: direction,
         insetScale: insetScale,
         drawFilter: drawFilter,
+        cut: cut,
       })
     } else {
       //NOTE: Create InterGrid
@@ -2639,7 +2789,7 @@ class Island extends ProtoLayer {
       const copyIsland = () => {
         DeBug.log(`copying island ${this.id}`)
         // copy this island but change inset, set filter, set drawFilter
-        const subIsland = this.copy({ insetScale: insetScale, drawFilter: drawFilter })
+        const subIsland = this.copy({ insetScale: insetScale, drawFilter: drawFilter, cut: cut })
         // DeBug.log(`created subIsland: `, subIsland)
         subIslands = OpArray.from([subIsland])
       }
@@ -2651,13 +2801,16 @@ class Island extends ProtoLayer {
           direction: direction,
           insetScale: insetScale,
           drawFilter: drawFilter,
+          cut: cut,
         })
         newIsles?.forEach(i => {
           i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
-          DeBug.log(i.shape.simpleSubShapes)
+          DeBug.warn(`newIslands simples`, i.shape.simpleSubShapes)
           const simples = i.shape.allSimpleSegs
-          this.grid.curveMinRadiusCorners({ corners: simples })
-          // this.grid.createCubicCorners({ subShapes: i.shape.simpleSubShapes, outWrap: false })
+          // .filter(seg => !seg.hasCompleteEndCorner)
+          console.log(`simples`, simples)
+          // this.grid.curveMinRadiusCorners({ corners: simples })
+          this.grid.completeEnds(simples, false)
           // i.shape.assignElement()
           // i.shape.drawElement()
         })
@@ -2671,6 +2824,7 @@ class Island extends ProtoLayer {
         direction = this.direction // downgrade newDirection to same as current Island
       }
       // ordinal corner connecters visually collapse with inset < 0.75
+      // const inset = cut?.profile?.hasOutsetShade ? insetScale + (cut.depth / this.grid.cellRadius) : insetScale
       if (direction.isAll && insetScale < 0.75) {
         DeBug.error(`trying to create SubIslands with All and inset < 0.75. changing direction to Cardinal`)
         direction = Direction.Cardinal // downgrade newDirection to Cardinal to avoid collapse/overlap 
@@ -2724,6 +2878,7 @@ class Island extends ProtoLayer {
     cells = this.cells,
     shape,
     direction = this.direction,
+    cut = this.cut,
   } = {}) {
     // DeBug.log(`copying island`, this.id)
     const newIsland = new Island({
@@ -2737,7 +2892,8 @@ class Island extends ProtoLayer {
       direction: direction,
       maxCorners: this.maxCorners,
       stored: this.stored,
-      drawFilter: drawFilter
+      drawFilter: drawFilter,
+      cut: cut,
     })
 
     if (shape) {
@@ -2759,12 +2915,14 @@ class Island extends ProtoLayer {
   copyAllToCardinal(insetScale, drawFilter = true) {
     DeBug.log(`copyAllToCardinal`)
     DeBug.log(`insetScale`, insetScale)
+    const dir = Direction.Cardinal
     const cellIslands = this.grid.createIslands({
       insetScale: insetScale,
       drawFilter: drawFilter,
       selection: this.cells,
       islandID: this.id,
-      direction: Direction.Cardinal,
+      direction: dir,
+      cut: this.cut,
       // stored: true,
       // createShape: true, // this might NOT be impacting my debug situation - if not please remove on createIslands()
     })
@@ -2777,7 +2935,14 @@ class Island extends ProtoLayer {
 
       const simpleSubShapes = isle.shape.simpleSubShapes
 
-      this.grid.inWrapPerimeter(simpleSubShapes.flat(), parentSimpleSubShapes.flat())
+      // simpleSubShapes.flat().forEach(sub => sub.adjWrap(true))                     // fix bad adjacent Wraps //TODO: need to do more for innerGrids, etc
+      console.log(`this group`, this.grid.groupNamed(this.groupID))
+      this.grid.inWrapPerimeter(simpleSubShapes.flat(), parentSimpleSubShapes.flat()) // wrap inner perimeter to match outer parent segements
+
+      // simpleSubShapes.flat().forEach(sub => {
+      //   if(sub.outWrapper)
+      //   sub.adjWrap(true)
+      // })                     // fix bad adjacent Wraps //TODO: need to do more for innerGrids, etc
       // this.grid.maximizeCuddles(simpleSubShapes, 1)
       // this.grid.nestleShapes()
 
@@ -2974,8 +3139,8 @@ class Shape extends ProtoLayer {
 
   get cellBounds() { return this.island.cellBounds }
   get boundsRect() { return this.cellBounds.boundsRect }
-  get insetAnchor() { return this.anchor }
-  get insetSize() { return this.size }
+  // get insetAnchor() { return this.anchor }
+  // get insetSize() { return this.size }
   get padding() { return vert(this.grid.cellRadius) }
 
   get group() { return this.grid.groupNamed(this.groupID) }
@@ -3045,28 +3210,21 @@ class Shape extends ProtoLayer {
       && equalsRoundedDec(this.minCornerRadius, this.insetSize.x / 2)
     // && roundToDec(this.minCornerRadius, 1) === roundToDec(this.insetSize.x / 2, 1)
   }
-  get isLeaf() {
+  get isLeaf() {                                          // leaf is rect based shape with equal radii on diagonal corners, if square then it's also a lemon
     const rads = this.allCornerRadii
     return this.island.isRectangle
       && !this.isCircle
       && (equalsRoundedDec(rads[0], rads[2], 1) && equalsRoundedDec(rads[1], rads[3], 1))
       && (!equalsRoundedDec(rads[0], rads[1], 1) || !equalsRoundedDec(rads[2], rads[3], 1))
-    // && roundToDec(this.allCornerRadii[0], 1) === roundToDec(this.allCornerRadii[2], 1)
-    // && roundToDec(this.allCornerRadii[1], 1) === roundToDec(this.allCornerRadii[3], 1)
   }
-  get isSquareLeaf() { return this.isLeaf && this.isSquare }
-  get isPointedLeaf() {
-    const rads = this.allCornerRadii
+  get isLemon() { return this.isLeaf && this.isSquare }   // lemon is shape like a football or vesica piscis (3 small equal radii + 1 larger radius)
+  get isTurnip() {                                        // turnip is shape 
     return this.isSquare
-      && !this.isPizzaSlice
-      && (equalsRoundedDec(rads[0], rads[2], 1) || equalsRoundedDec(rads[1], rads[3], 1))
-      && (equalsRoundedDec(rads[0], rads[1], 1) || equalsRoundedDec(rads[2], rads[3], 1))
+      && this.allCornerRadii.filter(r => equalsRoundedDec(r, this.maxCornerRadius)).length === 3
   }
-  get isPizzaSlice() {
-    const rads = this.allCornerRadii
-    const minRad = min(rads)
+  get isPizzaSlice() {                                    // pizza slice is shape with 3 small equal corner radii and 1 larger radius
     return this.isSquare
-      && rads.filter(r => equalsRoundedDec(r, minRad)).length === 3
+      && this.allCornerRadii.filter(r => equalsRoundedDec(r, this.minCornerRadius)).length === 3
   }
 
   get hasSubShapes() { return this.subShapes.length > 1 }
@@ -3088,9 +3246,10 @@ class Shape extends ProtoLayer {
   get hasSingleWidth() { return this.cells.some(c => c.hasOppositeCardinalGroupNeighbors) }
   get hasOrdinalConnections() { return this.island.hasOrdinalConnections }
   get hasOffsetConnections() { return this.island.hasOffsetConnections }
+  get hasInsideCorners() { return this.allInsideCorners.length > 0 }
 
-  get minCornerRadius() { return min(this.allSimpleSegs.map(s => s.arcRadius)) }
-  get maxCornerRadius() { return max(this.allSimpleSegs.map(s => s.arcRadius)) }
+  get minCornerRadius() { return min(this.allCornerRadii) }
+  get maxCornerRadius() { return max(this.allCornerRadii) }
   get minInsideCornerRadius() {
     const corners = this.allInsideCorners
     if (corners.isEmpty) { return }
@@ -3099,7 +3258,7 @@ class Shape extends ProtoLayer {
     }
   }
   get minOutsideCornerRadius() {
-    if (this.isSquareLeaf) { return this.squareLeafLoftRadius }
+    if (this.isLemon) { return this.lemonLoftRadius }
     if (this.isSingleShape) {
       return min(this.allOutsideCorners.map(s => s.arcRadius))
     } else {
@@ -3113,7 +3272,7 @@ class Shape extends ProtoLayer {
       const vertRadius = minVertThick * cellSize.y / 2
       DeBug.log(`horRadius`, horRadius)
       DeBug.log(`vertRadius`, vertRadius)
-      return min(horRadius, vertRadius)
+      return min([horRadius, vertRadius, ...this.allOutsideCorners.map(s => s.arcRadius)])
     }
   }
   get minInsetCornerRadius() { return this.minCornerRadius + (this.insetScale.x - 1) * this.cellRadius }
@@ -3122,10 +3281,10 @@ class Shape extends ProtoLayer {
   get minSquareCornerRadius() {
     if (!this.isSquare) { return }
     if (this.isCircle) { return this.minCornerRadius }
-    if (this.isSquareLeaf) { return this.squareLeafLoftRadius }
+    if (this.isLemon) { return this.lemonLoftRadius }
   }
-  get squareLeafLoftRadius() {
-    if (this.isSquareLeaf) {
+  get lemonLoftRadius() {
+    if (this.isLemon) {
       const arcCenter = this.allSimpleSegs.find(s => s.arcRadius === this.maxCornerRadius).arcCenterVert
       return this.center.dist(arcCenter)
     }
