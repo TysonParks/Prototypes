@@ -18,7 +18,7 @@ class FeatureSet {
   // group dependencies
   groupCount              // Two / Three / More
   density                 // So Lonely / Some Availability / At Capacity
-  seed1                   // Noise/ Random Comb / Rectangles / Squares / Simple Pattern / Complex Pattern / Snake / Snakes
+  seed1                   // Noise/ Random Comb / Rectangles / Squares / Simple Pattern / Complex Pattern / Snake
   seed2                   // None, Noise/ Random Comb / Rectangles / Squares / Simple Pattern / Complex Pattern / Snake 
   shapeInterpreter        // 
   weight                  // Int: 2-10
@@ -27,8 +27,11 @@ class FeatureSet {
   uniformCuts             // Variable / Scoop / Torus / Stairs
   uniformCutsStyle        // 
   cutDirections           // Additive / Subtractive / Both
-  uniformLofts            // Constant / Variable / Maximizing
-  // cascades                // None / One / Some
+  uniformLofts            // Constant / Variable / Maximizing       
+  insideCuts              // True / False
+  insideCutStyle          // Cascades / Waves / Channel / Cyma Recta / Mixed
+
+  // insideCutAmount         // Small / Medium / Large
 
   // frame dependencies
   frameWidth              // None / Small / Medium / Large
@@ -100,17 +103,17 @@ class FeatureSet {
     const r = this.r
 
     // grid dependencies
+    DeBug.groupCollapsed(`calcGridProps`)
+    // DeBug.group(`calcGridProps`)
     this.#calcGridProps(r)
-    // DeBug.log('Grid Style:', this.gridStyle)
-    // DeBug.log('Cell Aspect:', this.cellAspect)
-    // DeBug.log('Grid Size:', this.x, `x`, this.y)
+    DeBug.groupEnd()
 
     // cut dependencies
     this.#calcUniformCuts(r)
 
     this.cellInset = this.enums.cellInset.feature(r)
     this.groupCount = this.#calcGroupCounts(r)
-    // this.#calcInsetCuts(r)
+    this.#calcInsideCuts(r)
 
     this.uniformLofts = this.enums.uniformLofts.feature(r) === 'True'
 
@@ -138,10 +141,17 @@ class FeatureSet {
   // #region Grid Methods
   //METH: #calcGridProps()
   #calcGridProps(r) {
+    DeBug.groupCollapsed(`calcGrid`)
+    // DeBug.group(`calcGrid`)
     this.#calcGridStyle(r)
     this.#calcX(r)
     this.#calcY(r)
+    DeBug.groupEnd()
+
+    DeBug.groupCollapsed(`calcFrameProps`)
+    // DeBug.group(`calcFrameProps`)
     this.#calcFrameProps(r)
+    DeBug.groupEnd()
     this.#calcGridInset(r)
   }
   //METH: #calcGridStyle()
@@ -250,10 +260,18 @@ class FeatureSet {
   //METH: #calcFrameProps()
   #calcFrameProps(r) {
     if (this.gridStyle === 'Magical') {
+      DeBug.log(`cellOutset`, this.enums.cellOutset.value)
+      const outset = this.enums.cellOutset.value
       const ratio = this.y / this.x
       let w = `Medium`
-      if (ratio < 2.3) { w = `Small` }
-      if (ratio > 3) { w = `Large` }
+      if (ratio < 2.3) {
+        w = outset < 0.5 ? `Small` : `Minimum`
+      }
+      if (ratio > 3) {
+        w = outset < 0.5 ? `Large` : `Medium`
+      }
+      w = outset < 0.5 ? `Medium` : `Small`
+      if (outset > .75) w = `Minimum`
       this.frameWidth = w
       this.enums.frameWidth.chosen = w
     } else {
@@ -264,17 +282,19 @@ class FeatureSet {
     const widthVal = this.enums.frameWidth.value
     DeBug.warn(`widthVal`, widthVal)
     if (widthVal < 3) {                                   // Medium or Less
-      this.enums.frameDivs.removeOptions([`5`, `4`])
+      this.enums.frameDivs.removeOptions([`5`, `4`, `3`])
       this.enums.frameSpacing.removeOptions([`Ninths`, `Eighths`])
       this.enums.frameCascades.removeOptions([`Some`])
     }
     if (widthVal < 2) {                                   // Small or Less
-      this.enums.frameDivs.removeOptions([`3`])
+      this.enums.frameDivs.removeOptions([`2`])
       this.enums.frameSpacing.removeOptions([`Fifths`, `Quarters`])
       this.enums.frameCascades.removeOptions([`One`])
     }
     if (widthVal < 1) {                                   // Minimum
-      if (this.enums.cellOutset.value > .25) { this.enums.frameDivs.removeOptions([`2`]) }
+      // if (this.enums.cellOutset.value > .125) {
+      // this.enums.frameDivs.removeOptions([`2`])
+      // }
       this.enums.frameSpacing.removeOptions([`Thirds`])
       // this.enums.frameCascades.removeOptions([`One`])
     }
@@ -283,7 +303,7 @@ class FeatureSet {
     if (this.frameDivs < 3) { this.enums.frameCascades.removeOptions([`Some`]) }
     if (this.frameDivs === `1`) {
       this.enums.frameSpacing.removeOptions([`Quarters`, `Thirds`])
-      this.enums.frameCascades.replaceOptions([['None', 0.5], ['One', 0.5]])
+      this.enums.frameCascades.replaceOptions([['None', 0.5, 0], ['One', 0.5, 1]])
     }
     // if (this.frameDivs === `1`) {
     //   this.frameSpacing = `Whole`
@@ -438,7 +458,7 @@ class FeatureSet {
         this.enums.seed1.removeOptions(['Random Comb', 'Simple Pattern', 'Complex Pattern', 'Noise'])
         this.enums.seed2.removeOptions(['Random Comb', 'Simple Pattern', 'Complex Pattern', 'Noise'])
         this.enums.modifierStyle.removeOptions(['Noise'])
-        this.enums.cellInset.removeOptions(['0.5x Min'])
+        // this.enums.cellInset.removeOptions(['0.5x Min'])
         if (this.cellOutset < 1 / 7) this.enums.seed1.replaceOptions(['Snake', .5])
       }
       if (this.uniformCutsStyle === 'jIn') this.enums.cellInset.removeOptions(['4x Min', '3x Min'])
@@ -446,7 +466,7 @@ class FeatureSet {
       if (this.uniformCutsStyle !== 'jIn' && this.uniformCutsStyle !== 'rOut') this.enums.cellInset.removeOptions(['4x Min', '3x Min', '2x Min'])
       this.cutDirections = this.uniformCutsStyle.includes('Out') ? 'Additive' : 'Subtractive'
     } else {
-      this.enums.cellInset.removeOptions(['0.5x Min'])
+      // this.enums.cellInset.removeOptions(['0.5x Min'])
       this.enums.cutDirections.removeOptions(['Additive', 'Subtractive'])
       this.cutDirections = this.enums.cutDirections.feature(r)
     }
@@ -496,14 +516,15 @@ class FeatureSet {
 
     return { adds: adds, subs: subs }
   }
-  //METH: calcInsetCuts()
-  #calcInsetCuts(r) {
-    if (this.cellAspect === 'Square') {
-      this.insetCuts = this.enums.insetCuts.feature(r)
-    } else {
-      this.insetCuts = 'False'
+  //METH: calcInsideCuts()
+  #calcInsideCuts(r) {
+    if (this.cellAspect !== 'Square') this.enums.insideCuts.removeOptions(['True'])
+    this.insideCuts = this.enums.insideCuts.feature(r)
+    if (this.insideCuts === 'True') this.insideCutStyle = this.enums.insideCutStyle.feature(r)
+    else {
+      this.enums.insideCutStyle.chosen = 'None'
+      this.insideCutStyle = 'None'
     }
-    if (this.insetCuts === 'True') this.insetCutStyle = this.enums.insetCutStyle.feature(r)
   }
   //METH:
   #calcGroups(r) {
@@ -544,10 +565,10 @@ class FeatureSet {
     }
     // DeBug.log('style2', style)
     let loft
-    if (this.uniformLofts) {
-      loft = additive ? this.enums.groupHeight : this.enums.groupDepth
-      loft = loft.feature(r)
-    } else { loft = 1 }
+    // if (this.uniformLofts) {
+    //   loft = additive ? this.enums.groupHeight : this.enums.groupDepth
+    //   loft = loft.feature(r)
+    // } else { loft = 1 }
 
     let method = 'Empty'
     if (i === 1) method = this.seed1
@@ -625,8 +646,8 @@ class FeatureSet {
     const enums = {}
     Object.keys(this.#options).forEach((optionKey) => {
       const option = this.#options[optionKey]
-      const { name: name, options: options, values: values } = option
-      const enumFeature = new EnumFeature(name, options, values, this.usageStore)
+      const { name: name, options: options } = option
+      const enumFeature = new EnumFeature(name, options, this.usageStore)
       enums[optionKey] = enumFeature
     })
     this.enums = enums
@@ -661,37 +682,30 @@ const publicOptions = {
   cellOutset: {
     name: 'Cell Outset',
     options: [
-      ['None', .25],             // 75 / 300 (Total)
-      ['Eighth', .03],           // 9  / 300 (Total)
-      ['Fifth', .03],            // 9  / 300 (Total)
-      ['Quarter', .07],          // 21 / 300 (Total)
-      ['Third', .05],            // 15 / 300 (Total)
-      ['Three Eighths', .04],    // 12 / 300 (Total)
-      ['Half', .2],              // 60 / 300 (Total)
-      ['Five Eighths', .04],     // 12 / 300 (Total)
-      ['Two Thirds', .06],       // 18 / 300 (Total)
-      ['Three Quarters', .07],   // 21 / 300 (Total)
-      ['Seven Eighths', .08],    // 24 / 300 (Total)
-      ['Eight Ninths', .08],     // 24 / 300 (Total)
+      ['None', .25, 0],               // 75 / 300 (Total)
+      ['Eighth', .03, .125],          // 9  / 300 (Total)
+      ['Fifth', .03, .2],             // 9  / 300 (Total)
+      ['Quarter', .07, .25],          // 21 / 300 (Total)
+      ['Third', .05, 1 / 3],          // 15 / 300 (Total)
+      ['Three Eighths', .04, .375],   // 12 / 300 (Total)
+      ['Half', .2, .5],               // 60 / 300 (Total)
+      ['Five Eighths', .04, .625],    // 12 / 300 (Total)
+      ['Two Thirds', .06, 2 / 3],     // 18 / 300 (Total)
+      ['Three Quarters', .07, .75],   // 21 / 300 (Total)
+      ['Seven Eighths', .08, .875],   // 24 / 300 (Total)
+      ['Eight Ninths', .08, 8 / 9],   // 24 / 300 (Total)
     ],
-    values: [0, .125, .2, .25, 1 / 3, .375, .5, .625, 2 / 3, .75, .875, 8 / 9],
+    // values: [0, .125, .2, .25, 1 / 3, .375, .5, .625, 2 / 3, .75, .875, 8 / 9],
   },
   // Public: Cell Inset
   cellInset: {
     name: 'Cell Inset',
     options: [
-      ['0.5x Min', .3],          // 210 / 300 (Total)
-      ['Min', .4],               // 210 / 300 (Total)
-      ['2x Min', .15],           // 45  / 300 (Total)
-      ['3x Min', .1],            // 30  / 300 (Total)
-      ['4x Min', .05],           // 15  / 300 (Total)
-    ],
-    values: [
-      .5,
-      1,
-      2,
-      3,
-      4
+      // ['0.5x Min', .3],          // 210 / 300 (Total)
+      ['Min', .7, 1],               // 210 / 300 (Total)
+      ['2x Min', .15, 2],           // 45  / 300 (Total)
+      ['3x Min', .1, 3],            // 30  / 300 (Total)
+      ['4x Min', .05, 4],           // 15  / 300 (Total)
     ],
   },
   //Public: grid column amount
@@ -772,32 +786,35 @@ const publicOptions = {
       ['False', 0.8],
     ]
   },
-  // Public: insetCuts : Inset Cuts only apply to "Square Aspect" outputs
-  insetCuts: {
-    name: 'Inset Cuts',
+  // Public: insideCuts : Inside Cuts only apply to "Square Aspect" outputs
+  insideCuts: {
+    name: 'Inside Cuts',
     options: [
-      ['True', 0.3],             // 69  / 230 (Square Aspect) 
-      ['False', 0.7],            // 161 / 230 (Square Aspect) 
+      ['True', 0.4, true],        // 92  / 230 (Square Aspect) 
+      ['False', 0.6, false],      // 138 / 230 (Square Aspect) 
     ]
   },
-  // Public: insetCutStyle
-  insetCutStyle: {
-    name: 'Inset Cut Style',
+  // Public: insideCutStyle
+  insideCutStyle: {
+    name: 'Inside Cut Style',
     options: [
-      ['Cascades', 0.35],       // 24  / 69 (Inset Cuts)
-      ['Waves', 0.2],           // 14  / 69 (Inset Cuts)
-      ['Channel', 0.1],         //  7  / 69 (Inset Cuts)
-      ['Cyma Recta', 0.1],      //  7  / 69 (Inset Cuts)
-      ['Mixed', 0.25],          // 17  / 69 (Inset Cuts)
+      ['None', 0.0],              // 0  / 69 (Inside Cuts)
+      ['Cascades', 0.35],         // 24 / 69 (Inside Cuts)
+      ['Waves', 0.2],             // 14 / 69 (Inside Cuts)
+      // ['Cyma Recta', 0.2],        //  7 / 69 (Inside Cuts)
+      // ['Mixed', 0.25],            // 17 / 69 (Inside Cuts)
+      // ['Channel', 0.1],         //  7 / 69 (Inside Cuts)
     ]
   },
-  //Private: insetCutAmount INSTANCE USE
-  insetCutAmount: {
-    name: 'Inset Cut Amount',
+  //Private: insideCutAmount INSTANCE USE
+  insideCutAmount: {
+    name: 'Inside Cut Amount',
     options: [
-      ['Small', 0.35],          // 24  / 69 (Inset Cuts)
-      ['Medium', 0.4],          // 28  / 69 (Inset Cuts)
-      ['Large', 0.25],          // 17  / 69 (Inset Cuts)
+      ['None', 0.0, 0],           // 0  / 69 (Inside Cuts)
+      ['Two', 0.0,],              // 0  / 69 (Inside Cuts)
+      ['Small', 0.35, 4],         // 24 / 69 (Inside Cuts)
+      ['Medium', 0.4, 3],         // 28 / 69 (Inside Cuts)
+      ['Large', 0.25, 2],         // 17 / 69 (Inside Cuts)
     ]
   },
   // TODO: insetStyles
@@ -806,13 +823,13 @@ const publicOptions = {
   extraGroups: {
     name: 'Extra Groups',
     options: [
-      ['None', 0.05],                 // 15 / 300 (Total)
-      ['1', 0.05],                     // 30 / 300 (Total)
-      ['2', 0.05],                     // 90 / 300 (Total)      
-      ['3', 0.2],                    // 45 / 300 (Total)
-      ['4', 0.2],                    // 45 / 300 (Total)
-      ['5', 0.25],                    // 45 / 300 (Total)
-      ['6', 0.25],                    // 45 / 300 (Total)
+      ['None', 0.05],             // 15 / 300 (Total)
+      ['1', 0.05],                // 30 / 300 (Total)
+      ['2', 0.05],                // 90 / 300 (Total)      
+      ['3', 0.2],                 // 45 / 300 (Total)
+      ['4', 0.2],                 // 45 / 300 (Total)
+      ['5', 0.25],                // 45 / 300 (Total)
+      ['6', 0.25],                // 45 / 300 (Total)
     ]
   },
 
@@ -872,14 +889,9 @@ const publicOptions = {
   rectOverlap: {
     name: 'Rectangular Overlap',
     options: [
-      ['Never', 0.6],                      // 60 / 100
-      ['Always', 0.1],                     // 10 / 100
-      ['Sometimes', 0.3],                  // 30 / 100 
-    ],
-    values: [
-      0,
-      1,
-      2
+      ['Never', 0.6, 0],                      // 60 / 100
+      ['Always', 0.1, 1],                     // 10 / 100
+      ['Sometimes', 0.3, 2],                  // 30 / 100 
     ],
   },
   // Private: Instance style of modifier
@@ -905,12 +917,11 @@ const publicOptions = {
   frameWidth: {
     name: 'Frame Width',
     options: [
-      ['Minimum', 0.15],        // 15 / 100 ("Flexible")     10 / 300 (Total)
-      ['Small', 0.4],           // 40 / 100 ("Flexible")
-      ['Medium', 0.25],         // 25 / 100 ("Flexible")
-      ['Large', 0.2],           // 20 / 100 ("Flexible")
+      ['Minimum', 0.15, 0],        // 15 / 100 ("Flexible")     10 / 300 (Total)
+      ['Small', 0.4, 1],           // 40 / 100 ("Flexible")
+      ['Medium', 0.25, 2],         // 25 / 100 ("Flexible")
+      ['Large', 0.2, 3],           // 20 / 100 ("Flexible")
     ],
-    values: [0, 1, 2, 3],
   },
   // Public: Frame Divisions
   frameDivs: {
@@ -927,24 +938,23 @@ const publicOptions = {
   frameSpacing: {
     name: 'Frame Spacing',
     options: [
-      ['Whole', 0.2],            // 120 / 300 (Total)
-      ['Thirds', 0.15],          // 30  / 300 (Total)
-      ['Quarters', 0.2],         // 60  / 300 (Total)
-      ['Fifths', 0.15],          // 30  / 300 (Total)  
-      ['Eighths', 0.15],         // 30  / 300 (Total)     
-      ['Ninths', 0.15],          // 30  / 300 (Total)   
+      ['Whole', 0.2, 1],            // 120 / 300 (Total)
+      ['Thirds', 0.15, 3],          // 30  / 300 (Total)
+      ['Quarters', 0.2, 4],         // 60  / 300 (Total)
+      ['Fifths', 0.15, 5],          // 30  / 300 (Total)  
+      ['Eighths', 0.15, 8],         // 30  / 300 (Total)     
+      ['Ninths', 0.15, 9],          // 30  / 300 (Total)   
     ],
-    values: [1, 3, 4, 5, 8, 9],
+    // values: [1, 3, 4, 5, 8, 9],
   },
   // Public: Frame Cascades
   frameCascades: {
     name: 'Frame Cascades',
     options: [
-      ['None', 0.65],            // 195 / 300 (Total)
-      ['One', 0.3],              // 90  / 300 (Total)
-      ['Some', 0.05],            // 15  / 300 (Total)
+      ['None', 0.65, 0],            // 195 / 300 (Total)
+      ['One', 0.3, 1],              // 90  / 300 (Total)
+      ['Some', 0.05, 2],            // 15  / 300 (Total)
     ],
-    values: [0, 1, 2],
   },
   // Private: Frame Profiles
   frameProfiles: {
@@ -1044,29 +1054,29 @@ const publicOptions = {
     ]
   },
   // Private: (INSTANCE USE) (subtractive) depth of cutouts
-  groupDepth: {
-    name: 'Depth',
-    options: [
-      ['0.25', 0.025],
-      ['0.5', 0.05],
-      ['0.666', 0.075],
-      ['0.75', 0.075],
-      ['0.875', 0.1],
-      ['1', 0.6],
-      // ['2', 0.075],
-    ]
-  },
+  // groupDepth: {
+  //   name: 'Depth',
+  //   options: [
+  //     ['0.25', 0.025],
+  //     ['0.5', 0.05],
+  //     ['0.666', 0.075],
+  //     ['0.75', 0.075],
+  //     ['0.875', 0.1],
+  //     ['1', 0.6],
+  //     // ['2', 0.075],
+  //   ]
+  // },
   // Private: (INSTANCE USE) (additive) height of addons
-  groupHeight: {
-    name: 'Height',
-    options: [
-      ['0.25', 0.025],
-      ['0.5', 0.075],
-      ['0.666', 0.1],
-      ['0.8', 0.2],
-      ['1', 0.6],
-    ]
-  },
+  // groupHeight: {
+  //   name: 'Height',
+  //   options: [
+  //     ['0.25', 0.025],
+  //     ['0.5', 0.075],
+  //     ['0.666', 0.1],
+  //     ['0.8', 0.2],
+  //     ['1', 0.6],
+  //   ]
+  // },
 
   // // Private: (INSTANCE USE) cascade step count options
   // cascadeSteps: {
@@ -1088,16 +1098,14 @@ class EnumFeature {
   // FIXME: make options and weightedOptions private after fully tested 
   name
   options
-  values
   weightedOptions
   usageStore
 
   chosen
 
-  constructor(name, options = [], values, usageStore) {
+  constructor(name, options = [], usageStore) {
     this.name = name
     this.options = options
-    this.values = values
     this.usageStore = usageStore
     this.weightedOptions = this.#weighOptions()
   }
@@ -1127,21 +1135,11 @@ class EnumFeature {
     if (this.options.length < 2) return
     // DeBug.warn(`removeOptions`, this.name)
     // DeBug.log(`options before`, this.options)
-    // DeBug.log(`values before`, this.values)
     // DeBug.log(`options to remove`, options)
-    let vals
-    if (this.values) { vals = options.map(opt => this.valueOf(opt)) }
-    // DeBug.log(`vals to remove`, vals)
     const reduced = this.options.filter(opt => !options.includes(opt[0]))
     // DeBug.log(`reduced`, reduced)
     if (reduced) { this.replaceOptions(reduced) }
-    if (this.values) {
-      const reducedVals = this.values.filter(val => !vals.includes(val))
-      // DeBug.log(`reducedVals`, reducedVals)
-      if (reducedVals) { this.values = reducedVals }
-    }
     // DeBug.log(`options after`, this.options)
-    // DeBug.log(`values after`, this.values)
   }
   //METH: removeLast()
   removeLastOption(amount = 1) {
@@ -1163,36 +1161,9 @@ class EnumFeature {
     // DeBug.log(`original options`, this.options)
     // DeBug.log(`withOptions`, withOptions)
 
-    // if (!all) { 
-    //   const hasOptions = withOptions.filter(newOpt => this.options.some(oldOpt => oldOpt[0] === newOpt[0])) 
-    //   if (hasOptions) {
-    //     withOptions.forEach(newOpt => {
-    //             const oldOpt = this.options.find(opt => opt[0] === newOpt[0])
-    //             if (oldOpt) { oldOpt[1] = newOpt[1] }
-    //           })}
-    // }
-    // DeBug.log(`withOptions`, withOptions)
-
-    // this.options = withOptions
-    // if (this.values) {
-    //   vals = withOptions.map(opt => this.valueOf(opt))
-    //   const reducedVals = this.values.filter(val => !vals.includes(val))
-    //   // DeBug.log(`reducedVals`, reducedVals)
-    //   if (reducedVals) { this.values = reducedVals }
-    // }
-
-
     if (all) {
       this.options = withOptions
-      // if (this.values) {
-      //   const reducedVals = this.values.filter(val => !vals.includes(val))
-      //   // DeBug.log(`reducedVals`, reducedVals)
-      //   if (reducedVals) { this.values = reducedVals }
-      // }
     } else {
-      // withOptions = withOptions.filter(newOpt=> this.options.some(oldOpt=> oldOpt[0]=== newOpt[0]))
-
-
       withOptions.forEach(newOpt => {
         const oldOpt = this.options.find(opt => opt[0] === newOpt[0])
         if (oldOpt) { oldOpt[1] = newOpt[1] }
@@ -1200,10 +1171,11 @@ class EnumFeature {
     }
     this.weightedOptions = this.#weighOptions()
   }
+
   indexOf(option) { return this.options.findIndex(opt => opt[0] === option) }
-  valueOf(option) { return this.values[this.indexOf(option)] }
+
   get index() { return this.indexOf(this.chosen) }
-  get value() { return this.values[this.index] }
+  get value() { return this.options[this.index][2] }
   // #endregion
   // MARK: Private Methods
   // #region Private Methods
@@ -1211,11 +1183,11 @@ class EnumFeature {
   #getFeature(index) {
     // console.log(this)
     const result = this.options[index][0]
-    if (result) { return result }
-    else {
-      // DeBug.log(this.index)
-      // DeBug.log(this.options)
-    }
+    if (result) return result
+    // else {
+    // DeBug.log(this.index)
+    // DeBug.log(this.options)
+    // }
   }
   //METH: getFeatureIndex(weight)
   #getFeatureIndex(weight) { return this.weightedOptions.findIndex(e => between(weight, e[1])) }
