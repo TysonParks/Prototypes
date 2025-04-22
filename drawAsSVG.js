@@ -1911,7 +1911,7 @@ class ProtoSegment extends Segment {
     let report = false
     const mode = start ? 'Start' : `End`
     if (
-      this.id.includes('cell1446')                                                                       //LOGGING:
+      this.id.includes('cel008')                                                                       //LOGGING:
       // || this.id.includes('cell185')                                                                    //LOGGING:
       // || this.id.includes('cell001')                                                                    //LOGGING:
     ) { report = true }                                                                                 //LOGGING:
@@ -2060,6 +2060,7 @@ class ProtoSegment extends Segment {
     return memoize(() => {
       return this.hasAnEndVert && this.endNeighbor.hasAStartVert
         && equalsRoundedDec(this.availableEndLength, this.endNeighbor.availableStartLength)
+        && roundToDec(this.availableEndLength, 1) >= roundToDec(this.cellRadius, 1)
     }, `hasCompleteEndCorner`).call(this)
   }
   get hasBothCompleteCorners() { return this.hasCompleteStartCorner && this.hasCompleteEndCorner }
@@ -2378,7 +2379,8 @@ class ProtoSegment extends Segment {
 
   get currentViableArcOriginsSeg() {
     const viables = this.currentViableArcOrigins
-    return segment(viables.first, viables.last)
+    // DeBug.log(`currentViableArcOriginsSeg`, viables)
+    if (!viables.isEmpty) return segment(viables.first, viables.last)
   }
 
   //MARK: Edges
@@ -3303,7 +3305,7 @@ class ProtoSegment extends Segment {
         .map(s => s.currentViableArcOriginsSeg)
       DeBug.log(`viableRadOutWrappersOriginBounds viables`, viables)                                  //LOGGING:
       const result = boundsOverlap({ geo: [viables], accuracy: 0 })
-      // DeBug.log(`result`, result)                                                              //LOGGING:
+      DeBug.log(`result`, result)                                                              //LOGGING:
       return result
     }
     // }, `viableRadOutWrappersOriginBounds`).call(this)
