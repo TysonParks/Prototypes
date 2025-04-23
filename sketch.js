@@ -161,6 +161,7 @@ class ProtoMill {
     DeBug.log('GRID', GRID)
     DeBug.log('minCellWidth', GRID.minCellWidth)
 
+    DeBug.log('this.F.enums.cellInset', this.F.enums.cellInset)
     this.minInsetAmount = max(.05, 1 / GRID.minCellWidth * this.F.enums.cellInset.value)
     const minCellInsetAmount = this.minInsetAmount
     this.minInsetScale = (1 - minCellInsetAmount)
@@ -302,15 +303,49 @@ class ProtoMill {
   //METH: cutGroups()
   cutGroups() {
     DeBug.warn(`cutGroups`)
+    const useReDirect = false
+    const count = this.grid.groupCount - 1
+    let directions = range(0, count).array(),
+      reDirects
+    // .filter(i => i !== this.outsetIndex)
+
+    if (useReDirect) {
+      let reDirectCount = R.random_int(1, count)
+      reDirects = directions
+        .filter(i => i !== this.outsetIndex)
+        .randReduce(reDirectCount)
+        .map(i => {
+          const dir = R.random_choice([
+            Direction.Horizontal,
+            Direction.Horizontal,
+            Direction.Vertical,
+            Direction.Vertical,
+            // Direction.None
+          ])
+          return [i, dir]
+        })
+      DeBug.log(`reDirects`, reDirects)
+    }
+
+    DeBug.log(`directions`, directions)
+
+
+    directions = directions.map(i => {
+      const dir = i === this.outsetIndex ? Direction.All : Direction.Cardinal,
+        reDir = useReDirect ? reDirects.find(d => d[0] === i) : undefined
+      return reDir ? reDir[1] : dir
+    })
+    DeBug.log(`directions`, directions.map(d => d.name))
+
     this.grid.groups.forEach((g, i) => {
       // if (i > 2) return                                                         //TESTING:
       const
         group = this.F.groups[i],
-        makeInsideCut = this.F.enums.insideCuts.value,
-        useAltDirection = true
+        makeInsideCut = this.F.enums.insideCuts.value
+
       let
         primeCut = new Profile(group.style, group.type !== `Additive`),
-        altDirection = Direction.Cardinal,
+        // altDirection = Direction.Cardinal,
         insideStyle, insideCutAmount
 
       // DeBug.warn(`cutGroups`)
@@ -325,16 +360,6 @@ class ProtoMill {
         }
 
         DeBug.log(`insideCutAmount`, insideCutAmount)
-      }
-      if (useAltDirection) {
-        // altDirection = R.random_choice([Direction.Horizontal, Direction.Vertical, Direction.None])
-        altDirection = this.grid.cellAspect.isSquare ?
-          R.random_choice([
-            Direction.Horizontal,
-            Direction.Vertical,
-            // Direction.None
-          ])
-          : altDirection
       }
 
 
@@ -375,7 +400,7 @@ class ProtoMill {
         isOutsetCut: this.outsetIndex === i,
         layerStart: primeCut.hasInsetShade ? this.minInsetScale : 1,
         amount: this.outsetIndex === i && makeInsideCut ? insideCutAmount : 1,
-        direction: this.outsetIndex === i ? Direction.All : altDirection,
+        direction: directions[i],
         insideCutStyle: insideStyle,
       })
       // if (makeInCut) {
@@ -421,10 +446,10 @@ class ProtoMill {
 
     DeBug.warn(`FeatureSet`, this.F)
     DeBug.log(`frameWidth:`, this.F.frameWidth)
+    DeBug.log(`frameWidth val:`, this.F.enums.frameWidth)
     DeBug.log(`frameWidth val:`, this.F.enums.frameWidth.value)
     const widthVal = this.F.enums.frameWidth.value
-    const frameWidth = (100 - this.grid.insetSize.x) / 2
-      - (this.minInsetAmount * this.grid.cellRadius)
+    const frameWidth = this.F.calcdFrameWidth
     DeBug.log(`frameWidth`, frameWidth)
 
     // profiles
@@ -447,10 +472,10 @@ class ProtoMill {
     // DeBug.log(`spaces start/end`, spaces[0].start, spaces[0].end)
     DeBug.log(`spaces:`, spaces)
 
-    //ARROW: spaceWidth(i)
+    //ARROW: spaceWidth(i) : calculate current space width
     const spaceWidth = (i) => spaces[i].size * frameWidth
 
-    //ARROW: randInset()
+    //ARROW: randInset() : calculate random harmonic inset amount
     const randInset = (spaceIndex, minDenom = 3, maxDenom = widthVal * 4) => {
       // const maxSize = 2 / spaceWidth(spaceIndex)
       let maxSize = abs(1 - 2 / spaceWidth(spaceIndex))
@@ -460,10 +485,9 @@ class ProtoMill {
       const inset = min(maxSize, 1 - 1 / max(4, ceil(R.random_num(minDenom, maxDenom))))
       DeBug.log(`new randInset`, inset)
       return inset
-
     }
 
-    //dif
+    // difference between spacing and profile count
     const dif = spacing - profCount
     DeBug.log(`dif:`, dif)
     if (dif) {
@@ -594,7 +618,10 @@ class ProtoMill {
 
         //ARROW: insetEnd()
         const insetEnd = (min = false) => {
-          if (min) spaces[i].end = space.end - 1.5 / spaceWidth(i)
+          if (min) {
+            DeBug.error(`insetEnd() using min`, start, end, i, spaceWidth(i))
+            spaces[i].end = space.end - 1.5 / spaceWidth(i)
+          }
           else {
             let inset = randInset(i)
             DeBug.error(`insetEnd()`, inset)
@@ -613,9 +640,11 @@ class ProtoMill {
 
         DeBug.warn(`initial Start/End`, space.start, space.end)
 
+        let makeSpace
         // innermost cut processing
         if (i === 0) {
           DeBug.warn(`processing innermost`, p)
+          makeSpace = start < 0.1
           if (p === `iIn` || p === `rIn`) {
             // inset
             if (widthVal < 2) {
@@ -634,8 +663,9 @@ class ProtoMill {
           if (widthVal > 1
             // && gap() < .5 / profCount
           ) {
-            const makeSpace = cascadeCount > 0 ? R.random_bool(1 / 3) : R.random_bool(2 / 3)
-            // const makeSpace = R.random_bool(2 / 3)
+            DeBug.warn(`makeSpace`, makeSpace)
+            makeSpace = makeSpace ? R.random_bool(2 / 3) : false
+            // const makeSpace = cascadeCount > 0 ? R.random_bool(1 / 3) : R.random_bool(2 / 3)
             if (makeSpace) {
               DeBug.log(`making inner space!`)
               // insetStart()
