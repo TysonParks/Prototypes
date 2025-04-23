@@ -94,6 +94,17 @@ class FeatureSet {
     }
   }
 
+  get groupWeight() { return this.groupCount.adds + this.groupCount.subs }
+  get emptyWeight() { return this.weight - this.groupWeight }
+  get minCellSize() { return Math.min(this.cellSize.x, this.cellSize.y) }
+  get gridInsetSize() { return 100 * this.gridInsetScale.x }
+  get minInsetAmount() {
+    DeBug.log('this.minCellSize', this.minCellSize)
+    DeBug.log('this.enums.cellInset.value', this.enums.cellInset)
+    return Math.max(.05, 1 / this.minCellSize * this.enums.cellInset.value)
+  }
+  get calcdFrameWidth() { return ((100 - this.gridInsetSize) - (this.minInsetAmount * this.minCellSize)) / 2 }
+
   // MARK: Private Methods
   // #region Private Methods
   //METH:
@@ -112,6 +123,8 @@ class FeatureSet {
     this.#calcUniformCuts(r)
 
     this.cellInset = this.enums.cellInset.feature(r)
+    this.#recalcFrameWidth(r)
+
     this.groupCount = this.#calcGroupCounts(r)
     this.#calcInsideCuts(r)
 
@@ -219,15 +232,6 @@ class FeatureSet {
     }
 
     this.cellOutset = this.enums.cellOutset.feature(r)
-
-    // const outset = this.enums.cellOutset.value
-    // console.log('outset', this.cellOutset)
-    // // if(outset < 1 / 4) this.enums.seed1.removeOptions(['2x Min', '3x Min', '4x Min'])
-    // if (outset > 1 / 4) this.enums.cellInset.removeOptions(['4x Min'])
-    // if (outset > 1 / 2) this.enums.cellInset.removeOptions(['3x Min'])
-    // if (outset > 3 / 4) this.enums.cellInset.removeOptions(['2x Min'])
-
-    // this.cellInset = this.enums.cellInset.feature(r)
 
     this.x = x
   }
@@ -418,7 +422,7 @@ class FeatureSet {
         insetRatio = ratio / multiplier
         this.gridRatio = 1 / insetRatio
         DeBug.warn(`GRID Ratio: ${this.gridRatio}:1`)
-        return (100 - (100 / (x * insetRatio + 1))) / 100
+        return lilVert((100 - (100 / (x * insetRatio + 1))) / 100)
       }
     }
 
@@ -445,6 +449,37 @@ class FeatureSet {
     if (outset > 3 / 4 || this.minCellSize < 5) this.enums.cellInset.removeOptions(['2x Min'])
 
     // this.cellInset = this.enums.cellInset.feature(r)
+
+    // calc frameWidth
+    // if (this.gridStyle === 'Magical') {
+    //   DeBug.log(`calcdFrameWidth`, this.calcdFrameWidth)
+    //   const width = this.calcdFrameWidth
+    //   // const widthVal = Math.min(3, Math.floor(this.calcdFrameWidth / 8))
+    //   // DeBug.log(`widthVal`, widthVal)
+    //   let name
+    //   if (width < 2) name = 'Minimum'
+    //   if (width >= 2) name = 'Small'
+    //   if (width > 8) name = 'Medium'
+    //   if (width > 25) name = 'Large'
+    //   // switch (widthVal) {
+    //   //   case 0:
+    //   //     name = 'Minimum'
+    //   //     break
+    //   //   case 1:
+    //   //     name = 'Small'
+    //   //     break
+    //   //   case 2:
+    //   //     name = 'Medium'
+    //   //     break
+    //   //   case 3:
+    //   //     name = 'Large'
+    //   //     break
+    //   // }
+    //   DeBug.log(`name`, name)
+    //   this.enums.frameWidth.chosen = name
+    //   this.frameWidth = name
+    // }
+
   }
   // #endregion
   // MARK: Group Methods
@@ -469,6 +504,37 @@ class FeatureSet {
       // this.enums.cellInset.removeOptions(['0.5x Min'])
       this.enums.cutDirections.removeOptions(['Additive', 'Subtractive'])
       this.cutDirections = this.enums.cutDirections.feature(r)
+    }
+  }
+  //METH: #recalcFrameWidth(r)
+  #recalcFrameWidth(r) {
+    if (this.gridStyle === 'Magical') {
+      DeBug.log(`calcdFrameWidth`, this.calcdFrameWidth)
+      const width = this.calcdFrameWidth
+      // const widthVal = Math.min(3, Math.floor(this.calcdFrameWidth / 8))
+      // DeBug.log(`widthVal`, widthVal)
+      let name
+      if (width < 2) name = 'Minimum'
+      if (width >= 2) name = 'Small'
+      if (width > 8) name = 'Medium'
+      if (width > 25) name = 'Large'
+      // switch (widthVal) {
+      //   case 0:
+      //     name = 'Minimum'
+      //     break
+      //   case 1:
+      //     name = 'Small'
+      //     break
+      //   case 2:
+      //     name = 'Medium'
+      //     break
+      //   case 3:
+      //     name = 'Large'
+      //     break
+      // }
+      DeBug.log(`name`, name)
+      this.enums.frameWidth.chosen = name
+      this.frameWidth = name
     }
   }
   //METH:
@@ -620,9 +686,6 @@ class FeatureSet {
     }
     return density
   }
-  get groupWeight() { return this.groupCount.adds + this.groupCount.subs }
-  get emptyWeight() { return this.weight - this.groupWeight }
-  get minCellSize() { return Math.min(this.cellSize.x, this.cellSize.y) }
 
   //METH:
   #calcWeight(r) {
@@ -1097,7 +1160,9 @@ const publicOptions = {
 class EnumFeature {
   // FIXME: make options and weightedOptions private after fully tested 
   name
-  options
+  // options
+  ogOptions
+  modOptions
   weightedOptions
   usageStore
 
@@ -1110,6 +1175,12 @@ class EnumFeature {
     this.weightedOptions = this.#weighOptions()
   }
 
+  get options() { return this.modOptions ? this.modOptions : this.ogOptions }
+  set options(opts) {
+    this.ogOptions = opts
+    this.modOptions = opts
+    this.weightedOptions = this.#weighOptions()
+  }
   get length() { return this.options.length }
 
   // MARK: Public Methods
@@ -1120,7 +1191,7 @@ class EnumFeature {
     return this.chosen
   }
   //METH: addOptions()
-  addOptions(options) {
+  addOptions(options) {                                                                 //UNUSED:
     // DeBug.log('addOptions called')
     // DeBug.log('options', options)
     // options = OpArray.format(options)
@@ -1155,7 +1226,7 @@ class EnumFeature {
   }
   //METH: replaceOptions()
   replaceOptions(withOptions, all = true) {
-    let vals
+    // let vals
     // DeBug.warn(`replaceOptions`)
     // DeBug.log(this)
     // DeBug.log(`original options`, this.options)
@@ -1163,9 +1234,14 @@ class EnumFeature {
 
     if (all) {
       this.options = withOptions
+      this.modOptions = withOptions
     } else {
       withOptions.forEach(newOpt => {
         const oldOpt = this.options.find(opt => opt[0] === newOpt[0])
+        if (oldOpt) { oldOpt[1] = newOpt[1] }
+      })
+      withOptions.forEach(newOpt => {
+        const oldOpt = this.modOptions.find(opt => opt[0] === newOpt[0])
         if (oldOpt) { oldOpt[1] = newOpt[1] }
       })
     }
