@@ -147,6 +147,7 @@ class Grid extends ProtoLayer {
   get takenCells() { return this.cells.filter(cell => cell.isTaken) }
   // get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }                         //UNUSED:
   get isFull() { return this.availableCells.length === 0 }
+  get groupCount() { return this.groups.length }
   get lastGroup() { return this.groups.last }
   // get biggestGroup() {                                                                                  //UNUSED:
   //   return this.groups.reduce((max, grp) => {
