@@ -12,19 +12,17 @@ Bored UI Buttons Club by Tyson Parks, 2021
 // import { Look, Shade, CS } from './neuMark_I.js'
 
 // MARK: Storage
+let
+  //Color Constants
+  backgroundColor, frameColor,
 
-//Color Constants
-let accentHue = 10
-let backgroundColor, frameColor, accentColor, acHiCol, acShCol
-let bgCol, acCol, hiCol, shCol
-
-//Variables
-let frameSize
-// let FTS                     // Feature Set
-let BG, FRAME, BGRID, GRID  // Background, Frame, Background Grid, Grid
-let ROT, frameRate
-let R, S, RuID              // Random, Store, Random UID
-let animationController
+  //Variables
+  frameSize,
+  //  FTS                     // Feature Set
+  BG, FRAME, BGRID, GRID,  // Background, Frame, Background Grid, Grid
+  ROT, frameRate,
+  R, S, RuID,              // Random, Store, Random UID
+  animationController
 
 
 // MARK: setup
@@ -61,7 +59,8 @@ function setup() {
 // MARK: SETUP FUNCS
 // FUNC: sizeFrame()
 function sizeFrame() {
-  let width = min(windowWidth, windowHeight / 2) * 1.1,
+  let
+    width = min(windowWidth, windowHeight / 2) * 1.1,
     height = width * 1.8
 
   frameSize = vert(width, height)
@@ -92,15 +91,6 @@ function setupColors() {
   backgroundColor = achromic(0)
   frameColor = achromic(0.9)
   // frameColor = color(`oklch(70% 0.1 49)`)
-  accentColor = color("hsb(190, 100%, 90%)")
-
-  acHiCol = color("hsb(190, 20%, 100%)").toString('#rrggbb')
-  acShCol = color("hsb(190, 100%, 70%)").toString('#rrggbb')
-
-  bgCol = backgroundColor.toString('#rrggbb')
-  acCol = accentColor.toString('#rrggbb')
-  hiCol = color(255).toString('#rrggbb')
-  shCol = color(210).toString('#rrggbb')
 }
 
 // FUNC: setupBackground()
@@ -129,6 +119,8 @@ class ProtoMill {
   constructor(features) {
     this.F = features
   }
+
+  get outsetValue() { return this.F.enums.cellOutset.value }
   //METH: mkProtoType()
   mkProtoType() {
     DeBug.log(':::PROTOMILL RUNNING:::')
@@ -164,7 +156,9 @@ class ProtoMill {
     DeBug.log('this.F.enums.cellInset', this.F.enums.cellInset)
     this.minInsetAmount = max(.05, 1 / GRID.minCellWidth * this.F.enums.cellInset.value)
     const minCellInsetAmount = this.minInsetAmount
-    this.minInsetScale = (1 - minCellInsetAmount)
+    this.minInsetScale
+      = 1 - minCellInsetAmount
+    // = 1
     // const maxGlobalOutset = this.F.gridStyle === `Flexible` ? globalOutset : min(this.minInsetScale - minInsetAmount, max(GRID.minCellWidth - 5, 0))
     DeBug.log(`minInsetAmount`, minCellInsetAmount)
     DeBug.log(`this.minInsetScale`, this.minInsetScale)
@@ -173,7 +167,9 @@ class ProtoMill {
 
     DeBug.log(`maxCellOutset`, maxCellOutset)
     // cellOutset = min(cellOutset, maxCellOutset)
-    this.grid.cellOutset = min(cellOutset, maxCellOutset)
+    this.grid.cellOutset
+      = min(cellOutset, maxCellOutset)
+    // = 1
     DeBug.log(`final cellOutset`, cellOutset)
     this.minCellSize = min(this.grid.cellSize.x, this.grid.cellSize.y)
     DeBug.log('Grid Cells', x, y)
@@ -205,11 +201,11 @@ class ProtoMill {
   }
   //METH: nestleGroups()
   nestleGroups() {
-    // set outsetGroup
+    //NOTE: set outsetGroup
     console.warn(`Groups OrdinalConnects`, this.grid.groups.map(g => g.ordinalConnections))
     const ordinalIndices = this.grid.groups.map((g, i) => {
       console.log(`ordinalConnections`, i, g.hasOrdinalConnections)
-      if (g.hasOrdinalConnections) { return i }
+      if (g.hasOrdinalConnections) return i
     }).compacted
     console.log(`ordinalIndices`, ordinalIndices)
     // const useOrdinal = R.random_bool(0.25)
@@ -220,9 +216,9 @@ class ProtoMill {
     console.log(`outsetGroup`, outsetGroup)
     console.log(`groups`, this.grid.groups)
 
-    // group perimeters
+    //NOTE: group perimeters
     DeBug.groupCollapsed(`createPerimiters`)
-    // DeBug.group(`groupPerimeters`)
+    //ARROW: groupPerimeters()
     const groupPerimeters = () => {
       this.grid.groups.forEach((g, i) => {
         let
@@ -232,15 +228,18 @@ class ProtoMill {
         g.createPerimiters(dir)
       })
     }
+
     groupPerimeters()
 
-    // pack spacing by moving shapes to outsetGroup
+    //NOTE: pack spacing by moving shapes to outsetGroup
     if (this.F.cellOutset !== 'None') {
       // if (false) {
       //ARROW: converts()
       const converts = () => {
         // DeBug.log(`outsetGroup`, outsetGroup?.nonNeighborIslands?.map(i => [i.id, i.ordinalConnections]))
-        let maxConxs, converts = outsetGroup?.nonNeighborIslands
+        let
+          maxConxs,
+          converts = outsetGroup?.nonNeighborIslands
         if (converts) {
           maxConxs = max(converts.map(i => i.ordinalConnections.length))
           maxConxs = R.random_int(0, maxConxs)
@@ -254,101 +253,125 @@ class ProtoMill {
         }
         return converts || []
       }
+
       DeBug.log(`outsetGroup`, outsetGroup.nonNeighborIslands)
       let tempConverts = converts()
 
       DeBug.log(`converts`, tempConverts?.map(i => i.id))
       while (tempConverts.length > 0) {
+        const
+          isle = tempConverts.pop(),
+          cells = isle.cells,
+          group = this.grid.groupNamed(isle.groupID)
+
         DeBug.error(`converts`, converts().map(i => i.id))
-        const isle = tempConverts.pop()
         DeBug.warn(`processing:`, isle.id)
-        const cells = isle.cells
-        const group = this.grid.groupNamed(isle.groupID)
+
         group.cells = group.cells.exclude(cells, `id`)
         group.perimeterIslands = group.perimeterIslands.exclude(isle, `id`)
         // this.grid.assignCells(cells, outsetGroup.id)
         outsetGroup.cells = outsetGroup.cells.union(isle.cells, `id`)
         outsetGroup.perimeterIslands = outsetGroup.perimeterIslands.union(isle, `id`)
         isle.groupID = outsetGroup.id
-        //FIXME: still need to change shapeGroups or cuts.shapeGroups to get padding/size calculation correct
-
         tempConverts = converts()
         DeBug.log(`updated converts`, tempConverts?.map(i => i.id))
-        // tempConverts = new OpArray
-        // converts = converts.slice(0, 3)
       }
     }
     DeBug.error(`outsetGroup`, outsetGroup)
-    //FIXME: 
 
-    // this.grid.createSimpleSubShapes()
-    // outsetGroup.createPerimiters(Direction.All)
-
-    // group0?.createPerimiters(Direction.Cardinal)
+    //NOTE: remove empty groups
+    this.grid.groups.forEach((g, i) => {
+      if (g.cells.isEmpty) {
+        this.grid.groups[i] = undefined
+        if (i < this.outsetIndex) this.outsetIndex--
+      }
+    })
+    this.grid.groups = this.grid.groups.compacted
 
     DeBug.groupEnd()
     DeBug.log(``)
 
     DeBug.error(`  ######################   `)
+
     DeBug.group(`nestleShapes`)
     // DeBug.groupCollapsed(`nestleShapes`)
-    //                                                                     //NOTE: 11. Nestle Shapes 
     GRID.nestleShapes(0)
     DeBug.groupEnd()
 
     DeBug.error(`  ######################   `)
     DeBug.log(``)
-
   }
   //METH: cutGroups()
   cutGroups() {
     DeBug.warn(`cutGroups`)
-    const useReDirect = false
-    const count = this.grid.groupCount - 1
-    let directions = range(0, count).array(),
+    //NOTE: useDirect:  x > 3,
+    //NOTE: useOrdinals: only square, cellOutset < .2, group: no outsetShade cuts, minThickness > 1
+    const
+      groups = this.grid.groups,
+      dirCuts = this.F.enums.directedCuts.value,
+      useReDirect
+        // = false,
+        = dirCuts > 0,
+      count = this.grid.groupCount - 1
+    let
+      directions = range(0, count).array(),
       reDirects
-    // .filter(i => i !== this.outsetIndex)
+    DeBug.log(`useReDirect`, useReDirect)
 
     if (useReDirect) {
-      let reDirectCount = R.random_int(1, count)
+      let reDirectCount = dirCuts === 1 ? 1 : R.random_int(1, count)
+      DeBug.log(`reDirectCount`, reDirectCount)
       reDirects = directions
         .filter(i => i !== this.outsetIndex)
+        .filter(i => !groups[i].hasOnlySingles)
         .randReduce(reDirectCount)
         .map(i => {
-          const dir = R.random_choice([
-            Direction.Horizontal,
-            Direction.Horizontal,
-            Direction.Vertical,
-            Direction.Vertical,
-            // Direction.None
-          ])
+          const group = groups[i]
+          let options = [Direction.Horizontal, Direction.Vertical,],
+            dir
+          //FIXME: finish implementations for adding Directions based upon thicknesses, and cutTypes (hasInsetCut) for _Ordinal Directions
+          if (group.hasOnlyVertLines) dir = reDirectCount > 2 ? options[1] : options[0]
+          else if (group.hasOnlyHorLines) dir = reDirectCount > 2 ? options[0] : options[1]
+          else {
+            const fGroup = this.F.groups[i],
+              profile = new Profile(fGroup.style, fGroup.type !== `Additive`)
+            if (
+              group.cellBounds.maxCellThickness > 2
+              && this.outsetValue + this.minInsetAmount <= 0.25
+              && !groups[this.outsetIndex].hasOrdinalConnections
+              && profile.hasInsetShade
+            ) {
+              DeBug.log(`group.cuts`, group.cuts.profile)
+              const ordOptions = [Direction.PosOrdinal, Direction.NegOrdinal]
+              options = reDirectCount > 2 ? ordOptions : [...options, ...ordOptions]
+              if (reDirectCount > 3) options = [...options, Direction.Cardinal]
+            }
+            dir = R.random_choice(options)
+          }
+          DeBug.log(`options`, options.map(d => d.name))
+          DeBug.log(`dir`, dir.name)
           return [i, dir]
         })
       DeBug.log(`reDirects`, reDirects)
     }
 
     DeBug.log(`directions`, directions)
-
-
     directions = directions.map(i => {
       const dir = i === this.outsetIndex ? Direction.All : Direction.Cardinal,
-        reDir = useReDirect ? reDirects.find(d => d[0] === i) : undefined
-      return reDir ? reDir[1] : dir
+        reDir = useReDirect ? reDirects.find(d => d[0] === i) : Direction.Cardinal
+      return reDir ? reDir : [i, dir]
     })
-    DeBug.log(`directions`, directions.map(d => d.name))
+    DeBug.log(`directions`, directions)
+    DeBug.log(`directions`, directions.map(d => d[1]?.name || `Undefined`))
 
     this.grid.groups.forEach((g, i) => {
-      // if (i > 2) return                                                         //TESTING:
+      // if (i > 1) return                                                         //TESTING: reduce layer draws
       const
         group = this.F.groups[i],
         makeInsideCut = this.F.enums.insideCuts.value
-
       let
         primeCut = new Profile(group.style, group.type !== `Additive`),
-        // altDirection = Direction.Cardinal,
         insideStyle, insideCutAmount
-
-      // DeBug.warn(`cutGroups`)
 
       if (makeInsideCut) {
         insideStyle = this.F.insideCutStyle
@@ -358,75 +381,35 @@ class ProtoMill {
           const insideCutDiv = this.F.enums.insideCutAmount.value
           insideCutAmount = R.random_int(2, floor(this.minCellSize * (1 + this.grid.cellOutset) / insideCutDiv))
         }
-
         DeBug.log(`insideCutAmount`, insideCutAmount)
       }
 
-
-
-      // let makeInCut = R.random_bool(.2)
-      // makeInCut = false
-      // makeInCut = this.F.cellAspect === `Square`
-
-
-
-      // let inCut, inCutProfile, dilAmount = 0
-
-      // if (makeInCut) {
-      //   dilAmount = R.random_choice([
-      //     // .25,
-      //     .5,
-      //     // .75,
-      //   ])
-      //   // dilAmount = .5
-      //   // dilAmount = R.random_choice([.125, .25, .375, .5, .625, .75, .875])
-      //   // inCut = R.random_choice([Direction.Horizontal, Direction.Vertical, Direction.None, Direction.Cardinal])
-      //   inCut = R.random_choice([
-      //     Direction.Cardinal,
-      //     Direction.Horizontal,
-      //     Direction.Vertical,
-      //     Direction.None
-      //   ])
-      //   inCutProfile = new Profile(group.style, group.type === `Additive`)
-      // }
-      // primeCut = R.random_choice([
-      //   // Profile.rOut,
-      //   // Profile.jIn,
-      //   // Profile.rIn,
-      //   Profile.jOut
-      // ])
+      //MARK: Primary Cut
       g.cutIslands({
         profile: primeCut,
         isOutsetCut: this.outsetIndex === i,
-        layerStart: primeCut.hasInsetShade ? this.minInsetScale : 1,
+        layerStart: primeCut.hasInsetShade ? this.minInsetScale * 1 : 1 * 1,
         amount: this.outsetIndex === i && makeInsideCut ? insideCutAmount : 1,
-        direction: directions[i],
+        direction: directions[i][1],
         insideCutStyle: insideStyle,
       })
-      // if (makeInCut) {
-      //   g.cutIslands({
-      //     // profile: inCutProfile,
-      //     profile: R.random_choice([
-      //       Profile.rOut,
-      //       // Profile.jIn,
-      //       Profile.rIn,
-      //       // Profile.jOut
-      //     ]),
-      //     // profile: Profile.rOut,
-      //     isOutsetCut: this.outsetIndex === i,
-      //     // layerStart: minInsetScale - R.random_num(0, minInsetScale / 5),
-      //     layerStart: this.minInsetScale,
-      //     // dilationStart: R.random_num(.25, .9),
-      //     dilationStart: dilAmount,
-      //     dilationEnd: 0,
-      //     // dilationEnd: R.random_int(-2, round(1 / dilAmount) * 4),
-      //     // amount: R.random_int(1, round(1 / dilAmount) * 4),
-      //     // amount: R.random_int(1, ceil(1 / (1 - GRID.cellOutset)) + 1),
-      //     amount: 1,
-      //     direction: inCut
-      //   })
-      // }
-
+      //MARK: Fail Cut
+      const failCut = false
+      if (failCut) {
+        const overlay = R.random_choice([
+          primeCut.channel,
+          primeCut.wave,
+          // primeCut.cyma
+        ])
+        g.cutIslands({
+          profile: overlay,
+          isOutsetCut: this.outsetIndex === i,
+          layerStart: primeCut.hasInsetShade ? this.minInsetScale * 1 : 1 * 1,
+          amount: this.outsetIndex === i && makeInsideCut ? insideCutAmount : 1,
+          direction: directions[i][1],
+          insideCutStyle: insideStyle,
+        })
+      }
     })
   }
   //METH: mkFrame()
@@ -444,13 +427,15 @@ class ProtoMill {
     // if(rIn->jIn)               { BAN or inset between or blur to make sIn }  // cyma reversa
     // if(rIn->rOut)              { inset or scoop between
 
+    const
+      widthVal = this.F.enums.frameWidth.value,
+      frameWidth = this.F.calcdFrameWidth
+
     DeBug.warn(`FeatureSet`, this.F)
     DeBug.log(`frameWidth:`, this.F.frameWidth)
     DeBug.log(`frameWidth val:`, this.F.enums.frameWidth)
     DeBug.log(`frameWidth val:`, this.F.enums.frameWidth.value)
-    const widthVal = this.F.enums.frameWidth.value
-    const frameWidth = this.F.calcdFrameWidth
-    DeBug.log(`frameWidth`, frameWidth)
+    DeBug.log(` calculated frameWidth`, frameWidth)
 
     // profiles
     let profiles = new OpArray(+this.F.frameDivs).fill(0)             // create array from frameDivs amount
@@ -468,7 +453,7 @@ class ProtoMill {
     if (spacing === 1 || spacing < profCount) spacing = profCount     // if spacing = 'Whole' then use frameDivs amount
 
     DeBug.log(`spacing:`, spacing)
-    let spaces = range(0, 1).subRanges(spacing)                           // create subRanges in 0-1 from spacing
+    let spaces = range(0, 1).subRanges(spacing)                       // create subRanges in 0-1 from spacing
     // DeBug.log(`spaces start/end`, spaces[0].start, spaces[0].end)
     DeBug.log(`spaces:`, spaces)
 
@@ -512,10 +497,11 @@ class ProtoMill {
         DeBug.log(`combines after`, combines)
         let removals = []
         combines.forEach(c => {
-          const startIndex = c - 1
-          const start = spaces[startIndex]
-          const end = spaces[c]
-          const replace = range(start.start, end.end)
+          const
+            startIndex = c - 1,
+            start = spaces[startIndex],
+            end = spaces[c],
+            replace = range(start.start, end.end)
           spaces[c] = replace
           removals.push(startIndex)
         })
@@ -543,26 +529,21 @@ class ProtoMill {
         })                                                                // remove spaces that are too small
       DeBug.log(`cascades filtered`, cascades)
       if (cascades.length > 1) cascades = cascades.randReduce(cascadeCount / profCount)  // randomly reduce to cascadeCount amount
-
-      cascades = cascades
+      cascades = cascades                                                 // randomly add stairCounts
         .map(e => {
           const maxAmount = floor(spaceWidth(e) / 1.5)
           DeBug.log(`maxAmount`, e, maxAmount)
           return [e, R.random_int(2, maxAmount)]
-        })  // randomly add stairCounts
-      // .map(e => [e, R.random_int(2, floor(3 * widthVal / profCount))])  // randomly add stairCounts
+        })
     }
 
     DeBug.log(`cascadeCount:`, cascadeCount)
     DeBug.log(`cascades:`, cascades)
-
-
     DeBug.log(`widthVal`, widthVal)
 
     //ARROW: removeFlats()
     const removeFlats = () => {
       profiles.forEach((p, i, a) => {
-        // let space = spaces[i]
         let cascade = cascades?.find(c => c[0] === i)
         // DeBug.log(`space`, space)
         // DeBug.log(`cascade`, cascade)
@@ -585,11 +566,9 @@ class ProtoMill {
 
     removeFlats()
     // DeBug.log(`spaces after removeFlats(): start/end`, spaces[0].start, spaces[0].end)
-    console.log('')
+    DeBug.log('')
     DeBug.warn('Processing Profiles')
     DeBug.log(`profiles`, profiles)
-    //final cuts
-    // let cuts = profiles
 
     profiles = profiles
       .map((p, i, a) => {
@@ -612,7 +591,6 @@ class ProtoMill {
           const inset = randInset(i, min, max)
           DeBug.error(`insetStart()`, inset)
           DeBug.log(`space.size`, space.size)
-          // startInset = inset
           spaces[i].start = end - space.size * inset
         }
 
@@ -677,7 +655,7 @@ class ProtoMill {
         }
         // outermost cut processing
         if (i === profiles.lastIndex) {
-          if (p === `iIn`) { p = `iOut` }                       // iIn will cast a false shadow from nothing
+          if (p === `iIn`) p = `iOut`                           // iIn will cast a false shadow from nothing
           if (p === `jIn` || p === `rIn`) {                     // jIn/rIn are hard to read without an outside reference line
             // inset
             if (widthVal < 2) p = p === `jIn` ? `jOut` : `rOut`
@@ -697,16 +675,16 @@ class ProtoMill {
           DeBug.log(`prev`, prev)
           DeBug.log(`cascade`, cascade)
           if (p === `iOut`) {
-            if (prev === `iIn` || prev === `jIn`) { insetStart() }
-            if (prev === `rOut`) { randFlatOrInset() }
+            if (prev === `iIn` || prev === `jIn`) insetStart()
+            if (prev === `rOut`) randFlatOrInset()
           }
           if (p === `jOut`) {
-            if (prev === `iIn` || prev === `jIn`) { insetStart() }
-            if (prev === `rOut`) { randFlatOrInset() }
+            if (prev === `iIn` || prev === `jIn`) insetStart()
+            if (prev === `rOut`) randFlatOrInset()
           }
           if (p === `rIn`) {
-            if (prev === `rOut`) { insetStart() }
-            if (prev === `iIn` || prev === `jIn`) { randFlatOrInset() }
+            if (prev === `rOut`) insetStart()
+            if (prev === `iIn` || prev === `jIn`) randFlatOrInset()
           }
         }
 
@@ -720,39 +698,17 @@ class ProtoMill {
       .map((p, i, a) => {
         // DeBug.log(profiles)
         // DeBug.log(`spaces after`)
-        // removeFlats()
         let
           space = spaces[i],
           cascade = cascades?.find(s => s[0] === i),
           start = space.start,
           end = space.end,
-          // maxAmount = (end - start) * frameWidth,
           amount = cascade ? cascade.last : 1
 
         DeBug.warn(`space`, space)
         DeBug.warn(`cascade`, cascade)
-        // DeBug.warn(`maxAmount`, maxAmount)
         DeBug.warn(`amount`, amount)
         DeBug.warn(`calculated inset Start/End`, start, end)
-
-        // if (
-        //   p !== `Flat`
-        //   &&
-        //   i < profiles.length
-        //   &&
-        //   abs(start - end) < .25 / widthVal
-        // ) {         // make sure start and end are not equal (rare but nasty bug)
-        //   // DeBug.log(`cascades`, cascades)
-        //   // if (start > abs(1 - end)) 
-        //   // start = 0
-        //   // else 
-        //   // end = 1
-        //   // start = 0
-        //   // amount = ceil(amount / 2)
-        //   if (p === `rIn` || p === `iIn`) p = `jIn`
-
-        // }
-
         DeBug.warn(`cascade`, cascade)
 
         return p === `Flat` ? undefined : {
@@ -833,6 +789,7 @@ function gridTests2(features) {
   console.log('hash', tokenData.hash)
   console.log(`Features`, features)
   DeBug.warn(` InsideCuts`, features.insideCuts)
+  DeBug.warn(` Directed Cuts`, features.directedCuts)
   console.log(`Mill`, mill)
   console.log('all ProtoLayers', S.allLayers)
   console.log(`GRID`, GRID)
@@ -849,7 +806,7 @@ function gridTests2(features) {
   DeBug.warn(`FRAME Cuts`, GRID.protoParent.backGroup.cuts)
   DeBug.warn(`BGRID`, BGRID)
   DeBug.warn(`GRID Ratio: ${mill.gridRatio / 2}:1`)
-  console.warn(`gridInsetScale:`, mill.gridInsetScale)
+  // console.warn(`gridInsetScale:`, mill.gridInsetScale)
   DeBug.warn(`GRID.insetAmount.x:`, GRID.insetAmount.x)
   DeBug.warn(`GRID size:`, GRID.insetSize)
   DeBug.warn(`Groups OrdinalConnects`, GRID.groups.map(g => g.ordinalConnections))
@@ -863,11 +820,7 @@ function gridTests2(features) {
 // MARK: DRAWING FUNCS
 // FUNC: startAnimationLoop()
 function startAnimationLoop() {
-  if (globalControls.animated) {
-    // Don't start if already running
-    return
-  }
-
+  if (globalControls.animated) return     // Don't start if already running
   globalControls.animated = true
   animationController.globalAnimation()
 }
@@ -879,12 +832,8 @@ function stopAnimationLoop() {
 
 // // FUNC: shadeAnimation()
 function shadeAnimation() {
-  if (globalControls.animated) {
-    stopAnimationLoop()
-  } else {
-    // globalControls.animated = true
-    startAnimationLoop()
-  }
+  if (globalControls.animated) stopAnimationLoop()
+  else startAnimationLoop()
 }
 
 
@@ -895,7 +844,6 @@ function windowResized() {
   sizeFrame()
   BG.size(windowWidth, windowHeight)
 }
-
 
 // FUNC: globalShadowVector()
 function globalShadowVector() {
