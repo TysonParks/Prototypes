@@ -1215,6 +1215,10 @@ class CellGroup extends ProtoLayer {
       .exclude(this.neighborIslands, `id`)
     if (!isles.isEmpty) { return isles }
   }
+  get hasOnlySingles() { return this.perimeterIslands.every(i => i.isSingleCell) }
+  get hasOnlyCardSingles() { return this.perimeterIslands.every(i => i.isCardinalSingle) }
+  get hasOnlyVertLines() { return this.perimeterIslands.every(i => i.isVertical || i.isCardinalSingle) }
+  get hasOnlyHorLines() { return this.perimeterIslands.every(i => i.isHorizontal || i.isCardinalSingle) }
   // #endregion
   // MARK: CellGroup Geometry Methods
   // #region Geometry Methods
@@ -1348,11 +1352,15 @@ class CellGroup extends ProtoLayer {
     //calculate maxLofts per shape
 
     DeBug.log(`cutIslands perimeterShapes:`, this.perimeterShapes)
+    // DeBug.log(`Cut direction:`, direction.name, direction.hierarchy)
+    // DeBug.log(`Group direction:`, this.direction.name, this.direction.hierarchy)
     const cellRadius = this.grid.cellRadius
 
     //MARK: Create Shape Groups
     let shapeGroups = new OpArray
-    this.perimeterShapes.forEach(sh => {                                  // create shapeGroups from common shape minRads
+
+    //NOTE: create shapeGroups from common shape minRads
+    this.perimeterShapes.forEach(sh => {
       DeBug.error(`current shape in queue`, sh)
       // const minInset = profile?.hasOutsetShade ? layerEnd : layerStart
       // let minRad = useDilation ? sh.minOutsideCornerRadius : minInset * cellRadius
@@ -1401,6 +1409,7 @@ class CellGroup extends ProtoLayer {
 
       minRad = roundToDec(minRad, 4)
 
+      //NOTE: separate shapes by minRad and cardinal neighbors
       const neighbors = sh.neighborShapesCardinal
       DeBug.warn(`minRad`, minRad)
       DeBug.warn(`cellRadius`, cellRadius)
@@ -1408,6 +1417,7 @@ class CellGroup extends ProtoLayer {
       let group = shapeGroups.find(g =>
         equalsRoundedDec(g.minRad, minRad, 1)
         && g.shapes.every(s => neighbors.every(n => n.id !== s.id))
+        // && profile?.hasCastShadow ? true : g.shapes.every(s => neighbors.every(n => n.id !== s.id))
       )
       if (!group) {
         const id = shapeGroups.filter(g => g.minRad === minRad).length
@@ -1671,12 +1681,13 @@ class CellGroup extends ProtoLayer {
         if (profile) {
           cut = new ProtoCut({
             profile: profile,
-            depth: loft * this.grid.minCellWidth,
-            start: insetScale,
-            extHighDepth: extHighDepth,
+            depth: loft * this.grid.minCellWidth * 1,
+            start: insetScale * 1,
+            extHighDepth: extHighDepth * 1,
             // useExtHighDepth: profile.isR ? amount < 2 : true,   //FIXME: also check 'cuts' for consecutive rCuts!
             useExtHighDepth: !isFrame,
-            angleOffset: angleOffset,
+            // angleOffset: angleOffset,
+            // angleOffset: R.random_int(0, 360),
           })
         } else { console.error(`cut profile is undefined!`) }
 
@@ -1694,9 +1705,57 @@ class CellGroup extends ProtoLayer {
         DeBug.groupEnd()
         DeBug.groupCollapsed(`islandsToShapeGroups`)
         if (!newIslands.flat().isEmpty) {
-          this.islandsToShapeGroups(newIslands, cut, direction, isFrame
-            // , insetScale
-          )
+          //NOTE: regroup islands if they are inside/redirected cuts that cast shadows to prevent shadow cropping bugs
+          if (profile?.hasCastShadow
+            && direction.hierarchy < 2
+            && direction.hierarchy < this.direction.hierarchy
+          ) {
+            let
+              islandGroups = new OpArray,
+              count = 0
+            DeBug.log(`newIslands`, newIslands)
+            newIslands = newIslands.flat(this.islandLevel).compacted
+            newIslands.forEach(isles => {
+              DeBug.log(`isles`, isles)
+              if (!Array.isArray(isles)) isles = [isles]
+              // DeBug.log(`isles`, isles?.map(i => i.id))
+              // DeBug.log(`isles`, isles?.map(i => i.cells.map(c => c.islandIDs)))
+              // DeBug.log(`all islands`, this.grid.allIslands.map(i => i.id))
+
+              isles.forEach(isle => {
+                DeBug.log(`island`, isle)
+                const neighborCells = this.grid.tempOutlineSelection(isle.cells, 1, Direction.Cardinal),
+                  neighbors = isles.filter(i => i.cells.includesAny(neighborCells, `id`))
+
+                // DeBug.log(`neighborCells`, neighborCells)
+                DeBug.log(`neighbors`, neighbors.map(i => i.id))
+                let group = islandGroups.find(g => g.isles.every(isle => neighbors.every(n => n.id !== isle.id)))
+
+                if (!group) {
+                  const id = count
+                  count += 1
+                  group = { id: id, isles: new OpArray, cells: neighborCells }
+                  islandGroups.push(group)
+                }
+                group.isles.push(isle)
+                group.cells.push(neighborCells)
+                DeBug.log(`group`, group)
+              })
+            })
+            DeBug.log(`islandGroups`, islandGroups)
+            DeBug.log(`islandGroups`, islandGroups.map(g => g.isles.map(i => i.id)))
+            islandGroups.forEach(group => {
+              DeBug.log(`group`, group)
+              const newIsles = group.isles.map(isle => isle.createSubIslands({
+                cut: cut,
+                selection: selection,
+                direction: direction,
+                insetScale: insetScale,
+              }))
+              this.islandsToShapeGroups(newIsles, cut, direction, isFrame)
+            })
+          }
+          else this.islandsToShapeGroups(newIslands, cut, direction, isFrame)
         }
         DeBug.groupEnd()
         DeBug.log(``)
@@ -1921,7 +1980,7 @@ class ShapeGroup extends ProtoLayer {
       // .attribute('fill-rule', 'evenodd')
       .viewBox(this.anchor, this.size, this.padding)
       .layout(this.anchor, this.size, this.padding)
-      .attribute(`fill`, frameColor)
+    // .attribute(`fill`, frameColor)
 
   }
   //METH: assignShapes()
@@ -2008,7 +2067,7 @@ class ShapeGroup extends ProtoLayer {
       // .attribute(`primitiveUnits`, `userSpaceOnUse`)
       // .attribute('fill', protoColor(230))
       // .attribute('fill', lchcol02)
-      // .attribute('fill', achromic(0.1))
+      // .attribute('fill', achromic(0.9))
       // .attribute('fill', 'red')
       // .attribute(`pathLength`, 12)
       // .attribute('stroke', `blue`)
@@ -2093,7 +2152,7 @@ class ShapeGroup extends ProtoLayer {
 
     const randomLCH = (l) => {
       const hue = R.random_num(0, 360)
-      const chroma = R.random_num(.0, .01)
+      const chroma = R.random_num(.125, .125)
       return `oklch(${l} ${chroma} ${hue})`
     }
     if (this.isFrame) {
@@ -2103,7 +2162,7 @@ class ShapeGroup extends ProtoLayer {
       // .attribute('fill', 'black')
       // .attribute('fill', R.random_choice(['white', 'black']))
       // .attribute('fill', achromic(.3))
-      // .attribute('fill', randomLCH(.2))
+      // .attribute('fill', randomLCH(.9))
       // .attribute('fill', randomTransit(vintage))
       // .style(`background`, `linear-gradient(45deg, blue, red)`)
       // .attribute(`overflow`, `visible`)
@@ -2111,7 +2170,7 @@ class ShapeGroup extends ProtoLayer {
     } else {
       this.svgGroupElt
       // .attribute('fill', achromic(1))
-      // .attribute('fill', randomLCH(.99))
+      // .attribute('fill', randomLCH(.9))
       // .attribute('fill', 'white')
       // .attribute('fill', R.random_choice(['white', 'black']))
       // .attribute('fill-opacity', .5)
