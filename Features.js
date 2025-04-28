@@ -30,6 +30,7 @@ class FeatureSet {
   uniformLofts            // Constant / Variable / Maximizing       
   insideCuts              // True / False
   insideCutStyle          // Cascades / Waves / Channel / Cyma Recta / Mixed
+  linearCuts            // None / One / Some
 
   // insideCutAmount         // Small / Medium / Large
 
@@ -127,6 +128,7 @@ class FeatureSet {
 
     this.groupCount = this.#calcGroupCounts(r)
     this.#calcInsideCuts(r)
+    this.#calcLinearCuts(r)
 
     this.uniformLofts = this.enums.uniformLofts.feature(r) === 'True'
 
@@ -307,7 +309,7 @@ class FeatureSet {
     if (this.frameDivs < 3) { this.enums.frameCascades.removeOptions([`Some`]) }
     if (this.frameDivs === `1`) {
       this.enums.frameSpacing.removeOptions([`Quarters`, `Thirds`])
-      this.enums.frameCascades.replaceOptions([['None', 0.5, 0], ['One', 0.5, 1]])
+      this.enums.frameCascades.replaceOptions([['None', 0.7, 0], ['One', 0.3, 1]])
     }
     // if (this.frameDivs === `1`) {
     //   this.frameSpacing = `Whole`
@@ -591,6 +593,12 @@ class FeatureSet {
       this.enums.insideCutStyle.chosen = 'None'
       this.insideCutStyle = 'None'
     }
+  }
+  //METH: calcLinearCuts()
+  #calcLinearCuts(r) {
+    if (this.groupWeight < 3) this.enums.linearCuts.removeOptions(['Some'])
+    if (this.x < 4 || this.cellAspect !== 'Square') this.enums.linearCuts.removeOptions(['One', 'Some'])
+    this.linearCuts = this.enums.linearCuts.feature(r)
   }
   //METH:
   #calcGroups(r) {
@@ -880,8 +888,15 @@ const publicOptions = {
       ['Large', 0.25, 2],         // 17 / 69 (Inside Cuts)
     ]
   },
-  // TODO: insetStyles
-  // TODO: groupCount
+  // Public: linearCuts
+  linearCuts: {
+    name: 'Linear Cuts',
+    options: [
+      ['None', 0.7, 0],           // 70 / 100
+      ['One', 0.2, 1],            // 20 / 100
+      ['Some', 0.1, 2],           // 10 / 100
+    ]
+  },
   // Private: amount of extra groups to create
   extraGroups: {
     name: 'Extra Groups',
@@ -912,14 +927,14 @@ const publicOptions = {
   seed1: {
     name: 'Primary Seed Style',
     options: [
-      ['Noise', 0.1],                   // 30 / 300 (Total)
-      ['Random Comb', 0.1],             // 30 / 300 (Total)
-      ['Squares', 0.1],                 // 30 / 300 (Total)   // Spheres
-      ['Rectangles', 0.1],              // 30 / 300 (Total)   // Pills
-      ['Squares and Rectangles', 0.1],  // 30 / 300 (Total)   // Pills
-      ['Simple Pattern', 0.1],          // 30 / 300 (Total)
-      ['Complex Pattern', 0.2],         // 60 / 300 (Total)
-      ['Snake', 0.20],                  // 60 / 300 (Total)
+      ['Noise', .075],                 // 23 / 300 (Total)
+      ['Random Comb', .075],           // 23 / 300 (Total)
+      ['Squares', .1],                 // 30 / 300 (Total)   // Spheres
+      ['Rectangles', .1],              // 30 / 300 (Total)   // Pills
+      ['Squares and Rectangles', .1],  // 30 / 300 (Total)   // Pills
+      ['Simple Pattern', .125],        // 37 / 300 (Total)
+      ['Complex Pattern', .225],       // 67 / 300 (Total)
+      ['Snake', .2],                   // 60 / 300 (Total)
       // ['Snakes', 0.1],                  // 30 / 300 (Total)
       // ['Triangles', 0.1],
     ]
@@ -1014,8 +1029,8 @@ const publicOptions = {
   frameCascades: {
     name: 'Frame Cascades',
     options: [
-      ['None', 0.65, 0],            // 195 / 300 (Total)
-      ['One', 0.3, 1],              // 90  / 300 (Total)
+      ['None', 0.75, 0],            // 195 / 300 (Total)
+      ['One', 0.2, 1],              // 90  / 300 (Total)
       ['Some', 0.05, 2],            // 15  / 300 (Total)
     ],
   },
