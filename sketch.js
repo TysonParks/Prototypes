@@ -308,7 +308,7 @@ class ProtoMill {
     //NOTE: useOrdinals: only square, cellOutset < .2, group: no outsetShade cuts, minThickness > 1
     const
       groups = this.grid.groups,
-      dirCuts = this.F.enums.directedCuts.value,
+      dirCuts = this.F.enums.linearCuts.value,
       useReDirect
         // = false,
         = dirCuts > 0,
@@ -788,8 +788,8 @@ function gridTests2(features) {
   // console.error(`backGrid`, BGRID.shapeGroups)
   console.log('hash', tokenData.hash)
   console.log(`Features`, features)
-  DeBug.warn(` InsideCuts`, features.insideCuts)
-  DeBug.warn(` Directed Cuts`, features.directedCuts)
+  DeBug.warn(`InsideCuts`, features.insideCuts)
+  DeBug.warn(`Linear Cuts`, features.linearCuts)
   console.log(`Mill`, mill)
   console.log('all ProtoLayers', S.allLayers)
   console.log(`GRID`, GRID)
