@@ -16,8 +16,9 @@ class Profile {
 
   //MARK: Static 
   static breed(breed) {
-    const type = breed[0]
-    const cutIn = breed.slice(1) === 'In'
+    const
+      type = breed[0],
+      cutIn = breed.slice(1) === 'In'
     return new Profile(type, cutIn)
   }
 
@@ -58,6 +59,7 @@ class Profile {
 
   get hasInsetShade() { return this.isIIn || this.isJIn || this.isROut }
   get hasOutsetShade() { return this.isIOut || this.isJOut || this.isRIn }
+  get hasCastShadow() { return this.isIOut || this.isROut }
 
   get isCurve() { return this.CurveTypes.includes(this.type) } // is in CurveTypes
   get isFlat() { return this.FlatTypes.includes(this.type) }   // is in FlatTypes
@@ -136,23 +138,25 @@ class ProtoCut {
   get spread() { return this.profile.isSingleDepth ? this.depth : this.depth + this.depth2 }
   get padding() { return vert(this.depth * 2) }
   get description() {
-    const p = this.profile
-    const prime = p.breed
-    const half = p.halfCurve ? `-half` : ``
-    const edge = p.frameEdge ? `-frameEdge` : ``
-    const dep = roundToDec(this.depth / GRID.cellRadius, 4)
-    const start = roundToDec(this.start, 4)
+    const
+      p = this.profile,
+      prime = p.breed,
+      half = p.halfCurve ? `-half` : ``,
+      edge = p.frameEdge ? `-frameEdge` : ``,
+      dep = roundToDec(this.depth / GRID.cellRadius, 4),
+      start = roundToDec(this.start, 4)
     return `${prime}${half}${edge}-${dep}xCellRadius`
     // return `${prime}${half}${edge}-${dep}xCellRadius-${start}start`
   }
   get maxLayout() {
     let [xMax, yMax, widthMax, heightMax] = [0, 0, 0, 0]
     this.shapeGroups.forEach(grp => {
-      const [size, padding] = [grp.insetSize, grp.padding]
-      // const finalSize = grp.finalSize
-      const padSize = Vertex.div(padding, size)
-      const anchor = Vertex.mult(padSize, -100)
-      const newSize = Vertex.mult(padSize, 200).add(vert(100))
+      const
+        [size, padding] = [grp.insetSize, grp.padding],
+        //  finalSize = grp.finalSize,
+        padSize = Vertex.div(padding, size),
+        anchor = Vertex.mult(padSize, -100),
+        newSize = Vertex.mult(padSize, 200).add(vert(100))
 
       xMax = min(anchor.x, xMax)
       yMax = min(anchor.y, yMax)
@@ -178,8 +182,8 @@ class ProtoCut {
   }
 
   curve(layer) {
-    if (this.profile.isR) { return layer === 0 ? `r` : `r2` }
-    if (this.profile.isS) { return layer === 0 ? `j` : `r` }
+    if (this.profile.isR) return layer === 0 ? `r` : `r2`
+    if (this.profile.isS) return layer === 0 ? `j` : `r`
     return this.profile.type
   }
 
@@ -195,7 +199,6 @@ class ProtoCut {
           this.#createShader(`high`)
         } else {
           this.#createShader(`high`)
-          // this.#createShader(`high`, `i`, this.extHighDepth)
         }
 
         this.#createShader(`shad`)
@@ -221,26 +224,16 @@ class ProtoCut {
       }
     }
 
-
-    if (this.profile.isS) {
-      DeBug.error(`ProtoCut "s" profile not yet implemented`)
-      //   if (inset) { 
-
-      //   }else{
-
-      //   }
-      //   this.#createShader(`j`, this.depth)
-      //   this.#createShader(`r`, this.depth2)
-    }
-    //TODO: implement v shader
-    if (this.profile.isV) { DeBug.error(`ProtoCut "v" profile not yet implemented`) }
+    if (this.profile.isS) DeBug.error(`ProtoCut "s" profile not yet implemented`)
+    if (this.profile.isV) DeBug.error(`ProtoCut "v" profile not yet implemented`)
   }
   //METH: createShader()
   #createShader(shadeType, curve = this.profile.type, mag = this.depth) {
-    const cutIn = this.profile.cutIn ? 1 : -1
-    const r = curve === `r` ? -1 : 1
-    const r2 = curve === `r2` ? 1 : -1
-    const angle = curve === `r` ? this.angleOffset + 180 : this.angleOffset
+    const
+      cutIn = this.profile.cutIn ? 1 : -1,
+      r = curve === `r` ? -1 : 1,
+      r2 = curve === `r2` ? 1 : -1,
+      angle = curve === `r` ? this.angleOffset + 180 : this.angleOffset
     mag = mag * cutIn * r * r2
     DeBug.warn({ curve: curve, cut: this.profile.cutIn ? `in` : `out`, shadeType, mag: mag / FRAME.pixToUserUnits, rotOffset: angle })
     const stack = Shade.neuShadeSVGFactory({
@@ -267,8 +260,6 @@ class ProtoCut {
 Object.assign(ProtoCut.prototype, IdentifiableStored)
 
 
-
-
 // CLASS: Shade
 // SIZE: 163 lines
 class Shade {
@@ -285,26 +276,31 @@ class Shade {
   }
   //METH: neuShadeSVG()
   static neuShadeSVG(shadeType, vector = this.shadVect(), mag, highBlurRad, shadBlurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
+    //NOTE: FAKE IRIDESCENT
+    //NOTE: ----------------------------------
     // const randomLCH = (l) => {
-    //   const hue = R.random_num(0, 360)
-    //   return `oklch(${l} .25 ${hue})`
+    //   const
+    //     chroma = 1 / 8,
+    //     hue = R.random_num(0, 360)
+    //   return `oklch(${l} ${chroma} ${hue})`
     // }
     // highCol = randomLCH(.98)
-    // shadCol = randomLCH(0.5)
+    // shadCol = randomLCH(0.7)
+    //NOTE: ----------------------------------
 
     // highCol = achromic(1)
     // shadCol = achromic(0.7)
 
-    const invert = curve === `r`
-    // DeBug.log('components', vector.x, vector.y, blurRad)
-    const iCutHighMagMult = curve === `i` ? .75 : 1
-    const r2CutHighMagMult = curve === `r2` ? .5 : 1
-    const jCutMagMult = curve === `j` ? .75 : 1
-    const highMag = iCutHighMagMult * r2CutHighMagMult * jCutMagMult * highOffsetRatio * mag
+    const
+      invert = curve === `r`,
+      iCutHighMagMult = curve === `i` ? .75 : 1,
+      r2CutHighMagMult = curve === `r2` ? .5 : 1,
+      jCutMagMult = curve === `j` ? .75 : 1,
+      highMag = iCutHighMagMult * r2CutHighMagMult * jCutMagMult * highOffsetRatio * mag
 
-    let shadeHighlight
+    let highlight, shadow
     if (shadeType !== `shad`) {
-      shadeHighlight = this.dropShadeSVG({
+      highlight = this.dropShadeSVG({
         invert: invert,
         vector: vector,
         mag: highMag,
@@ -312,21 +308,13 @@ class Shade {
         col: highCol,
         inset: inset
       })
-      // const highlight = this.dropShadSVG({
-      //   x: highMag * vector.x,
-      //   y: highMag * vector.y,
-      //   blurRad: (blur ? 1 : 0) * (curve === `i` ? 4 : 1) * (curve === `r2` ? 2 : 1) * jCutMagMult * blurRad * blurRatio,
-      //   col: highCol,
-      //   inset: inset
-      // })
     }
 
-    let shadeShadow
     if (shadeType !== `high`) {
       const r2CutMagMult = curve === `r2` ? .5 : 1
       // const shadowCol = shadeType === `shad` ? achromic(0.9) : shadCol
       const shadowCol = shadeType === `shad` ? achromic(0.5) : shadCol
-      shadeShadow = this.dropShadeSVG({
+      shadow = this.dropShadeSVG({
         lighten: false,
         invert: invert,
         vector: vector,
@@ -335,37 +323,9 @@ class Shade {
         col: shadowCol,
         inset: inset
       })
-      // const shadow = this.dropShadSVG({
-      //   lighten: false,
-      //   x: jCutMagMult * r2CutMagMult * vector.x,
-      //   y: jCutMagMult * r2CutMagMult * vector.y,
-      //   blurRad: (blur ? 1 : 0) * jCutMagMult * r2CutMagMult * blurRad * blurRatio,
-      //   col: shadCol,
-      //   inset: inset
-      // })
     }
 
-    return OpArray.format([shadeShadow, shadeHighlight]).compacted
-    // return [shadow, highlight]
-    // // DeBug.log('nsSVG shadow', shadow)
-    // if (curve === 'j') {
-    //   return [shadow, highlight]
-    //   // return [highlight, shadow]
-
-    // }
-    // if (curve === 'r') {
-    //   return [shadow, highlight]
-    //   // return [highlight, shadow]
-    // }
-    // if (curve === 'r2') {
-    //   return [shadow, highlight]
-    //   // return [highlight, shadow]
-    // }
-    // if (curve === 'i') {
-    //   return [shadow, highlight]
-    //   // return [highlight, shadow]
-    // }
-
+    return OpArray.format([shadow, highlight]).compacted
   }
   //METH:
   static neuShadeSVGFactory({
@@ -391,32 +351,6 @@ class Shade {
     DeBug.log(``)
     DeBug.groupCollapsed(`neuShadeSVGFactory`, vector)
     DeBug.log(`mag`, mag)
-    // //MARK: "I" Cut
-    // if (curve === 'i') {
-    //   mag = mag / pixToUserUnits * 0.85           // convert pixelUnit to userUnit magnitude
-    //   const blurRadius = mag * .25 // subtract 1pix so thin layers full value at ~0 blur
-    //   // const offsetRange
-    //   const highColSpread = 0.06                           // spread up from base (0.9) to max highlight luma (1!)
-    //   const shadColSpread = 0.75                           // spread down from base (0.9) to min shadow luma (0.7)
-    //   const maxHighlight = 0.9 + highColSpread                 // 0.9 + 0.04 = 0.94
-    //   const minShadow = (0.9 - shadColSpread)    // 0.9 - 0.25 = 0.65
-    //   const perceptualDivisor = 8                         // compensates for blur, etc to get visually correct result
-    //   const highColLuma = maxHighlight - (highColSpread * mag / perceptualDivisor)
-    //   const shadColLuma1 = minShadow + (shadColSpread * mag / perceptualDivisor)
-    //   const shadColLuma2 = minShadow + (2 * shadColSpread * mag / perceptualDivisor)
-
-    //   const highCol = achromic(highColLuma)
-    //   const shadCol1 = achromic(shadColLuma1)
-    //   const shadCol2 = achromic(shadColLuma2)
-    //   DeBug.log(`i inset`, inset)
-    //   let shades = new OpArray
-    //   const shades1 = this.neuShadeSVG(vector.setMag(mag).rotate(rotOffset), blurRadius, highCol, shadCol1, inset, blur, curve)
-    //   shades.push(shades1)
-    //   const shades2 = this.neuShadeSVG(vector.setMag(mag * 1.5).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
-    //   shades.push(shades2)
-    //   // DeBug.log(`i shades`, shades)
-    //   return shades.flat()
-    // }
 
     //MARK: "J" and "R" Cuts
     //ARROW: keep() : [number] : Optimization to reduce neuShades stack size based upon mag using Shadow Layer Decay chart
