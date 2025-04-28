@@ -75,7 +75,7 @@ class ProtoFilter {
   }
 
   //METH: shade()
-  shade(shades, type, clearInset = true, normalBlending = true) {
+  shade(shades, type, clearInset = true, normalBlending = false) {
     shades = OpArray.format(shades)
     DeBug.log(`shade creation`)
     // const normalBlending = false            // always use true (use false for special one offs!)
@@ -116,7 +116,7 @@ class ProtoFilter {
         // const { dx, dy, blur, color, lighten } = shade
         let { invert, blur, color, lighten } = shade
         const vector = Shade.shadVect()
-        let mag = shade.mag
+        let mag = shade.mag * 1
         mag = lighten ? mag * -1 : mag
         mag = invert ? mag * -1 : mag
         const [dx, dy] = [vector.x * mag, vector.y * mag]
@@ -126,15 +126,18 @@ class ProtoFilter {
           .substring(7)}`
         // insetResult = resultId
         const blendMode = () => {
-          if ((prevMode === 'lighten' && !lighten) || (prevMode === 'darken' && lighten)) { return 'normal' }
+          return 'normal'
+          // if ((prevMode === 'lighten' && !lighten) || (prevMode === 'darken' && lighten)) { return 'normal' }
           // return lighten ? 'lighten' : 'darken'
           // return lighten ? 'multiply' : 'darken'
-          // return 'normal'
           // return 'hard-light'
+          return 'exclusion'
+          return 'difference'
+          return 'overlay'
           // return lighten ? 'darken' : 'screen'
-          return lighten ? 'hard-light' : 'multiply'
-          // return lighten ? 'multiply' : 'screen'
-          return lighten ? 'screen' : 'darken'
+          // return lighten ? 'hard-light' : 'multiply'
+          return lighten ? 'multiply' : 'screen'
+          // return lighten ? 'screen' : 'darken'
         }
 
         let useBlur = blur > 0
