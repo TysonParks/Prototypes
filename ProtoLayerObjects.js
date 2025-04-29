@@ -96,43 +96,36 @@ class ProtoLayer {
 
   // MARK: Memoized Properties
   // #region 
-  //MEMO: parentID
   get parentID() {
     return memoize(() => {
       return this.protoParent?.id ?? this.svgParent.id()
     }, `parentID`).call(this)
   }
-  //MEMO: boundsRect
   get boundsRect() {                      // inherits parent's insetBoundsRect
     return memoize(() => {
       return this.protoParent?.insetBoundsRect
     }, `boundsRect`).call(this)
   }
-  //MEMO: anchor
   get anchor() {                          // taken from this.boundsRect
     // return memoize(() => {
     return vert(this.boundsRect.x, this.boundsRect.y)
     // }, `anchor`).call(this)
   }
-  //MEMO: size
   get size() {                            // taken from this.boundsRect
     // return memoize(() => {
     return vert(this.boundsRect.width, this.boundsRect.height)
     // }, `size`).call(this)
   }
-  //MEMO: insetSize
   get insetSize() {                       // calc from this.size and this.insetScale
     // return memoize(() => {
     return Vertex.mult(this.size, this.insetScale)
     // }, `insetSize`).call(this)
   }
-  //MEMO: insetAnchor
   get insetAnchor() {                     // calc from this.insetSize and this.size
     // return memoize(() => {
     return this.anchorFor(this.insetSize)
     // }, `insetAnchor`).call(this)
   }
-  //MEMO: insetBoundsRect
   get insetBoundsRect() {                 // combines this.insetAnchor and this.insetSize
     return memoize(() => {
       return DOMRect.fromRect(
@@ -144,26 +137,22 @@ class ProtoLayer {
         })
     }, `insetBoundsRect`).call(this)
   }
-  //MEMO: padSize
   get padSize() {                         // calc from this.insetSize and this.size
     return memoize(() => {
       return Vertex.sub(this.size, this.insetSize).div(2)
     }, `padSize`).call(this)
   }
 
-  //MEMO: center
   get center() {
     return memoize(() => {
       return Vertex.div(this.size, 2).add(this.anchor)
     }, `center`).call(this)
   }
-  //MEMO: corners
   get corners() {
     return memoize(() => {
       return new Corners([this.anchor, Vertex.add(this.anchor, this.size)])
     }, `corners`).call(this)
   }
-  //MEMO: sides
   get sides() {
     return memoize(() => {
       const
@@ -197,13 +186,11 @@ class ProtoLayer {
 
     }, `sides`).call(this)
   }
-  //MEMO: midPoints
   get midPoints() {
     return memoize(() => {
       return this.sides.obj.map(side => side.mid)
     }, `midPoints`).call(this)
   }
-  //MEMO: points
   get points() {  // 9 points array: center, corners, midpoints all grid vert sorted
     return memoize(() => {
       const
@@ -212,7 +199,6 @@ class ProtoLayer {
       return OpArray.format([this.center, corners, mids].flat()).gridVertSorted
     }, `points`).call(this)
   }
-  //MEMO: bounds
   get bounds() {
     return memoize(() => {
       return findBounds(this.anchor, this.corners.downRight)
@@ -703,43 +689,36 @@ class SelectionBounds {
 
   get xCellValues() { return this.selection.map(e => e.x) }
   get yCellValues() { return this.selection.map(e => e.y) }
-  //MEMO: xCellMin
   get xCellMin() {
     return memoize(() => {
       return min(this.xCellValues)
     }, `xCellMin`).call(this)
   }
-  //MEMO: xCellMax
   get xCellMax() {
     return memoize(() => {
       return max(this.xCellValues)
     }, `xCellMax`).call(this)
   }
-  //MEMO: yCellMin
   get yCellMin() {
     return memoize(() => {
       return min(this.yCellValues)
     }, `yCellMin`).call(this)
   }
-  //MEMO: yCellMax
   get yCellMax() {
     return memoize(() => {
       return max(this.yCellValues)
     }, `yCellMax`).call(this)
   }
-  //MEMO: cellsBoundsSeg
   get cellsBoundsSeg() {
     return memoize(() => {
       return segment(vert(this.xCellMin, this.yCellMin), vert(this.xCellMax, this.yCellMax))
     }, `cellsBoundsSeg`).call(this)
   }
-  //MEMO: cellsBounds
   get cellsBounds() {
     return memoize(() => {
       return findBounds(this.cellsBoundsSeg)
     }, `cellsBounds`).call(this)
   }
-
   get selectionRows() {
     return this.boundCellRows.map(r => r.filter(c => this.selection.some(s => s.id === c.id)))
   }
@@ -747,7 +726,6 @@ class SelectionBounds {
     return this.boundCellColumns.map(c => c.filter(r => this.selection.some(s => s.id === r.id)))
   }
 
-  //MEMO: cellsBounds
   get outerCells() {
     //ARROW: calcCells()
     const calcCells = (row, min) => {
@@ -869,7 +847,6 @@ class SelectionBounds {
         height: this.size.y,
       })
   }
-  //MEMO: corners
   get corners() {
     return memoize(() => {
       const rect = this.boundsRect
@@ -881,16 +858,15 @@ class SelectionBounds {
       ])
     }, `corners`).call(this)
   }
-  //MEMO: sides
   get sides() {
     return memoize(() => {
       return this.corners.sides
     }, `sides`).call(this)
   }
 
-  get bounds() { return this.corners.bounds }
-
-  //MEMO: cellPoints
+  get bounds() {
+    return this.corners.bounds
+  }
   get cellPoints() {
     return memoize(() => {
       return this.selection
@@ -899,7 +875,6 @@ class SelectionBounds {
         .gridVertSorted
     }, `cellPoints`).call(this)
   }
-  //MEMO: xGuidePoints
   get xGuidePoints() {
     return memoize(() => {
       return this.outerCells.up
@@ -908,7 +883,6 @@ class SelectionBounds {
       // .gridVertSorted
     }, `xGuidePoints`).call(this)
   }
-  //MEMO: yGuidePoints
   get yGuidePoints() {
     return memoize(() => {
       return this.outerCells.left
@@ -917,13 +891,11 @@ class SelectionBounds {
         .gridVertSorted
     }, `yGuidePoints`).call(this)
   }
-  //MEMO: xGuides
   get xGuides() {
     return memoize(() => {
       return this.xGuidePoints.map(c => c.x).flat()
     }, `xGuides`).call(this)
   }
-  //MEMO: yGuides
   get yGuides() {
     return memoize(() => {
       return this.yGuidePoints.map(c => c.y).flat()
@@ -1075,13 +1047,11 @@ class CellGroup extends ProtoLayer {
   // #endregion
   // MARK: CellGroup Grid Properties
   // #region Grid Properties
-  //MEMO: validNeighbors
   get validNeighbors() {
     return memoize(() => {
       return this.grid.validNeighbors({ selection: this.cells })
     }, `validNeighbors`).call(this)
   }
-  //MEMO: validCardinalNeighbors
   get validCardinalNeighbors() {
     return memoize(() => {
       return this.grid.validNeighbors({ selection: this.cells, direction: Direction.Cardinal })
@@ -1984,37 +1954,31 @@ class Cell extends ProtoLayer {
 
   // MARK: Cell Computed Properties
   // #region Computed Properties
-  //MEMO: cellBounds
   get cellBounds() {
     return memoize(() => {
       return this.grid.cellBounds({ selection: OpArray.from([this]) })
     }, `cellBounds`).call(this)
   }
-  //MEMO: boundsRect
   get boundsRect() {
     return memoize(() => {
       this.cellBounds.boundsRect
     }, `boundsRect`).call(this)
   }
-  //MEMO: anchor
   get anchor() {
     return memoize(() => {
       return this.grid.cellAnchor(this.coords.x, this.coords.y)
     }, `anchor`).call(this)
   }
-  //MEMO: size
   get size() {
     return memoize(() => {
       return this.grid.cellSize
     }, `size`).call(this)
   }
-  //MEMO: aspect
   get aspect() {
     return memoize(() => {
       return this.size.aspect
     }, `aspect`).call(this)
   }
-  //MEMO: minRadius
   get minRadius() {
     return memoize(() => {
       return this.grid.cornerRadius
@@ -2079,19 +2043,16 @@ class Cell extends ProtoLayer {
   get sideNeighbors() { return new Sides(this.cardinalNeighborCoords.map(co => this.grid.cellAtCoords(co.x, co.y))) }
   get cornerNeighbors() { return new Corners(this.ordinalNeighborCoords.map(co => this.grid.cellAtCoords(co.x, co.y))) }
 
-  //MEMO: neighbors()
   get neighbors() {
     return memoize(() => {
       return this.validNeighbors()
     }, `neighbors`).call(this)
   }
-  //MEMO:cardinalNeighbors() 
   get cardinalNeighbors() {
     return memoize(() => {
       return this.validNeighbors(Direction.Cardinal)
     }, `cardinalNeighbors`).call(this)
   }
-  //MEMO:ordinalNeighbors() 
   get ordinalNeighbors() {
     return memoize(() => {
       return this.validNeighbors(Direction.Ordinal)
@@ -2280,7 +2241,6 @@ class Island extends ProtoLayer {
   //   }, `cellGroup`).call(this)
   // }
 
-  //MEMO: allSubIslands
   get allSubIslands() {
     //FIXME: using resetMemoized() when islands are added, memoize should be reinstated here
     // return memoize(() => {
@@ -2343,24 +2303,20 @@ class Island extends ProtoLayer {
 
   get directionHierarchy() { return this.direction.hierarchy }
 
-  //MEMO: exposedSegments
   get exposedSegments() {
     return memoize(() => {
       return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
     }, `exposedSegments`).call(this)
   }
-
   get exposedCorners() {
     return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
   }
 
-  //MEMO: neighborIslands
   get neighborIslands() {
     return memoize(() => {
       return this.findNeighborIslands(Direction.All)
     }, `neighborIslands`).call(this)
   }
-  //MEMO: neighborIslandsCardinal
   get neighborIslandsCardinal() {
     return memoize(() => {
       return this.findNeighborIslands(Direction.Cardinal)
@@ -2875,7 +2831,7 @@ class Shape extends ProtoLayer {
   }
 
   // get testLook() { return Look.test(this.size, 'shape') }
-
+  get cellRadius() { return this.grid.cellRadius }
   get cellBounds() { return this.island.cellBounds }
   get boundsRect() { return this.cellBounds.boundsRect }
   // get insetAnchor() { return this.anchor }
@@ -2888,44 +2844,37 @@ class Shape extends ProtoLayer {
   get simpleSegPaths() { return this.simpleSubShapes.map(sub => new SegPath(sub, this)) }
   get cells() { return this.island.cells }
 
-  //MEMO: cutOutCells
   get cutOutCells() {
     return memoize(() => {
       if (!this.isSingleShape) { return this.simpleSegPaths.slice(1).map(sp => sp.cells).flat() }
     }, `cutOutCells`).call(this)
   }
-  //MEMO: enclosedCells
   get enclosedCells() {
     return memoize(() => {
       return this.isSingleShape ? this.cells : this.cells.union(this.cutOutCells, `id`).gridVertSorted
     }, `enclosedCells`).call(this)
   }
-  //MEMO: cutOutSegs
   get cutOutSegs() {
     return memoize(() => {
       if (!this.isSingleShape) { return this.simpleSubShapes.slice(1).flat() }
     }, `cutOutSegs`).call(this)
   }
-  get cellRadius() { return this.grid.cellRadius }
-  //MEMO: neighborShapes
+
   get neighborShapes() {
     return memoize(() => {
       return this.island.neighborIslands.map(i => i.shape)
     }, `neighborShapes`).call(this)
   }
-  //MEMO: neighborShapesCardinal
   get neighborShapesCardinal() {
     return memoize(() => {
       return this.island.neighborIslandsCardinal.map(i => i.shape)
     }, `neighborShapesCardinal`).call(this)
   }
-  //MEMO: neighborSimples
   get neighborSimples() {
     return memoize(() => {
       return this.neighborShapes.map(s => s.simpleSubShapes).flat()
     }, `neighborSimples`).call(this)
   }
-  //MEMO: andNeighborSimples
   get andNeighborSimples() {
     return memoize(() => {
       return this.simpleSubShapes.flat().union(this.neighborSimples.flat(), ['id'])
@@ -3029,7 +2978,6 @@ class Shape extends ProtoLayer {
   //NOTE: inset first: 1. possibility of knowing that opposite-walled cells will disappear at insetScale === 0
   //NOTE: inset first: 2. might be some hierarchical or derivative scaling advantage to successive inset knowledge
   //NOTE: ultimately both have advantages. could make inset transform a method with two inset compProps: sub & simpleSub
-  //MEMO: insetSubShapes
   get insetSubShapes() {
     // return memoize(() => {
     const subs = this.simpleSubShapes

@@ -93,7 +93,6 @@ class Grid extends ProtoLayer {
   get isBackGrid() { return this.type === `BackGrid` }
   get isFrontGrid() { return this.type === `Grid` }
 
-  //MEMO: gridCellBounds
   get gridCellBounds() {
     return memoize(() => {
       return this.cellBounds()
@@ -106,43 +105,36 @@ class Grid extends ProtoLayer {
   get rowCount() { return this.gridCellBounds.rowCount }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
 
-  //MEMO: cellSize  
   get cellSize() {
     return memoize(() => {
       return Vertex.div(this.insetSize, this.gridSize)
     }, `cellSize`).call(this)
   }
-  //MEMO: cellAspect
   get cellAspect() {
     return memoize(() => {
       return this.cellSize.aspect
     }, `cellAspect`).call(this)
   }
-  //MEMO: minCellWidth
   get minCellWidth() {
     return memoize(() => {
       return min(this.cellSize.x, this.cellSize.y)
     }, `minCellWidth`).call(this)
   }
-  //MEMO: cellRadius
   get cellRadius() {
     return memoize(() => {
       return this.minCellWidth / 2
     }, `cellRadius`).call(this)
   }
-  //MEMO: cells
   get cells() {
     return memoize(() => {
       return this.cellRows.flat()
     }, `cells`).call(this)
   }
-  //MEMO: cellPoints
   get cellPoints() {
     return memoize(() => {
       return this.gridCellBounds.cellPoints
     }, `cellPoints`).call(this)
   }
-  //MEMO: cellColumns
   get cellColumns() {
     return memoize(() => {
       return this.cellRowsFlipped()
@@ -169,34 +161,29 @@ class Grid extends ProtoLayer {
   get perimeterShapes() { return this.perimeterIslands.map(i => i.shape) }
   get shapeGroups() { return this.groups.map(g => g.shapeGroups).flat() }
 
-  //MEMO: allSimpleSubShapes()
   get allSimpleSubShapes() {
     return memoize(() => {
       return this.perimeterIslands
         .map(i => i.shape.simpleSubShapes).flat()
     }, `allSimpleSubShapes`).call(this)
   }
-  //MEMO: allSimpleSubShapesSegs()
   get allSimpleSubShapesSegs() {
     return memoize(() => {
       return this.allSimpleSubShapes.flat()
         .gridVertSorted
     }, `allSimpleSubShapesSegs`).call(this)
   }
-  //MEMO: allSimpleSubShapesSegsCounterSorted()
   get allSimpleSubShapesSegsCounterSorted() {
     return memoize(() => {
       return this.allSimpleSubShapesSegs
         .counterGridVertSorted
     }, `allSimpleSubShapesSegsCounterSorted`).call(this)
   }
-  //MEMO: allSimpleSegPaths()
   get allSimpleSegPaths() {
     return memoize(() => {
       return this.perimeterShapes.map(sh => sh.simpleSegPaths)
     }, `allSimpleSegPaths`).call(this)
   }
-  //MEMO: allSingleSimpleSubShapes
   get allSingleSimpleSubShapes() {                 // subshapes that contain no internal subShapes    
     return memoize(() => {
       return this.perimeterShapes
@@ -204,7 +191,6 @@ class Grid extends ProtoLayer {
         .map(s => s.simpleSubShapes).flat()          // map to simpleSubShapes 
     }, `allSingleSimpleSubShapes`).call(this)
   }
-  //MEMO: allInternalSimpleSubShapes
   get allInternalSimpleSubShapes() {               // Internal subshapes run counter-clockwise
     return memoize(() => {
       return this.perimeterShapes
@@ -212,13 +198,11 @@ class Grid extends ProtoLayer {
         .map(s => s.simpleSubShapes.slice(1)).flat()   // map to simpleSubShapes minus their outer shape
     }, `allInternalSimpleSubShapes`).call(this)
   }
-  //MEMO: allSimpleOutsideCorners
   get allSimpleOutsideCorners() {
     return memoize(() => {
       return this.allSimpleSubShapesSegs.filter(s => s.isOutsideCorner)
     }, `allSimpleOutsideCorners`).call(this)
   }
-  //MEMO: allSimpleInsideCorners
   get allSimpleInsideCorners() {
     return memoize(() => {
       return this.allSimpleSubShapesSegs.filter(s => !s.isOutsideCorner)
