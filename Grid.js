@@ -8,7 +8,6 @@ class Grid extends ProtoLayer {
   offset
   cellRows
   cellOutset
-  // cellRowsPref   
   gridStyle                                                                                   //UNUSED: 
   gridType
   frontGrid
@@ -22,10 +21,17 @@ class Grid extends ProtoLayer {
   highElt
   shadElt
   shaderElts
-  // gridCellBounds
   groups = new OpArray
 
-  constructor({ protoParent, gridSize, insetScale = 1, transform, startCoord = vert(), gridStyle = 0, gridType = 0, isInterGrid = false, cellOutset = 0 } = {}) {
+  constructor({ protoParent,
+    gridSize,
+    insetScale = 1,
+    startCoord = vert(),
+    gridStyle = 0,
+    gridType = 0,
+    isInterGrid = false,
+    cellOutset = 0
+  } = {}) {
     let type
     switch (gridType) {
       case 0:
@@ -49,6 +55,7 @@ class Grid extends ProtoLayer {
       // drawRect: true,
       // drawFilter: true,
     })
+
     this.gridSize = gridSize
     this.startCoord = startCoord
     this.offset = isInterGrid ? 0.5 : 0
@@ -65,9 +72,9 @@ class Grid extends ProtoLayer {
   }
 
   // MARK: Grid Override Properties
-  get testLook() { return Look.test(this.size, 'grid') }
-  get testColor() { return protoColor(0, 230, 0, 90) }
-  get cornerRadius() { return this.cellRadius }
+  // get testLook() { return Look.test(this.size, 'grid') }
+  // get testColor() { return protoColor(0, 230, 0, 90) }
+  // get cornerRadius() { return this.cellRadius }
 
   get gridAspect() { return this.gridSize.y / this.gridSize.x }
   get anchor() { return this.gridStyle === `Flexible` ? super.anchor : vert(0, (1 - this.gridAspect / 2) * 100) }
@@ -81,12 +88,11 @@ class Grid extends ProtoLayer {
         height: this.size.y,
       })
   }
-
   // MARK: Grid Computed Properties
   // #region Computed Properties
-
   get isBackGrid() { return this.type === `BackGrid` }
   get isFrontGrid() { return this.type === `Grid` }
+
   //MEMO: gridCellBounds
   get gridCellBounds() {
     return memoize(() => {
@@ -99,6 +105,7 @@ class Grid extends ProtoLayer {
   get columnCount() { return this.gridCellBounds.columnCount }
   get rowCount() { return this.gridCellBounds.rowCount }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
+
   //MEMO: cellSize  
   get cellSize() {
     return memoize(() => {
@@ -123,7 +130,6 @@ class Grid extends ProtoLayer {
       return this.minCellWidth / 2
     }, `cellRadius`).call(this)
   }
-
   //MEMO: cells
   get cells() {
     return memoize(() => {
@@ -190,34 +196,22 @@ class Grid extends ProtoLayer {
       return this.perimeterShapes.map(sh => sh.simpleSegPaths)
     }, `allSimpleSegPaths`).call(this)
   }
-
+  //MEMO: allSingleSimpleSubShapes
   get allSingleSimpleSubShapes() {                 // subshapes that contain no internal subShapes    
-    return this.perimeterShapes
-      .filter(s => s.isSingleShape)                // filter shapes for singles
-      .map(s => s.simpleSubShapes).flat()          // map to simpleSubShapes 
-    // return this.perimeterIslands
-    //   .map(i => i.shape.simpleSubShapes)           // get unflattened to test subShape count
-    //   .filter(subs => subs.length === 1).flat()    // only subShapes with a single simpleSubShape
+    return memoize(() => {
+      return this.perimeterShapes
+        .filter(s => s.isSingleShape)                // filter shapes for singles
+        .map(s => s.simpleSubShapes).flat()          // map to simpleSubShapes 
+    }, `allSingleSimpleSubShapes`).call(this)
   }
+  //MEMO: allInternalSimpleSubShapes
   get allInternalSimpleSubShapes() {               // Internal subshapes run counter-clockwise
-    return this.perimeterShapes
-      .filter(s => !s.isSingleShape)               // filter shapes for not singles!
-      .map(s => s.simpleSubShapes.slice(1)).flat()   // map to simpleSubShapes minus their outer shape
-    // return this.perimeterIslands
-    //   .filter(i => i.shape.simpleSubShapes.length > 1)    // only shapes with more than 1 simpleSubShape are internal
-    //   .map(i => i.shape.simpleSubShapes.slice(1)).flat()  // remove external subShapes
+    return memoize(() => {
+      return this.perimeterShapes
+        .filter(s => !s.isSingleShape)               // filter shapes for not singles!
+        .map(s => s.simpleSubShapes.slice(1)).flat()   // map to simpleSubShapes minus their outer shape
+    }, `allInternalSimpleSubShapes`).call(this)
   }
-  // get outerSideParametricShapes() {
-  //   return this.sides.obj.map((side, key) => {
-  //     const cells = this.gridCellBounds.outerCells[key]
-  //     const islands = cells.map()
-  //     return cells
-  //   })
-  // }
-  // get cornerMappedParametricShapes() {
-
-  // }
-
   //MEMO: allSimpleOutsideCorners
   get allSimpleOutsideCorners() {
     return memoize(() => {
@@ -231,62 +225,16 @@ class Grid extends ProtoLayer {
     }, `allSimpleInsideCorners`).call(this)
   }
 
-  get allOuterTakenSides() {
-    return this.allSimpleSubShapesSegs.filter(s => {
-      // const match = 
-    })
-  }
-
   get availableRows() { return this.cellRows.filter(row => row.every(c => c.isAvailable)) }
   get availableColumns() { return this.cellColumns.filter(col => col.every(c => c.isAvailable)) }
 
   get gridCornerSegs() {
-    // const validate=(seg,corner)=> {
-    //   if(seg.cells.some(c=> c.id===))
-    // }
-    let corners = this.allSimpleSubShapesSegs.cornerElements
+    return this.allSimpleSubShapesSegs.cornerElements
       .map(s => s.startNeighbor)
-    return corners
   }
-  // //MEMO: mostUpLeftSeg
-  // get mostUpLeftSeg() {
-  //   return memoize(() => {
-  //     const seg = this.allSimpleSubShapesSegs.first.startNeighbor
-  //     if(seg.cells.some(c=>c.id===))
-  //     return seg
-  //   }, `mostUpLeftSeg`).call(this)
-  // }
-  // //MEMO: mostUpRightSeg
-  // get mostUpRightSeg() {
-  //   return memoize(() => {
-  //     const seg = this.allSimpleSubShapesSegsCounterSorted.first.startNeighbor
-  //     if(seg.cells.some(c=>c.id===))
-  //     return seg
-  //   }, `mostUpRightSeg`).call(this)
-  // }
-  // //MEMO: mostDownRightSeg
-  // get mostDownRightSeg() {
-  //   return memoize(() => {
-  //     const seg = this.allSimpleSubShapesSegs.last.startNeighbor
-  //     if(seg.cells.some(c=>c.id===))
-  //     return seg
-  //   }, `mostDownRightSeg`).call(this)
-  // }
-  // //MEMO: mostDownLeftSeg
-  // get mostDownLeftSeg() {
-  //   return memoize(() => {
-  //     const seg = this.allSimpleSubShapesSegsCounterSorted.last.startNeighbor
-  //     if(seg.cells.some(c=>c.id===))
-  //     return seg
-  //   }, `mostDownLeftSeg`).call(this)
-  // }
-
-
   // #endregion
   // MARK: Grid Geometry Methods
   // #region Geometry Methods
-  //METH:
-  // cellNamed(id) { return this.cells.find(c => c.id = id) }                                             //UNUSED:
   //METH: 
   cellAnchor(x, y) { return Vertex.mult(this.cellSize, vert(x, y)).add(this.insetAnchor) }
   //METH: 
@@ -294,10 +242,7 @@ class Grid extends ProtoLayer {
   //METH: 
   coords(index) { return gridCoords(index, this.gridSize.x, this.offset) }
   //METH: 
-  coordsAreInBounds(x, y, bounds = this.gridCellBounds) {
-    return vertIsWithinBounds(vert(x, y), bounds.cellsBounds) //TODO: verify this implementation works before deleting 
-    return bounds.xCellMin <= x && x <= bounds.xCellMax && bounds.yCellMin <= y && y <= bounds.yCellMax
-  }
+  coordsAreInBounds(x, y, bounds = this.gridCellBounds) { return vertIsWithinBounds(vert(x, y), bounds.cellsBounds) }
   //METH: 
   cellAtCoords(x, y) { if (this.coordsAreInBounds(x, y)) { return this.cellAt(this.index(x, y)) } }
   //METH: 
@@ -305,49 +250,40 @@ class Grid extends ProtoLayer {
   //METH: 
   islandNamed(name) { return this.allIslands.find(e => e.id === name) || null }
   //METH: 
-  shapeNamed(name) {
-    // DeBug.log(this.shapes)
-    return this.shapes.find(e => e.id === name) || null
-  }
+  shapeNamed(name) { return this.shapes.find(e => e.id === name) || null }
   // #endregion
   // MARK: Grid CellIndex Methods
   // #region CellIndex Methods
-  //METH: 
+  //METH: callAt(cellIndex) : Cell : find cell by index
   cellAt(cellIndex) { return this.cells.find(e => e.index === cellIndex) }
-  //METH:
+  //METH: cellsWithinBounds()
   cellsWithinBounds(bounds) { return this.cells.filter(c => vertIsWithinBounds(c.center, bounds)) }
-  //METH: 
-  // rowContaining(cellIndex) { return this.cellRows[this.coords(cellIndex).y] }                              //UNUSED:
-  //METH: 
-  // columnContaining(cellIndex) { return this.cellColumns[this.coords(cellIndex).x] }                        //UNUSED:
-  //METH: 
-  // rowContains(rowIndex, cellIndex) { return this.coords(cellIndex).y === rowIndex }                        //UNUSED:
-  //METH: 
-  // columnContains(columnIndex, cellIndex) { return this.coords(cellIndex).x === columnIndex }               //UNUSED:
-  //METH:
+  //METH: cellIsInAnIsland() : BOOL : if cell is in an island
   // cellIsInAnIsland(cellIndex) {                                                                         //UNUSED: (caller)
   //   return this.allIslands.some(isle => isle.cells.some(cell => cell.index === cellIndex))
   // }
-  //METH: 
+  //METH: cellSegmentBetween()  : [Cell] : find cells between two indices
   cellSegmentBetween(indexA, indexB) {
-    const indices = OpArray.from([indexA, indexB]).numSorted
-    // print(indices)
-    const a = this.coords(indices[0])
-    const b = this.coords(indices[1])
-    const direction = a.biDirectionTo(b)
-    if (direction === -1) { return -1 }
+    const
+      indices = OpArray.from([indexA, indexB]).numSorted,
+      a = this.coords(indices[0]),
+      b = this.coords(indices[1]),
+      direction = a.biDirectionTo(b)
+    if (direction === -1) return -1
     if (direction.allAreCardinal) {
       let seg
-      if (direction.allAreHorizontal) { seg = this.cellRows[a.y] }
-      if (direction.allAreVertical) { seg = this.cellColumns[a.x] }
-      const start = seg.findIndex(e => e.index === indices[0])
-      const end = seg.findIndex(e => e.index === indices[1])
+      if (direction.allAreHorizontal) seg = this.cellRows[a.y]
+      if (direction.allAreVertical) seg = this.cellColumns[a.x]
+      const
+        start = seg.findIndex(e => e.index === indices[0]),
+        end = seg.findIndex(e => e.index === indices[1])
       return seg.slice(start, end + 1)
     }
     if (direction.allAreOrdinal) {
       const slope = a.slopeTo(b)
-      let seg = new OpArray
-      let next = a
+      let
+        seg = new OpArray,
+        next = a
       for (let i = a.x; i <= b.x; i++) {
         const cell = this.cellAtCoords(next.x, next.y)
         seg.push(cell)
@@ -356,12 +292,12 @@ class Grid extends ProtoLayer {
       return seg
     }
   }
-  //METH: 
+  //METH: cellSegmentBetween()  : [Cell] : find cells between two indices
   cellSpanRowsBetween(indexA, indexB) {
-    const indices = OpArray.from([indexA, indexB]).numSorted
-    // print(indices)
-    const a = this.coords(indices[0])
-    const b = this.coords(indices[1])
+    const
+      indices = OpArray.from([indexA, indexB]).numSorted,
+      a = this.coords(indices[0]),
+      b = this.coords(indices[1])
     let rows = new OpArray
     for (let i = a.y; i <= b.y; i++) {
       const seg = this.cellSegmentBetween(this.index(a.x, i), this.index(b.x, i))
@@ -369,24 +305,21 @@ class Grid extends ProtoLayer {
     }
     return rows
   }
-  //METH: cellSpanBetween()
+  //METH: cellSpanBetween() : [Cell] : find cells between two indices
   cellSpanBetween(indexA, indexB) { return this.cellSpanRowsBetween(indexA, indexB).flat() }
-  //METH: cellSpanBounds()
+  //METH: cellSpanBounds()  
   cellSpanBounds(indexA = this.cells.first, indexB = this.cells.last) {
-    const topLeft = this.cellAt(indexA).anchor
-    const botRight = this.cellAt(indexB).corners.downLeft
+    const
+      topLeft = this.cellAt(indexA).anchor,
+      botRight = this.cellAt(indexB).corners.downLeft
     return findBounds(topLeft, botRight)
   }
-  //METH: directionToNeighbor()
-  directionToNeighbor(cell, neighbor) {
-    // if (cell.neighbors.some(n => n.id === cell.id)) {
-    return cell.coords.directionTo(neighbor.coords)
-    // }
-  }
+  //METH: directionToNeighbor() : Direction : find direction to neighbor cell
+  directionToNeighbor(cell, neighbor) { return cell.coords.directionTo(neighbor.coords) }
   //METH: neighbor() : Cell : find neighbor cell by direction
   neighbor(cellIndex, direction) {
     let coords = this.cellAt(cellIndex).neighborCoords(direction)   // get neighbor coords
-    if (this.coordsAreInBounds(coords?.x, coords?.y)) {               // verify coords are inside grid
+    if (this.coordsAreInBounds(coords?.x, coords?.y)) {             // verify coords are inside grid
       return this.cells.find(e => e.coords.equals(coords))
     }
   }
@@ -394,9 +327,9 @@ class Grid extends ProtoLayer {
   #neighborIs({ cellIndex, direction, groupID, islandID } = {}) {
     let neighbor = this.neighbor(cellIndex, direction)        // find neighbor 
     if (neighbor) {
-      if (groupID) { return neighbor.groupID === groupID }     // test group membership
-      if (islandID) { return neighbor.islandIDs.has(islandID) } // test island membership
-      return neighbor.isAvailable                               // test availability
+      if (groupID) return neighbor.groupID === groupID        // test group membership
+      if (islandID) return neighbor.islandIDs.has(islandID)   // test island membership
+      return neighbor.isAvailable                             // test availability
     }
     return false
   }
@@ -405,9 +338,7 @@ class Grid extends ProtoLayer {
     return this.#neighborIs({ cellIndex: cellIndex, direction: direction })
   }
   //METH: neighborIsTaken() : BOOL : if certain neighbor is taken
-  neighborIsTaken(cellIndex, direction) {
-    return !this.neighborIsAvailable(cellIndex, direction)
-  }
+  neighborIsTaken(cellIndex, direction) { return !this.neighborIsAvailable(cellIndex, direction) }
   //METH: neighborIsInIsland() : BOOL : if certain neighbor is in certain Island
   neighborIsInIsland(cellIndex, direction, islandID) {
     return this.#neighborIs({ cellIndex: cellIndex, direction: direction, islandID: islandID })
@@ -419,84 +350,69 @@ class Grid extends ProtoLayer {
   //METH: exposedDirections() : Direction : directions with NO neighbors, i.e. where edges/corners should be drawn
   exposedDirections({ cellIndex, groupID, islandID } = {}) {
     const dirs = Direction.All.directions
-    if (groupID) {
-      return dirs.filter(e => !this.neighborIsInGroup(cellIndex, e, groupID))
-    }
-    if (islandID) {
-      return dirs.filter(e => !this.neighborIsInIsland(cellIndex, e, islandID))
-    }
+    if (groupID) return dirs.filter(e => !this.neighborIsInGroup(cellIndex, e, groupID))
+    if (islandID) return dirs.filter(e => !this.neighborIsInIsland(cellIndex, e, islandID))
     return dirs.filter(e => !this.neighborIsAvailable(cellIndex, e))
   }
-  //METH: 
-  //TODO: add sort??
+  //METH: exposedSides() : [Side] : sides with NO neighbors, i.e. where edges should be drawn
   exposedSides({ cellIndex, groupID, islandID } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID })
       .filter(e => e.allAreCardinal)
       .map(f => this.cellAt(cellIndex).side(f))
-
   }
-  //METH: 
-  //TODO: add sort??
+  //METH: exposedCorners() : [Corner] : corners with NO neighbors, i.e. where corners should be drawn 
   exposedCorners({ cellIndex, groupID, islandID } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID })
       .filter(e => e.allAreOrdinal)
       .map(f => this.cellAt(cellIndex).corner(f))
-    // .gridVertSorted
   }
-  //METH: cellIsIsolated() : if cell does NOT have neighbors in given direction, by group, island, or taken (default)
+  //METH: cellIsIsolated() : Bool : if cell does NOT have neighbors in given direction, by group, island, or taken (default)
   cellIsIsolated({ cellIndex, groupID, islandID, direction = Direction.Cardinal } = {}) {
     return this.exposedDirections({ cellIndex, groupID, islandID }).includesMany(direction.directions, ['value'])
   }
-  //METH: neighbors() : [Cell]
+  //METH: neighbors() : [Cell]  : find all neighbors of a cell
   neighbors(cellIndex) { return Direction.All.directions.map(dir => this.neighbor(cellIndex, dir)) }
-  //METH: availableNeighbors() : [Cell]
+  //METH: availableNeighbors() : [Cell] : find available neighbors of a cell
   availableNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.isAvailable) }       //UNUSED:
-  //METH: takenNeighbors() : [Cell]
+  //METH: takenNeighbors() : [Cell] : find taken neighbors of a cell
   takenNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.isTaken) }               //UNUSED:
-  //METH: ordinalNeghbors() : [Cell]
-  ordinalNeighbors(cellIndex) {                                                                           //UNUSED:
+  //METH: ordinalNeighbors() : [Cell] : find ordinal neighbors of a cell 
+  ordinalNeighbors(cellIndex) {                                                                             //UNUSED:
     return Direction.Ordinal.directions.map(dir => this.neighbor(cellIndex, dir))
   }
 
   // #endregion
   // MARK: Grid Selection Methods
   // #region Selection Methods
-  //METH: 
+  //METH: cellBounds() : SelectionBounds : returns a SelectionBounds object for the grid
   cellBounds({ selection = this.cells, groupID, islandID } = {}) {
     return new SelectionBounds({ selection: selection, grid: this, groupID: groupID, islandID: islandID })
   }
-  //METH: 
+  //METH: shrunkSelection() : [Cell] : returns a selection of cells shrunk by a given amount in a given direction
   shrunkSelection(selection = this.cells, amount = 1, direction = Direction.Cartesian) {
     const excludeEdges = this.inline(selection, amount, direction)
-    // return excludeEdges
     return selection.exclude(excludeEdges, 'id')
   }
-  //METH: converts 1D selection array to a 2D CellRows array
+  //METH: toCellRows() : [ [Cell] ] : converts 1D selection array to a 2D CellRows array
   toCellRows(selection) {
     const rows = new map()
     for (const cell of selection) {
       const y = cell.coords.y
-      if (!rows.has(y)) { rows.set(y, []) }
+      if (!rows.has(y)) rows.set(y, [])
       rows.get(y).push(cell)
     }
     return OpArray.from(rows.values())
   }
-  //METH: randomly transforms a 1D or 2D selection array into a 2D CellRows array
-  randTransformedCells(selection) {                                                                           //UNUSED:
-    return this.transformedCellRows({
-      selection: selection,
-      start: R.random_int(0, 3),
-      direction: R.random_int(0, 1)
-    }).flat()
-  }
-  //METH: transforms a 1D or 2D selection array into a 2D CellRows array given a start corner and direction
+  //METH: transformedCellRows() : [ [Cell] ] : transforms a 1D or 2D selection array into a 2D CellRows array given a start corner and direction
   transformedCellRows({ selection = this.cellRows, start = Corner.TopLeft, direction = Direction.Horizontal } = {}) {
-    if (!selection.is2D) { selection = this.toCellRows(selection) }
-    if (start instanceof Corner) { start = start.value }
+    if (!selection.is2D) selection = this.toCellRows(selection)
+    if (start instanceof Corner) start = start.value
+
     let isVertical
-    if (direction instanceof Direction) { isVertical = direction.isVertical }
-    if (direction instanceof String) { isVertical = direction === 'vertical' }
-    if (Number.isFinite(direction)) { isVertical = direction === 0 }
+
+    if (direction instanceof Direction) isVertical = direction.isVertical
+    if (direction instanceof String) isVertical = direction === 'vertical'
+    if (Number.isFinite(direction)) isVertical = direction === 0
 
     switch (start) { // horizontal direction
       case 0: //upLeft -> no change
@@ -517,12 +433,9 @@ class Grid extends ProtoLayer {
     }
     return selection
   }
-  //METH: validNeighbors() : [cell]
+  //METH: validNeighbors() : [Cell] : find valid neighbors of a selection of cells
   validNeighbors({ selection = this.cells, bounds = this.gridCellBounds, direction = Direction.All } = {}) {
-    // DeBug.log(`validNeighbors selection`, selection)
-    // DeBug.error(`validNeighbors selection`, selection.map(c => c.id))
     let cells = OpArray.from(new Set(selection.flatMap(c => c.validNeighborsCoords(direction, bounds))))
-    // let cells = selection.flatMap(e => e.validNeighborsCoords(direction, bounds)).unique(`id`)
     // DeBug.log(`validNeighbors selection`, selection.map(c => c.id))
     // DeBug.log(`validNeighbors cells`, cells.map(c => c.id))
     cells = cells
@@ -532,31 +445,26 @@ class Grid extends ProtoLayer {
       .exclude(selection, ['x', 'y']) // exclude objects with same x and y values
     return cells
   }
-  //METH: 
+  //METH: allExposedSides() : [Side] : find all exposed sides of a selection of cells
   allExposedSides({ selection, groupID, islandID } = {}) {
     return selection
       .flatMap(e => this.exposedSides({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
       .gridVertSorted
-    // .sort((a, b) => a.start.y - b.start.y || a.start.x - b.start.x) // sort by y, x 
   }
-  //METH: 
+  //METH: allExposedCorners() : [Corner] : find all exposed corners of a selection of cells
   allExposedCorners({ selection, groupID, islandID } = {}) {
     return selection
       .flatMap(e => this.exposedCorners({ cellIndex: e.index, groupID: groupID, islandID: islandID }))
-      .gridVertSorted // sort by y, x 
+      .gridVertSorted
   }
   // #endregion
   // MARK: Grid createIslands Method
   // #region createIslands Method
-  //TODO: add transform functionality
-  //NOTE: Transform requires: transformed cells, transformed bounds, and transformed direction
-  //NOTE: don't change selection to 2Darray, input 1D array as param from transformer 
   //METH: createIslands()
   createIslands({
     selection,
     groupID,
     islandID,
-    filter,
     cut,
     direction = Direction.Cardinal,
     maxCorners = true,
@@ -573,48 +481,51 @@ class Grid extends ProtoLayer {
     DeBug.log(`stored?`, stored)
     DeBug.log(`allIslands`, this.allIslands.map(i => i.id))
     DeBug.log(`island?`, this.islandNamed(islandID))
+
     let cells, group, island
+
     if (!groupID && !islandID && !selection) {  // "taken/available" mode - currently unused, probably DEPRECATE!
-      if (isTaken) { cells = this.takenCells }
-      else { cells = this.availableCells }
+      if (isTaken) cells = this.takenCells
+      else cells = this.availableCells
     }
-    // if (!selection) {
     //TODO: could/should I migrate from ID to direct reference?
-    if (groupID) {                            // "group" mode finds & creates islands within a group
+    if (groupID) {                              // "group" mode finds & creates islands within a group
       group = this.groupNamed(groupID)
       cells = group?.cells || new OpArray
-      if (group) { protoParent = group }
+      if (group) protoParent = group
     }
     //TODO: could/should I migrate from ID to direct reference?
-    if (islandID) {                           // "island" mode finds & creates islands within an island
+    if (islandID) {                             // "island" mode finds & creates islands within an island
       island = this.islandNamed(islandID)
       cells = island?.cells || new OpArray
       DeBug.warn(`island found for ${islandID}?`, island)
-      if (island) { protoParent = island }
+      if (island) protoParent = island
     }
-    if (selection) { cells = OpArray.from(selection) }
+
+    if (selection) cells = OpArray.from(selection)
     if (cells.isEmpty) {
       DeBug.groupEnd()
       return
     }
+
     DeBug.log(`cells`, cells.map(c => c.id))
     let tempIslands = new OpArray
     while (cells.length > 0) {
-      let cell = cells[0]
-      let islanders = OpArray.from([cell])
-      let fillstack = []
+      let
+        cell = cells[0],
+        islanders = OpArray.from([cell]),
+        fillstack = []
       //NOTE: Non-recursive flood-fill implementation from: https://codeguppy.com/blog/flood-fill/index.html
+
       //ARROW: findIslanders : 
       const findIslanders = () => {
         fillstack.push(cell)
 
         while (fillstack.length > 0) {
           let current = fillstack.pop()
-          if (current.islandChecked) { continue }
+          if (current.islandChecked) continue
           // DeBug.warn(`current cell: ${current.id}`)
           let neighbors = this.validNeighbors({ selection: [current], bounds: bounds, direction: direction })
-          // DeBug.log(`validNeighbors-neighbors`, neighbors.map(c => c.id))
-          neighbors = neighbors
             .filter(e => !e.islandChecked)
           // DeBug.log(`islandChecked-neighbors`, neighbors.map(c => c.id))
           //NOTE: I can't remember why I wrote this logic to work with goupID and islandID. Else case makes sense. This might be a source of problems down the road, or an avenue for something interesting. 
@@ -622,15 +533,15 @@ class Grid extends ProtoLayer {
           // if (isTaken) {
           // DeBug.log(`islandChecked-neighbors islandIDs`, neighbors.map(c => Array.from(c.islandIDs)).join(` `))
 
-          if (selection) { // filter neighbors from selection
+          if (selection) {                                                  // filter neighbors from selection
             neighbors = neighbors.intersect(selection, ['id'])
             // DeBug.log(`selection-neighbors`, neighbors.map(c => c.id))
           } else {
-            if (groupID) {// find neighbors in group
+            if (groupID) {                                                  // find neighbors in group
               neighbors = neighbors.filter(e => e.groupID === groupID)
               // DeBug.log(`groupID-neighbors`, neighbors.map(c => c.id))
             }
-            if (islandID) {// find neighbors in island
+            if (islandID) {                                                 // find neighbors in island
               neighbors = neighbors.filter(e => e.islandIDs.has(islandID))
               // DeBug.log(`islandID-neighbors`, neighbors.map(c => c.id))
             }
@@ -642,13 +553,14 @@ class Grid extends ProtoLayer {
           islanders.push(current)
           islanders = islanders
             .unique(['id'])
-            .gridVertSorted // sort by y then x values
+            .gridVertSorted
         }
       }
 
       findIslanders()
       cells = cells.exclude(islanders, ['id'])
       islanders.forEach(e => e.islandChecked = false)
+
       DeBug.log(`islandID`, islandID)
 
       let newIsland = new Island({
@@ -667,36 +579,28 @@ class Grid extends ProtoLayer {
       })
 
       if (stored) {
-        // newIsland.setFilter(filter)
-        //FIXME: Need to figure out how to properly assign/add subIslands from Island.CreateSubIsland() call to createIslands
-        if (group) { group.perimeterIslands.push(newIsland) }
+        if (group) group.perimeterIslands.push(newIsland)
         if (protoParent?.type === 'Island' || protoParent?.type === 'PerimeterIsland') {
-          // protoParent.setFilter(filter)
-          // DeBug.warn(protoParent)
-          if (!protoParent.subIslands) { protoParent.subIslands = new OpArray }
+          if (!protoParent.subIslands) protoParent.subIslands = new OpArray
           protoParent.subIslands.push(newIsland)
         }
-        // if ()
       }
       tempIslands.push(newIsland)
     }
-    // DeBug.log(`  $$$  `)
     DeBug.log(`tempIslands`, tempIslands.map(i => i.id))
-    //TODO: need to keep this in mind in regards to find Islands new temp/non-stored use case
+
     if (stored) {
       this.updateCells()
       tempIslands.forEach(isle => {
         this.updateCells({ island: isle })
-        if (createShape) { isle.createShape(insetScale) }
+        if (createShape) isle.createShape(insetScale)
         DeBug.warn(isle.shape.svg)
       })
     }
-    tempIslands.forEach(isle => {
-      // this.updateCells({ island: isle })
-      // isle.createShape()
-      DeBug.log(`completed Island ${isle.id} cell-islandIDs`, isle.cells)
-      // DeBug.log(`completed Island ${isle.id} cell-islandIDs`, isle.cells.forEach(c => Array.from(c.islandIDs)).join(` `))
-    })
+
+    // tempIslands.forEach(isle => {
+    //   DeBug.log(`completed Island ${isle.id} cell-islandIDs`, isle.cells)
+    // })
 
     DeBug.groupEnd()
     DeBug.log(``)
@@ -705,56 +609,47 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: Grid Shape Methods
   // #region Grid Shape Methods
-  //METH:
+  //METH: createSimpleSubShapes() : null : create simple subshapes for all shapes in the grid
   createSimpleSubShapes() {
     // DeBug.group(`GRID.createSimpleSubShapes called!!!`)
     this.groups.forEach(g => g.createSimpleSubShapes())
     // DeBug.groupEnd()
   }
   // #region end
-
   //MARK: MAXIMIZE CUDDLES
+  //METH: inWrapPerimeter() : null : wrap all simpleSegs within outer parentSegs
   inWrapPerimeter(simpleSegs, parentSegs) {
-    DeBug.warn(`inWrapPerimeter`)
-    DeBug.log(`simpleSegs`, simpleSegs)
+    // DeBug.warn(`inWrapPerimeter`)
+    // DeBug.log(`simpleSegs`, simpleSegs)
+
     let unmatched = new OpArray
     simpleSegs.forEach(simp => {
-      DeBug.log(`current Seg`, simp)
+      // DeBug.log(`current Seg`, simp)
       const match = parentSegs.find(prnt => simp.hasCoincidentCorner(prnt))
-      DeBug.log(`match`, match)
-      if (match) {
-        simp.setEndCurveOrigin(match.arcOrigin)
-      } else {
-        unmatched.push(simp)
-      }
+      // DeBug.log(`match`, match)
+      if (match) simp.setEndCurveOrigin(match.arcOrigin)
+      else unmatched.push(simp)
     })
-    DeBug.warn(`unmatched`, unmatched)
+
+    // DeBug.warn(`unmatched`, unmatched)
     unmatched.forEach(s => {
-      DeBug.warn(`current unmatched`, s)
-      if (s.inWrapper
-        && s.canCurveTo(s.inWrapper.arcOrigin)
-      ) s.setEndCurveOrigin(s.inWrapper.arcOrigin)
+      // DeBug.warn(`current unmatched`, s)
+      if (s.inWrapper && s.canCurveTo(s.inWrapper.arcOrigin)) s.setEndCurveOrigin(s.inWrapper.arcOrigin)
       else
         s.matchEndCorner()
     })
   }
 
-  get allMinRadiusCorners() {
-    return this.allSimpleSubShapesSegs
-      .filter(s => s.hasMinArcRadius || s.isMinCorner)
-    // .gridVertSorted
-    // .sort((a, b) => b.outWrappers?.length - a.outWrappers?.length)
-  }
+  get allMinRadiusCorners() { return this.allSimpleSubShapesSegs.filter(s => s.hasMinArcRadius || s.isMinCorner) }
 
-  // curveMinCorners() {}
-
-  //METH: curveCellRadiusCorners()
+  //METH: curveCellRadiusCorners() : null : curve all corners that have min radius
   curveMinRadiusCorners({ corners = this.allMinRadiusCorners, all = false } = {}) {
     if (all) { corners = this.allSimpleSubShapesSegs }
     DeBug.log(`this.allMinRadiusCorners`, this.allMinRadiusCorners)
     DeBug.log(`corners`, corners)
     // if (!all) { DeBug.log(`allMinRadiusCorners`, corners) }
-    // corners = corners.slice(0, 5)
+
+    // corners = corners.slice(0, 5)                                        //TESTING: reduce processed
     corners.forEach(s => {
       // if (s.id.includes('cell081')                                                                   //LOGGING:
       //   // || s.id.includes('cell008')                                                               //LOGGING:
@@ -766,27 +661,23 @@ class Grid extends ProtoLayer {
       // DeBug.log(s.id)                                                                            //LOGGING:
       //   DeBug.log(`this before`, s.cubicVerts)                                                     //LOGGING:
       // }                                                                                              //LOGGING:
-      if (s.isMinCorner) {
-        s.setMinEndCorner(true)
-      } else {
-        s.setMinEndCorner()
-      }
+      if (s.isMinCorner) s.setMinEndCorner(true)
+      else s.setMinEndCorner()
       // if (report) { DeBug.log(`this after`, s.cubicVerts) }                                        //LOGGING:
       if (!all
         && !s.flushWrapper?.isMinCorner
         && s.flushWrapper?.isCoinOutWrapper
-      ) {
+      )
         s.flushWrap()
+      // if (report) {                                                                                //LOGGING:
+      //   DeBug.log(`calling flushWrap:`, s.coincidentWrapper?.id)                                    //LOGGING:
+      //   DeBug.log(`flushWrap:`, s.coincidentWrapper)                                                //LOGGING:
+      //   DeBug.log(`cubicVerts:`, s.coincidentWrapper?.cubicVerts, s.coincidentWrapper?.endNeighbor.cubicVerts)
+      // }                                                                                            //LOGGING:
 
-        // if (report) {                                                                                //LOGGING:
-        //   DeBug.log(`calling flushWrap:`, s.coincidentWrapper?.id)                                    //LOGGING:
-        //   DeBug.log(`flushWrap:`, s.coincidentWrapper)                                                //LOGGING:
-        //   DeBug.log(`cubicVerts:`, s.coincidentWrapper?.cubicVerts, s.coincidentWrapper?.endNeighbor.cubicVerts)
-        // }                                                                                            //LOGGING:
-      }
     })
   }
-  //METH: completeEnds()
+  //METH: completeEnds() : null : complete all segment ends that are incomplete
   completeEnds = (testPool, wrap = true) => {
     testPool = testPool
       .filter(s => !s.hasCompleteEndCorner)
@@ -794,29 +685,17 @@ class Grid extends ProtoLayer {
 
     DeBug.warn(`allIncompleteEnds`, testPool)
     DeBug.warn(`allIncompleteEnds`, testPool.map(s => s.arcRadius))
-    // testPool = testPool.slice(0, 16)
+
+    // testPool = testPool.slice(0, 16)                                       //TESTING: reduce processed
     testPool.forEach(s => {
       // DeBug.log(`current Seg`, s)
       s.matchEndCorner()
-      if (wrap) {
-        s.flushWrap()
-        // if (s.shape.neighborShapes.isEmpty
-        //   // && s.adjacentWrapper?.adjInWrapper?.equals(s)
-        // ) {
-        //   s.adjWrap()
-        // }
-      }
-      // if (wrap && (s.isOutsideCorner || s.coinInWrapper)) { s.flushWrap() }
+      if (wrap) s.flushWrap()
     })
-    // testPool.forEach(s => {
-    //   // s.matchEndCorner()
-    //   // if (wrap) { s.flushWrap() }
-    // })
   }
 
   //MARK: maximizeCuddles()
-
-  //METH: maximizeCuddles()
+  //METH: maximizeCuddles() : null : maximize cuddles for all simple subshapes
   maximizeCuddles(
     defaultPool = this.allSimpleSubShapesSegs,
     nestleMode = 0,
@@ -838,7 +717,7 @@ class Grid extends ProtoLayer {
     DeBug.log(`allInterferenceWrapped`, allInterferenceWrapped)
     DeBug.log(`allInterferenceWrappers`, allInterferenceWrappers)
 
-    //ARROW: wrapInterferenceCorners()
+    //ARROW: wrapInterferenceCorners() : null : wrap all interference corners (corners that have concentric wrappers && adjacently intersect)
     const wrapInterferenceCorners = (testPool = allInterferenceWrapped, preserveQuads = preserveQs) => {
       DeBug.warn(`allInterferenceWrapped`, testPool)                                                        //LOGGING:
       DeBug.warn(`allInterferenceWrapped hasDoubleInterference`, testPool.map(s => s.hasDoubleInterference))//LOGGING:
@@ -848,11 +727,13 @@ class Grid extends ProtoLayer {
       DeBug.warn(`allInterferenceWrappers`, allInterferenceWrapped.map(w => w.interferenceWrappers))   //LOGGING:
       DeBug.warn(`allInterferenceWrappers flat`, allInterferenceWrappers)                              //LOGGING:
 
-      //ARROW: removeDuplicates()
+      //ARROW: removeDuplicates() : null : remove duplicate interference wrappers that cross-reference each other
       const removeDuplicates = () => {
-        const wrappers = allInterferenceWrappers.map(w => w.innerMostRadiantWrapper)
+        const
+          wrappers = allInterferenceWrappers.map(w => w.innerMostRadiantWrapper),
+          dupes = testPool.intersect(wrappers, `id`)
+
         DeBug.log(`wrappers`, wrappers)
-        const dupes = testPool.intersect(wrappers, `id`)
         DeBug.warn(`dupes`, dupes)
 
         if (!dupes.isEmpty) {
@@ -861,8 +742,9 @@ class Grid extends ProtoLayer {
             let dupeCount = 0
             while (reducePool.length > 0) {
               // DeBug.log(`dupeCount`, dupeCount)
-              const wrap = reducePool.shift()
-              const wrappers = OpArray.fromObjectValues(wrap.interferenceWrappers).compacted
+              const
+                wrap = reducePool.shift(),
+                wrappers = OpArray.fromObjectValues(wrap.interferenceWrappers).compacted
               // DeBug.log(`wrap`, wrap)
               // DeBug.log(`wrappers`, wrappers)
               // DeBug.log(`wrap.id`, wrap.id)
@@ -882,27 +764,23 @@ class Grid extends ProtoLayer {
         }
         DeBug.warn(`reduced Pool`, testPool)
       }
-
       removeDuplicates()
 
-      // return
-      // testPool = testPool.slice(0, 1)
-
+      // testPool = testPool.slice(0, 1)                                        //TESTING: reduce processed
       testPool.forEach(s => {
-        //ARROW: setCurve()
+        //ARROW: setCurve() : null : set curve for interference wrappers
         const setCurve = (seg, isStart) => {
           const wrapType = isStart ? `start` : `end`
           DeBug.warn(`setCurve ${wrapType}`)
           let dir                                                               // direction of perpendicular seg
-          if (s.isOutsideCorner) {
-            dir = isStart ? s.direction.toLeft : s.direction
-          } else {
-            dir = isStart ? s.direction : s.direction.toRight
-          }
-          const perpEnd = Vertex.add(dir.lineVector, origin)                    // calculate end of perpendicular seg
-          const perpSeg = segment(origin, perpEnd)                              // calculate perpendicular seg
-          const projected = perpSeg.intersectionWith(seg.maxArcBoundsSeg, true) // calculate intersect
-          DeBug.log(`seg`, seg)                                                                      //LOGGING:
+          if (s.isOutsideCorner) dir = isStart ? s.direction.toLeft : s.direction
+          else dir = isStart ? s.direction : s.direction.toRight
+
+          const
+            perpEnd = Vertex.add(dir.lineVector, origin),                       // calculate end of perpendicular seg
+            perpSeg = segment(origin, perpEnd),                                 // calculate perpendicular seg
+            projected = perpSeg.intersectionWith(seg.maxArcBoundsSeg, true)     // calculate intersect
+          DeBug.log(`seg`, seg)                                                                         //LOGGING:
           DeBug.log(`wrapped direction`, s.direction.name)                                              //LOGGING:
           DeBug.log(`wrapper direction`, seg.direction.name)                                            //LOGGING:
           DeBug.log(`perp direction`, dir.name)                                                         //LOGGING:
@@ -918,38 +796,27 @@ class Grid extends ProtoLayer {
             && seg.inWrappers ? seg.inWrappers.every(i => i.canCurveTo(projected, true)) : true        // prevent from curving to self 
           ) {
             DeBug.log(`curving ${wrapType}wrapper!`)                                                    //LOGGING:
-
             seg.setEndRadiantOutWrapsOrigin(projected)
-            seg.flushWrap()                             //TODO: this improves interferenceWrapping on #516
+            seg.flushWrap()
           }
         }
 
         DeBug.error(`interferenceWrapped in queue:`, s)
         DeBug.error(`interferenceWrappers:`, s.interferenceWrappers)
         DeBug.log(`neighbors`, s.neighborsArray)
-        // let viables
-        // const neighbors = OpArray.fromObjectValues(s.interferenceWrappers)
-        //   .compacted
-        //   .map(i => i.neighborsArray).flat()
-
-        // if (neighbors.every(n => !n.hasArc)) {
-        //   viables = s.viableInterferenceOrigins
-        // }
-
 
         const viables = s.viableInterferenceOrigins
         let origin
         if (viables) {
           DeBug.log(`viables`, viables)
-          if (preserveQuads && s.isEdgeOfQuad && viables.some(v => v.equals(s.shape?.center, 1))) {
+          if (preserveQuads && s.isEdgeOfQuad
+            && viables.some(v => v.equals(s.shape?.center, 1))) {
             origin = s.shape.center
           } else {
-            // origin = viables.middle
             origin = viables.last
           }
-        } else {
-          DeBug.log(`NO viableInterferenceOrigins found!`)
-        }
+        } else DeBug.log(`NO viableInterferenceOrigins found!`)
+
         if (origin
           && s.outerMostRadiantWrapper.canCurveTo(origin, true)
           // && Object.values(s.interferenceWrappers).every(i => i.canCurveTo(origin, true))
@@ -957,16 +824,14 @@ class Grid extends ProtoLayer {
           DeBug.log(`origin found!`, origin)
           s.setEndRadiantOutWrapsOrigin(origin)
           let { start, end } = s.interferenceWrappers
-          if (start) { setCurve(start, true) }
-          if (end) { setCurve(end, false) }
-        } else {
-          DeBug.log(`NO origin found!`)
-        }
+          if (start) setCurve(start, true)
+          if (end) setCurve(end, false)
+        } else DeBug.log(`NO origin found!`)
       })
     }
 
     //MARK: wrapInnerMost()
-    //ARROW: wrapInnerMost()
+    //ARROW: wrapInnerMost() : null : wrap all inner most wrappers with concentric wrappers
     const wrapInnerMost = (testPool = defaultPool, preserveQuads = preserveQs, balanced = balance) => {
       DeBug.warn(`wrapInnerMost testPool`, testPool)
       testPool = testPool
@@ -988,9 +853,7 @@ class Grid extends ProtoLayer {
       DeBug.warn(`allInnerMostWrappers outWrappers`, testPool.map(s => s.radiantOutWrappers.length))
       // DeBug.warn(`allInnerMostWrappers viables`, testPool.map(s => s.viableRadiantOrigins))
 
-      // return
-      // testPool = testPool.slice(0, 1)
-
+      // testPool = testPool.slice(0, 1)                                        //TESTING: reduce processed
       testPool.forEach(s => {
         DeBug.error(`innerMost in queue`, s)                                                                //LOGGING:
         // DeBug.groupCollapsed(`innerMost in queue`, s)                                                    //LOGGING:
@@ -1002,7 +865,6 @@ class Grid extends ProtoLayer {
         DeBug.log(`radiantOutWrappers`, s.radiantOutWrappers.map(r => r.viableArcOrigins))              //LOGGING:
 
         if (viables) {
-          // let origin
           const shape = s.shape
           DeBug.log(shape)
           if (preserveQuads
@@ -1027,7 +889,6 @@ class Grid extends ProtoLayer {
             s.endNeighbor.setArcToMiddle()
             s.endNeighbor.setEndRadiantOutWrapsOrigin()
           } else {                                                                      // not balanced
-            // const origin = needsMiddle(s.endNeighbor) ? viables.middle : viables.last
             const origin = viables.last
             DeBug.log(`radiant wrapping to ${origin.string}`)
             s.setEndRadiantOutWrapsOrigin(origin)
@@ -1035,16 +896,14 @@ class Grid extends ProtoLayer {
               DeBug.log(`outerMostRadiantWrapper`, s.outerMostRadiantWrapper)
               s.outerMostRadiantWrapper.adjWrap()
             }
-            // this.completeEnds(s.neighborsArray)
           }
-
           // DeBug.groupEnd()                                                                             //LOGGING:
         }
       })
     }
 
     //MARK: fixBadAdjWraps()
-    //ARROW: fixBadAdjWraps()
+    //ARROW: fixBadAdjWraps() : null : fix adjacent wraps that are diverging/converging
     const fixBadAdjWraps = (testPool = defaultPool, canWrapIn = true) => {
       testPool = testPool
         .filter(s =>
@@ -1056,49 +915,42 @@ class Grid extends ProtoLayer {
         .sort((a, b) => b.arcRadius - a.arcRadius)
       DeBug.log(`badAdjWraps`, testPool)
 
-      // return
-      // testPool = testPool.slice(0, 1)
+      // testPool = testPool.slice(0, 1)                                            //TESTING: reduce processed
       //FIXME: Implement this in a while loop as used in fixLoosies(), can we reuse finishing testPool code?
       testPool.forEach(s => {
         DeBug.error(`badAdjWrap in queue:`, s)                                                          //LOGGING:
         // DeBug.groupCollapsed(`badAdjWrap in queue:`, s)                                                //LOGGING:
 
-        //ARROW: wrapOutFix()
-        const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
+        //ARROW: wrapOutFix() : null : wrap out to self
+        const wrapOutFix = () => {                                  // adjWrap() inWrapper to wrap Out to self
           DeBug.log(`inWrapper:`, s.inWrapper)
-          s.inWrapper.adjWrap(true)                             // adjWrap() should handle div/conv and equid/prox
-          s.inWrapper.replaceEndRadiantOutWrapsOrigin(s.arcOrigin) // radiant outwrapping
+          s.inWrapper.adjWrap(true)                                 // adjWrap() should handle div/conv and equid/prox
+          s.inWrapper.replaceEndRadiantOutWrapsOrigin(s.arcOrigin)  // radiant outwrapping
         }
-        //ARROW: wrapInFix()
+        //ARROW: wrapInFix() : null : wrap in to self
         const wrapInFix = () => {
           DeBug.log(`inWrapper:`, s.inWrapper)
           if (s.inWrapper.isInWrappedToRadiants) {
             DeBug.log(`abort fix: inWrapper is wrapped to radiants`)
             return
           }
-          s.adjWrap(true)                                       // adjWrap self to wrap in
-          s.inWrapper.flushWrap(true)                             // only do a single flushWrap in
+          s.adjWrap(true)                                           // adjWrap self to wrap in
+          s.inWrapper.flushWrap(true)                               // only do a single flushWrap in
         }
 
-
-        if (s.isOutWrappedToRadiants) {                      // bail if s is already wrapped to outer radiants
+        if (s.isOutWrappedToRadiants) {                             // bail if s is already wrapped to outer radiants
           DeBug.log(`is outWrapped to radiants`)                                                      //LOGGING:
           if ((s.inWrapper.isInWrapped || s.inWrapper.isInWrappedToRadiants)
-            // && s.neighborsArray.every(n => !n.isInWrappedToRadiants)            // fixes: #453, #472
-            // && s.neighborsArray.some(n => !n.isInWrappedToRadiants)            // fixes: #493
+            // && s.neighborsArray.every(n => !n.isInWrappedToRadiants)
+            // && s.neighborsArray.some(n => !n.isInWrappedToRadiants)
           ) {
             DeBug.log(`inWrapper is inWrapped to radiants`)                                           //LOGGING:
             // DeBug.log(`neighbors`, s.neighborsArray.map(n => n.isInWrappedToRadiants))                //LOGGING:
             const inner = s.inWrapper.innerMostRadiantWrapper
             DeBug.log(`inner`, inner)
             if (s.neighborsArray.every(n => !n.isInWrappedToRadiants)) {          // fixes: #453, #472
-
               DeBug.log(`inner.viableRadiantOrigins`, inner.viableRadiantOrigins)
-
-              // s.adjWrap(true, false)                                              // fixes #645
-              // inner.replaceEndCurveOrigin(inner.viableRadiantOrigins?.last)
               inner.replaceEndRadiantOutWrapsOrigin(inner.viableRadiantOrigins?.last)
-              // inner.outerMostRadiantWrapper
               this.completeEnds(inner.andNeighborsArray)
             } else if (s.neighborsArray.some(n => !n.isInWrappedToRadiants)) {    // fixes: #493
               // inner.replaceEndCurveOrigin(inner.viableRadiantOrigins?.last)
@@ -1108,7 +960,6 @@ class Grid extends ProtoLayer {
               s.inWrapper.adjWrap(true)
               s.replaceEndRadiantOutWrapsOrigin()
             }
-            // if (s.canRadiateTo(inner.arcOrigin)) inner.replaceEndRadiantOutWrapsOrigin(inner.arcOrigin)
           }
           return
         }
@@ -1145,9 +996,8 @@ class Grid extends ProtoLayer {
     }
 
     //MARK: fixBadFlushWraps()
-    //ARROW: fixBadFlushWraps()
+    //ARROW: fixBadFlushWraps() : null : fix flush wraps that are diverging/converging
     const fixBadFlushWraps = (testPool = defaultPool, canWrapIn = true) => {
-      // return
       testPool = testPool
         .filter(s =>
           s.isFlushOutWrapper
@@ -1156,33 +1006,26 @@ class Grid extends ProtoLayer {
         )
       DeBug.log(`badFlushWraps`, testPool)
 
-      // return
-      // testPool = testPool.slice(0, 1)
-
+      // testPool = testPool.slice(0, 1)                                      //TESTING: reduce processed
       testPool.forEach(s => {
+        //ARROW: checkNeighbors() : null : check neighbors for bad adjWraps
         const checkNeighbors = (neighbors) => {
           neighbors = neighbors.filter(n => n.adjWrapIsNonEquidistant)
           if (!neighbors.isEmpty) fixBadAdjWraps(neighbors)
         }
 
-        //ARROW: wrapOutFix()
-        const wrapOutFix = () => {                              // adjWrap() inWrapper to wrap Out to self
+        //ARROW: wrapOutFix() : null : wrap out to self
+        const wrapOutFix = () => {                                // adjWrap() inWrapper to wrap Out to self
           if (s.inWrapper) {
             DeBug.log(`using wrapOutFix on:`, s.inWrapper)
             s.inWrapper.flushWrap(true)                           // adding true fixes collinear convergences #304
             s.inWrapper.replaceEndRadiantOutWrapsOrigin()
             s.replaceEndRadiantOutWrapsOrigin()
             if (s.adjWrapIsNonEquidistant) { s.adjWrap(true) }    //TODO: fixes hor aspect cell bug, remove if problematic
-            // s.inWrapper.radiantOutWrappers.forEach(w => {
-            //   // if (!w.startNeighbor.isInWrappedToRadiants       // avoid possible off-axis interference wrap
-            //   //   && !w.endNeighbor.isInWrappedToRadiants) {     // avoid possible off-axis interference wrap
-            //   w.replaceEndCurveOrigin(s.inWrapper.arcOrigin)
-            //   // }
-            // })
             checkNeighbors(s.neighborsArray)
           }
         }
-        //ARROW: wrapInFix()
+        //ARROW: wrapInFix() : null : wrap in to self
         const wrapInFix = () => {
           DeBug.log(`using wrapInFix`)
           s.inWrapper.replaceEndCurveOrigin(s.arcOrigin)
@@ -1194,7 +1037,8 @@ class Grid extends ProtoLayer {
 
         DeBug.error(`current badFlushWrap: `, s)
         DeBug.error(`inWrapper: `, s.inWrapper)
-        if (s.flushWrapIsConverging) {
+
+        if (s.flushWrapIsConverging) {                            // curveOuterLess or curveInnerMore to fix
           DeBug.log(`flushWrapIsConverging`)
           if (s.canCurveLessAtEnd) {
             wrapOutFix()
@@ -1214,7 +1058,7 @@ class Grid extends ProtoLayer {
     }
 
     //MARK: fixLoosies()
-    //ARROW: fixLoosies()
+    //ARROW: fixLoosies() : null : fix loosies (corners that are already curved but can potentially curve more at end)
     const fixLoosies = (testPool = defaultPool, balanced = balance, loners = true, ignoreMinRadius = true) => {
 
       //ARROW: filterPool()
@@ -1236,28 +1080,18 @@ class Grid extends ProtoLayer {
           })
           .sort((a, b) => b.isOutsideCorner - a.isOutsideCorner)
       }
-
       testPool = filterPool(testPool)
 
       DeBug.log(`loosies`, testPool.map(s => s.id))
       DeBug.log(`loosies`, testPool)
       DeBug.log(`loosies outWrappers`, testPool.map(s => s.outWrappers?.length))
-      // return
 
       let processed = new OpArray
 
-      // const conditionFunc = () => { return testPool }
-      // const action = () => {
-
-      // return
       // testPool = testPool.slice(0, 1)
-
       while (testPool.length > 0) {
         const s = testPool.shift()
-
-        // testPool.forEach(s => {
         DeBug.error(`current loosie`, s)
-        // return
 
         //ARROW: minRadFix()
         const minRadFix = () => {
@@ -1266,8 +1100,8 @@ class Grid extends ProtoLayer {
             DeBug.log(`${s.id} neighbor`, n)
             return n.canCurveMoreAtEnd
               && (n.flushWrapIsNonEquidistant || n.adjWrapIsNonEquidistant)
-              && n.coincidentWrapper?.canCurveMoreAtEnd           // optional fixes #504
-          })) {          // check and curve neighbor fully
+              && n.coincidentWrapper?.canCurveMoreAtEnd
+          })) {                                                   // check and curve neighbor fully
             if (balanced) {
               DeBug.log(`balanced fix`)
               if (s.canCurveToMiddleOrigin) {
@@ -1287,29 +1121,22 @@ class Grid extends ProtoLayer {
               }
             } else {
               DeBug.log(`Unbalanced fix`)
-              if (s.startNeighbor.canCurveMoreAtEnd) {                      // check startNeighbor
+              if (s.startNeighbor.canCurveMoreAtEnd)                       // check startNeighbor
                 s.startNeighbor.replaceEndRadiantOutWrapsOrigin(s.startNeighbor.currentMaxArcOrigin)
-              }
-              if (s.endNeighbor.canCurveMoreAtEnd) {                        // check endNeighbor
+              if (s.endNeighbor.canCurveMoreAtEnd)                         // check endNeighbor
                 s.endNeighbor.replaceEndRadiantOutWrapsOrigin(s.endNeighbor.currentMaxArcOrigin)
-              }
-
             }
             if (ignoreMinRadius) {                                        // check if this can still curve more
               s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
             }
-
-            // fixBadAdjWraps(s.segPath)
             fixBadFlushWraps(s.segPath)
           } else {
             //TODO: Might need to add constraints to this!
-            if (s.canCurveMoreAtEnd) {
-              s.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
-            }
+            if (s.canCurveMoreAtEnd) s.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
           }
         }
 
-        // case: s.hasNoWrappers
+        //NOTE: case: s.hasNoWrappers
         if (s.hasNoWrappers && loners) {
           DeBug.log(`loners fix`)
           if (s.isOutsideCorner
@@ -1320,11 +1147,10 @@ class Grid extends ProtoLayer {
             s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
           }
         }
-        // if (s.flushWrapIsNonEquidistant || s.adjWrapIsNonEquidistant) {
-        // case: s.isInnerMostWrapper
+
+        //NOTE: case: s.isInnerMostWrapper
         if (s.isInnerMostWrapper) {
           DeBug.log(`s.isInnerMostWrapper`)
-
           if (s.isOutsideCorner && equalsRoundedDec(s.arcRadius, s.cellRadius, 1)) {  // case:  this has minRadius 
             DeBug.log(`this has minRadius`)
             if (s.outWrapper.isMinCorner) {
@@ -1333,52 +1159,48 @@ class Grid extends ProtoLayer {
             }
             if (s.isOutWrappedToRadiants && !s.outWrapper.hasMinArcRadius) {
               DeBug.log(`outwrapping`)
-              if (s.viableRadiantOrigins?.some(v => v.equals(s.currentMaxArcOrigin, 1))) {
+              if (s.viableRadiantOrigins?.some(v => v.equals(s.currentMaxArcOrigin, 1)))
                 s.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
-              }
             } else {
               if (s.outWrapper.hasMinArcRadius && s.canCurveMoreAtEnd) {        // case: tucked inside minRadius corner
                 DeBug.log(`maximizing neighbor curves first`)
                 minRadFix()
               }
-              else if (ignoreMinRadius && s.currentMaxArcRadius > 3 * s.cellRadius) {
-                // s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
+              else if (ignoreMinRadius && s.currentMaxArcRadius > 3 * s.cellRadius)
                 s.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
-              }
-              else {
-                minRadFix()
-              }
+              else minRadFix()
             }
           }
 
-          if (s.id !== s.outWrapper.inWrapper?.id) {  // case: this isn't the inWrapper to this outWrapper
+          //NOTE: case: this isn't the inWrapper to this outWrapper
+          if (s.id !== s.outWrapper.inWrapper?.id) {
             DeBug.log(`this isn't the inWrapper to this outWrapper`)
             s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
             s.flushWrap(true)
             s.radiantOutWrappers?.forEach(o => {
-              if (o.canCurveMoreAtEnd) { o.replaceEndCurveOrigin(s.currentMaxArcOrigin) }
+              if (o.canCurveMoreAtEnd) o.replaceEndCurveOrigin(s.currentMaxArcOrigin)
             })
           }
 
-          //TODO: Might need to refine further, it fixes #393 and #390
           if (s.radiantOutWrappers?.every(w => w.canCurveMoreAtEnd)) {
             DeBug.log(`outWrappers fix`)
             s.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
           }
 
           const outWrapper = s.inOutFlushWrappers[1]
-          if (s.flushWrapIsEquidistant && outWrapper.radiantOutWrappers) { // case: colWrapped & has rad outWrappers
+          //NOTE: case: colWrapped & has rad outWrappers
+          if (s.flushWrapIsEquidistant && outWrapper.radiantOutWrappers) {
             DeBug.log(`colWrapped & has rad outWrappers`)
             DeBug.log(`outWrapper`, outWrapper)
 
-            if (outWrapper.canCurveMoreAtEnd                            // outWrapper can STILL curve more
-              && !outWrapper.isOutWrappedToRadiants                  // outWrapper is not outwrapped to radiants
-              && outWrapper.radiantOutWrappers.every(ro => !ro.canCurveMoreAtEnd)) { // radiant outWrappers can't curve more
+            if (outWrapper.canCurveMoreAtEnd                                          // outWrapper can STILL curve more
+              && !outWrapper.isOutWrappedToRadiants                                   // outWrapper is not outwrapped to radiants
+              && outWrapper.radiantOutWrappers.every(ro => !ro.canCurveMoreAtEnd)) {  // radiant outWrappers can't curve more
               outWrapper.replaceEndCurveOrigin(outWrapper.currentMaxArcOrigin)
               outWrapper.flushWrap(true)
             }
-
-            if (!respectAdjacents                                         // case: only s & flushWrapper can curve more
+            //NOTE: case: only s & flushWrapper can curve more
+            if (!respectAdjacents
               && outWrapper.canCurveTo(s.currentMaxArcOrigin)
               && !outWrapper.outWrapper.canCurveTo(s.currentMaxArcOrigin)
             ) {
@@ -1395,12 +1217,11 @@ class Grid extends ProtoLayer {
                 s.replaceEndCurveOrigin(s.currentMaxArcOrigin)
                 s.flushWrap(true)
               }
-
             }
           }
         }
 
-        // case: s.isOuterMostWrapper
+        //NOTE: case: s.isOuterMostWrapper
         if (s.isOuterMostWrapper) {
           DeBug.log(`s.isOuterMostWrapper`)
           if (s.radiantInWrappers                            // case: has radiantInWrappers
@@ -1415,29 +1236,24 @@ class Grid extends ProtoLayer {
             }
             else if (s.canCurveTo(s.innerMostRadiantWrapper.currentMaxArcOrigin), true) {
               DeBug.log(`case1 viables`, s.currentViableArcOrigins)
-              // DeBug.log(`case1 currentMaxArcOrigin`, s.innerMostRadiantWrapper.currentMaxArcOrigin)
               s.innerMostRadiantWrapper.replaceEndRadiantOutWrapsOrigin(s.innerMostRadiantWrapper.currentMaxArcOrigin)
             }
             else if (s.innerMostRadiantWrapper.canCurveTo(s.currentMaxArcOrigin), true) {
               DeBug.log(`case2 viables`, s.innerMostRadiantWrapper.currentViableArcOrigins)
-              // DeBug.log(`case2 currentMaxArcOrigin`, s.currentMaxArcOrigin)
               s.innerMostRadiantWrapper.replaceEndRadiantOutWrapsOrigin(s.currentMaxArcOrigin)
             }
           } else if (s.isAdjOutWrapper) {                    // case: NO radiantInWrappers
             DeBug.log(`s.isAdjOutWrapper`)
-            s.inWrapper.adjWrap()                            // fixes #499, #512
+            s.inWrapper.adjWrap()
           }
         }
-        // } else {
-        //   DeBug.log(`wrap was equidistant`)
-        // }
-        // else { DeBug.log(`skipped: no cases met`) }
+
         testPool = testPool
           .union(s.neighborsArray, `id`)
           .exclude(processed, `id`)
-        DeBug.log(`add neighbors testPool`, testPool)
+        // DeBug.log(`add neighbors testPool`, testPool)
         testPool = filterPool(testPool)
-        DeBug.log(`filtered testPool`, testPool)
+        // DeBug.log(`filtered testPool`, testPool)
         processed.push(s)
       }
       // safeArrayWhile(conditionFunc, action)
@@ -1446,6 +1262,7 @@ class Grid extends ProtoLayer {
     }
 
     //MARK: QUAD SHAPES
+    //FIXME: incomplete and unused!
     //ARROW: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
     //TODO: need to add an ABFeature to select these!!!
     const createQuadShapes = (mode, onlySingles = true) => {
@@ -1520,10 +1337,8 @@ class Grid extends ProtoLayer {
         default:
       }
 
-      //ARROW: assignQuad() : assign cubic verts using radii from cornerMap
-      const assignQuad = (quad, cornerMap) => {
-        cornerMap.forEach((cMap, i) => quad[i].addDistancedStartCornerVerts(cMap))
-      }
+      //ARROW: assignQuad() : null : assign cubic verts using radii from cornerMap
+      const assignQuad = (quad, cornerMap) => cornerMap.forEach((cMap, i) => quad[i].addDistancedStartCornerVerts(cMap))
 
       quads.forEach((quad, i) => {
         const cornerMap = processor(quad)
@@ -1586,10 +1401,11 @@ class Grid extends ProtoLayer {
       DeBug.warn(`roundQuads fixIssues()`)
       fixBadFlushWraps()
       fixLoosies()
-
     }
+
     //MARK: maximizeOuterCorners()
-    //ARROW: maximizeOuterCorners()
+    //FIXME: incomplete and unused!
+    //ARROW: maximizeOuterCorners() : null : maximize curve on outer corners that border on the frame
     const maximizeOuterCorners = (mode = 0, preserveQuads = true, wrap = true) => {
       let testPool = Object.values(this.gridCornerSegs)
       DeBug.log(`testPool`, testPool)
@@ -1618,7 +1434,6 @@ class Grid extends ProtoLayer {
       })
       this.completeEnds(defaultPool)
     }
-
 
     //TODO: DELETE WHEN DONE: only kept as ref to safeArrayWhile() and 'changed' implementations
     //ARROW: fixLooseCorners()                                                                          //UNUSED:
@@ -1669,10 +1484,8 @@ class Grid extends ProtoLayer {
     // }
 
     //MARK: fixIssues()
-    //ARROW: fixIssuess()
+    //ARROW: fixIssuess() : null : performs all wrapping of corners and fixes issues
     const fixIssues = (mode = nestleMode) => {
-
-      // this.curveMinRadiusCorners()
       if (mode === 0) {
         DeBug.warn(`wrapInterferenceCorners`)                                                   //LOGGING:
         wrapInterferenceCorners()
@@ -1680,43 +1493,31 @@ class Grid extends ProtoLayer {
         wrapInnerMost()
       }
 
-      DeBug.warn(`curveMinRadiusCorners`)                                                     //LOGGING:
+      DeBug.warn(`curveMinRadiusCorners`)                                                       //LOGGING:
       this.curveMinRadiusCorners()
-      DeBug.warn(`completeEnds`)                                                              //LOGGING:
+      DeBug.warn(`completeEnds`)                                                                //LOGGING:
       this.completeEnds(defaultPool)
 
-
-
-      DeBug.warn(`fixBadAdjWraps`)
+      DeBug.warn(`fixBadAdjWraps`)                                                              //LOGGING:
       fixBadAdjWraps()
-      DeBug.warn(`fixBadFlushWraps`)
+      DeBug.warn(`fixBadFlushWraps`)                                                            //LOGGING:
       fixBadFlushWraps()
-      DeBug.warn(`fixLoosies`)
+      DeBug.warn(`fixLoosies`)                                                                  //LOGGING:
       fixLoosies()
 
-
-
-      DeBug.warn(`roundQuads`)                                                                //LOGGING:
+      DeBug.warn(`roundQuads`)                                                                  //LOGGING:
       // roundQuads()
-
     }
 
-    DeBug.error(`FIX Issues 1`)                                                                         //LOGGING:
+    DeBug.error(`FIX Issues`)                                                                   //LOGGING:
     fixIssues()
-    DeBug.error(``)                                                                                     //LOGGING:
-    // DeBug.error(`FIX Issues 2`)                                                                         //LOGGING:
-    // fixIssues()
-
+    DeBug.error(``)                                                                             //LOGGING:
   }
 
 
   //MARK: NESTLE SHAPES
-  //METH: nestleShapes() :
+  //METH: nestleShapes() : null : nestle shapes into the grid
   nestleShapes(quadMode = 0, diagonals = false) {
-    // const cellRadius = roundToDec(this.cellRadius)
-    const cellRadius = this.cellRadius
-
-    //MARK: Nestle Main
     DeBug.groupCollapsed(`createSimpleSubShapes`)
     this.createSimpleSubShapes()                                        // createSimpleSubShapes 
     DeBug.groupEnd()
@@ -1737,13 +1538,13 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: Grid Creation Methods
   // #region Setup Methods
-  //METH:
+  //METH: cellRowsRotated() : [ [Cell] ] : rotate the cell rows by a given degree (0, 90, 180, 270)
   cellRowsRotated(degree = 90, selection = this.cellRows) { return selection.rotated2D(normalizeDegree(degree)) }
-  //METH:
+  //METH: cellRowsFlipped() : [ [Cell] ] : flip the cell rows by a given direction (posOrdinal, negOrdinal)
   cellRowsFlipped(direction = "negOrdinal", selection = this.cellRows) { return selection.flipped2D(direction) }
-  //METH: createRowsArray()
+  //METH: createRowsArray() : [ [Cell] ] : create the rows of cells in the grid
   #createRowsArray() {
-    let size = this.gridSize
+    const size = this.gridSize
     let rows = new OpArray(size.y)
     for (let j = this.startCoord.y; j < size.y; j++) {
       let row = new OpArray(size.x)
@@ -1762,58 +1563,50 @@ class Grid extends ProtoLayer {
     }
     return OpArray.from(rows)
   }
-
-  //METH: setFrameRadii()
-  setFrameRadii() {
-    FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize)
-  }
-  //METH:
-  setInsetScale(scale) {
-    // DeBug.log('Grid setInsetScale', scale)
-    super.setInsetScale(scale)
-    // DeBug.log('Grid insetScale', this.insetScale)
-    this.setFrameRadii()
-    this.updateCells()
-  }
-  // #endregion
-  // MARK: Grid Cell Grammar Ops
-  // #region Cell Grammar Ops
-  //METH:
-  insetCells(scale, groupID) {
-    let cells
-    if (groupID) {
-      const group = this.groupNamed(groupID)
-      if (group) {
-        cells = group.cells
-      } else {
-        // DeBug.error(`no group named ${groupID}`)
-        // DeBug.log(`current groups:`, this.groups)
-      }
-    } else { cells = this.cells }
-    cells.forEach(e => e.setInsetScale(scale))
-  }
+  //METH: setFrameRadii() : null : set the frame radii for the grid                                   //UNUSED:
+  // setFrameRadii() { FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize) }
+  //METH: setInsetScale() : null : set the inset scale for the grid
+  // setInsetScale(scale) {
+  //   // DeBug.log('Grid setInsetScale', scale)
+  //   super.setInsetScale(scale)
+  //   // DeBug.log('Grid insetScale', this.insetScale)
+  //   // this.setFrameRadii()
+  //   this.updateCells()
+  // }
+  //METH: insetCells() : null : set the inset scale for the cells in the grid                         //UNUSED:
+  // insetCells(scale, groupID) {
+  //   let cells
+  //   if (groupID) {
+  //     const group = this.groupNamed(groupID)
+  //     if (group) {
+  //       cells = group.cells
+  //     } else {
+  //       // DeBug.error(`no group named ${groupID}`)
+  //       // DeBug.log(`current groups:`, this.groups)
+  //     }
+  //   } else { cells = this.cells }
+  //   cells.forEach(e => e.setInsetScale(scale))
+  // }
   // #endregion
   // MARK: Grid Grammar Generators
   // #region Grammar Generators
-  //METH:
-  randGroup({ selection = this.availableCells, amount } = {}) {
-    return this.assignCells(selection.randReduce(amount))
-  }
-  //METH:
+  //METH: randGroup() : Group : generate a random group of cells from the available cells
+  randGroup({ selection = this.availableCells, amount } = {}) { return this.assignCells(selection.randReduce(amount)) }
+  //METH: randomSelection() : [Cell] : generate a random selection of cells from the available cells
   randomSelection(amount, selection = this.availableCells) { return selection.copy.randReduce(amount) }
-  //METH:
+  //METH: groupAvail() : Group : generate a group of cells from the available cells
   groupAvail(markTaken = true) {
     const group = this.assignCells(this.availableCells)
-    if (!markTaken) { this.setAvailability(group.cells, true) }
+    if (!markTaken) this.setAvailability(group.cells, true)
     return group
   }
-  //METH: groupFromIndices()
+  //METH: groupFromIndices() : Group : generate a group of cells from the given indices
   groupFromIndices(indices) {
     indices = OpArray.format(indices)
     const cells = indices.map(i => this.cellAt(i))
     return this.assignCells(cells)
   }
-  //METH:
+  //METH: randomComb() : Group : generate a CellGroup using a random comb filtering method
   randomComb({
     selection = this.availableCells,
     keepRange = range(2, 7),
@@ -1824,7 +1617,7 @@ class Grid extends ProtoLayer {
     // DeBug.log(`randomComb reduced`, reduced)
     return this.assignCells(reduced)
   }
-  //METH:
+  //METH: comb() : Group : generate a CellGroup using a simple comb filtering method
   comb({ selection = this.availableCells, keep = 2, drop = 1, start = 0 } = {}) {
     const reduced = this.randomComb({
       selection: selection,
@@ -1835,17 +1628,14 @@ class Grid extends ProtoLayer {
     // DeBug.log(`comb reduced`, reduced)
     return reduced
   }
-  //METH: comb2()
+  //METH: comb2() : Group : generate a CellGroup using a complex comb filtering method
   comb2({ selection = this.availableCells, dashArray, start = 0 } = {}) {
     const reduced = selection.combReduce(dashArray)
     // DeBug.log(`comb2 reduced`, reduced)
     return this.assignCells(reduced)
   }
-  //METH:
-  rects(coverage, aspects) {
 
-  }
-  //METH:
+  //METH: squares() : Group : generate a random selection of squares from the available cells
   squares({
     coverage,
     direction = Direction.DownRight,
@@ -1855,16 +1645,18 @@ class Grid extends ProtoLayer {
     rectMode = 0            // 0: none, 1: someVert, 2: allVert, 3: someHor, 4: allHor, 5: someMixed, 6: allMixed
   } = {}) {
     // DeBug.groupCollapsed(`Squares`)
-    let maxSize // allowable max square based on 'Square and Rect Generation' study
     if (rectMode > 0) {
       coverage *= 1.5
       minSize = minSize + 1
     }
 
-    let reducer = 0
+    let
+      maxSize, // allowable max square based on 'Square and Rect Generation' study
+      reducer = 0
     const cols = this.columnCount
-    if (cols > 3 && cols < 6) { reducer = R.random_choice([0, 1, 1, 2, 2, 2]) }
-    if (cols > 5) { reducer = R.random_choice([0, 1, 1, 2, 2, 2, 3, 3, 3]) }
+
+    if (cols > 3 && cols < 6) reducer = R.random_choice([0, 1, 1, 2, 2, 2])
+    if (cols > 5) reducer = R.random_choice([0, 1, 1, 2, 2, 2, 3, 3, 3])
     // DeBug.log(`reducer`, reducer)
     maxSize = cols - reducer
 
@@ -1872,9 +1664,10 @@ class Grid extends ProtoLayer {
     const maxCells = round(coverage * this.cellCount)
     maxSize = min(maxSize, floor(sqrt(maxCells))) // maxSize by gridSize or coverage amount
     // DeBug.log('maxSize', maxSize)
-    let usedCells = 0
-    let squares = new OpArray
-    let uniformSquare = uniform ? R.random_int(minSize, maxSize) : undefined // single size if uniform
+    let
+      usedCells = 0,
+      squares = new OpArray,
+      uniformSquare = uniform ? R.random_int(minSize, maxSize) : undefined // single size if uniform
     while (usedCells < maxCells) {
       const square = uniform ? uniformSquare : R.random_int(minSize, maxSize)
       squares.push(square)
@@ -1884,8 +1677,9 @@ class Grid extends ProtoLayer {
     // DeBug.log('squares', squares)
 
     const original = this.availableCells.copy
-    let selection = new OpArray
-    let availables = this.availableCells
+    let
+      selection = new OpArray,
+      availables = this.availableCells
     // DeBug.log('original', original)
     // DeBug.log('selection', selection)
     // DeBug.log('availables', availables)
@@ -1902,11 +1696,12 @@ class Grid extends ProtoLayer {
       let shrunkSelection = availables.exclude(inlineSelection, 'id') //shrunk selection by excluding inline
       // DeBug.log('shrunkSelection', shrunkSelection.map(e => e.id))
 
-      //ARROW: newSquare() :
+      //ARROW: newSquare() :  [Cell] : create a new square from the shrunk selection
       const newSquare = () => {
         // DeBug.warn(`newSquare`)
-        let isValid = false
-        let cell, square
+        let
+          isValid = false,
+          cell, square
         while (isValid === false && shrunkSelection.length > 1) {
           // DeBug.log('')
           // DeBug.log(`size`, size)
@@ -1922,14 +1717,14 @@ class Grid extends ProtoLayer {
             const useRect = rectMode % 2 === 0 ? true : R.random_bool(0.5)            // all=>true, some =>random
             if (useRect) {
               let dir                                                             // choose inline direction
-              if (rectMode < 3) { dir = Direction.Horizontal.random() }               // vert uses hor
-              if (rectMode > 2 && rectMode < 5) { dir = Direction.Vertical.random() }     // hor uses vert
-              if (rectMode > 4 && rectMode < 7) { dir = Direction.Cardinal.random() }     // rand cardinal
+              if (rectMode < 3) dir = Direction.Horizontal.random()                // vert uses hor
+              if (rectMode > 2 && rectMode < 5) dir = Direction.Vertical.random()     // hor uses vert
+              if (rectMode > 4 && rectMode < 7) dir = Direction.Cardinal.random()      // rand cardinal
               // if (rectMode > 6) { dir = Direction.Ordinal.random() }                  // triangle
-              const inlineAmount = min(R.random_int(1, ceil(size - 1)), size - minSize + 1)
-              const inlined = this.inline(square, inlineAmount, dir)
+              const
+                inlineAmount = min(R.random_int(1, ceil(size - 1)), size - minSize + 1),
+                inlined = this.inline(square, inlineAmount, dir)
               // DeBug.log(`inlined`, inlined)
-              // square = inlined
               square = square.exclude(inlined, `id`)
               // DeBug.log(`rect`, square)
             }
@@ -1970,8 +1765,6 @@ class Grid extends ProtoLayer {
     return this.assignCells(selection)
   }
   //METH:
-  triangles(coverage) { }
-  //METH:
   snake({
     selection = this.availableCells,
     direction = Direction.Cardinal,
@@ -1984,19 +1777,16 @@ class Grid extends ProtoLayer {
     // newGroup = true,
   } = {}) {
     // DeBug.groupCollapsed(`new snake`)
-    if (selection.isEmpty) {
-      // DeBug.error(`selection is empty!`)
-      // DeBug.groupEnd()
-      return
-    }
+    if (selection.isEmpty) return
+
     const cellBounds = this.cellBounds({ selection: selection })
     // DeBug.log(`selection`, selection)
     // DeBug.log(`cellBounds`, cellBounds)
     let outer = cornerStart ? cellBounds.cornerCells.compacted : cellBounds.outerCells.all.flat().compacted
-    // DeBug.log(`outer`, outer)
-    outer = outer.filter(c => c.isAvailable).unique().gridVertSorted
+      .filter(c => c.isAvailable)
+      .unique()
+      .gridVertSorted
     // DeBug.log(`outer availables:`, outer)
-
 
     let start, snake
     //ARROW: chooseStart()
@@ -2011,9 +1801,9 @@ class Grid extends ProtoLayer {
     //ARROW: dirChoices()
     const dirChoices = () => {
       const valids = start?.availableMoveDirections(direction, selection)
-      // DeBug.log(`valids`, valids?.map(v => v.name))
       return valids?.exclude([dirChoice], `name`)
     }
+
     //ARROW: createSnake()
     const createSnake = () => {
       chooseStart()
@@ -2034,46 +1824,36 @@ class Grid extends ProtoLayer {
           let choiceCellsToEdge = choices
             .map(ch => [ch, cellBounds.cellsToEdge({ fromCell: start, direction: ch, selection })])
             .sort((a, b) => b[1][0] - a[1][0])
-          if (R.random_bool(.5)) {
-            choiceCellsToEdge = choiceCellsToEdge.first
-          } else {
-            choiceCellsToEdge = choiceCellsToEdge.randomElement
-          }
+          if (R.random_bool(.5)) choiceCellsToEdge = choiceCellsToEdge.first
+          else choiceCellsToEdge = choiceCellsToEdge.randomElement
+
           // DeBug.log(`choiceCellsToEdge`, choiceCellsToEdge)
           dirChoice = choiceCellsToEdge[0]
           // DeBug.log(`dirChoice`, dirChoice.name)
           let [availDist, travCells] = choiceCellsToEdge[1]
-          const lastCell = travCells.last
+          const
+            lastCell = travCells.last,
+            lineNeighbors = this.tempOutlineSelection(travCells, 1, Direction.Cardinal)
           // DeBug.log(`lastCell`, lastCell)
           // DeBug.log(`availDist`, availDist)
-          const lineNeighbors = this.tempOutlineSelection(travCells, 1, Direction.Cardinal)
           if (lineNeighbors.some(n => snake.exclude(start).some(s => s.equals(n)))) {
-            // choices = choices.exclude(dirChoice)
-            // if (!choices.isEmpty) {
-            //   dirChoice = choices.randomElement
-            // } else {
-            // availDist -= 1
             withinCoverage = false
             break
-            // }
           }
           let invalidDists = this.tempOutlineSelection(travCells, 2, dirChoice.perpindiculars)
             .exclude(travCells, `id`)
             .exclude(lineNeighbors, `id`)
             .filter(c => c.isTaken)
             .map(c => dirChoice.allAreVertical ? abs(c.coords.y - start.coords.y) : abs(c.coords.x - start.coords.x))
-          if (!invalidDists.duplicates().isEmpty) { invalidDists = invalidDists.duplicates() }
+          if (!invalidDists.duplicates().isEmpty) invalidDists = invalidDists.duplicates()
           // DeBug.log(`invalidDists`, invalidDists)
           const rangeArray = range(min(availDist, max(size + 1, floor(availDist / 3))), availDist)
             .array()
             .exclude(invalidDists)
 
           // DeBug.log(`rangeArray`, rangeArray)
-          if (rangeArray.isEmpty) {
-            // restartSnake()
-            // break
-            withinCoverage = false
-          }
+          if (rangeArray.isEmpty) withinCoverage = false
+
           const viableDists = R.random_choice(rangeArray)
           // DeBug.log(`rangeArray`, rangeArray)
           dist = i === moves.lastIndex ? availDist : viableDists
@@ -2095,21 +1875,14 @@ class Grid extends ProtoLayer {
 
           selection = selection.exclude(snake, `id`)
           start = snake.last
-          // prevChoice = dirChoice
           // DeBug.log(`snake`, snake)
           // DeBug.log(`start`, start)
         }
       }
     }
-    //ARROW: restartSnake()
-    const restartSnake = () => {
-      if (!outer.isEmpty) {
-        // DeBug.error(`restart snake!`)
-        // DeBug.groupEnd()
-        createSnake()
 
-      }
-    }
+    //ARROW: restartSnake() : null : restart the snake if it is empty
+    const restartSnake = () => { if (!outer.isEmpty) createSnake() }
 
     createSnake()
 
@@ -2122,14 +1895,13 @@ class Grid extends ProtoLayer {
       // DeBug.log(`outline`, outline)
     }
     // DeBug.groupEnd()
-    let output = OpArray.format(snake)
+    const output = OpArray.format(snake)
     return this.assignCells(output)
   }
   // #endregion
   // MARK: Grid Grammar Modifiers
   // #region Grammar Modifiers
-  //METH: iterative outliner driven by directions
-  //FIXME: bug: when 'amount' is larger than available space (in grid?) outline returns nothing
+  //METH: outline() : Group : iterative outliner driven by directions
   outline({
     selection = this.lastGroup?.cells || this.takenCells,
     groupID,
@@ -2138,13 +1910,13 @@ class Grid extends ProtoLayer {
     amount = 1,
     newGroup = true
   } = {}) {
-    if (amount < 1 || this.isFull) { return }
+    if (amount < 1 || this.isFull) return
     if ((selection && groupID) || (selection && islandID) || (groupID && islandID)) {
       DeBug.error('Grid.outline can only use one selection method')
       return
     }
     let group
-    if (selection && newGroup === false) { group = this.lastGroup }
+    if (selection && newGroup === false) group = this.lastGroup
     if (groupID) {
       group = this.groupNamed(groupID)
       selection = group.cells
@@ -2162,42 +1934,32 @@ class Grid extends ProtoLayer {
         // console.log(`outline direction`, direction)
         const outline = this.validNeighbors({ selection: selection, direction: direction })
           .filter(cell => cell.isAvailable)
-        // DeBug.log(`${groupID} outline ${amount}:`, outline.map(c => c.isAvailable))
-        // if (outline.isEmpty) { return }
-        // if (newGroup === true) { group = undefined } //allow assign to create new group
-        // if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
-        // else { this.assignCells(outline, group?.id) } //assign to group
-        // if (newGroup === true && !group) { //continue adding to the new group
-        //   group = this.lastGroup
-        //   newGroup = false
-        // }
-        // selection = group.cells
+
         //FIXME: this solution is not quite there: it allows outline to absorb prev group or overlap?
         if (!outline.isEmpty) {
-          if (newGroup === true) { group = undefined } //allow assign to create new group
-          if (typeof newGroup === 'string' && !temp) { group = this.groupNamed(newGroup) } //use existing group
-          else { this.assignCells(outline, group?.id) } //assign to group
-          if (newGroup === true && !group) { //continue adding to the new group
+          if (newGroup === true) group = undefined                                      //allow assign to create new group
+          if (typeof newGroup === 'string' && !temp) group = this.groupNamed(newGroup)  //use existing group
+          else this.assignCells(outline, group?.id)                                     //assign to group
+          if (newGroup === true && !group) {                                            //continue adding to the new group
             group = this.lastGroup
             newGroup = false
           }
           selection = group.cells
-        } else if (amount === 1) { return }
-
+        } else if (amount === 1) return
       }
       amount -= 1
     }
     return group
   }
-  //METH: outline a group and assign
+  //METH: outlineGroup() : Group : outline a group and assign
   outlineGroup({ groupID, direction = Direction.All, amount = 1, newGroup = true } = {}) {
     return this.outline({ groupID, direction, amount, newGroup })
   }
-  //METH: outline all taken cells and assign
+  //METH: outlineTaken() : Group : outline all taken cells and assign
   outlineTaken({ direction = Direction.All, amount = 1, newGroup = true } = {}) {
     return this.outline({ selection: this.takenCells, direction: direction, amount: amount, newGroup: newGroup })
   }
-  //METH: grab an outline of a selection without assignment
+  //METH: tempOutlineSelection() : [Cell] : grab an outline of a selection without assignment
   tempOutlineSelection(selection, amount = 1, direction = Direction.All, sort = true) {
     // DeBug.log(`tempOutlineSelection selection`, selection)
     // DeBug.log(`tempOutlineSelection direction`, direction)
@@ -2208,12 +1970,9 @@ class Grid extends ProtoLayer {
         // DeBug.log(`tempOutlineSelection selection`, selection)
         const outline = this.validNeighbors({ selection: selection, direction: direction })
         // DeBug.log('temp outline', outline)
-        // if (!outline.isEmpty) {
         newSelection.push(...outline)
         selection = newSelection
-        if (sort) { selection = selection.sort((a, b) => a.index - b.index) }
-
-        // }
+        if (sort) selection = selection.sort((a, b) => a.index - b.index)
         // DeBug.log('temp selection', selection.map(e => e.id))
       }
       amount -= 1
@@ -2222,14 +1981,13 @@ class Grid extends ProtoLayer {
     }
     // DeBug.log('tempOutline', amount, direction)
     return selection
-
   }
-  //METH: grab an inline of a selection without assignment
+  //METH: inline() : [Cell] : grab an inline of a selection without assignment
   inline(selection, amount = 1, direction = Direction.All) {
     if (amount < 1) { return new OpArray }
     // DeBug.log('inline amount', amount)
     const bounds = this.gridCellBounds
-    let inlineEdges = new OpArray //store edge rows/columns/corners that can't be outlined, to be inlined
+    let inlineEdges = new OpArray                           //store edge rows/columns/corners that can't be outlined, to be inlined
     direction.directions.forEach(dir => {
       const name = dir.names[0]
       // DeBug.log('direction name', name)
@@ -2240,7 +1998,6 @@ class Grid extends ProtoLayer {
         inlineEdges.push(bounds.outerCells[name])
         // DeBug.log('addedCells', bounds.outerCells[name])
       }
-
     })
     inlineEdges = inlineEdges
       .flat()
@@ -2251,18 +2008,20 @@ class Grid extends ProtoLayer {
     inlinedEdges = inlinedEdges.union(inlineEdges, 'id')
     // DeBug.log('inlinedEdges', inlinedEdges.map(e => e.id))
 
-    const outline = this.tempOutlineSelection(selection, 1, direction)
-    const inline = this.tempOutlineSelection(outline, amount, direction.opposites)
-      .union(inlinedEdges, 'id')
+    const
+      outline = this.tempOutlineSelection(selection, 1, direction),
+      inline = this.tempOutlineSelection(outline, amount, direction.opposites)
+        .union(inlinedEdges, 'id')
     // DeBug.log('outline', outline.map(e => e.id))
     // DeBug.log('inline', inline.map(e => e.id))
     // DeBug.log('inline method return')
     // DeBug.log('')
     return selection.intersect(inline, 'index')
   }
+
+  //METH: symmetrize() : null : symmetrize the grid by reflecting or rotating a selection
   //FIXME: somehow it's drawing multiple cell configs as it reassigns
   //TODO: feature: flip a single quad once only
-  //METH:
   symmetrize({
     selection = this.cellRows,
     direction, // Horizontal/Vertical = HALF, Cardinal = QUAD
@@ -2271,28 +2030,28 @@ class Grid extends ProtoLayer {
     useAvailable = true,
     groupIDs,
   } = {}) {
-    if (!direction.allAreCardinal && direction.vals.length % 2 !== 0) { DeBug.error('only Hor, Vert, and Cardinal allowed') }
-    const isQuad = direction.equals(Direction.Cardinal) // Horizontal/Vertical = HALF, Cardinal = QUAD
+    if (!direction.allAreCardinal && direction.vals.length % 2 !== 0) DeBug.error('only Hor, Vert, and Cardinal allowed')
+    const isQuad = direction.equals(Direction.Cardinal)             // Horizontal/Vertical = HALF, Cardinal = QUAD
     DeBug.log('isQuad', isQuad)
-    if (!selection.is2D) { selection = this.toCellRows(selection) }
-    const bounds = this.cellBounds({ selection: selection }) // get cellBounds of selection
+    if (!selection.is2D) selection = this.toCellRows(selection)
+    const bounds = this.cellBounds({ selection: selection })        // get cellBounds of selection
     DeBug.log('bounds', bounds)
 
-    //METH: assignSym arrow function
+    //ARROW: assignSym() : null : assign the transformed cells to the destination cells
     const assignSym = (transformed, destination) => {
-      transformed = transformed.flat() // flatten half for operations
-      destination = destination.flat() // flatten half for operations
+      transformed = transformed.flat()                              // flatten half for operations
+      destination = destination.flat()                              // flatten half for operations
       DeBug.log('transformed', transformed.map(e => e.id))
       DeBug.log('transformed isAvailable', transformed.map(e => e.isAvailable))
       DeBug.log('destination flattened', destination.map(e => e.id))
       DeBug.log('destination isAvailable', destination.map(e => e.isAvailable))
-      if (transformed.length !== destination.length) { // ensure halves are equal
+      if (transformed.length !== destination.length) {              // ensure halves are equal
         DeBug.error('expected selections to have same length')
       }
 
       destination.forEach((destCell, i) => {
         const transformCell = transformed[i]
-        if (useAssigned) { // useAssigned changes assigned cells' groupIDs
+        if (useAssigned) {                                          // useAssigned changes assigned cells' groupIDs
           if (groupIDs && !groupIDs?.some(id => id === transformCell.groupID)) {
             DeBug.log('HIT THIS HIT THIS HIT THIS HIT THIS')
           } else {
@@ -2302,38 +2061,37 @@ class Grid extends ProtoLayer {
             }
           }
         }
-        if (useAvailable && transformCell.isAvailable === true) { // useAvailable changes isAvailable cells  
+        if (useAvailable && transformCell.isAvailable === true) {   // useAvailable changes isAvailable cells  
           const currentGroup = this.groupNamed(destCell.groupID)
-          if (currentGroup) { // remove cell from currentGroup
+          if (currentGroup) {                                       // remove cell from currentGroup
             currentGroup.cells = currentGroup.cells.filter(cell => cell.id !== destCell.id)
           }
-          destCell.groupID = -1 // groupID to -1
-          destCell.isAvailable = true // isAvailable to true
+          destCell.groupID = -1                                     // groupID to -1
+          destCell.isAvailable = true                               // isAvailable to true
         }
       })
       DeBug.log('destination transformed isAvailable', destination.map(e => e.isAvailable))
       DeBug.log('destination transformed groupID', destination.map(e => e.groupID))
 
-      if (groupIDs) { //filter destination by groupIDs
+      if (groupIDs) {                                               //filter destination by groupIDs
         destination = destination.filter(destCell => groupIDs.some(id => destCell.groupID === id))
-      } else { // get all groupIDs
-        groupIDs = this.groups.map(group => group.id)
-      }
+      } else groupIDs = this.groups.map(group => group.id)          // get all groupIDs
+
       DeBug.log('destination groupID filtered', destination.map(e => e.id))
       DeBug.log('groupIDs', groupIDs)
 
-      const groupSelections = groupIDs.map(id => { // group destCells by groupID
+      const groupSelections = groupIDs.map(id => {                  // group destCells by groupID
         DeBug.log('process id', id)
         return destination.filter(destCell => destCell.groupID === id)
       })
       DeBug.log('groupID Selections', groupSelections)
 
       let emptySelections = destination
-        .filter(cell => cell.isAvailable === true) // filter for only isAvailable cells
+        .filter(cell => cell.isAvailable === true)                  // filter for only isAvailable cells
       DeBug.log('emptySelections 1', emptySelections)
 
       emptySelections = emptySelections
-        .exclude(groupSelections.flat(), 'id') // exclude cells that will be isTaken
+        .exclude(groupSelections.flat(), 'id')                      // exclude cells that will be isTaken
       DeBug.log('emptySelections 2', emptySelections.map(e => e.id))
 
       groupSelections.forEach((selection, i) => {
@@ -2354,49 +2112,50 @@ class Grid extends ProtoLayer {
     // h reflection: half reflect, assign
     // h rotation:  half rotate(180), assign
 
-    let sourceDir = direction.random() // pick a random direction from available directions
+    let sourceDir = direction.random()                                // pick a random direction from available directions
     DeBug.log('sourceDir', sourceDir)
     let source, transformed, destination
-    if (isQuad) { //quad
-      source = bounds.half(sourceDir) // get picked half
+    if (isQuad) {                                                     //quad
+      source = bounds.half(sourceDir)                                 // get picked half
       DeBug.log('quad source', source)
-      destination = bounds.half(sourceDir.opposites) // get other half
+      destination = bounds.half(sourceDir.opposites)                  // get other half
       if (reflection) {
-        direction = sourceDir.andOpposites // get flip direction
-        transformed = source.flipped2D(direction) // flip source
-        sourceDir = sourceDir.toLeft // set next source half to -90deg
+        direction = sourceDir.andOpposites                            // get flip direction
+        transformed = source.flipped2D(direction)                     // flip source
+        sourceDir = sourceDir.toLeft                                  // set next source half to -90deg
         DeBug.log('quad direction', direction)
         direction = direction.equals(Direction.Horizontal) ? Direction.Vertical : Direction.Horizontal // rotate flip direction -90deg
         DeBug.log('after quad direction', direction)
       } else {
-        transformed = source.rotated2D(90) // rotate source 90deg
+        transformed = source.rotated2D(90)                            // rotate source 90deg
       }
       assignSym(transformed, destination)
     }
     // half symmetrize
-    source = bounds.half(sourceDir) // get picked half
+    source = bounds.half(sourceDir)                                   // get picked half
     DeBug.log('half bounds', bounds)
     DeBug.log('half source', source)
     DeBug.log('half source flattened', source.flat().map(e => e.id))
-    destination = bounds.half(sourceDir.opposites) // get other half
+    destination = bounds.half(sourceDir.opposites)                    // get other half
     if (reflection) {
       DeBug.log('reflection direction', direction)
-      transformed = source.flipped2D(direction) // flip source
+      transformed = source.flipped2D(direction)                       // flip source
     } else {
-      transformed = source.rotated2D(180) // rotate source 180deg
+      transformed = source.rotated2D(180)                             // rotate source 180deg
     }
     assignSym(transformed, destination)
   }
   // #endregion
   // MARK: Grid Grammar Enum Methods
   // #region Grammar Enum Methods
+  //METH: randTransformedCells() : [Cell] : generate a random selection of cells from the available cells 
   randTransformedCells({ selection = this.cellRows, rotate = true, flip = true } = {}) {
     if (rotate) selection = selection.rotated2D(R.random_int(0, 3) * 90)
     if (flip) selection = selection.flipped2D(Direction.Cardinal.random(1).andOpposites)
     return selection.flat()
   }
 
-  //METH:
+  //METH: seed() : null : call the appropriate seed method based on the name with the given options
   seed(name, options) {
     const coverage = options?.coverage || 0.3,
       selection = options?.selection || this.availableCells
@@ -2505,12 +2264,11 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: Grid Grammar Assignment Methods
   // #region Grammar Assignment Methods
-  //METH:
+  //METH: assignCells() : Group : assign a selection of cells to a group
   assignCells(selection, groupID) {
-    // DeBug.log('selection', selection)
-    if (selection.isEmpty) { return }
+    if (selection.isEmpty) return
     let newGroup = false
-    if (!groupID) { newGroup = true }
+    if (!groupID) newGroup = true
     let group
     if (newGroup) {
       group = new CellGroup(this, this.svgElt, this, selection)
@@ -2522,15 +2280,11 @@ class Grid extends ProtoLayer {
     this.updateCells({ groupID: group.id })
     return group
   }
-  //METH:
-  //FIXME: need to rethink this in regards to find Islands new temp/non-stored use case
+  //METH: updateCells() : null : update the cells of a group or island
   updateCells({ groupID, island } = {}) {
-    // DeBug.log(`updating Cells ${groupID}, ${islandID}`)
-    if (arguments.length === 0) { this.cells.forEach(cell => cell.drawElement()) } // DEPRECATE: we dont render cells!
-
     let groups, islands
-    if (groupID) { groups = [this.groupNamed(groupID)] }
-    else { groups = this.groups }
+    if (groupID) groups = [this.groupNamed(groupID)]
+    else groups = this.groups
     groups.forEach(group => this.updateGroup(group))
 
     if (island) {
@@ -2538,62 +2292,48 @@ class Grid extends ProtoLayer {
       // DeBug.log(`all islands: `, this.islands)
       DeBug.log(`updateCells: islands found: `, islands)
     }
-    else { islands = this.allIslands }
+    else islands = this.allIslands
     islands.forEach(island => this.updateIsland(island))
-    // DeBug.log(`islands`, islands)
   }
-  //METH:
+  //METH: updateGroup() : null : update the cells of a group
   updateGroup(group) {
-    // DeBug.log(`updating Group ${group.id}`)
     group.cells.forEach(cell => {
-      // DeBug.log('this Cell', cell)
-      let thisCell = this.cells[cell.index]
-      // DeBug.log('thisCell', thisCell.id)
+      const thisCell = this.cells[cell.index]
       thisCell.groupID = group.id
       thisCell.isAvailable = false
-      // thisCell.color = group.color
-      // thisCell.drawElement()                                    // DEPRECATE: we dont render cells!
     })
-    // group.updateDisplay()
   }
-  //METH:
+  //METH: updateIsland() : null : update the cells of an island
   updateIsland(island) {
-    // DeBug.log(`updating Island ${island.id}`)
     island.cells.forEach(cell => {
-      let thisCell = this.cells[cell.index]
-      if (thisCell) {
-        thisCell.islandIDs.add(island.id)
-        // thisCell.color = island.color
-        // thisCell.drawElement()                                   // DEPRECATE: we dont render cells!
-      }
+      const thisCell = this.cells[cell.index]
+      if (thisCell) thisCell.islandIDs.add(island.id)
     })
-    // island.updateDisplay()
   }
-  //METH:
+  //METH: setAvailability() : null : set the availability of a selection of cells
   setAvailability(selection = this.cells, isAvailable = false) {
     selection.forEach(cell => cell.isAvailable = isAvailable)
   }
-
+  //METH: setGridAvailability() : null : set the availability of a selection of cells
   setGridAvailability(selection = this.cells, isAvailable = false) {
     if (selection.isEmpty) { return }
     selection.forEach(cell => {
-      const thisCell = this.cells[cell.index]
+      const
+        thisCell = this.cells[cell.index],
+        thisGroup = this.groupNamed(thisCell.groupID)
       // DeBug.log('thisCell id', thisCell.id)
       // DeBug.log('thisCell groupID', thisCell.groupID)
       // DeBug.log('thisCell isAvailable', thisCell.isAvailable)
-      const thisGroup = this.groupNamed(thisCell.groupID)
       // DeBug.log('thisGroup', thisGroup)
-      if (thisGroup) { thisGroup.cells = thisGroup.cells.filter(cell => cell.id !== thisCell.id) }
+      if (thisGroup) thisGroup.cells = thisGroup.cells.filter(cell => cell.id !== thisCell.id)
       thisCell.groupID = -1
       thisCell.isAvailable = isAvailable
     })
   }
   // #endregion
-
-  //MARK: Setup Methods
-  //METH: assignElement() override
+  //MARK: Setup Overrides
+  //METH: assignElement() : null : create and assign SVG elements to the grid
   assignElement() {
-    // if (this.isFrontGrid) {
     super.assignElement()
 
     if (this.isFrontGrid) {
@@ -2611,15 +2351,12 @@ class Grid extends ProtoLayer {
       })
     }
   }
-  //METH: drawElement() override
+  //METH: drawElement() : null : draw the SVG elements of the grid
   drawElement() {
     super.drawElement()
-
     if (this.isFrontGrid) {
       this.shaderElts?.forEach(elt => {
         elt
-        // .viewBox(this.insetAnchor, this.insetSize, this.padding)
-        // .layout(this.insetAnchor, this.insetSize, this.padding)
         // .attribute(`fill`, frameColor)
         // .attribute('overflow', 'visible')
         // .attribute(`filterUnits`, `userSpaceOnUse`)
@@ -2628,18 +2365,16 @@ class Grid extends ProtoLayer {
       })
       this.backElt
       // .attribute(`display`, `none`)
-
       this.comboElt
-        // .attribute(`display`, `none`)
         .attribute(`opacity`, 1)
+      // .attribute(`display`, `none`)
       // .attribute(`fill`, `red`)
-
       this.highElt
-        // .attribute(`display`, `none`)
         .attribute(`opacity`, 1)
+      // .attribute(`display`, `none`)
       this.shadElt
-        // .attribute(`display`, `none`)
         .attribute(`opacity`, .6)
+      // .attribute(`display`, `none`)
       // .style(`mixBlendMode`, `luminosity`)
     }
   }

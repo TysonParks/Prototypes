@@ -240,20 +240,20 @@ class ProtoLayer {
   // #region 
   //METH: setType()
   setType(toType) { this._type = toType }
-  //METH: setInsetScale()
-  setInsetScale(scale) {
-    this._insetScale = scale instanceof Vertex ? scale : vert(scale)
-    // DeBug.log('ProtoLayer insetScale', this.insetScale)
-    this.drawElement()
-  }
-  //METH: setFilter()
-  setFilter(filter) {
-    // DeBug.log(`setting filter of ${this.id} to ${filter?.id}`)
-    this._filter = filter
-    // this.drawElement()
-  }
-  //METH: setFilterLoft()
-  setFilterLoft(loft) { this._filterLoft = loft }
+  //METH: setInsetScale() :                                              //UNUSED:              
+  // setInsetScale(scale) {
+  //   this._insetScale = scale instanceof Vertex ? scale : vert(scale)
+  //   // DeBug.log('ProtoLayer insetScale', this.insetScale)
+  //   this.drawElement()
+  // }
+  //METH: setFilter() :                                                  //UNUSED:
+  // setFilter(filter) {
+  //   // DeBug.log(`setting filter of ${this.id} to ${filter?.id}`)
+  //   this._filter = filter
+  //   // this.drawElement()
+  // }
+  //METH: setFilterLoft() :                                              //UNUSED:
+  // setFilterLoft(loft) { this._filterLoft = loft }
   // #endregion
   // MARK: Setup Methods
   // #region 
