@@ -4,7 +4,6 @@
 class UnusedSegPath extends SegPath {
   //METH: cutAllToCardinal()
   static cutAllToCardinal(segPath) {
-
     //ARROW: shared() : find segments with shared startPoint to input seg's endPoint
     const shared = (seg) => {
       const pairs = segPath.filter(s => seg.end.equals(s.start, 4)) // seg.end = s.start
@@ -45,6 +44,45 @@ class UnusedSegPath extends SegPath {
     //FIXME: ALSO: add an early bailout if no sharedStarts are found, just return original segPath
     return newPaths
   }
+
+  // METH: fromVertPath() : convert array of verts to a shape path made of Segments                         //UNUSED:
+  // static fromVertPath({ vertPath, refine = true, parentID } = {}) {
+  //   // DeBug.log('vertPath', vertPath)                                                            //LOGGING:
+  //   let vertCount = vertPath.length
+  //   if (vertCount < 3) { return }
+  //   vertPath = SegPath.loopPath(vertPath)
+  //   // DeBug.log('loopedpath', vertPath)                                                          //LOGGING:
+  //   let segmentPath = new OpArray
+  //   let previousSeg = undefined
+  //   for (let i = 0; i < vertCount; i++) {
+  //     let seg = protoSegment({ start: vert(vertPath[i]), end: vert(vertPath[i + 1]), parentID: parentID })
+  //     if (refine === true && !!previousSeg && seg.angle === previousSeg.angle) {
+  //       seg = protoSegment({ start: previousSeg.start, end: seg.end, parentID: parentID })
+  //       segmentPath.pop()
+  //     } // combine segments with same angle
+  //     segmentPath.push(seg)
+  //     previousSeg = seg
+  //   }
+  //   return segmentPath
+  // }
+
+  //METH: loopPath() : loopPath closes a shape path loop made of either segments or vertices              //UNUSED:
+  // static loopPath(verts = simpleSquare) {
+  //   let origin = verts[0]
+  //   let last = verts[verts.length - 1]
+  //   if (origin !== last) {
+  //     let closer
+  //     if (origin instanceof Segment) {
+  //       // closer = segment({ start: last, end: origin })
+  //       closer = new Segment({ start: last, end: origin })
+  //     } else if (typeof origin[0] === 'number') {
+  //       // print('has number')
+  //       closer = origin
+  //     }
+  //     verts.push(closer)
+  //   }
+  //   return verts
+  // }
 }
 
 //CLASS: UnusedSVGPath
@@ -169,6 +207,142 @@ class UnusedSVGPath {
   //     return pairs.map(f => f * multiplier)
   //   })
   //   return verts
+  // }
+}
+
+//CLASS: UnusedVertPath
+class UnusedVertPath {
+  //METH: fromSegPath()                                                                                   //UNUSED:
+  // static fromSegPath(segPath) {
+  //   return segPath.map(seg => [seg.start.x, seg.start.y])
+  // }
+  //METH: fromSVGPath() : extract comma separated vert coordinates from an SVG path to array              //UNUSED:
+  // static fromSVGPath(path = '') {
+  //   let reg = /-?\d+(?:\.\d+)*[,]-?\d+(?:\.\d+)*/
+  //   let result = matchAll(path, reg)
+  //   return result
+  // }
+  //TODO: rewrite to work with svgElements instead of htmlElements
+  // METH: drawPoints() : draw index labeled points at verts                                              //UNUSED:
+  // static drawPoints({ verts, parent, size = 5, offset = vert(0), color = '#F80', indices = true } = {}) {
+  //   let centerOffset = size / 2
+  //   let divs = []
+  //   verts.forEach((e, i) => {
+  //     if (!indices) { i = '' }
+  //     let div = createDiv(i)
+  //     let coord = VertPath.toCoord(e)
+  //     // print(coord)
+  //     div
+  //       .attribute('index', i)
+  //       .attribute('x', coord[0].toFixed())
+  //       .attribute('y', coord[1].toFixed())
+  //       .position(coord[0] - centerOffset + offset.x, coord[1] - centerOffset + offset.y)
+  //       .size(size, size)
+  //       .style(CS.backgroundColor, color)
+  //       .style(CS.borderRadius, '50%')
+  //       .style(CS.textAlign, 'center')
+  //       .style(CS.fontSize, `${(size * 1.5)}pt`)
+  //       .style(CS.lineHeight, `${size * 4}px`)
+  //       .parent(parent)
+  //       .mouseOver(showCoords)
+  //       .mouseOut(showIndex)
+  //     divs.push(div)
+  //     // print(i, e)
+  //   })
+  //   return divs
+
+  //   function showCoords() {
+  //     // print('scrolled over')
+  //     const i = this.attribute('index')
+  //     const x = this.attribute('x')
+  //     const y = this.attribute('y')
+  //     let text = `${i}\n(${x},${y})`
+  //     this.html(text)
+  //     redrawAll()
+  //   }
+  //   function showIndex() {
+  //     this.html(this.attribute('index'))
+  //     redrawAll()
+  //   }
+  // }
+  // METH: toCoordinate() : extract x and y from single comma separated vert string                       //UNUSED:
+  // static toCoord(vertPairString) {
+  //   let reg = /-?\d+(?:\.\d+)*/
+  //   let result = matchAll(vertPairString, reg)
+  //     .flatMap(e => Number(e))
+  //   // print('extractCoord()')
+  //   // print(result)
+  //   return result
+  // }
+}
+
+//CLASS: UnusedExport
+class UnusedExport {
+  // NOTE: Made with ClaudeAI on Oct 5, 2023
+  //METH:
+  // static async exportPNG16(svgMarkup, fileName, width, height) {
+  //   // Load SVG image
+  //   async function loadImage(svgMarkup) {
+  //     const img = await new Promise(resolve => {
+  //       const img = new Image()
+  //       img.onload = () => {
+  //         resolve(img)
+  //       }
+  //       img.src = URL.createObjectURL(new Blob([svgMarkup], { type: 'image/svg+xml' }))
+  //     })
+  //     return img
+  //   }
+
+  //   // Encode 16-bit PNG
+  //   function encodePNG16(data, width, height) {
+  //     const header = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+
+  //     const buf = new Uint16Array(width * height * 4)
+
+  //     for (let i = 0; i < data.length; i++) {
+  //       const high = (data[i] >> 8) & 0xFF
+  //       const low = data[i] & 0xFF
+  //       buf[i * 2] = low
+  //       buf[i * 2 + 1] = high
+  //     }
+
+  //     const png = new Uint8Array(header.length + buf.length * 2)
+  //     png.set(header)
+  //     png.set(buf, header.length)
+
+  //     return png
+  //   }
+
+  //   // Export PNG file  
+  //   function downloadBlob(data, filename) {
+  //     const url = URL.createObjectURL(new Blob([data]))
+  //     const a = document.createElement('a')
+  //     a.href = url
+  //     a.download = filename
+  //     a.click()
+  //     URL.revokeObjectURL(url)
+  //   }
+
+  //   const canvas = new OffscreenCanvas(width, height)
+  //   // canvas.style('image-rendering', `high-quality`)
+  //   const gl = canvas.getContext('webgl2', { pixelFormat: 'float16' })
+
+  //   if (!gl) {
+  //     throw new Error('WebGL 2 not supported')
+  //   }
+
+  //   const texture = gl.createTexture()
+  //   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.UNSIGNED_SHORT, null)
+
+  //   const img = await loadImage(svgMarkup)
+  //   gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_SHORT, img)
+
+  //   const data = new Uint16Array(width * height * 4)
+  //   gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_SHORT, data)
+
+  //   const png = await encodePNG16(data, width, height)
+
+  //   downloadBlob(png, fileName)
   // }
 }
 
