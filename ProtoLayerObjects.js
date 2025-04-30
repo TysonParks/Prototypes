@@ -280,9 +280,7 @@ class ProtoLayer {
           .attribute('fill', `black`)
 
         if (this.drawFilter) {
-          if (this.filter) {
-            this.rect.applyFilter({ filter: this.filter, size: this.insetSize })
-          }
+          if (this.filter) this.rect.applyFilter(this.filter)
         }
       }
       // DeBug.groupEnd()
@@ -609,7 +607,6 @@ class Frame extends ProtoLayer {
         .attribute('fill-opacity', '0')
       // .attribute('stroke', 'red')
       // .attribute('stroke-width', `.0625`)
-      // .applyFilter({ filter: this.filter, size: this.size, padding: vert(20) })
     }
   }
   // #endregion
@@ -1685,7 +1682,7 @@ class ShapeGroup extends ProtoLayer {
   }
   //METH: createSVGGroup()
   createSVGGroup() {
-    this.svgGroupElt = createElementNS(SVG.xmlns, 'g')
+    this.svgGroupElt = createElementNS(xmlns, 'g')
     const isleLvl = this.islandLevel.toString().padStart(2, '0')
     this.svgGroupElt
       .id(`${this.id}-${this.protoParent.id}-lvl${isleLvl}`)
@@ -1875,7 +1872,7 @@ class ShapeGroup extends ProtoLayer {
       // .attribute(`overflow`, `visible`)
     }
 
-    if (this.drawFilter) this.svgGroupElt.applyFilter({ filter: this.filter })
+    if (this.drawFilter) this.svgGroupElt.applyFilter(this.filter)
   }
 }
 
