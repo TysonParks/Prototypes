@@ -1,4 +1,5 @@
 //ENUM: Profile : Cut Profile Descriptor
+// SIZE: 92 lines
 class Profile {
   breed
   type
@@ -73,15 +74,12 @@ class Profile {
   get cyma() { return new Profile(this.type === `r` ? `j` : `r`, this.cutIn) }
 
   get insetDepth() {
-    if (this.isR) {
-      return this.cutIn ? 0.35 : 0.45
-    } else {
-      return 1
-    }
+    if (this.isR) return this.cutIn ? 0.35 : 0.45
+    else return 1
   }
   get outsetDepth() {
-    if (isSingleDepth) { return 0 }
-    else { return 1 }
+    if (isSingleDepth) return 0
+    else return 1
   }
   get description() {
     const inOut = this.cutIn ? `In` : `Out`
@@ -97,6 +95,7 @@ class Profile {
 }
 
 //MARK: PROTOCUT CLASS
+// SIZE: 157 lines
 class ProtoCut {
   id
   breed
@@ -131,7 +130,6 @@ class ProtoCut {
     }
     this.storeObject(S.Cuts, true)
     this.#createFilters()
-    // this.storeObject(S.Cuts)
   }
 
   //MARK: Computed
@@ -167,10 +165,9 @@ class ProtoCut {
   }
 
   //MARK: Public Methods
+  //METH: setLayout() : null : 
   setLayouts() {
-    // console.warn(`setLayouts`, this)
     const layout = this.maxLayout
-    // console.log(`maxLayout`, layout)
     this.filters.forEach(f => {
       f.filter
         .attribute("x", `${layout.x}%`)
@@ -178,9 +175,8 @@ class ProtoCut {
         .attribute("width", `${layout.width}%`)
         .attribute("height", `${layout.height}%`)
     })
-
   }
-
+  //METH: curve() : type :
   curve(layer) {
     if (this.profile.isR) return layer === 0 ? `r` : `r2`
     if (this.profile.isS) return layer === 0 ? `j` : `r`
@@ -189,7 +185,7 @@ class ProtoCut {
 
   //MARK: Private Methods
 
-  //METH: createSingleShader()
+  //METH: createFilters() : null : create filters for each cut type
   #createFilters() {
     // if (abs(this.depth) < 0.25 / FRAME.pixToUserUnits) { return }     // don't create filters for 1/4 pixel depth or less
     const inset = this.profile.hasInsetShade
@@ -227,7 +223,7 @@ class ProtoCut {
     if (this.profile.isS) DeBug.error(`ProtoCut "s" profile not yet implemented`)
     if (this.profile.isV) DeBug.error(`ProtoCut "v" profile not yet implemented`)
   }
-  //METH: createShader()
+  //METH: createShader() : null : create shader for each cut type
   #createShader(shadeType, curve = this.profile.type, mag = this.depth) {
     const
       cutIn = this.profile.cutIn ? 1 : -1,
@@ -248,12 +244,12 @@ class ProtoCut {
     const filter = createFilter().shade(stack, shadeType)
     this.filters.push(filter)
   }
-  //METH: equals()
+  //METH: equals() : boolean : compare two cuts
   equals(cut) { return this.breed === cut.breed }
 
   //TODO: implement createPerimeter()
-  //METH: createPerimeter()
-  #createPerimeterShader() {
+  //METH: createChannelShader() : null : create channel shader for cut
+  #createChannelShader() {
     // to be implemented utilizing an SVG stroke mask, similar to 'v' cut eventual implementation
   }
 }
@@ -261,20 +257,16 @@ Object.assign(ProtoCut.prototype, IdentifiableStored)
 
 
 // CLASS: Shade
-// SIZE: 163 lines
+// SIZE: 379 lines
 class Shade {
-  //METH: shadVect( ): create vector from Angle + Offset
+  //METH: shadVect( ): null : create vector from Angle + Offset
   static shadVect(angle = globalControls.shadAngle) { return createVector(1, 0).rotate(radians(angle)) }
 
-  //METH: dropShadSVG()
-  // static dropShadSVG({ lighten = true, x, y, blurRad = 0, spreadRad = 0, col = frameColor, inset = false } = {}) {
-  //   return { lighten: lighten, dx: x, dy: y, blur: blurRad, color: col, inset: inset }
-  // }
-  //METH: dropShadeSVG()
+  //METH: dropShadeSVG() : dropShade Object : create drop shade object for SVG
   static dropShadeSVG({ lighten = true, invert = false, vector, mag, blurRad = 0, col = frameColor, inset = false } = {}) {
     return { lighten: lighten, invert: invert, vector: vector, mag: mag, blur: blurRad, color: col, inset: inset }
   }
-  //METH: neuShadeSVG()
+  //METH: neuShadeSVG() : [dropShade] : create dropShade objects for SVG
   static neuShadeSVG(shadeType, vector = this.shadVect(), mag, highBlurRad, shadBlurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
     //NOTE: FAKE IRIDESCENT
     //NOTE: ----------------------------------
@@ -324,10 +316,9 @@ class Shade {
         inset: inset
       })
     }
-
     return OpArray.format([shadow, highlight]).compacted
   }
-  //METH:
+  //METH: neuShadeSVGFactory() : [dropShade] : create dropShade objects for SVG
   static neuShadeSVGFactory({
     curve = 'j',                            // type of cut/curve : [i, j, r, r2, f, v]
     cutIn,
@@ -353,30 +344,29 @@ class Shade {
     DeBug.log(`mag`, mag)
 
     //MARK: "J" and "R" Cuts
+
     //ARROW: keep() : [number] : Optimization to reduce neuShades stack size based upon mag using Shadow Layer Decay chart
     const keep = () => {
       const root = sqrt(mag)
-      if (root >= 88) { return 14 }         // mag >= 7744
-      if (root >= 62) { return 13 }         // mag >= 3844
-      if (root >= 44) { return 12 }         // mag >= 1936
-      if (root >= 31) { return 11 }         // mag >= 961
-      if (root >= 22) { return 10 }         // mag >= 484
-      if (root >= 16) { return 9 + 1 }          // mag >= 256
-      if (root >= 11) { return 8 + 1 }          // mag >= 121
-      if (root >= 8) { return 7 + 1 }           // mag >= 64
-      if (root >= 6) { return 6 + 1 }           // mag >= 36
-      if (root >= 3) { return floor(root) + 1 } // mag >= 9
+      if (root >= 88) return 14               // mag >= 7744
+      if (root >= 62) return 13               // mag >= 3844
+      if (root >= 44) return 12               // mag >= 1936
+      if (root >= 31) return 11               // mag >= 961
+      if (root >= 22) return 10               // mag >= 484
+      if (root >= 16) return 9 + 1            // mag >= 256
+      if (root >= 11) return 8 + 1            // mag >= 121
+      if (root >= 8) return 7 + 1             // mag >= 64
+      if (root >= 6) return 6 + 1             // mag >= 36
+      if (root >= 3) return floor(root) + 1   // mag >= 9
       return 3
     }
+
     //ARROW: rounding(): [number] : preserve precision of lower offsets, reduce duplicates for larger offsets
     const rounding = (e) => {
-      if (e < 4) {
-        return roundToDec(e)  // roundToDec values below 4, to preserve precision for small shade depths
-      } else {
-        return floor(e)       // floor values at 4 and above to reduce duplicate shades for larger depths
-      }
+      if (e < 4) return roundToDec(e)  // roundToDec values below 4, to preserve precision for small shade depths
+      else return floor(e)       // floor values at 4 and above to reduce duplicate shades for larger depths
     }
-    // console.warn(`mag`, mag)
+
     //ARROW: createOffsets() : [OpArray] : create offsets for shade layers
     const createOffsets = () => {
       let current = mag,
@@ -419,11 +409,9 @@ class Shade {
       .slice(start, keep())       // reduce layers based upon start and keep()
     // offsets = createOffsets()
 
-    // .filter(e=> )
-    // .slice(start, 2)       // reduce layers based upon start and keep()
     console.error('offsets', offsets)
     offsets = offsets
-      .map(e => rounding(e)) // round offsets
+      .map(e => rounding(e))      // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
       .numSorted                  // sort small-large
       .unique()                   // remove duplicates
@@ -435,50 +423,49 @@ class Shade {
       const offsetRange = range(offsets[0], offsets.last)   // range from offsets
 
       //ARROW: easeInCircNormalized : number : normalizes and shifts value using circular easing
-      const easeInCircNormalized = (x, exp = 2) => { return 1 - sqrt(1 - pow(offsetRange.normalize(x), exp)) }
-      const easeOutCircNormalized = (x, exp = 2) => { return sqrt(1 - pow(offsetRange.normalize(x), exp)) }
-      const easeInExpoNormalized = (x, exp = 2) => { return x === 0 ? 0 : pow(2, 10 * offsetRange.normalize(x) - 10) }
+      const easeInCircNormalized = (x, exp = 2) => 1 - sqrt(1 - pow(offsetRange.normalize(x), exp))
+      const easeOutCircNormalized = (x, exp = 2) => sqrt(1 - pow(offsetRange.normalize(x), exp))
+      const easeInExpoNormalized = (x, exp = 2) => x === 0 ? 0 : pow(2, 10 * offsetRange.normalize(x) - 10)
       const easeInOutCircNormalized = (x, exp = 2) => {
         x = offsetRange.normalize(x)
         return x < 0.5 ? (1 - sqrt(1 - pow(2 * x, exp))) / 2
           : (sqrt(1 - pow(-2 * x + 2, exp)) + 1) / 2
       }
 
-      frameColor = achromic(0.9)
+      // frameColor = achromic(0.9)
       const shadColSpread = 0.25
 
       //MARK: "I" Cut
       if (curve === 'i' || curve === 'r2') {
-        const highColSpread = 0.04                          // spread up from base (0.9) to max highlight luma (1!)
-        // const shadColSpread = curve === 'r2' ? 0.25 : .25  // spread down from base (0.9) to min shadow luma (0.7)
-        const maxHighlight = 0.9 + highColSpread             // 0.9 + 0.04 = 0.94
-        const minShadow = (0.9 - shadColSpread)              // 0.9 - 0.25 = 0.65
-        const perceptualDivisor = curve === 'i' ? 4 : 16                   // compensates for blur, etc to get visually correct result
-        const highOffsetRatio = curve === 'i' ? 1 : 1 / 16
+        const
+          highColSpread = 0.04,                             // spread up from base (0.9) to max highlight luma (1!)
+          //  shadColSpread = curve === 'r2' ? 0.25 : .25,  // spread down from base (0.9) to min shadow luma (0.7)
+          maxHighlight = 0.9 + highColSpread,               // 0.9 + 0.04 = 0.94
+          minShadow = (0.9 - shadColSpread),                // 0.9 - 0.25 = 0.65
+          perceptualDivisor = curve === 'i' ? 4 : 16,       // compensates for blur, etc to get visually correct result
+          highOffsetRatio = curve === 'i' ? 1 : 1 / 16
 
         // blur = true
         neuShades = offsets
           .map((offset, i) => {
-            mag = offset / pixToUserUnits * 1         // convert pixelUnit to userUnit magnitude
+            mag = offset / pixToUserUnits * 1               // convert pixelUnit to userUnit magnitude
             mag = curve === 'i' ? mag * 1 : mag * 1.2
-            const iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6  //
-            const r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6  //
-            const blurRadius = curve === 'i' ? iBlurRadius : r2BlurRadius
-            const highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset, 2) / perceptualDivisor)
-            const shadColLuma1 = minShadow + (shadColSpread * easeInOutCircNormalized(offset, 3) / perceptualDivisor)
-            const shadColLuma2 = minShadow + (4 * shadColSpread * easeOutCircNormalized(offset, 2) / perceptualDivisor)
+            const
+              iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6,  //
+              r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6,  //
+              blurRadius = curve === 'i' ? iBlurRadius : r2BlurRadius,
+              highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset, 2) / perceptualDivisor),
+              shadColLuma1 = minShadow + (shadColSpread * easeInOutCircNormalized(offset, 3) / perceptualDivisor),
+              shadColLuma2 = minShadow + (4 * shadColSpread * easeOutCircNormalized(offset, 2) / perceptualDivisor),
 
-            const highCol = achromic(highColLuma)
-            const shadCol1 = achromic(shadColLuma1)
-            // const shadCol2 = achromic(shadColLuma2)
-            // const shadCol2 = achromic(shadColLuma1).setAlpha(.25)
+              highCol = achromic(highColLuma),
+              shadCol1 = achromic(shadColLuma1)
 
             let shades = new OpArray
             DeBug.log(`mag`, mag)
             DeBug.log(`vector`, vector)
             DeBug.log(`rotOffset`, rotOffset)
             const shadeVector = Vertex.cleanRotate(vector, radians(rotOffset)).setMag(mag)
-            // const shadeVector = vector.setMag(mag)
 
             // DeBug.log(`angleMode`, _angleMode)
             // DeBug.log(`shadeVector`, shadeVector)
@@ -488,10 +475,6 @@ class Shade {
             const shades1 = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
             shades.push(shades1)
 
-            if (i === offsets.length - 1) {
-              // const shades2 = this.neuShadeSVG(shadeType,vector.setMag(mag * 1).rotate(rotOffset), blurRadius * 2, highCol, shadCol2, inset, blur, curve)
-              // shades.push(shades2)
-            }
             DeBug.log(`${curve} shades`, shades)
             return shades.flat()
           }).flat()
@@ -499,42 +482,42 @@ class Shade {
 
       if (curve === 'j' || curve === 'r') {
         let reflLightRange
-        // if (curve === 'r') {                            // "R" cut
         // rotOffset = rotOffset + PI
-        const rangeSize = mag                       // shadow range
-        reflLightRange = rangeSize / 2.2              // visual observation shows relfLight to be about 1/5 the shadow
+        const rangeSize = mag                             // shadow range
+        reflLightRange = rangeSize / 2.2                  // visual observation shows relfLight to be about 1/5 the shadow
         // DeBug.log(`reflLightRange`, reflLightRange)
-        if (!offsets.includes(reflLightRange)) {      // if necessary, add extra shade layer at reflLightRange
+        if (!offsets.includes(reflLightRange)) {          // if necessary, add extra shade layer at reflLightRange
           offsets.push(reflLightRange)
           offsets = offsets.numSorted
         }
-        // }
-        // DeBug.log('bonus offsets', offsets)
 
-        const highColSpread = 0.1                         // spread up from base (0.9) to max highlight luma (1!)
-        // const shadColSpread = 0.25                          // spread down from base (0.9) to min shadow luma (0.7)
-        const reflHighMult = 0.6                         // 
-        const reflShadMult = 1                           //
-        const reflHighSpread = reflHighMult * shadColSpread // spread down from base (0.9) to min shadow luma (0.65)
+        const
+          highColSpread = 0.1,                            // spread up from base (0.9) to max highlight luma (1!)
+          //  shadColSpread = 0.25,                       // spread down from base (0.9) to min shadow luma (0.7)
+          reflHighMult = 0.6,                             // 
+          reflShadMult = 1,                               //
+          reflHighSpread = reflHighMult * shadColSpread,  // spread down from base (0.9) to min shadow luma (0.65)
+          maxHighlight = 1,                                                         // 0.9 + 0.1 = 1!
+          reflHighlight = (1 - highColSpread - reflHighSpread),                     // 0.9 -0.1 - 0.2  = .7
+          //  reflHighlight = (1 - highColSpread - reflHighSpread) - shadowReducer,  // 0.9 -0.1 - 0.2  = .7
+          perceptualDivisor = 16                          // compensates for blur, etc to get visually correct result
+
         let shadowReducer = curve === 'r' ? min(0.2, (20 / (mag * mag * pixToUserUnits))) : 0
         // shadowReducer = curve === 'r' ? (1 / (mag * pixToUserUnits) * 5) : 0
         // shadowReducer = 0
-        const maxHighlight = 1                                                      // 0.9 + 0.1 = 1!
         const minShadow = (1 - highColSpread - shadColSpread) + shadowReducer       // 0.9 -0.1 - 0.25 = .65
-        const reflHighlight = (1 - highColSpread - reflHighSpread)                  // 0.9 -0.1 - 0.2  = .7
-        // const reflHighlight = (1 - highColSpread - reflHighSpread) - shadowReducer  // 0.9 -0.1 - 0.2  = .7
-        const perceptualDivisor = 16                       // compensates for blur, etc to get visually correct result
+
         DeBug.log(``)
         DeBug.warn(`offsets`, offsets)
         neuShades = offsets
           .map(offset => {
-            let mag = offset / pixToUserUnits                  // convert pixelUnit to userUnit magnitude
+            let mag = offset / pixToUserUnits             // convert pixelUnit to userUnit magnitude
             mag = curve === 'j' ? mag * 1 : mag * .65
-            let isSCurve = false
-
-            let highBlurRad = mag * 1
-            let shadBlurRad = mag * 1
-            let blurRadius = mag
+            let
+              isSCurve = false,
+              highBlurRad = mag * 1,
+              shadBlurRad = mag * 1,
+              blurRadius = mag
             blurRadius = isSCurve ? mag - offsets[0] / pixToUserUnits * .5
               : mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
             highBlurRad = blurRadius
@@ -576,28 +559,21 @@ class Shade {
               }
             }
 
-            const highCol = achromic(highColLuma)
-            const shadCol = achromic(shadColLuma)
-            // angleMode(DEGREES)
-            // DeBug.log(`DEG_TO_RAD`, DEG_TO_RAD)
-            // DeBug.log(`PI/180`, PI / 180)
-            // DeBug.log(`angleMode`, _angleMode)
+            const
+              highCol = achromic(highColLuma),
+              shadCol = achromic(shadColLuma),
+              shadeVector = Vertex.cleanRotate(vector, rotOffset).setMag(mag)
+
             // DeBug.log(`vector`, vector)
             // DeBug.log(`vectorX: ${vector.x}, vectorY: ${vector.y}, vectorZ: ${vector.z}`)
-            // DeBug.log(`rotOffset`, rotOffset)
             // DeBug.log(`calculation`, Vertex.rotate(vector, radians(rotOffset)))
             // DeBug.log(`calculation`, Vertex.rotate(vector, PI))
             DeBug.log(`mag`, mag)
             DeBug.log(`vector`, vector)
             DeBug.log(`rotOffset`, rotOffset)
-            const shadeVector = Vertex.cleanRotate(vector, rotOffset).setMag(mag)
-            // const shadeVector = vector.setMag(mag)
-
-            // DeBug.log(`angleMode`, _angleMode)
             DeBug.log(`shadeVector`, shadeVector)
             // DeBug.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
-            // DeBug.log(`rotOffset`, rotOffset)
-            // const shadeVector = vector.setMag(mag)
+
             let shades = this.neuShadeSVG(shadeType, shadeVector, mag, highBlurRad, shadBlurRad, highCol, shadCol, inset, blur, curve)
             DeBug.log(`${curve} ${shadeType} shades`, shades)
             return shades
@@ -641,8 +617,9 @@ class Shade {
     }
 
     if (sort) {
-      const lighten = neuShades.filter(shad => shad.lighten)
-      const darken = neuShades.filter(shad => !shad.lighten)
+      const
+        lighten = neuShades.filter(shad => shad.lighten),
+        darken = neuShades.filter(shad => !shad.lighten)
       neuShades = OpArray.from([...lighten, ...darken])
       // neuShades = OpArray.from([...darken, ...lighten])
     }
@@ -653,63 +630,20 @@ class Shade {
     DeBug.groupEnd()
     return neuShades
   }
-
-  // MARK: OG CSS Methods
-  // #region OG CSS Methods
-  //METH: Box-Shadow CSS
-  static boxShadCSS(x, y, blurRad = 0, spreadRad = 0, col = color(0), inset = false) {
-    let color = col.toString('#rrggbb')
-    if (inset === true) {
-      return `inset ${x}px ${y}px ${blurRad}px ${color}`
-    } else if (spreadRad === 0) {
-      return `${x}px ${y}px ${blurRad}px ${color}`
-    } else {
-      return `${x}px ${y}px ${blurRad}px ${spreadRad}px ${color}`
-    }
-  }
-  //METH: Text-Shadow CSS
-  static textShadCSS(x, y, blurRad = 0, col = color(0)) { return this.boxShadCSS(x, y, blurRad, col) }
-  //METH: Drop-Shadow CSS
-  static dropShadCSS(x, y, blurRad = 0, col = color(0)) {
-    return `drop-shadow(${this.boxShadCSS(x, y, blurRad, col)})`
-  }
-  //METH: Neumorphic Box-Shadow CSS - create highlight shadow pair code for CSS
-  static neuBoxShadCSS(vector = this.shadVect(), blurRad, highCol, shadCol, inset = false) {
-    let highlightCSS = this.boxShadCSS(-vector.x, -vector.y, blurRad, 0, highCol, inset)
-    let shadowCSS = this.boxShadCSS(vector.x, vector.y, blurRad, 0, shadCol, inset)
-    return `${shadowCSS}, ${highlightCSS}`
-  }
-  //METH: Neumorphic Box Shadow Factory - create a shadow and highlight stack
-  static neuBoxShadFactory({ baseCol = protoColor(230), vector = this.shadVect(), start = 0.5, spread = 16, inset = false } = {}) {
-    // DeBug.log('neuCSS')
-    // DeBug.log(baseCol, vector, start, spread, inset)
-    let offset = vector.mag() / sqrt(2)
-    let cols = baseCol.highShadSpread(spread)
-    // DeBug.log(offset, cols)
-    let neuShads = cleanSlices(start, offset, globalControls.shadQuality)
-    print(neuShads.map(e => e.toFixed(2)))
-    neuShads = neuShads.map(sliceOffset => this.neuBoxShadCSS(vector.setMag(sliceOffset), 2 * sliceOffset, cols[0], cols[1], inset))
-    return neuShads
-  }
-  // #endregion
 }
 
-
-
-
 // CLASS: ProtoColor
-// SIZE: 75 lines
+// SIZE: 87 lines
 function protoColor() {
-  if (arguments[0] instanceof p5.Color || arguments[0] instanceof ProtoColor) {
-    return arguments[0]; // Do nothing if argument is already a color object.
-  }
+  if (arguments[0] instanceof p5.Color || arguments[0] instanceof ProtoColor)
+    return arguments[0] // Do nothing if argument is already a color object.
 
   const args = arguments[0] instanceof Array ? arguments[0] : arguments
   return new ProtoColor(this, args)
 }
-
 function achromic(l) { return ProtoColor.achromic(l) }
 class ProtoColor extends p5.Color {
+
   constructor(pInt, args) {
     super(pInt, args)
   }
@@ -736,415 +670,57 @@ class ProtoColor extends p5.Color {
   get complement() {
     return protoColor(`hsba(${this.complementHue}, ${this.saturation}%, ${this.brightness}%, ${this.alpha})`)
   }
-
   get complementHue() { return (this.hue + 180 % 360) }
 
+  //METH: setAlpha() : ProtoColor : set alpha value
   setAlpha(alpha) { return protoColor(`hsba(${this.hue}, ${this.saturation}%, ${this.brightness}%, ${alpha})`) }
+  //METH: setSaturation() : ProtoColor : set saturation value
   setSaturation(sat) { return protoColor(`hsba(${this.hue}, ${sat}%, ${this.brightness}%, ${this.alpha})`) }
-
+  //METH: highShadComplementSpread() : [ProtoColor] : create highlight and shadow colors with complementary hues
   highShadComplementSpread(spread = 16) {
     spread = spread / 2.56
-    const h = this.hue
-    const s = this.saturation
-    const b = this.brightness
-    // DeBug.log('brightness', b)
-
-    const high = [h, s, constrain(b + spread, 0, 100)]
-    const shad = [this.complementHue, s, constrain(b - 2.5 * spread, 0, 100)]
+    const
+      h = this.hue,
+      s = this.saturation,
+      b = this.brightness,
+      // DeBug.log('brightness', b)
+      high = [h, s, constrain(b + spread, 0, 100)],
+      shad = [this.complementHue, s, constrain(b - 2.5 * spread, 0, 100)]
     // DeBug.log('cols:', high, shad)
     let cols = [high, shad]
       .map(hsb => `hsb(${hsb[0]}, ${hsb[1]}%, ${hsb[2]}%)`)
       .map(dscrpt => color(dscrpt))
     return cols
   }
-
+  //METH: highShadSpread() : [ProtoColor] : create achromic highlight and shadow colors 
   highShadSpread(spread = 16) {
-    let b = this.brightness
-    let bPair = [round(b + spread), round(b - 1.3 * spread)]
-    // DeBug.log('bPair', bPair)
-    let cols = bPair
-      .map(b => `hsb(${this.hue}, ${this.saturation}%, ${b}%)`)
-      .map(dscrpt => protoColor(dscrpt))
+    let
+      b = this.brightness,
+      bPair = [round(b + spread), round(b - 1.3 * spread)],
+      // DeBug.log('bPair', bPair)
+      cols = bPair
+        .map(b => `hsb(${this.hue}, ${this.saturation}%, ${b}%)`)
+        .map(dscrpt => protoColor(dscrpt))
     return cols
   }
-
+  //METH: randomHighHue() : ProtoColor : create highlight color with random hue
   static randomHighHue(isSeeded = false) {
     let hue = floor(isSeeded ? R.random_num(0, 255) : random(255))
     return protoColor(`hsb(${hue}, 100%, 100%)`)
   }
-
+  //METH: randomShadHue() : ProtoColor : create shadow color with random hue
   static randomShadHue(isSeeded = false) {
     let hue = floor(isSeeded ? R.random_num(0, 255) : random(255))
     return protoColor(`hsb(${hue}, 100%, 50%)`)
   }
-
+  //METH: okLCH() : ProtoColor : create okLCH color
   static okLCH(l, c, h) {
     const rgbColor = oklch2rgb([l, c, h])
     // DeBug.log(`okLCH 2 RGB:`, rgbColor)
     return protoColor(rgbColor)
   }
-
+  //METH: achromic() : ProtoColor : create achromic color
   static achromic(l) { return protoColor(l * 255) }
 }
 
-//TODO: DEPRECATE
-// FUNC: sliceExpSeries()
-function sliceExpSeries(min, max) {
-  let startIndex = expSeries.findIndex(e => e >= min)
-  let endIndex = expSeries.findIndex(e => e > max) + 1
-  let maxInterval = expSeries.slice(endIndex - 2, endIndex)
-  let scalar = convertRange(max, maxInterval, [0, 1])
-  let scaledLastValue = maxInterval[1] * scalar
-  let series = expSeries.slice(startIndex, endIndex)
-    .map(e => e * scalar)
-  return series
-}
 
-// FUNC: createSlices()
-//NOTE: created with GPT-4 April 18,2023
-function createSlices(min, max, factor = 0.5) {
-  const slice = []
-
-  function helper(min, max, factor) {
-    if (max >= min) {
-      helper(min, max * factor, factor)
-      slice.push(max)
-    }
-  }
-
-  helper(min, max, factor)
-  return OpArray.from(slice)
-}
-// FUNC: exponentialSlices()
-function exponentialSlices(min, max, amount, factor = 0.5) {
-  // DeBug.log('expSlicesInput', min, max, amount)
-  // if (amount < 3) { return OpArray.from([min, max]) }
-  const range = max - min
-  const multipliers = createSlices(1, pow(2, amount - 1), factor).map(e => e - 1)
-  const last = multipliers.last
-  // DeBug.log('multipliers', multipliers)
-  return multipliers.map(e => min + e * (range / last))
-}
-// FUNC: cleanSlices()
-function cleanSlices(min, max, factor = 0.5) {
-  return createSlices(min, max, factor)
-    .map(e => round(e))
-    .unique()
-}
-
-// MARK: CSS Factory Functions
-
-// TODO: after most work is complete check to see how many of these are actually used and clean where needed
-// CLASS: CS
-// SIZE: 33 lines
-class CS {
-  static inset = 'inset'
-  // static space = ' '
-  static comma = ', '
-
-  static boxShadow = 'box-shadow'
-  // static dropShadow = 'drop-shadow'
-  static textShadow = 'text-shadow'
-
-  static transform = 'transform'
-  static border = 'border'
-  static borderRadius = 'border-radius'
-  static rotate = 'rotate'
-  static scale = 'scale'
-  static filter = 'filter'
-  static padding = 'padding'
-  static clipPath = 'clip-path'
-  static shapeOutside = 'shape-outside'
-  static fontSize = 'font-size'
-  static textAlign = 'text-align'
-  static vertAlign = 'vertical-align'
-  static lineHeight = 'line-height'
-  static margin = 'margin'
-  // static width = 'width'
-  static background = 'background'
-  static backgroundColor = 'background-color'
-  static color = 'color'
-  static clear = "#0000"
-  static display = 'display'
-  static overflow = 'overflow'
-  static flexDirection = 'flex-direction'
-  static justifyContent = 'justify-content'
-  static alignItems = 'align-items'
-}
-
-// MARK:CSS Look Class
-
-// PROTOTYPE: p5.Element.prototype.look()
-p5.Element.prototype.look = function (look = Look.testGrid, html) {
-  if (look instanceof Array) {
-    const lookOp = OpArray.from(look).compacted
-    if (look[0][0] instanceof Array) {
-      lookOp = lookOp.reduce((acc, val) => acc.concat(val), [])
-    }
-    lookOp.forEach(e => this.style(e[0], e[1]))
-  }
-  if (html) { this.html(html) }
-  return this
-}
-
-// PROTOTYPE: p5.Element.prototype.SVGlook()
-p5.Element.prototype.svgLook = function (svgLook) {
-  if (svgLook instanceof Array) {
-    let lookOp = OpArray.from(svgLook).compacted
-    if (svgLook[0][0] instanceof Array) {
-      lookOp = lookOp.reduce((acc, val) => acc.concat(val), [])
-    }
-    lookOp.forEach(e => this.attribute(e[0], e[1]))
-  }
-  return this
-}
-//FIXME: Never got this one properly working, maybe should do it with CSS anyway?
-// PROTOTYPE: p5.Element.prototype.label(text, color, direction)
-p5.Element.prototype.label = function (text, color, direction) {
-  const labelText = createSVGElt("text");
-  labelText.html(text);
-  labelText.style("fill", color);
-
-  const parentBBox = this.elt.getBBox();
-
-  const xFactor = direction.isNone ? 0.5 : Math.cos(direction.angle);
-  const yFactor = direction.isNone ? 0.5 : Math.sin(direction.angle);
-
-  const x = parentBBox.x + (parentBBox.width * (xFactor + 1)) / 2;
-  const y = parentBBox.y + (parentBBox.height * (yFactor + 1)) / 2;
-
-  labelText.attribute("x", x);
-  labelText.attribute("y", y);
-  labelText.attribute("text-anchor", "middle");
-  labelText.attribute("dominant-baseline", "central");
-
-  this.child(labelText);
-  return this;
-}
-
-
-// CLASS: SVGLook
-// SIZE: 84 lines
-class SVGLook {
-
-  static get blackAndWhite() {
-    return SVGLook.clear
-  }
-
-  static get clear() {
-    return [
-      ['fill-opacity', `0`],
-      ['stroke-opacity', `0`],
-    ]
-  }
-  //MARK: Methods
-  //METH:  
-  static testStroke(color = ProtoColor.randomHighHue(), opacity = 1, radius = 5) {
-    return [
-      ['stroke', color],
-      ['stroke-opacity', `${opacity}`],
-      ['stroke-width', '.5'],
-      // ['pathLength', '360'],
-      ['stroke-dasharray', `0 2`],
-      ['stroke-linecap', 'round'],
-      ['stroke-linejoin', 'round'],
-      ['rx', `${radius}`],
-      ['ry', `${radius}`],
-      ['fill-opacity', '0'],
-    ]
-  }
-  //METH:
-  static testFill(color = ProtoColor.randomHighHue(), opacity = .5, radius = 5) {
-    return [
-      ['fill', color],
-      ['fill-opacity', `${opacity}`],
-      ['rx', `${radius}`],
-      ['ry', `${radius}`],
-    ]
-  }
-  //METH:
-  static test(strokeColor, fillColor, opacity = .5, radius = 5) {
-    return [...SVGLook.testStroke(strokeColor, 1, radius), ...SVGLook.testFill(fillColor, `${opacity}`)]
-  }
-
-  static blackAndWhite() { }
-
-  static get clear() {
-    return [
-      ['fill-opacity', `0`],
-      ['stroke-opacity', `0`],
-    ]
-  }
-  //METH:
-  static neuShade({
-    baseCol = protoColor(230),
-    vector = globalShadowVector(),
-    start = globalControls.start,
-    spread = globalControls.spread,
-    inset = globalControls.inset,
-  } = {}) {
-
-  }
-
-
-  //METH:
-  static trendyCactus(path) {
-    const length = path.elt.getTotalLength()
-    const dashLength = R.random_int(0, 20)
-    const dashWidth = (20 - dashLength) / 4
-    const loopCount = R.random_int(0, 10)
-    // const loopCount = 10
-    const offset = R.random_num(0, 10)
-    return [
-      ['fill', ProtoColor.randomHighHue()],
-      ['fill-opacity', '0.2'],
-      ['stroke', 'black'],
-      ['stroke-opacity', '1'],
-      ['stroke-linecap', 'round'],
-      ['stroke-linejoin', 'round'],
-      ['overflow', 'auto'],
-      ['pathLength', 'length'],
-      ['stroke-dasharray', `${dashLength} ${length / loopCount - dashLength}`],
-      ['stroke-width', `${dashWidth}`],
-      ['stroke-dashoffset', `${offset}`],
-    ]
-  }
-}
-
-
-// CLASS: Look
-// SIZE: 
-class Look {
-
-  static islandShape(path, color = randomColor().toString('#rrggbbaa')) {
-    return [
-      [CS.backgroundColor, testingControls.blackMode ? '#000' : color],
-      [CS.clipPath, path],
-      [CS.shapeOutside, path],
-      // [CS.overflow, 'visible']
-    ]
-  }
-
-  static neuShade(
-    {
-      baseCol = protoColor(230),
-      vector = globalShadowVector(),
-      start = globalControls.start,
-      spread = globalControls.spread,
-      inset = globalControls.inset,
-    } = {}
-  ) {
-    return [[CS.boxShadow, Shade.neuBoxShadFactory(baseCol, vector, start, spread, inset)]]
-  }
-
-  static textAlign({ size, hor = 'center', vert = 'center' } = {}) {
-    let textAlign = [CS.textAlign, hor]
-    let lineHeight = [CS.lineHeight, `${size.y}px`]
-    let otherHeight = [CS.lineHeight, `${(size.y + (sqrt(size.x) * 2.5))}px`]
-    if (vert === 'center') { return [textAlign, lineHeight] }
-    if (vert === 'top') { return [textAlign] }
-    if (vert === 'below') { return [textAlign, otherHeight] }
-  }
-
-  static testText(
-    sizeX,
-    color,
-    radius = 25,
-    labels = testingControls.labels,
-    borders = testingControls.borders,
-  ) {
-    return [
-      [CS.color, (labels ? color : CS.clear)],
-      // [CS.borderRadius, `${sqrt(sizeX) * 1.5}px`],
-      [CS.borderRadius, `${radius}px`],
-      [CS.fontSize, `${sqrt(sizeX) * 1.5}px`],
-      [CS.border, `${borders ? color : CS.clear} dashed ${sqrt(sizeX) / 20}px`],
-    ]
-  }
-
-  static test(size, type) {
-    switch (type) {
-      case 'frame':
-        return [...Look.textAlign({ size: size, vert: 'top' }), ...Look.testText(size.x, '#80F8', 10)]
-      case 'grid':
-        return [...Look.textAlign({ size: size, vert: 'top', hor: 'start' }), ...Look.testText(size.x, '#08F8')]
-      case 'group':
-        // return []
-        return [...Look.textAlign({ size: size, hor: 'start', vert: 'top', }), ...Look.testText(size.x, '#80F0')]
-      case 'cell':
-        const text = [
-          ...Look.textAlign({ size: size }),
-          ...Look.testText(size.x, '#8088')
-        ]
-        const neuShade = [...Look.neuShade()]
-        if (testingControls.blackMode) { return text }
-        else { return [...text, ...neuShade] }
-        return [
-          ...Look.textAlign({ size: size }),
-          ...Look.testText(size.x, '#8088'),
-          ...Look.neuShade()
-        ]
-      case 'island':
-        return [...Look.textAlign({ size: size }), ...Look.testText(size.x, '#F08b')]
-      case 'shape':
-        return [...Look.textAlign({ size: size, vert: 'below' }), ...Look.testText(size.x, '#F0Fb')]
-    }
-  }
-
-  static get testGrid() {
-    return [
-      // [CS.color, '#80F'],
-      [CS.color, CS.clear],
-      [CS.backgroundColor, '#00'],
-      [CS.borderRadius, '10%'],
-      [CS.textAlign, "center"],
-      // [CS.border, '#F7F dashed 1px'],
-      // [CS.display, 'none'],
-    ]
-  }
-
-  static testCell(color = randomColor().toString('#rrggbbaa'), labels = testingControls.labels,) {
-    // let randomColor = randomColor().toString('#rrggbbaa')
-    return [
-      [CS.color, (labels ? '#00F' : CS.clear)],
-      [CS.backgroundColor, '#0FF6'],
-      [CS.backgroundColor, color],
-      [CS.borderRadius, '20%'],
-      [CS.textAlign, "center"],
-      // [CS.border, '#808 solid 1px'],
-    ]
-  }
-
-  static blankTestCell(labels = testingControls.labels,) {
-    const neuShade = [...Look.neuShade({ vector: globalShadowVector().mult(0.3), inset: !globalControls.inset, })]
-    return [
-      [CS.color, (labels ? '#00F' : CS.clear)],
-      [CS.backgroundColor, CS.clear],
-      [CS.borderRadius, '50%'],
-      [CS.textAlign, "center"],
-      testingControls.blackMode ? neuShade : null,
-      // neuShade,
-      // ...Look.neuShade({ vector: globalShadowVector().mult(0.3), inset: !globalControls.inset, })
-    ]
-  }
-
-  static centeredFlex(color, direction = 'row') {
-    return [
-      [CS.background, color],
-      [CS.margin, '0'],
-      [CS.display, 'flex'],
-      [CS.flexDirection, direction],
-      [CS.justifyContent, 'space-evenly'],
-      [CS.alignItems, 'center'],
-    ]
-  }
-
-}
-
-// TODO: can these functions be generalized into Classes? Or proto extensions on p5.Element?
-// MARK:CSS Shadow Functions
-
-// PROTOTYPE: p5.Element.prototype.boxShadow
-p5.Element.prototype.boxShadow = function (value) {
-  return this.style(boxShadow, value)
-}
