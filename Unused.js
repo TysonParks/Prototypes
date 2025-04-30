@@ -86,7 +86,7 @@ class UnusedSegPath extends SegPath {
 }
 
 //CLASS: UnusedSVGPath
-class UnusedSVGPath {
+class UnusedSVGPath extends SVGPath {
   //METH: fromSegPath() :                                                                                  //UNUSED:
   // static fromSegPath({ segPath, refine = true, random = false, straightness = 0 } = {}) {          
   //   if (refine) {

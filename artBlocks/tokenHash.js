@@ -1376,34 +1376,21 @@ const hex5 = "0123456789abcdefghijklmnopqrstuv"
 
 // MARK: FUNCTIONS
 
-// FUNC: pointToHex5()
-function pointToHex5(x, y) {
-  return hex5[x] + hex5[y]
-}
+// FUNC: pointToHex5() : hex5 (String):  convert a point to a hex5 string
+function pointToHex5(x, y) { return hex5[x] + hex5[y] }
 
-// FUNC: hex5ToPoint()
+// FUNC: hex5ToPoint() : [x, y] : convert a hex5 string to a point
 function hex5ToPoint(hexString) {
-  let pair = Array.from(hexString)
+  const pair = Array.from(hexString)
   return [parseInt(pair[0], 32), parseInt(pair[1], 32)]
 }
 
-// FUNC: pointsToHex5s()
+// FUNC: pointsToHex5s() : [hex5] : convert an array of points to an array of hex5 strings
 function pointsToHex5s(array = []) {
   let hashes = []
   for (e of array) {
-    let hash = pointToHex5(e[0], e[1])
+    const hash = pointToHex5(e[0], e[1])
     hashes.push(hash)
   }
   return hashes
-}
-
-// TODO: check if this works and if I've already integrated into Grid Class or not
-// FUNC: remapByIndex()
-function remapByIndex(array, remap) {
-  if (remap.length == array.length) {
-    array = array.map((e, i) => [remap[i], array[i]])
-      .sort((a, b) => a[0] - b[0])
-      .map(e => e[1])
-  }
-  return array
 }
