@@ -53,7 +53,7 @@ function keyPressed() {
     const hash = tokenData.hash
     const name = `Prototype-${date}-${rezString}-${hash}.png`
 
-    ProtoSVG.exportPNG(FRAME.svgMarkup, name, rez.x, rez.y, scale)
+    Export.exportPNG(FRAME.svgMarkup, name, rez.x, rez.y, scale)
   }
   if (key === 'l') {
     // use for cornerScale animation
