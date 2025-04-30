@@ -373,7 +373,7 @@ class Frame extends ProtoLayer {
       return ctm.a
     }, `pixToUserUnits`).call(this)
   }
-  get svgMarkup() { return ProtoSVG.createSVGMarkup(this.bleed.elt) }
+  get svgMarkup() { return Export.createSVGMarkup(this.bleed.elt) }
 
   // MARK: Frame modifiers
   //METH:  setCornerRadii()                                                   //UNUSED:
@@ -3023,14 +3023,14 @@ class Shape extends ProtoLayer {
 
   // MARK: methods
   // #region methods
-  //METH: hasSameForm() : Form = same shape, different position. Used for determining svg instancing
-  hasSameForm(otherShape) {
+  //METH: isCongruent() : Bool : Congruence = same shape, same scale, same rotation, different position. Used for determining svg instancing
+  isCongruent(otherShape) {
     const length = this.simpleSegPaths.length
     if (length !== otherShape.simpleSegPaths.length) return false
 
     for (let i = 0; i < length; i++) {
       const a = this.simpleSegPaths[i], b = otherPath.simpleSegPaths[i]
-      if (!a.hasSameForm(b)) return false
+      if (!a.isCongruent(b)) return false
     }
     return true
   }
