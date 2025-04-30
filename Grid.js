@@ -72,10 +72,6 @@ class Grid extends ProtoLayer {
   }
 
   // MARK: Grid Override Properties
-  // get testLook() { return Look.test(this.size, 'grid') }
-  // get testColor() { return protoColor(0, 230, 0, 90) }
-  // get cornerRadius() { return this.cellRadius }
-
   get gridAspect() { return this.gridSize.y / this.gridSize.x }
   get anchor() { return this.gridStyle === `Flexible` ? super.anchor : vert(0, (1 - this.gridAspect / 2) * 100) }
   get size() { return this.gridStyle === `Flexible` ? super.size : vert(100, this.gridAspect * 100) }
@@ -990,7 +986,7 @@ class Grid extends ProtoLayer {
         )
       DeBug.log(`badFlushWraps`, testPool)
 
-      // testPool = testPool.slice(0, 1)                                      //TESTING: reduce processed
+      testPool = testPool.slice(0, 1)                                      //TESTING: reduce processed
       testPool.forEach(s => {
         //ARROW: checkNeighbors() : null : check neighbors for bad adjWraps
         const checkNeighbors = (neighbors) => {
@@ -1005,7 +1001,9 @@ class Grid extends ProtoLayer {
             s.inWrapper.flushWrap(true)                           // adding true fixes collinear convergences #304
             s.inWrapper.replaceEndRadiantOutWrapsOrigin()
             s.replaceEndRadiantOutWrapsOrigin()
-            if (s.adjWrapIsNonEquidistant) { s.adjWrap(true) }    //TODO: fixes hor aspect cell bug, remove if problematic
+            if (s.adjWrapIsNonEquidistant) {
+              s.adjWrap(true)                                     //TODO: fixes hor aspect cell bug, remove if problematic       
+            }
             checkNeighbors(s.neighborsArray)
           }
         }
@@ -1487,7 +1485,7 @@ class Grid extends ProtoLayer {
       DeBug.warn(`fixBadFlushWraps`)                                                            //LOGGING:
       fixBadFlushWraps()
       DeBug.warn(`fixLoosies`)                                                                  //LOGGING:
-      fixLoosies()
+      // fixLoosies()
 
       DeBug.warn(`roundQuads`)                                                                  //LOGGING:
       // roundQuads()
