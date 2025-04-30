@@ -12,6 +12,8 @@ Bored UI Buttons Club by Tyson Parks, 2021
 // import { Shade } from './neuMark_I.js'
 
 // MARK: Storage
+const xmlns = 'http://www.w3.org/2000/svg'
+
 let
   //Color Constants
   backgroundColor, frameColor,

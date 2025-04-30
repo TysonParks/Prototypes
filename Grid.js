@@ -2319,10 +2319,10 @@ class Grid extends ProtoLayer {
     super.assignElement()
 
     if (this.isFrontGrid) {
-      this.backElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-backLayer`)
-      this.comboElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-comboLayer`)
-      this.highElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-highLayer`)
-      this.shadElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-shadLayer`)
+      this.backElt = createElementNS(xmlns, 'g').id(`${this.id}-backLayer`)
+      this.comboElt = createElementNS(xmlns, 'g').id(`${this.id}-comboLayer`)
+      this.highElt = createElementNS(xmlns, 'g').id(`${this.id}-highLayer`)
+      this.shadElt = createElementNS(xmlns, 'g').id(`${this.id}-shadLayer`)
 
       this.shaderElts = OpArray.format([this.backElt, this.comboElt, this.highElt, this.shadElt])
       this.shaderElts.forEach(elt => {
