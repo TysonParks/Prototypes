@@ -1,6 +1,7 @@
 
 //TODO: Before submission, update FeatureSet and EnumFeature in ABFeatureScript.js!!!
 //MARK: FeatureSet Class
+// SIZE: 664 lines
 class FeatureSet {
   // MARK: Calculated Feature Properties
   // grid dependencies
@@ -43,7 +44,7 @@ class FeatureSet {
 
 
   // modifierStyle           // TODO: DEPRECATE
-  symmetryStyle           // TODO: DEPRECATE
+  // symmetryStyle           // TODO: DEPRECATE
 
   // underlying storage (could be private?)
   r
@@ -100,8 +101,8 @@ class FeatureSet {
   get minCellSize() { return Math.min(this.cellSize.x, this.cellSize.y) }
   get gridInsetSize() { return 100 * this.gridInsetScale.x }
   get minInsetAmount() {
-    DeBug.log('this.minCellSize', this.minCellSize)
-    DeBug.log('this.enums.cellInset.value', this.enums.cellInset)
+    // DeBug.log('this.minCellSize', this.minCellSize)
+    // DeBug.log('this.enums.cellInset.value', this.enums.cellInset)
     return Math.max(.05, 1 / this.minCellSize * this.enums.cellInset.value)
   }
   get calcdFrameWidth() { return ((100 - this.gridInsetSize) - (this.minInsetAmount * this.minCellSize)) / 2 }
@@ -133,8 +134,8 @@ class FeatureSet {
     this.uniformLofts = this.enums.uniformLofts.feature(r) === 'True'
 
     // group dependencies
-    this.density = this.#calcDensity(r)
-    this.weight = this.#calcWeight(r)
+    this.#calcDensity(r)
+    this.#calcWeight(r)
     this.seed1 = this.enums.seed1.feature(r)
     if (this.seed1 === 'Noise') {
       this.enums.seed2.removeOptions(['Noise'])
@@ -143,11 +144,8 @@ class FeatureSet {
     this.seed2 = this.enums.seed2.feature(r)
     this.#calcGroups(r)
 
-    // this.modifierStyle = this.enums.modifierStyle.feature(r)
-
     // shape dependencies
-    this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)
-
+    this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)      //FIXME: DEPRECATE, calling R unnecessarily
 
     DeBug.groupEnd()
   }
@@ -169,20 +167,17 @@ class FeatureSet {
     DeBug.groupEnd()
     this.#calcGridInset(r)
   }
-  //METH: #calcGridStyle()
+  //METH: #calcGridStyle() : null : calculate gridStyle and cellAspect
   #calcGridStyle(r) {
     this.gridStyle = this.enums.gridStyle.feature(r)
-    if (this.gridStyle === `Magical`) {
-      this.cellAspect = 'Square'                    // "Magical" only uses 'Square' cells
-    } else {                                        // calculate cellAspect using native distributions
-      this.cellAspect = this.enums.cellAspect.feature(r)
-    }
-    // if (this.cellAspect !== 'Square') this.enums.cellOutset.removeLastOption()
+    if (this.gridStyle === `Magical`) this.cellAspect = 'Square'        // "Magical" only uses 'Square' cells
+    else this.cellAspect = this.enums.cellAspect.feature(r)             // calculate cellAspect using native distributions
   }
-  //METH: #calcX()
+  //METH: #calcX() : null : calculate X, the number of columns in the grid
   #calcX(r) {
-    const enumX = this.gridStyle === `Magical` ? this.enums.gridXMagic : this.enums.gridXFlex
-    const x = parseInt(enumX.feature(r))
+    const
+      enumX = this.gridStyle === `Magical` ? this.enums.gridXMagic : this.enums.gridXFlex,
+      x = parseInt(enumX.feature(r))
 
     if (x < 10) {
       this.enums.extraGroups.removeLastOption(min(3, 10 - x))           // remove '6' from extraGroups
@@ -197,15 +192,14 @@ class FeatureSet {
 
     }
     if (x < 5) {
-      this.enums.extraGroups.removeLastOption()           // remove '2' from extraGroups
+      this.enums.extraGroups.removeLastOption()                         // remove '2' from extraGroups
     }
     if (x < 2) {
       this.enums.seed1.replaceOptions([['Noise', 1]])
       this.enums.seed2.replaceOptions([['Modifier', 1]])
     }
-
     if (x > 9) {
-      // this.enums.cellOutset.removeLastOption()
+
     }
     if (x > 8) {
       this.enums.extraGroups.removeOptions(['1'])
@@ -214,13 +208,12 @@ class FeatureSet {
 
     }
     if (x > 6) {
-      // this.enums.extraGroups.removeOptions(['1'])
+
     }
     if (x > 5) {
 
     }
     if (x > 4) {
-
       if (this.gridStyle === `Flexible`) {
         this.enums.cellOutset.removeLastOption()
         this.enums.frameWidth.removeOptions(['Large'])
@@ -234,13 +227,12 @@ class FeatureSet {
     }
 
     this.cellOutset = this.enums.cellOutset.feature(r)
-
     this.x = x
   }
-  //METH: #calcY(r)
+  //METH: #calcY(r) : null : calculate Y, the number of rows in the grid
   #calcY(r) {
     const x = this.x
-
+    //ARROW: y() : Number : calculate Y, the number of rows in the grid
     const y = () => {
       if (this.gridStyle === 'Magical') {      // "Magical" gridStyle
         const min = x * 2 + 1                                     // min is always double the columns plus one
@@ -263,13 +255,16 @@ class FeatureSet {
     }
     this.y = y()
   }
-  //METH: #calcFrameProps()
+  //METH: #calcFrameProps() : null : calculate frameWidth, frameDivs, frameSpacing, and frameCascades
   #calcFrameProps(r) {
+    //NOTE: calc frameWidth: function of cellOutset and gridStyle
     if (this.gridStyle === 'Magical') {
       DeBug.log(`cellOutset`, this.enums.cellOutset.value)
-      const outset = this.enums.cellOutset.value
-      const ratio = this.y / this.x
+      const
+        outset = this.enums.cellOutset.value,
+        ratio = this.y / this.x
       let w = `Medium`
+
       if (ratio < 2.3) {
         w = outset < 0.5 ? `Small` : `Minimum`
       }
@@ -278,15 +273,16 @@ class FeatureSet {
       }
       w = outset < 0.5 ? `Medium` : `Small`
       if (outset > .75) w = `Minimum`
+
       this.frameWidth = w
       this.enums.frameWidth.chosen = w
-    } else {
-      this.frameWidth = this.enums.frameWidth.feature(r)
     }
+    else this.frameWidth = this.enums.frameWidth.feature(r)
     DeBug.log(`frameWidth:`, this.frameWidth)
 
     const widthVal = this.enums.frameWidth.value
     DeBug.warn(`widthVal`, widthVal)
+
     if (widthVal < 3) {                                   // Medium or Less
       this.enums.frameDivs.removeOptions([`5`, `4`, `3`])
       this.enums.frameSpacing.removeOptions([`Ninths`, `Eighths`])
@@ -298,29 +294,21 @@ class FeatureSet {
       this.enums.frameCascades.removeOptions([`One`])
     }
     if (widthVal < 1) {                                   // Minimum
-      // if (this.enums.cellOutset.value > .125) {
-      // this.enums.frameDivs.removeOptions([`2`])
-      // }
       this.enums.frameSpacing.removeOptions([`Thirds`])
-      // this.enums.frameCascades.removeOptions([`One`])
     }
+    //NOTE: calc frameDivs
     this.frameDivs = this.enums.frameDivs.feature(r)
-    if (this.frameDivs > 4) { this.enums.frameSpacing.removeOptions([`Quarters`, `Thirds`]) }
-    if (this.frameDivs < 3) { this.enums.frameCascades.removeOptions([`Some`]) }
+    if (this.frameDivs > 4) this.enums.frameSpacing.removeOptions([`Quarters`, `Thirds`])
+    if (this.frameDivs < 3) this.enums.frameCascades.removeOptions([`Some`])
     if (this.frameDivs === `1`) {
       this.enums.frameSpacing.removeOptions([`Quarters`, `Thirds`])
       this.enums.frameCascades.replaceOptions([['None', 0.7, 0], ['One', 0.3, 1]])
     }
-    // if (this.frameDivs === `1`) {
-    //   this.frameSpacing = `Whole`
-    //   this.enums.frameSpacing.chosen = `Whole`
-    // } else {
+    //NOTE: calc frameSpacing, frameCascades
     this.frameSpacing = this.enums.frameSpacing.feature(r)
-    // }
-
     this.frameCascades = this.enums.frameCascades.feature(r)
   }
-  //METH: calcGridInset()
+  //METH: calcGridInset() : null : calculate gridInsetScale and cellSize
   #calcGridInset(r) {
     const
       isFlex = this.gridStyle === `Flexible`,
@@ -328,7 +316,7 @@ class FeatureSet {
       y = this.y,
       gridYMult = y / x
 
-    //ARROW: calcRatio(x) : 
+    //ARROW: calcRatio(x) : Number : calculate ratio which properly sizes the grid
     const calcRatio = () => {
       if (x <= 1) return 9
       if (x <= 2) return 4.5
@@ -337,17 +325,18 @@ class FeatureSet {
       if (x > 8) return 1
       if (x > 15) return 0.5
     }
+
     let ratio = calcRatio()
-    console.log(`x`, x)
-    console.log(`ratio`, ratio)
+    DeBug.log(`x`, x)
+    DeBug.log(`ratio`, ratio)
 
     const cellOutset = this.enums.cellOutset.value
 
-    //ARROW: calcFrameWidth() : 
+    //ARROW: calcFrameWidth() : [Number] : calculate frameWidth divisor
     const calcFrameWidth = () => {
-      // DeBug.log(`frameWidth`,)
+      //ARROW: widths() : [Number] : calculate frameWidth divisors based on frameWidth property
       const widths = () => {
-        console.log(`frameWidth:`, this.frameWidth)
+        DeBug.log(`frameWidth:`, this.frameWidth)
         switch (this.frameWidth) {
           case `Minimum`:
             return [40]
@@ -359,14 +348,10 @@ class FeatureSet {
             return [2, 1.5, 1.25, 1]
         }
       }
-      // const options = widths()
-      // DeBug.log(`options`, options)
       return 1 - (1 / r.random_choice(widths()))
     }
 
-
-
-    //ARROW: calcInset(x) : 
+    //ARROW: calcInset(x) : lilVert : calculate gridInsetScale based on gridStyle
     const calcInset = () => {
       if (isFlex) {
         DeBug.log(`cellOutset`, cellOutset)
@@ -428,7 +413,6 @@ class FeatureSet {
       }
     }
 
-
     DeBug.log(`gridYMult`, gridYMult)
     let multiplier = isFlex ?
       ((1 / 10) + (cellOutset / (x * 2))) * x * ratio
@@ -437,6 +421,7 @@ class FeatureSet {
     DeBug.log(`multiplier`, multiplier)
     this.gridInsetScale = calcInset()
     this.cellSize = LilVert.div(lilVert(100, 200).mult(this.gridInsetScale), lilVert(x, y))
+
     if (this.cellSize.x < 9 || this.cellSize.y < 9) this.enums.uniformCutsStyle.removeOptions(['rIn', 'jOut'])
 
     DeBug.log(`gridInsetScale`, this.gridInsetScale)
@@ -444,58 +429,25 @@ class FeatureSet {
 
     const outset = this.enums.cellOutset.value
     console.log('outset', this.cellOutset)
-    // if(outset < 1 / 4) this.enums.seed1.removeOptions(['2x Min', '3x Min', '4x Min'])
 
     if (outset > 1 / 4 || this.minCellSize < 10) this.enums.cellInset.removeOptions(['4x Min'])
     if (outset > 1 / 2 || this.minCellSize < 7.5) this.enums.cellInset.removeOptions(['3x Min'])
     if (outset > 3 / 4 || this.minCellSize < 5) this.enums.cellInset.removeOptions(['2x Min'])
-
-    // this.cellInset = this.enums.cellInset.feature(r)
-
-    // calc frameWidth
-    // if (this.gridStyle === 'Magical') {
-    //   DeBug.log(`calcdFrameWidth`, this.calcdFrameWidth)
-    //   const width = this.calcdFrameWidth
-    //   // const widthVal = Math.min(3, Math.floor(this.calcdFrameWidth / 8))
-    //   // DeBug.log(`widthVal`, widthVal)
-    //   let name
-    //   if (width < 2) name = 'Minimum'
-    //   if (width >= 2) name = 'Small'
-    //   if (width > 8) name = 'Medium'
-    //   if (width > 25) name = 'Large'
-    //   // switch (widthVal) {
-    //   //   case 0:
-    //   //     name = 'Minimum'
-    //   //     break
-    //   //   case 1:
-    //   //     name = 'Small'
-    //   //     break
-    //   //   case 2:
-    //   //     name = 'Medium'
-    //   //     break
-    //   //   case 3:
-    //   //     name = 'Large'
-    //   //     break
-    //   // }
-    //   DeBug.log(`name`, name)
-    //   this.enums.frameWidth.chosen = name
-    //   this.frameWidth = name
-    // }
-
   }
   // #endregion
   // MARK: Group Methods
   // #region Group Methods
-  //METH: #calcUniformCuts()
+  //METH: #calcUniformCuts() : null : calculate uniformCuts and cutDirections
   #calcUniformCuts(r) {
     this.uniformCuts = this.enums.uniformCuts.feature(r) === 'True'
+
     if (this.uniformCuts) {
       this.uniformCutsStyle = this.enums.uniformCutsStyle.feature(r)
       if (this.uniformCutsStyle === 'rOut') {
         this.enums.seed1.removeOptions(['Random Comb', 'Simple Pattern', 'Complex Pattern', 'Noise'])
         this.enums.seed2.removeOptions(['Random Comb', 'Simple Pattern', 'Complex Pattern', 'Noise'])
         this.enums.modifierStyle.removeOptions(['Noise'])
-        // this.enums.cellInset.removeOptions(['0.5x Min'])
+
         if (this.cellOutset < 1 / 7) this.enums.seed1.replaceOptions(['Snake', .5])
       }
       if (this.uniformCutsStyle === 'jIn') this.enums.cellInset.removeOptions(['4x Min', '3x Min'])
@@ -503,12 +455,11 @@ class FeatureSet {
       if (this.uniformCutsStyle !== 'jIn' && this.uniformCutsStyle !== 'rOut') this.enums.cellInset.removeOptions(['4x Min', '3x Min', '2x Min'])
       this.cutDirections = this.uniformCutsStyle.includes('Out') ? 'Additive' : 'Subtractive'
     } else {
-      // this.enums.cellInset.removeOptions(['0.5x Min'])
       this.enums.cutDirections.removeOptions(['Additive', 'Subtractive'])
       this.cutDirections = this.enums.cutDirections.feature(r)
     }
   }
-  //METH: #recalcFrameWidth(r)
+  //METH: #recalcFrameWidth(r) : null : recalculate frameWidth for Magical gridStyle
   #recalcFrameWidth(r) {
     if (this.gridStyle === 'Magical') {
       DeBug.log(`calcdFrameWidth`, this.calcdFrameWidth)
@@ -520,29 +471,20 @@ class FeatureSet {
       if (width >= 2) name = 'Small'
       if (width > 8) name = 'Medium'
       if (width > 25) name = 'Large'
-      // switch (widthVal) {
-      //   case 0:
-      //     name = 'Minimum'
-      //     break
-      //   case 1:
-      //     name = 'Small'
-      //     break
-      //   case 2:
-      //     name = 'Medium'
-      //     break
-      //   case 3:
-      //     name = 'Large'
-      //     break
-      // }
       DeBug.log(`name`, name)
+
       this.enums.frameWidth.chosen = name
       this.frameWidth = name
     }
   }
-  //METH:
+  //METH: calcGroupCounts(r) : null : calculate groupCount and groupWeight
   #calcGroupCounts(r) {
-    const x = this.x, dirs = this.cutDirections
-    let adds = 0, subs = 0
+    const
+      x = this.x,
+      dirs = this.cutDirections
+    let
+      adds = 0,
+      subs = 0
 
     if (dirs === 'Additive and Subtractive') {
       adds = 1, subs = 1
@@ -551,8 +493,8 @@ class FeatureSet {
       if (dirs === 'Subtractive') subs = 1
       if (dirs === 'Additive') adds = 1
     }
-    if (dirs.includes('Additive')) { adds = 1 }          // if Additive is present, set adds to 1
-    if (dirs.includes('Subtractive')) {                  // if Subtractive is present, set subs to 1
+    if (dirs.includes('Additive')) adds = 1               // if Additive is present, set adds to 1
+    if (dirs.includes('Subtractive')) {                   // if Subtractive is present, set subs to 1
       if (dirs === 'Subtractive') {
         // this.enums.insetScale.removeOptions(['Maximum'])
         // this.enums.insetRatio.replaceOptions([['1:1', 0.75]], false)
@@ -568,14 +510,15 @@ class FeatureSet {
       extra = parseInt(extra)
       if (adds && subs) {
         for (let i = 0; i < extra; i++) {
-          if (r.random_bool(.5)) { adds += 1 }
-          else { subs += 1 }
+          if (r.random_bool(.5)) adds += 1
+          else subs += 1
         }
       } else {
-        if (adds) { adds += extra }
-        if (subs) { subs += extra }
+        if (adds) adds += extra
+        if (subs) subs += extra
       }
     }
+
     const groupWeight = adds + subs
 
     if (groupWeight < 4) this.enums.density.removeOptions(['So Lonely'])
@@ -584,33 +527,35 @@ class FeatureSet {
 
     return { adds: adds, subs: subs }
   }
-  //METH: calcInsideCuts()
+  //METH: calcInsideCuts() : null : calculate insideCuts and insideCutStyle
   #calcInsideCuts(r) {
     if (this.cellAspect !== 'Square') this.enums.insideCuts.removeOptions(['True'])
     this.insideCuts = this.enums.insideCuts.feature(r)
+
     if (this.insideCuts === 'True') this.insideCutStyle = this.enums.insideCutStyle.feature(r)
     else {
       this.enums.insideCutStyle.chosen = 'None'
       this.insideCutStyle = 'None'
     }
   }
-  //METH: calcLinearCuts()
+  //METH: calcLinearCuts() : null : calculate linearCuts
   #calcLinearCuts(r) {
     if (this.groupWeight < 3) this.enums.linearCuts.removeOptions(['Some'])
     if (this.x < 4 || this.cellAspect !== 'Square') this.enums.linearCuts.removeOptions(['One', 'Some'])
     this.linearCuts = this.enums.linearCuts.feature(r)
   }
-  //METH:
+  //METH: calcGroups() : null : calculate groups
   #calcGroups(r) {
     const adds = new Array(this.groupCount.adds).fill(`+`), subs = new Array(this.groupCount.subs).fill(`-`)
-    let groups = new OpArray(...adds, ...subs)
+    let
+      style,
+      groups = new OpArray(...adds, ...subs)
     groups = groups.randShuffle(r)
     // console.log(`#calcGroups adds`, adds)
     // console.log(`#calcGroups subs`, subs)
     // console.log(`#calcGroups groups`, groups)
     // console.log('this.groupWeight', this.groupWeight)
 
-    let style
     if (this.uniformCuts) style = this.uniformCutsStyle[0]
 
     let base = 1 / this.groupWeight, used = 0
@@ -623,13 +568,11 @@ class FeatureSet {
       const newGroup = this.#calcGroup(i + 1, r, additive, style, coverage)
       // console.log('new group', newGroup)
       this.groups.push(newGroup)
-      // return newGroup
     })
     console.log('used', used)
     console.log('groups', groups)
-    // return groups
   }
-  //METH:
+  //METH: calcGroup() : null : calculate group properties
   #calcGroup(i, r, additive, style, coverage) {
     const count = this.groupWeight
     // console.log('count', count)
@@ -656,16 +599,15 @@ class FeatureSet {
       } else this.enums.modifierStyle.removeLastOption()
     }
     if (i === count) {
-      if (this.density === 'At Capacity') {
-        method = 'Group Available'
-
-      }
+      if (this.density === 'At Capacity') method = 'Group Available'
       else method = 'Empty'
-    } else if (i > 2 && i <= count) method = this.enums.modifierStyle.feature(R)
+    }
+    else if (i > 2 && i <= count) method = this.enums.modifierStyle.feature(R)
 
     if (method === 'Noise') this.enums.modifierStyle.removeOptions(['Noise'])
     const isRectangular = method.includes('Rect') || method.includes('Square')
     let minSize, overlap
+
     if (isRectangular) {
       this.enums.rectOverlap.feature(r)
       overlap = this.enums.rectOverlap.value
@@ -685,40 +627,39 @@ class FeatureSet {
   // #endregion
   // MARK: Group Methods
   // #region Group Methods
-  //METH:
+  //METH: calcDensity() : null : calculate density
   #calcDensity(r) {
     const density = this.enums.density.feature(r)
-    if (density !== 'At Capacity') {
-      // this.enums.modifierStyle.removeOptions(['Triple Concentric'])
-      // this.enums.symmetryUse.removeOptions(['All', 'Empty Groups'])
-    }
-    return density
+    // if (density !== 'At Capacity')
+    // return density
+    this.density = density
   }
-
-  //METH:
+  //METH: calcWeight() : null : calculate weight
   #calcWeight(r) {
-    switch (this.density) {
-      case 'So Lonely':
-        return floor(this.groupWeight / r.random_num(0.1, 0.4))
-      case 'Some Availability':
-        return ceil(this.groupWeight / r.random_num(0.5, 0.9))
-      case 'At Capacity':
-        return max(2, this.groupWeight)
+    //ARROW: weight() : Number : calculate weight based on density
+    const weight = () => {
+      switch (this.density) {
+        case 'So Lonely':
+          return floor(this.groupWeight / r.random_num(0.1, 0.4))
+        case 'Some Availability':
+          return ceil(this.groupWeight / r.random_num(0.5, 0.9))
+        case 'At Capacity':
+          return max(2, this.groupWeight)
+      }
     }
+    this.weight = weight()
   }
-
-
-
   // #endregion
   // MARK: Init Methods
   // #region Init Methods
-  //METH:
+  //METH: #initFeatureSets() : null : initialize feature sets
   #initFeatureSets() {
     const enums = {}
     Object.keys(this.#options).forEach((optionKey) => {
-      const option = this.#options[optionKey]
-      const { name: name, options: options } = option
-      const enumFeature = new EnumFeature(name, options, this.usageStore)
+      const
+        option = this.#options[optionKey],
+        { name: name, options: options } = option,
+        enumFeature = new EnumFeature(name, options, this.usageStore)
       enums[optionKey] = enumFeature
     })
     this.enums = enums
@@ -728,6 +669,7 @@ class FeatureSet {
 }
 
 //MARK: Feature Options
+// SIZE: 439 lines
 // #region Feature Options
 const publicOptions = {
   // MARK: Grid Dependencies
@@ -1169,13 +1111,14 @@ const publicOptions = {
   // #endregion
 
 }
+
 //TODO: Paste in final EnumFeature class before submission!!!
-// TODO: OPTIMIZE by converting options.options from arrays to objects and refine methods accordingly
+//TODO: OPTIMIZE by converting options.options from arrays to objects and refine methods accordingly
 // ENUM: EnumFeature 
+// SIZE: 133 lines
 class EnumFeature {
   // FIXME: make options and weightedOptions private after fully tested 
   name
-  // options
   ogOptions
   modOptions
   weightedOptions
@@ -1214,7 +1157,7 @@ class EnumFeature {
     // const oldOpts = OpArray.format(this.options)
     const newOpts = [...options, ...this.options]
     // DeBug.log('newOpts', newOpts)
-    if (newOpts) { this.replaceOptions(newOpts) }
+    if (newOpts) this.replaceOptions(newOpts)
   }
   //METH: removeOptions()
   removeOptions(options) {
@@ -1224,7 +1167,7 @@ class EnumFeature {
     // DeBug.log(`options to remove`, options)
     const reduced = this.options.filter(opt => !options.includes(opt[0]))
     // DeBug.log(`reduced`, reduced)
-    if (reduced) { this.replaceOptions(reduced) }
+    if (reduced) this.replaceOptions(reduced)
     // DeBug.log(`options after`, this.options)
   }
   //METH: removeLast()
@@ -1237,7 +1180,7 @@ class EnumFeature {
   //METH: reduceOptions()
   reduceOptions(toOptions) {
     const reduced = this.options.filter(opt => toOptions.includes(opt[0]))
-    if (reduced) { this.replaceOptions(reduced) }
+    if (reduced) this.replaceOptions(reduced)
   }
   //METH: replaceOptions()
   replaceOptions(withOptions, all = true) {
@@ -1253,11 +1196,11 @@ class EnumFeature {
     } else {
       withOptions.forEach(newOpt => {
         const oldOpt = this.options.find(opt => opt[0] === newOpt[0])
-        if (oldOpt) { oldOpt[1] = newOpt[1] }
+        if (oldOpt) oldOpt[1] = newOpt[1]
       })
       withOptions.forEach(newOpt => {
         const oldOpt = this.modOptions.find(opt => opt[0] === newOpt[0])
-        if (oldOpt) { oldOpt[1] = newOpt[1] }
+        if (oldOpt) oldOpt[1] = newOpt[1]
       })
     }
     this.weightedOptions = this.#weighOptions()
@@ -1292,12 +1235,14 @@ class EnumFeature {
   }
   //METH: weighOptions()
   #weighOptions() {
-    let p = []
-    let currentWeight = 0
+    let
+      p = [],
+      currentWeight = 0
     const weightRange = [0, this.#totalWeight()]
     this.options.forEach(e => {
-      let range = [currentWeight, currentWeight + e[1]]
-      let normRange = normalizeSubRange(range, weightRange)
+      let
+        range = [currentWeight, currentWeight + e[1]],
+        normRange = normalizeSubRange(range, weightRange)
       currentWeight += e[1]
       p.push([e[0], normRange])
     })
@@ -1306,13 +1251,13 @@ class EnumFeature {
 }
 
 // MARK: LilVert 
+//SIZE: 35 lines
 function lilVert(x, y) {
-  if (arguments.length === 1
-    // && typeof x === 'number' && !isNaN(x)
-  ) { y = x }
+  if (arguments.length === 1) y = x
   return new LilVert(x, y)
 }
 class LilVert {
+
   constructor(x, y) {
     this.x = x
     this.y = y
@@ -1336,10 +1281,9 @@ class LilVert {
   }
 
   static coerce(vert) {
-    // console.log('coerce vert', vert)
-    if (vert instanceof LilVert) { return vert }
-    if (typeof vert === 'number' && !isNaN(vert)) { return lilVert(vert, vert) }
-    if (Array.isArray(vert)) { return lilVert(vert[0], vert[1]) }
+    if (vert instanceof LilVert) return vert
+    if (typeof vert === 'number' && !isNaN(vert)) return lilVert(vert, vert)
+    if (Array.isArray(vert)) return lilVert(vert[0], vert[1])
   }
 
 }
