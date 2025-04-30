@@ -9,7 +9,7 @@ Bored UI Buttons Club by Tyson Parks, 2021
 // import { Grid } from './ProtoLayerObjects.js'
 // import { Direction } from './ProtoUtility.js'
 // import { Store } from './ProtoStore.js'
-// import { Look, Shade, CS } from './neuMark_I.js'
+// import { Shade } from './neuMark_I.js'
 
 // MARK: Storage
 let
@@ -97,7 +97,13 @@ function setupColors() {
 function setupBackground() {
   BG = createDiv().id('BG')
     .size(windowWidth, windowHeight)
-    .look(Look.centeredFlex(backgroundColor, 'column'))      // FIXME: deprecating Look, assign CSS styling directly
+    // .look(Look.centeredFlex(backgroundColor, 'column'))      // FIXME: deprecating Look, assign CSS styling directly
+    .style('background', backgroundColor)
+    .style('margin', 0)
+    .style('display', 'flex')
+    .style('flex-direction', 'column')
+    .style('justify-content', 'space-evenly')
+    .style('alignItems', 'center')
   FRAME = new Frame(BG)
 }
 
@@ -774,7 +780,7 @@ function gridTests2(features) {
   // FRAME.backGrid.showCellsDebug()
   // FRAME.backGrid.showShapesDebug()
   // FRAME.backGrid.showShapeGroupsDebug(false)
-  // GRID.showCellsDebug()
+  GRID.showCellsDebug()
   // GRID.showShapesDebug()
   // GRID.showShapeGroupsDebug(false)
   // GRID.showFrameRate(animationController)
@@ -838,7 +844,6 @@ function shadeAnimation() {
 
 
 // MARK: GLOBAL FUNCS
-
 // FUNC: windowResized()
 function windowResized() {
   sizeFrame()
