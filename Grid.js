@@ -252,7 +252,7 @@ class Grid extends ProtoLayer {
       indices = OpArray.from([indexA, indexB]).numSorted,
       a = this.coords(indices[0]),
       b = this.coords(indices[1]),
-      direction = a.biDirectionTo(b)
+      direction = a.directionTo(b)               //FIXME: previously used biDirectionTo method, revisit if issues with cellBounds
     if (direction === -1) return -1
     if (direction.allAreCardinal) {
       let seg
