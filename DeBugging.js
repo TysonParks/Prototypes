@@ -6,8 +6,6 @@ const Debuggable = {
   drawInset: false,
   drawLoft: false,
 
-  // deBugColor: protoColor(255, 0, 0),
-
   //MARK: Debuggable Computed Properties
   get isPerimeterShape() { return this.type === `PerimeterShape` },
   get isPerimeterIsland() { return this.type === `PerimeterIsland` },
@@ -16,26 +14,23 @@ const Debuggable = {
   get isShapeGroup() { return this.type.includes(`ShapeGroup`) },
 
   get deBugAnchor() {
-    if (this.cellBounds?.selection) {
-      return this.cellBounds.selection[0].anchor
-    } else {
-      return this.anchor
-    }
+    if (this.cellBounds?.selection) return this.cellBounds.selection[0].anchor
+    else return this.anchor
   },
-
 
   //MARK: Debuggable Show Methods
+  //METH: showDeBug() : null : show debug info
   showDeBug() {
-    if (this.drawLabel) { this.showLabel() }
-    if (this.drawDeBugRect) { this.showRect() }
-    if (this.drawPerimeter) { this.showPerimeter() }
-    if (this.drawInset) { this.showInset() }
-    if (this.drawLoft) { this.showLofts() }
+    if (this.drawLabel) this.showLabel()
+    if (this.drawDeBugRect) this.showRect()
+    if (this.drawPerimeter) this.showPerimeter()
+    if (this.drawInset) this.showInset()
+    if (this.drawLoft) this.showLofts()
   },
-
+  //METH: showLabel() : null : show debug label
   showLabel() {
     if (this.drawSVG) {
-      if (!this.deBugLabelElt) { this.deBugLabelElt = createSVGText(this.id, 0, 0) }
+      if (!this.deBugLabelElt) this.deBugLabelElt = createSVGText(this.id, 0, 0)
       let offset, font
       if (this.isShape) {
         offset = this.isPerimeterShape ? vert(1, 4) : vert(1, 8)
@@ -55,34 +50,35 @@ const Debuggable = {
         .parent(this.svgElt)
         .layout(this.deBugAnchor.x + offset.x, this.deBugAnchor.y + offset.y, this.size.x, this.size.y)
         .style(`font`, font)
-        .style(CS.textShadow, `1px 1px 2px white`)
+        .style(`text-shadow`, `1px 1px 2px white`)
     }
   },
-
+  //METH: showRect() : null : show svg backing/layout rect
   showRect() {
     if (this.drawSVG) {
       const radius = 2
-      if (!this.deBugRectElt) { this.deBugRectElt = createSVGElt('rect').id(`${this.id}-deBugRect`) }
+      if (!this.deBugRectElt) this.deBugRectElt = createSVGElt('rect').id(`${this.id}-deBugRect`)
       // if (this.isShape) {
 
       // } else {
-      // console.warn(`${this.id} showRect called!`)
-      // console.log(`grid`, this.grid)
-      // console.log(`grid insetAnchor`, this.grid.insetAnchor)
-      // console.log(`grid insetScale`, this.grid.insetScale)
-      // console.log(`grid insetSize`, this.grid.insetSize)
+      // DeBug.warn(`${this.id} showRect called!`)
+      // DeBug.log(`grid`, this.grid)
+      // DeBug.log(`grid insetAnchor`, this.grid.insetAnchor)
+      // DeBug.log(`grid insetScale`, this.grid.insetScale)
+      // DeBug.log(`grid insetSize`, this.grid.insetSize)
       // if (this.type === `Cell`) {
-      //   console.log(`cell ${this.id} insetAnchor: `, this.insetAnchor)
-      //   console.log(`cell ${this.id} insetSize: `, this.insetSize)
+      //   DeBug.log(`cell ${this.id} insetAnchor: `, this.insetAnchor)
+      //   DeBug.log(`cell ${this.id} insetSize: `, this.insetSize)
       // }
-      // console.log(`showRect layout args`, this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
+      // DeBug.log(`showRect layout args`, this.insetAnchor.x, this.insetAnchor.y, this.insetSize.x, this.insetSize.y)
       this.deBugRectElt
         .parent(this.svgElt)
         .layout(this.insetAnchor, this.insetSize)
         .attribute('rx', radius)
         .attribute('ry', radius)
-      const randHue = ProtoColor.randomShadHue()
-      const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
+      const
+        randHue = ProtoColor.randomShadHue(),
+        lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
       this.deBugRectElt
         .attribute('fill', protoColor(0, 0))
         .attribute('stroke', randHue)
@@ -91,15 +87,16 @@ const Debuggable = {
       // }
     }
   },
-
+  //METH: showPerimeter() : null : show hard outline of perimeter shapes
   showPerimeter() {
     if (this.isPerimeterShape) {
-      if (!this.deBugPerimeterElt) { this.deBugPerimeterElt = createSVGElt('path') }
+      if (!this.deBugPerimeterElt) this.deBugPerimeterElt = createSVGElt('path')
       this.deBugPerimeterElt
         .parent(this.svgElt)
         .layout(this.anchor.x, this.anchor.y, this.size.x, this.size.y)
-      const randHue = ProtoColor.randomShadHue()
-      const lightHue = ProtoColor.randomHighHue()
+      const
+        randHue = ProtoColor.randomShadHue(),
+        lightHue = ProtoColor.randomHighHue()
       this.deBugPerimeterElt
         .attribute('d', this.perimeter)
         .attribute('fill', protoColor(0, 0))
@@ -108,16 +105,17 @@ const Debuggable = {
         .attribute('stroke-dasharray', `4 1`)
     }
   },
-
+  // METH: showInset() : null : show curved inset path of shapes
   showInset() {
     if (this.isShape) {
-      if (!this.deBugInsetPathElt) { this.deBugInsetPathElt = createSVGElt('path') }
+      if (!this.deBugInsetPathElt) this.deBugInsetPathElt = createSVGElt('path')
       this.deBugInsetPathElt
         .parent(this.svgElt)
         .layout(this.anchor, this.size)
 
-      const randHue = ProtoColor.randomShadHue()
-      const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 256)
+      const
+        randHue = ProtoColor.randomShadHue(),
+        lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 256)
       this.deBugInsetPathElt
         .attribute('d', this.svg)
         .attribute('fill', protoColor(0, 0))
@@ -125,14 +123,15 @@ const Debuggable = {
         .attribute('stroke-width', `.25`)
         .attribute('stroke-dasharray', `1 1`)
     } else {
-      if (!this.deBugInsetRectElt) { this.deBugInsetRectElt = createSVGElt('rect') }
+      if (!this.deBugInsetRectElt) this.deBugInsetRectElt = createSVGElt('rect')
       this.deBugInsetRectElt
         .parent(this.svgParent)
         .layout(this.insetAnchor, this.insetSize)
         .attribute('rx', 1)
         .attribute('ry', 1)
-      const randHue = ProtoColor.randomShadHue()
-      const lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
+      const
+        randHue = ProtoColor.randomShadHue(),
+        lightHue = protoColor(randHue.red, randHue.green, randHue.blue, 8)
       this.deBugInsetRectElt
         .attribute('fill', protoColor(0, 0))
         .attribute('stroke', randHue)
@@ -140,11 +139,13 @@ const Debuggable = {
         .attribute('stroke-dasharray', `4 1`)
     }
   },
+  //METH: showLofts() : null : show curved loft paths of shapes
   showLofts() {
     DeBug.error(`DEBUG: showLofts`)
 
-    const randHue = ProtoColor.randomShadHue()
-    const lightHue = protoColor(randHue.red, randHue.green, randHue.blue)
+    const
+      randHue = ProtoColor.randomShadHue(),
+      lightHue = protoColor(randHue.red, randHue.green, randHue.blue)
     DeBug.groupCollapsed(this.id)
     if (this.isShapeGroup && this.cut?.profile) {
       this.debugStartElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugStart`)
@@ -176,16 +177,15 @@ const Debuggable = {
         DeBug.log(`depthScale`, depthScale)
         let startScale, endScale, hasOutsetShade = this.cut.profile.hasOutsetShade
         if (hasOutsetShade) {
-          console.log(`hasOutsetShade`)
+          DeBug.log(`hasOutsetShade`)
           // startScale = Vertex.add(sh.insetScale, depthScale)
           startScale = Vertex.add(sh.insetScale, depthScale)
           endScale = this.cut.start < 0 ? sh.insetScale : sh.insetScale
         } else {
-          console.log(`no outsetShade`)
+          DeBug.log(`no outsetShade`)
           startScale = sh.insetScale
           endScale = Vertex.sub(sh.insetScale, depthScale)
         }
-
 
         const newScales = [startScale, endScale]
         DeBug.log(`newScales`, newScales)
@@ -212,7 +212,7 @@ const Debuggable = {
     DeBug.groupEnd()
   },
 
-  // METH: showSizeGrid()
+  // METH: showSizeGrid() : null : show grid for sizing shapes
   showSizeGrid(x = 10, y = x) {
     // if (!this.drawSVG || !this.drawGrid) return
 
@@ -228,8 +228,9 @@ const Debuggable = {
       this.gridSpacing = spacing
       this.deBugGridElt.innerHTML = '' // Clear existing grid
 
-      const randHue = ProtoColor.randomShadHue()
-      const lines = []
+      const
+        randHue = ProtoColor.randomShadHue(),
+        lines = []
 
       // Vertical lines
       for (let x = 0; x <= 100; x += spacing.x) {
@@ -283,8 +284,9 @@ const Debuggable = {
 
       // Update content every second instead of every frame
       setInterval(() => {
-        const fps = animationController.frameRate
-        const offsetEltsCount = S.offsetElts.length
+        const
+          fps = animationController.frameRate,
+          offsetEltsCount = S.offsetElts.length
         Debuggable.frameRateDisplay.html(`FPS: ${fps} | Offset Elements: ${offsetEltsCount}`)
       }, 1000)
     }
@@ -293,19 +295,21 @@ const Debuggable = {
 }
 
 //MARK: DeBug Class
-//CLASS: replace calls to console methods with these in order to have global control over logging
+//CLASS: replace calls to DeBug methods with these in order to have global control over logging
 class DeBug {
   static enableLogging = true // Set to false to disable all logging
 
   static getCallerInfo() {
-    const error = new Error()
-    const stack = error.stack.split('\n')
-    // Adjust the index based on the stack trace format
-    const callerLine = stack[3] || stack[2]
-    const match = callerLine.match(/at (.+):(\d+):(\d+)/)
+    const
+      error = new Error(),
+      stack = error.stack.split('\n'),
+      // Adjust the index based on the stack trace format
+      callerLine = stack[3] || stack[2],
+      match = callerLine.match(/at (.+):(\d+):(\d+)/)
     if (match) {
-      const filePath = match[1]
-      const fileName = filePath.split('/').pop() // Extract file name
+      const
+        filePath = match[1],
+        fileName = filePath.split('/').pop() // Extract file name
       return `${fileName}:${match[2]}`
     }
     return 'unknown'
