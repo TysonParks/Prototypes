@@ -1,4 +1,5 @@
 class AnimationController {
+
   constructor(initialFrameRate = 12) {
     this.frameRate = initialFrameRate
     this.frameDuration = 1000 / initialFrameRate
@@ -13,9 +14,9 @@ class AnimationController {
     this.frameTimes = []
   }
 
+  //METH: getMaxFPS() : Number : 
   getMaxFPS() {
     let maxFPS = 60 // Default fallback
-
     // Try to get refresh rate from screen
     if (window.screen && window.screen.refreshRate) {
       maxFPS = window.screen.refreshRate
@@ -34,33 +35,33 @@ class AnimationController {
       }
       requestAnimationFrame(loop)
     }
-
     // Limit to supported frame rates
     return this.frameRateOptions.reduce((prev, curr) =>
       (curr <= maxFPS ? curr : prev), this.frameRateOptions[0])
   }
-
+  //METH: optimizeFrameRate() : null :
   optimizeFrameRate() {
-    const averageFrameTime = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length
-    const singleFrameTime = 1000 / this.maxFPS
-    const frameAmount = ceil(averageFrameTime / singleFrameTime)
-    const targetRate = this.maxFPS / frameAmount
-
-    // Find highest frame rate option that's <= target rate
-    const optimalFrameRate = this.frameRateOptions
-      .filter(rate => rate <= targetRate)
-      .reduce((prev, curr) => Math.max(prev, curr))
+    const
+      averageFrameTime = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length,
+      singleFrameTime = 1000 / this.maxFPS,
+      frameAmount = ceil(averageFrameTime / singleFrameTime),
+      targetRate = this.maxFPS / frameAmount,
+      // Find highest frame rate option that's <= target rate
+      optimalFrameRate = this.frameRateOptions
+        .filter(rate => rate <= targetRate)
+        .reduce((prev, curr) => Math.max(prev, curr))
 
     this.frameRate = optimalFrameRate
     this.frameDuration = 1000 / this.frameRate
     this.isCalibrating = false
 
-    console.log(`Animation optimized - FPS: ${this.frameRate}, Batch Size: ${this.batchSize}`)
+    DeBug.log(`Animation optimized - FPS: ${this.frameRate}, Batch Size: ${this.batchSize}`)
   }
-
+  //METH: batchUpdateFilters() : null :
   batchUpdateFilters(shadeVect) {
-    const currentBatch = S.offsetElts
-    const batchStartTime = performance.now()
+    const
+      currentBatch = S.offsetElts,
+      batchStartTime = performance.now()
 
     currentBatch.forEach(({ elt, mag }) => {
       elt.attribute('dx', shadeVect.x * mag)
@@ -70,7 +71,6 @@ class AnimationController {
     if (this.isCalibrating) {
       const batchTime = performance.now() - batchStartTime
       this.frameTimes.push(batchTime)
-
       // Dynamic batch size adjustment during calibration
       if (batchTime < this.frameDuration * 0.75) {
         this.batchSize = Math.min(this.batchSize + 1, S.offsetElts.length)
@@ -83,9 +83,7 @@ class AnimationController {
       }
     }
   }
-
-
-
+  //METH: globalAnimation() : null : 
   globalAnimation() {
     if (!globalControls.animated) {
       this.frameStartTime = 0
@@ -96,8 +94,9 @@ class AnimationController {
       return
     }
 
-    const now = performance.now()
-    const actualFrameTime = now - this.frameStartTime
+    const
+      now = performance.now(),
+      actualFrameTime = now - this.frameStartTime
 
     if (actualFrameTime >= this.frameDuration) {
       this.frameStartTime = now - (actualFrameTime % this.frameDuration)
