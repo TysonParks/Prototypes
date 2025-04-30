@@ -1489,7 +1489,7 @@ class ProtoSegment extends Segment {
     radWrappers?.forEach(w => w.#setCurveOrigin(this.arcOrigin, replace, start))
     if (allWrappers?.length > radWrappers?.length && replace) {
       const last = radWrappers.last
-      console.log(`setRadiantOrigin last`, last)
+      DeBug.log(`setRadiantOrigin last`, last)
       if (last.flushOutWrapper) last.flushWrap(true)
       else last.adjWrap(true)
       last.outWrapper.replaceEndRadiantOutWrapsOrigin()
@@ -2237,8 +2237,8 @@ class ProtoSegment extends Segment {
     const wrapType = flush ? `flushWrap()` : `adjWrap()`                                        //LOGGING:
 
     let report = false                                                                            //LOGGING:
-    if (this.id.includes('cel152')                                                               //LOGGING:
-      || this.id.includes('cel027')                                                              //LOGGING:
+    if (this.id.includes('cel00')                                                               //LOGGING:
+      // || this.id.includes('cel027')                                                              //LOGGING:
     ) {                                                                                           //LOGGING:
       report = true                                                                               //LOGGING:
       DeBug.error(`${wrapType} called on:`, this)                                               //LOGGING:
@@ -2282,6 +2282,11 @@ class ProtoSegment extends Segment {
         } else {                                            // wraps are NOT diagonal (instead are COLLINEAR or PROXIMAL)
           const obj = flush ? this.flushIntersectObjs[0] : this.adjIntersectObjs[0] // COLLINEAR or PROXIMAL
           if (obj) {
+            if (report) {
+              DeBug.log(`obj`, obj)                                                              //LOGGING:
+              DeBug.log(`obj.dist`, obj.dist)                                                  //LOGGING:
+              DeBug.log(`target.maxArcRadius`, target.maxArcRadius)                            //LOGGING:
+            }
             if (roundToDec(obj.dist) <= roundToDec(target.maxArcRadius))            // previously COLL/PROX used (<)/(<=)
               target.addDistancedEndCornerVerts(obj.dist, true)
             else target.replaceEndCurveOrigin(target.currentMaxArcOrigin)
