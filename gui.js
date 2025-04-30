@@ -1,17 +1,18 @@
-let gui
+let
+  gui,
 
-let testingControls = {
-  hashNumber: 1302,
-  lastHash: true,
-  blackMode: false,
-}
+  testingControls = {
+    hashNumber: 1302,
+    lastHash: true,
+    blackMode: false,
+  },
 
-let globalControls = {
-  shadAngle: 90,
-  animated: false,
-}
+  globalControls = {
+    shadAngle: 90,
+    animated: false,
+  }
 
-// GUI using dat.GUI
+//FUNC: createGUI() : void : creates the GUI using dat.GUI
 function createGUI() {
   gui = new dat.GUI()
   gui.close()
@@ -62,31 +63,33 @@ function keyPressed() {
     // use for shade blurScale animation
   }
 }
+
+//FUNC: getCurrentDateString() : date (string) : in YYYY.MM.DD format
 //NOTE: Create with GPT-4 on April 15,2023
-//FUNC: getCurrentDateString()
 function getCurrentDateString() {
-  const currentDate = new Date();
-  const year = currentDate.getFullYear();
-  const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-  const day = String(currentDate.getDate()).padStart(2, '0');
-  return `${year}.${month}.${day}`;
+  const
+    currentDate = new Date(),
+    year = currentDate.getFullYear(),
+    month = String(currentDate.getMonth() + 1).padStart(2, '0'),
+    day = String(currentDate.getDate()).padStart(2, '0')
+  return `${year}.${month}.${day}`
 }
+
+//FUNC: getCurrentTime24HrFormat() : time (string) : in HH.MM.SS format
 //NOTE: Create with GPT-4 on April 15,2023
-//FUNC: getCurrentTime24HrFormat()
 function getCurrentTime(format24Hr = false) {
-  const now = new Date();
-  let hours = now.getHours();
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  let amPm = '';
-
+  const
+    now = new Date(),
+    minutes = String(now.getMinutes()).padStart(2, '0'),
+    seconds = String(now.getSeconds()).padStart(2, '0')
+  let
+    hours = now.getHours(),
+    amPm = ''
   if (!format24Hr) {
-    amPm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
+    amPm = hours >= 12 ? 'PM' : 'AM'
+    hours = hours % 12 || 12
   }
-
-  hours = String(hours).padStart(2, '0');
-
-  return `${hours}.${minutes}.${seconds}${amPm ? '' + amPm : ''}`;
+  hours = String(hours).padStart(2, '0')
+  return `${hours}.${minutes}.${seconds}${amPm ? '' + amPm : ''}`
 }
 
