@@ -60,23 +60,6 @@ class ProtoLayer {
   // #region 
 
   get type() { return this._type }
-  // get padding() { return vert(20) }                                                                             //UNUSED:
-
-  // get testLook() { return SVGLook.test() }                                                                //UNUSED:
-  // get blackLook() { }                                                                                     //UNUSED:
-  // get protoLook() { return SVGLook.clear }                                                                //UNUSED:
-  // get testColor() { return protoColor(0, 230, 230, 1) }                                                   //UNUSED:
-
-  // get color() { return protoColor(230) }                                                                  //UNUSED:
-
-  // get look() {                                                                                            //UNUSED:
-  //   const clear = SVGLook.clear
-  //   const stroke = testingControls.borders ? SVGLook.testStroke() : []
-  //   const fill = testingControls.testColors ? SVGLook.testFill() : []
-  //   const black = testingControls.blackMode ? SVGLook.blackAndWhite : []
-  //   return [clear, stroke, fill, black]
-  // }
-
   get cornerRadius() { return 2 }
 
   get insetScale() {
@@ -340,20 +323,6 @@ class Frame extends ProtoLayer {
 
     this.finishSetup(S.Frame)
   }
-
-  // MARK: Frame View Properties
-  // get look() { return SVGLook.clear }
-  // get testLook() { return Look.test(this.size, 'frame') }
-  // get testColor() { return protoColor(200, 200, 200) }
-
-  // get loft() { return 0 }
-
-  // get bleedLook() {
-  //   return [
-  //     [CS.border, testingControls.borders ? '1px dashed orange' : 'none'],
-  //     [CS.borderRadius, testingControls.borders ? '50px' : '0px']
-  //   ]
-  // }
 
   // MARK: Frame Computed Properties
   get anchor() { return vert() }
@@ -1029,10 +998,6 @@ class CellGroup extends ProtoLayer {
 
   // MARK: CellGroup Computed Properties
   // #region Computed Properties
-  get testLook() { return Look.test(this.size, 'group') }
-  get testColor() { return protoColor(255, 127, 0, 1) }
-
-  //FIXME: get this implementation of islands to work with update cells and createIslands so the createShapes will work when called by createSubIslands-->createIslands-->createShapes!!! 
   get islands() { return this.perimeterIslands.map(pIsle => pIsle.allSubIslands).flat() }
   get perimeterShapes() { return this.perimeterIslands.map(i => i.shape) }
 
@@ -2010,21 +1975,6 @@ class Cell extends ProtoLayer {
     return { start: start, end: end }
   }
 
-  // get look() {
-  //   const clear = SVGLook.clear
-  //   const stroke = testingControls.borders ? SVGLook.testStroke() : []
-  //   const fill = testingControls.testColors ? SVGLook.testFill() : []
-  //   const black = testingControls.blackMode ? SVGLook.blackAndWhite : []
-
-  //   return [clear, stroke, fill, black]
-  // }
-
-  // get testLook() {
-  //   // return Look.neuShade()
-  //   return Look.test(this.size, 'cell')
-  // }
-  // get testColor() { return protoColor(0, 230, 230) }
-
   get x() { return this.coords.x }
   get y() { return this.coords.y }
   get isTaken() { return !this.isAvailable }
@@ -2233,14 +2183,6 @@ class Island extends ProtoLayer {
 
   // MARK: Island Computed Properties
   // #region Computed Properties
-  // get testLook() { return Look.test(this.size, 'island') }
-  // get testColor() { return protoColor(255, 230, 0, 1) }
-  // get cellGroup() {
-  //   return memoize(() => {
-  //     return this.grid.groupNamed(this.groupID)
-  //   }, `cellGroup`).call(this)
-  // }
-
   get allSubIslands() {
     //FIXME: using resetMemoized() when islands are added, memoize should be reinstated here
     // return memoize(() => {
@@ -2830,7 +2772,7 @@ class Shape extends ProtoLayer {
     this.finishSetup(S.Shapes)
   }
 
-  // get testLook() { return Look.test(this.size, 'shape') }
+  // MARK: Shape Computed Properties
   get cellRadius() { return this.grid.cellRadius }
   get cellBounds() { return this.island.cellBounds }
   get boundsRect() { return this.cellBounds.boundsRect }
