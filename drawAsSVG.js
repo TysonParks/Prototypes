@@ -2142,7 +2142,7 @@ class ProtoSegment extends Segment {
     //ARROW: canHaveCorrectBounds() : Bool : 
     const canHaveCorrectBounds = (seg) => {
       if (this.shape.neighborShapes.isEmpty) return seg.minArcIsWithinThatCornerBounds(this) || this.minArcIsWithinThatCornerBounds(seg)
-      else return this.isOutsideCorner ? seg.minArcIsWithinThatCornerBounds(this) : this.minArcIsWithinThatCornerBounds(seg)
+      else return this.isOutsideCorner ? seg.minArcIsWithinThatMaxArc(this) : this.minArcIsWithinThatMaxArc(seg) //TODO: I think this is correct minArc method to use
     }
     //ARROW: canHaveCorrectSize() : Bool : 
     const canHaveCorrectSize = (seg) => {             // this radius should be either larger or smaller than adjWrap
