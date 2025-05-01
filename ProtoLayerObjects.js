@@ -413,7 +413,7 @@ class Frame extends ProtoLayer {
 
     //NOTE: curve remaining loose corners (all non-minRadius corners)
     const looseCorners = backGrid.allSimpleSubShapesSegs
-      .filter(s => s.canCurveMoreAtEnd)
+    // .filter(s => s.canCurveMoreAtEnd)
 
     DeBug.warn(`backGrid`, backGrid)
     DeBug.warn(`flushWrap corners`, looseCorners)
