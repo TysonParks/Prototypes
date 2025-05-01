@@ -101,8 +101,8 @@ class FeatureSet {
   get minCellSize() { return Math.min(this.cellSize.x, this.cellSize.y) }
   get gridInsetSize() { return 100 * this.gridInsetScale.x }
   get minInsetAmount() {
-    // DeBug.log('this.minCellSize', this.minCellSize)
-    // DeBug.log('this.enums.cellInset.value', this.enums.cellInset)
+    // console.log('this.minCellSize', this.minCellSize)                                      //LOGGING:
+    // console.log('this.enums.cellInset.value', this.enums.cellInset)                        //LOGGING:
     return Math.max(.05, 1 / this.minCellSize * this.enums.cellInset.value)
   }
   get calcdFrameWidth() { return ((100 - this.gridInsetSize) - (this.minInsetAmount * this.minCellSize)) / 2 }
@@ -111,15 +111,15 @@ class FeatureSet {
   // #region Private Methods
   //METH:
   #calcFeatures() {
-    // DeBug.groupCollapsed(`AB.calcFeatures`)
-    DeBug.group(`AB.calcFeatures`)
+    // console.groupCollapsed(`AB.calcFeatures`)                                              //LOGGING:
+    console.group(`AB.calcFeatures`)                                                          //LOGGING:
     const r = this.r
 
     // grid dependencies
-    DeBug.groupCollapsed(`calcGridProps`)
-    // DeBug.group(`calcGridProps`)
+    console.groupCollapsed(`calcGridProps`)                                                   //LOGGING:
+    // console.group(`calcGridProps`)                                                         //LOGGING:
     this.#calcGridProps(r)
-    DeBug.groupEnd()
+    console.groupEnd()                                                                        //LOGGING:
 
     // cut dependencies
     this.#calcUniformCuts(r)
@@ -145,26 +145,26 @@ class FeatureSet {
     this.#calcGroups(r)
 
     // shape dependencies
-    this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)      //FIXME: DEPRECATE, calling R unnecessarily
+    this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)            //FIXME: DEPRECATE, calling R unnecessarily
 
-    DeBug.groupEnd()
+    console.groupEnd()                                                        //LOGGING:
   }
   // #endregion
   // MARK: Grid Methods
   // #region Grid Methods
   //METH: #calcGridProps()
   #calcGridProps(r) {
-    DeBug.groupCollapsed(`calcGrid`)
-    // DeBug.group(`calcGrid`)
+    console.groupCollapsed(`calcGrid`)                                        //LOGGING:
+    // console.group(`calcGrid`)                                              //LOGGING:
     this.#calcGridStyle(r)
     this.#calcX(r)
     this.#calcY(r)
-    DeBug.groupEnd()
+    console.groupEnd()                                                        //LOGGING:
 
-    DeBug.groupCollapsed(`calcFrameProps`)
-    // DeBug.group(`calcFrameProps`)
+    console.groupCollapsed(`calcFrameProps`)                                  //LOGGING:
+    // console.group(`calcFrameProps`)                                        //LOGGING:
     this.#calcFrameProps(r)
-    DeBug.groupEnd()
+    console.groupEnd()                                                        //LOGGING:
     this.#calcGridInset(r)
   }
   //METH: #calcGridStyle() : null : calculate gridStyle and cellAspect
@@ -259,7 +259,8 @@ class FeatureSet {
   #calcFrameProps(r) {
     //NOTE: calc frameWidth: function of cellOutset and gridStyle
     if (this.gridStyle === 'Magical') {
-      DeBug.log(`cellOutset`, this.enums.cellOutset.value)
+      console.log(`cellOutset`, this.enums.cellOutset.value)                                        //LOGGING:
+      this.#calcGridInset(r)
       const
         outset = this.enums.cellOutset.value,
         ratio = this.y / this.x
@@ -278,10 +279,12 @@ class FeatureSet {
       this.enums.frameWidth.chosen = w
     }
     else this.frameWidth = this.enums.frameWidth.feature(r)
-    DeBug.log(`frameWidth:`, this.frameWidth)
+    console.log(`frameWidth:`, this.frameWidth)                                                     //LOGGING:
+    this.#calcGridInset(r)
 
     const widthVal = this.enums.frameWidth.value
-    DeBug.warn(`widthVal`, widthVal)
+    console.warn(`widthVal`, widthVal)                                                              //LOGGING:
+    this.#calcGridInset(r)
 
     if (widthVal < 3) {                                   // Medium or Less
       this.enums.frameDivs.removeOptions([`5`, `4`, `3`])
@@ -327,8 +330,8 @@ class FeatureSet {
     }
 
     let ratio = calcRatio()
-    DeBug.log(`x`, x)
-    DeBug.log(`ratio`, ratio)
+    console.log(`x`, x)                                                       //LOGGING:
+    console.log(`ratio`, ratio)                                               //LOGGING:
 
     const cellOutset = this.enums.cellOutset.value
 
@@ -336,7 +339,7 @@ class FeatureSet {
     const calcFrameWidth = () => {
       //ARROW: widths() : [Number] : calculate frameWidth divisors based on frameWidth property
       const widths = () => {
-        DeBug.log(`frameWidth:`, this.frameWidth)
+        console.log(`frameWidth:`, this.frameWidth)                           //LOGGING:
         switch (this.frameWidth) {
           case `Minimum`:
             return [40]
@@ -354,19 +357,19 @@ class FeatureSet {
     //ARROW: calcInset(x) : lilVert : calculate gridInsetScale based on gridStyle
     const calcInset = () => {
       if (isFlex) {
-        DeBug.log(`cellOutset`, cellOutset)
+        console.log(`cellOutset`, cellOutset)                                                   //LOGGING:
         const
           gridCellBoundsSize = lilVert(x, y),
           gridBoundsSize = lilVert(100, 200),
           initCellSize = LilVert.div(gridBoundsSize, gridCellBoundsSize),
-          // DeBug.log(`initCellSize`, initCellSize)
+          // console.log(`initCellSize`, initCellSize)                                          //LOGGING:
           // const
           initMinCellWidth = Math.min(initCellSize.x, initCellSize.y),
-          // DeBug.log(`initMinCellWidth`, initMinCellWidth)
+          // console.log(`initMinCellWidth`, initMinCellWidth)                                  //LOGGING:
           // cellAspectRatio = initCellSize.x / initCellSize.y,
           // const
           outsetCellSize = LilVert.add(lilVert(cellOutset * initMinCellWidth), initCellSize),
-          // DeBug.log(`outsetCellSize`, outsetCellSize)
+          // console.log(`outsetCellSize`, outsetCellSize)                                      //LOGGING:
           // const
           initGridSize = LilVert.add(LilVert.mult(LilVert.sub(gridCellBoundsSize, lilVert(1)), initCellSize), outsetCellSize),
 
@@ -384,51 +387,51 @@ class FeatureSet {
             : 1 / ceil(normOutsetCellSize.x / targetWidth),
           insetScale = (100 / (100 + normOutsetCellSize.x * insetAmount)) * minNormInset
 
-        DeBug.log(``)
-        DeBug.log(`initCellSize`, initCellSize)
-        DeBug.log(`initMinCellWidth`, initMinCellWidth)
-        // DeBug.log(`cellAspectRatio`, cellAspectRatio)
-        DeBug.log(`outsetCellSize`, outsetCellSize)
-        DeBug.log(`initGridSize`, initGridSize)
-        DeBug.log(``)
-        DeBug.log(`normInset`, normInset)
-        DeBug.log(`minNormInset`, minNormInset)
-        DeBug.log(`normCellSize`, normCellSize)
-        DeBug.log(`minNormCellWidth`, minNormCellWidth)
-        DeBug.log(`normOutsetCellSize`, normOutsetCellSize)
-        // DeBug.log(`normGridSize`, normGridSize)
-        DeBug.log(``)
-        DeBug.log(`frameWidth`, frameWidth)
-        DeBug.log(`targetWidth`, targetWidth)
-        DeBug.log(`insetAmount`, insetAmount)
-        DeBug.log(`insetScale`, insetScale)
+        console.log(``)                                                                         //LOGGING:
+        console.log(`initCellSize`, initCellSize)                                               //LOGGING:
+        console.log(`initMinCellWidth`, initMinCellWidth)                                       //LOGGING:
+        // console.log(`cellAspectRatio`, cellAspectRatio)                                      //LOGGING:
+        console.log(`outsetCellSize`, outsetCellSize)                                           //LOGGING:
+        console.log(`initGridSize`, initGridSize)                                               //LOGGING:
+        console.log(``)                                                                         //LOGGING:
+        console.log(`normInset`, normInset)                                                     //LOGGING:
+        console.log(`minNormInset`, minNormInset)                                               //LOGGING:
+        console.log(`normCellSize`, normCellSize)                                               //LOGGING:
+        console.log(`minNormCellWidth`, minNormCellWidth)                                       //LOGGING:
+        console.log(`normOutsetCellSize`, normOutsetCellSize)                                   //LOGGING:
+        // console.log(`normGridSize`, normGridSize)                                            //LOGGING:
+        console.log(``)                                                                         //LOGGING:
+        console.log(`frameWidth`, frameWidth)                                                   //LOGGING:
+        console.log(`targetWidth`, targetWidth)                                                 //LOGGING:
+        console.log(`insetAmount`, insetAmount)                                                 //LOGGING:
+        console.log(`insetScale`, insetScale)                                                   //LOGGING:
 
         return lilVert(insetScale)
       } else {
         let insetRatio
         insetRatio = ratio / multiplier
         this.gridRatio = 1 / insetRatio
-        DeBug.warn(`GRID Ratio: ${this.gridRatio}:1`)
+        console.warn(`GRID Ratio: ${this.gridRatio}:1`)                                         //LOGGING:
         return lilVert((100 - (100 / (x * insetRatio + 1))) / 100)
       }
     }
 
-    DeBug.log(`gridYMult`, gridYMult)
+    console.log(`gridYMult`, gridYMult)                                                         //LOGGING:
     let multiplier = isFlex ?
       ((1 / 10) + (cellOutset / (x * 2))) * x * ratio
       : ceil((gridYMult - 2) * (x)) * ratio
-    DeBug.log(`ratio`, ratio)
-    DeBug.log(`multiplier`, multiplier)
+    console.log(`ratio`, ratio)                                                                 //LOGGING:
+    console.log(`multiplier`, multiplier)                                                       //LOGGING:
     this.gridInsetScale = calcInset()
     this.cellSize = LilVert.div(lilVert(100, 200).mult(this.gridInsetScale), lilVert(x, y))
 
     if (this.cellSize.x < 9 || this.cellSize.y < 9) this.enums.uniformCutsStyle.removeOptions(['rIn', 'jOut'])
 
-    DeBug.log(`gridInsetScale`, this.gridInsetScale)
-    DeBug.warn(`cellOutset`, this.cellOutset, cellOutset)
+    console.log(`gridInsetScale`, this.gridInsetScale)                                          //LOGGING:
+    console.warn(`cellOutset`, this.cellOutset, cellOutset)                                     //LOGGING:
 
     const outset = this.enums.cellOutset.value
-    console.log('outset', this.cellOutset)
+    console.log('outset', this.cellOutset)                                                      //LOGGING:
 
     if (outset > 1 / 4 || this.minCellSize < 10) this.enums.cellInset.removeOptions(['4x Min'])
     if (outset > 1 / 2 || this.minCellSize < 7.5) this.enums.cellInset.removeOptions(['3x Min'])
@@ -462,16 +465,16 @@ class FeatureSet {
   //METH: #recalcFrameWidth(r) : null : recalculate frameWidth for Magical gridStyle
   #recalcFrameWidth(r) {
     if (this.gridStyle === 'Magical') {
-      DeBug.log(`calcdFrameWidth`, this.calcdFrameWidth)
+      console.log(`calcdFrameWidth`, this.calcdFrameWidth)                    //LOGGING:
       const width = this.calcdFrameWidth
       // const widthVal = Math.min(3, Math.floor(this.calcdFrameWidth / 8))
-      // DeBug.log(`widthVal`, widthVal)
+      // console.log(`widthVal`, widthVal)                                    //LOGGING:
       let name
       if (width < 2) name = 'Minimum'
       if (width >= 2) name = 'Small'
       if (width > 8) name = 'Medium'
       if (width > 25) name = 'Large'
-      DeBug.log(`name`, name)
+      console.log(`name`, name)                                               //LOGGING:
 
       this.enums.frameWidth.chosen = name
       this.frameWidth = name
@@ -502,7 +505,7 @@ class FeatureSet {
       subs = 1
     }
 
-    console.error('extraGroups options', this.enums.extraGroups.options)
+    console.error('extraGroups options', this.enums.extraGroups.options)      //LOGGING:
     this.extraGroups = this.enums.extraGroups.feature(r)
     let extra = this.extraGroups
 
@@ -551,10 +554,10 @@ class FeatureSet {
       style,
       groups = new OpArray(...adds, ...subs)
     groups = groups.randShuffle(r)
-    // console.log(`#calcGroups adds`, adds)
-    // console.log(`#calcGroups subs`, subs)
-    // console.log(`#calcGroups groups`, groups)
-    // console.log('this.groupWeight', this.groupWeight)
+    // console.log(`#calcGroups adds`, adds)                                  //LOGGING:
+    // console.log(`#calcGroups subs`, subs)                                  //LOGGING:
+    // console.log(`#calcGroups groups`, groups)                              //LOGGING:
+    // console.log('this.groupWeight', this.groupWeight)                      //LOGGING:
 
     if (this.uniformCuts) style = this.uniformCutsStyle[0]
 
@@ -566,21 +569,21 @@ class FeatureSet {
       used += coverage
       if (i === groups.lastIndex) coverage = 1 - used
       const newGroup = this.#calcGroup(i + 1, r, additive, style, coverage)
-      // console.log('new group', newGroup)
+      // console.log('new group', newGroup)                                   //LOGGING:
       this.groups.push(newGroup)
     })
-    console.log('used', used)
-    console.log('groups', groups)
+    console.log('used', used)                                                 //LOGGING:
+    console.log('groups', groups)                                             //LOGGING:
   }
   //METH: calcGroup() : null : calculate group properties
   #calcGroup(i, r, additive, style, coverage) {
     const count = this.groupWeight
-    // console.log('count', count)
-    // console.log('style', i, additive, style)
+    // console.log('count', count)                                            //LOGGING:
+    // console.log('style', i, additive, style)                               //LOGGING:
     if (!style) {
       style = additive ? this.enums.additiveStyle.feature(r) : this.enums.subtractiveStyle.feature(r)
     }
-    // DeBug.log('style2', style)
+    // console.log('style2', style)                                           //LOGGING:
     let loft
     // if (this.uniformLofts) {
     //   loft = additive ? this.enums.groupHeight : this.enums.groupDepth
@@ -593,7 +596,7 @@ class FeatureSet {
       method = this.seed2 === 'Modifier' ? this.enums.modifierStyle.feature(R) : this.seed2
       if (method === 'Outlines') {
         method = 'Outline'
-        // console.log(`this.groups`, this.groups)
+        // console.log(`this.groups`, this.groups)                            //LOGGING:
         this.groups[0].coverage = .5 / this.groupWeight
         this.enums.modifierStyle.replaceOptions([['Outline', 1]], true)
       } else this.enums.modifierStyle.removeLastOption()
@@ -1150,31 +1153,31 @@ class EnumFeature {
   }
   //METH: addOptions()
   addOptions(options) {                                                                 //UNUSED:
-    // DeBug.log('addOptions called')
-    // DeBug.log('options', options)
+    // console.log('addOptions called')                                                 //LOGGING:
+    // console.log('options', options)                                                  //LOGGING:
     // options = OpArray.format(options)
-    // DeBug.log('options', options)
+    // console.log('options', options)                                                  //LOGGING:
     // const oldOpts = OpArray.format(this.options)
     const newOpts = [...options, ...this.options]
-    // DeBug.log('newOpts', newOpts)
+    // console.log('newOpts', newOpts)                                                  //LOGGING:
     if (newOpts) this.replaceOptions(newOpts)
   }
   //METH: removeOptions()
   removeOptions(options) {
     if (this.options.length < 2) return
-    // DeBug.warn(`removeOptions`, this.name)
-    // DeBug.log(`options before`, this.options)
-    // DeBug.log(`options to remove`, options)
+    // console.warn(`removeOptions`, this.name)                                         //LOGGING:
+    // console.log(`options before`, this.options)                                      //LOGGING:
+    // console.log(`options to remove`, options)                                        //LOGGING:
     const reduced = this.options.filter(opt => !options.includes(opt[0]))
-    // DeBug.log(`reduced`, reduced)
+    // console.log(`reduced`, reduced)                                                  //LOGGING:
     if (reduced) this.replaceOptions(reduced)
-    // DeBug.log(`options after`, this.options)
+    // console.log(`options after`, this.options)                                       //LOGGING:
   }
   //METH: removeLast()
   removeLastOption(amount = 1) {
-    // console.log('removeLastOption', amount, this)
+    // console.log('removeLastOption', amount, this)                                    //LOGGING:
     const last = this.options.slice(-amount).map(opt => opt[0])
-    // console.log('last', last)
+    // console.log('last', last)                                                        //LOGGING:
     this.removeOptions(last)
   }
   //METH: reduceOptions()
@@ -1184,11 +1187,10 @@ class EnumFeature {
   }
   //METH: replaceOptions()
   replaceOptions(withOptions, all = true) {
-    // let vals
-    // DeBug.warn(`replaceOptions`)
-    // DeBug.log(this)
-    // DeBug.log(`original options`, this.options)
-    // DeBug.log(`withOptions`, withOptions)
+    // console.warn(`replaceOptions`)                                                   //LOGGING:
+    // console.log(this)                                                                //LOGGING:
+    // console.log(`original options`, this.options)                                    //LOGGING:
+    // console.log(`withOptions`, withOptions)                                          //LOGGING:
 
     if (all) {
       this.options = withOptions
@@ -1215,13 +1217,8 @@ class EnumFeature {
   // #region Private Methods
   //METH: getFeature(index)
   #getFeature(index) {
-    // console.log(this)
     const result = this.options[index][0]
     if (result) return result
-    // else {
-    // DeBug.log(this.index)
-    // DeBug.log(this.options)
-    // }
   }
   //METH: getFeatureIndex(weight)
   #getFeatureIndex(weight) { return this.weightedOptions.findIndex(e => between(weight, e[1])) }
@@ -1230,7 +1227,7 @@ class EnumFeature {
     let weight = this.options
       .map(option => option[1])
       .reduce((a, b) => a + b, 0)
-    if (roundToDec(weight) !== 1) DeBug.error(`weight != 1`, this.name, weight)
+    if (roundToDec(weight) !== 1) console.error(`weight != 1`, this.name, weight)                         //LOGGING:
     return weight
   }
   //METH: weighOptions()
@@ -1239,10 +1236,11 @@ class EnumFeature {
       p = [],
       currentWeight = 0
     const weightRange = [0, this.#totalWeight()]
+
     this.options.forEach(e => {
       let
-        range = [currentWeight, currentWeight + e[1]],
-        normRange = normalizeSubRange(range, weightRange)
+        ogRange = [currentWeight, currentWeight + e[1]],
+        normRange = normalizeSubRange(ogRange, weightRange)
       currentWeight += e[1]
       p.push([e[0], normRange])
     })
@@ -1250,7 +1248,9 @@ class EnumFeature {
   }
 }
 
-// MARK: LilVert 
+//MARK: Helpers
+
+// MARK: LilVert CLASS: little Vertex class
 //SIZE: 35 lines
 function lilVert(x, y) {
   if (arguments.length === 1) y = x
@@ -1263,15 +1263,11 @@ class LilVert {
     this.y = y
   }
 
-  add(vert) { return LilVert.add(this, vert) }
-  sub(vert) { return LilVert.sub(this, vert) }
-  mult(vert) { return LilVert.mult(this, vert) }
-  div(vert) { return LilVert.div(this, vert) }
-
+  //MARK: Static Methods
   static add(a, b) { return lilVert(a.x + b.x, a.y + b.y) }
   static sub(a, b) { return lilVert(a.x - b.x, a.y - b.y) }
   static mult(a, b) {
-    console.log('mult', a, b)
+    console.log('mult', a, b)                                                   //LOGGING:
     b = LilVert.coerce(b)
     return lilVert(a.x * b.x, a.y * b.y)
   }
@@ -1279,11 +1275,21 @@ class LilVert {
     b = LilVert.coerce(b)
     return lilVert(a.x / b.x, a.y / b.y)
   }
-
   static coerce(vert) {
     if (vert instanceof LilVert) return vert
     if (typeof vert === 'number' && !isNaN(vert)) return lilVert(vert, vert)
     if (Array.isArray(vert)) return lilVert(vert[0], vert[1])
   }
 
+  //MARK: Instance Methods
+  add(vert) { return LilVert.add(this, vert) }
+  sub(vert) { return LilVert.sub(this, vert) }
+  mult(vert) { return LilVert.mult(this, vert) }
+  div(vert) { return LilVert.div(this, vert) }
 }
+
+//MARK: range funcs
+function between(x, range = [0, 1]) { return x >= range[0] && x <= range[1] }
+function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
+function normalize(value, range) { return convertRange(value, range, [0, 1]) }
+function normalizeSubRange(subrange, range) { return [normalize(subrange[0], range), normalize(subrange[1], range)] }
