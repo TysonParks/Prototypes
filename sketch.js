@@ -20,11 +20,11 @@ let
 
   //Variables
   frameSize,
-  //  FTS                     // Feature Set
-  BG, FRAME, BGRID, GRID,  // Background, Frame, Background Grid, Grid
-  ROT, frameRate,
-  R, S, RuID,              // Random, Store, Random UID
-  animationController
+  //  FTS                   // Feature Set
+  BG, FRAME, BGRID, GRID,   // Background, Frame, Background Grid, Grid
+  ROT, frameRate,           // Rotation, Frame Rate
+  R, S, RuID,               // Random, Store, Random UID
+  animationController       // Animation Controller
 
 
 // MARK: setup
@@ -111,7 +111,7 @@ function setupBackground() {
 
 //MARK: CLASS: ProtoMill
 //CLASS: ProtoMill
-// SIZE: 134 lines
+// SIZE: 617 lines
 class ProtoMill {
   F                     // Features
   grid
@@ -761,10 +761,12 @@ function gridTests2(features) {
   DeBug.log(``)
   //                                                                  //NOTE: 6. Make Frame
   DeBug.groupCollapsed(`Make Frame`)
-  // DeBug.group(`setBackGridGroup`)
+  DeBug.groupCollapsed(`mill.mkFrame()`)
   const frameCuts = mill.mkFrame()
-  // FRAME.setBackGridGroup(R.random_int(0, 0), R.random_bool(1), frameCuts)
+  DeBug.groupEnd()
+  DeBug.groupCollapsed(`FRAME.setBackGridGroup`)
   FRAME.setBackGridGroup(0, true, frameCuts, mill.minInsetAmount)
+  DeBug.groupEnd()
   DeBug.groupEnd()
   DeBug.log(``)
 
@@ -782,7 +784,7 @@ function gridTests2(features) {
   // FRAME.backGrid.showCellsDebug()
   // FRAME.backGrid.showShapesDebug()
   // FRAME.backGrid.showShapeGroupsDebug(false)
-  GRID.showCellsDebug()
+  // GRID.showCellsDebug()
   // GRID.showShapesDebug()
   // GRID.showShapeGroupsDebug(false)
   // GRID.showFrameRate(animationController)
