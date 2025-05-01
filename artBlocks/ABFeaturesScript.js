@@ -946,15 +946,15 @@ function calculateFeatures(token = tokenData) {
   // #endregion
   // MARK: Helper Methods
   // #region Helper Methods
-  function between(x, range = [0, 1]) { return x >= range[0] && x < range[1] }
-  function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
-  function normalize(value, range) { return convertRange(value, range, [0, 1]) }
-  function normalizeSubRange(subrange, range) { return [normalize(subrange[0], range), normalize(subrange[1], range)] }
+  // function between(x, range = [0, 1]) { return x >= range[0] && x < range[1] }
+  // function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
+  // function normalize(value, range) { return convertRange(value, range, [0, 1]) }
+  // function normalizeSubRange(subrange, range) { return [normalize(subrange[0], range), normalize(subrange[1], range)] }
   // FUNC:
-  function roundToDec(number, decimalPlaces = 3) {
-    const factor = 10 ** decimalPlaces
-    return Math.round(number * factor) / factor
-  }
+  // function roundToDec(number, decimalPlaces = 3) {
+  //   const factor = 10 ** decimalPlaces
+  //   return Math.round(number * factor) / factor
+  // }
   // #endregion
 
   return calculateAll()
