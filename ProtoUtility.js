@@ -10,7 +10,7 @@ function memoize(getter, key) {
       cache = {}
       memoCache.set(this, cache)
     }
-    if (!(symbolKey in cache)) { cache[symbolKey] = getter.call(this) }
+    if (!(symbolKey in cache)) cache[symbolKey] = getter.call(this)
     return cache[symbolKey]
   }
 }
@@ -26,7 +26,7 @@ function resetMemoized(instance, ...keys) {
 }
 
 //MARK: Aspect
-// ENUM: Aspect
+// ENUM: Aspect : Represents the aspect ratio of a shape
 // SIZE: 30 lines
 class Aspect {
   static Square = new Aspect(0)
@@ -48,9 +48,9 @@ class Aspect {
   #getName(number) { return this.#descriptions[number] }
 
   static fromRatio(ratio) {
-    if (ratio === 1) { return Aspect.Square }
-    if (ratio < 1) { return Aspect.Portrait }
-    if (ratio > 1) { return Aspect.Landscape }
+    if (ratio === 1) return Aspect.Square
+    if (ratio < 1) return Aspect.Portrait
+    if (ratio > 1) return Aspect.Landscape
   }
 
   #descriptions = [
@@ -61,8 +61,8 @@ class Aspect {
 }
 
 //MARK: Direction
-// ENUM: Direction
-// SIZE: 231 lines
+// ENUM: Direction : Represents a direction in 2D space
+// SIZE: 308 lines
 class Direction {
 
   static None = new Direction()
@@ -107,7 +107,6 @@ class Direction {
     this.vals = OpArray.from(this.vals)
   }
 
-
   get directions() {
     return memoize(() => {
       return OpArray.from(this.vals.map(a => new Direction(a)))
@@ -118,31 +117,13 @@ class Direction {
 
   get moveCoord() {
     return memoize(() => {
-      // DeBug.group(`moveCoord`)
-      // DeBug.log(this.name)
-      // DeBug.log(this.angle)
-      // DeBug.log(this.angleDegrees)
-      // DeBug.groupEnd()
-      return this.directOp(a => {
-        // if (a.value % 0.5 === 0) {
-        //   return this.#moveCoords[a.name]
-        // } else {
-        return Direction.moveCoordFromAngle(a.angle)
-        // }
-
-
-      })
-      // return this.directOp(a => this.#moveCoords[a.name])
+      return this.directOp(a => Direction.moveCoordFromAngle(a.angle))
     }, `moveCoord`).call(this)
   }
 
-
   // get angle() { return this.valOp(a => ((((a * -1) - 1) % 4) + 2) * PI / 2) }
   get angle() { return this.directOp(a => Direction.valueToAngle(a.value)) }
-  // get angle() { return this.directOp(a => this.#angles[a.name]) }
-
   get angleDegrees() { return this.directOp(a => degrees(a.angle)) }
-  // get angleDegrees() { return degrees(this.angle) }
 
   get lineVector() { if (this.isSingle) { return this.moveCoord.normalize() } }
 
@@ -169,10 +150,10 @@ class Direction {
   }
   get andOpposites() { return new Direction(this.vals.union(this.opposites.vals, 'vals')) }
   get perpindiculars() {
-    if (this.allAreHorizontal) { return Direction.Vertical }
-    if (this.allAreVertical) { return Direction.Horizontal }
-    if (this.allArePosOrdinal) { return Direction.NegOrdinal }
-    if (this.allAreNegOrdinal) { return Direction.PosOrdinal }
+    if (this.allAreHorizontal) return Direction.Vertical
+    if (this.allAreVertical) return Direction.Horizontal
+    if (this.allArePosOrdinal) return Direction.NegOrdinal
+    if (this.allAreNegOrdinal) return Direction.PosOrdinal
   }
 
   get isAll() { return this.vals.length === 8 }
@@ -215,10 +196,10 @@ class Direction {
   get toRight() { return this.next(2) }
 
   get hierarchy() {
-    if (this.isAll) { return 3 }
-    if (this.isCardinal) { return 2 }
-    if (this.isTwoOpposites) { return 1 }
-    if (this.isNone) { return 0 }
+    if (this.isAll) return 3
+    if (this.isCardinal) return 2
+    if (this.isTwoOpposites) return 1
+    if (this.isNone) return 0
     DeBug.error('Undefined directionHierachy')
   }
 
@@ -233,11 +214,10 @@ class Direction {
   next(steps = 1) { return this.valOp(a => new Direction((a + (0.5 * steps)) % 4)) }
   rotated(degree = 90) { return new Direction(this.vals.map(e => this.#normalizeVals(e + degree / 90)).numSorted) }
   flipped(direction = 'negOrdinal') {
-    const coords = this.#matrixValCoords
-    const flippedMatrix = this.#matrix.flipped2D(direction)
-    // print(coords.map(e => e.string))
-    // print(flippedMatrix)
-    const newVals = coords.map(e => flippedMatrix.valueAt2DCoords(e))
+    const
+      coords = this.#matrixValCoords,
+      flippedMatrix = this.#matrix.flipped2D(direction),
+      newVals = coords.map(e => flippedMatrix.valueAt2DCoords(e))
     return new Direction(newVals)
   }
 
@@ -251,15 +231,13 @@ class Direction {
 
   #normalizeVals(vals) { return (vals % 4 + 4) % 4 }
 
-
   turnTo(direction) {
     if (this.isSingle && direction.isSingle) {
-      // print('valid candidates')
-      if (direction.equals(this.toLeft)) { return Turn.L }
-      if (direction.equals(this.previous())) { return Turn.SL }
-      if (direction.equals(this)) { return Turn.S }
-      if (direction.equals(this.next())) { return Turn.SR }
-      if (direction.equals(this.toRight)) { return Turn.R }
+      if (direction.equals(this.toLeft)) return Turn.L
+      if (direction.equals(this.previous())) return Turn.SL
+      if (direction.equals(this)) return Turn.S
+      if (direction.equals(this.next())) return Turn.SR
+      if (direction.equals(this.toRight)) return Turn.R
     } else {
       throw new Error("Invalid turn. Can only turn to/from a single direction.")
     }
@@ -267,21 +245,14 @@ class Direction {
 
   static atAngle(angle, decimal = 2) {
     angle = constrainAngle(angle)
-    const direction = Direction.None
-    const name = direction.angleKeys.find(key => equalsRoundedDec(direction.#angles[key], angle, decimal))
+    const
+      direction = Direction.None,
+      name = direction.angleKeys.find(key => equalsRoundedDec(direction.#angles[key], angle, decimal))
     if (!name) {
-      DeBug.error(`This angle is Non-Axial!: ${angle}`)
-      // DeBug.log(this)
       const value = Direction.angleToValue(angle)
       return new Direction(value)
-
-      return Direction.None
     }
     const index = direction.#descriptions.findIndex(e => e === name)
-    // DeBug.log(`angle`, angle)
-    // DeBug.log(`direction`, direction)
-    // DeBug.log(`name`, name)
-    // DeBug.log(`index`, index)
     return new Direction(index / 2)
   }
 
@@ -290,22 +261,19 @@ class Direction {
   static valueToAngle(value) { return PI * (((value + 0.5) % 4) - 1.5) / 2 }
 
   static fromMoveCoord(moveCoord) {
-    const dir = Direction.None
-    const dirs = Object
-      .keys(dir.#moveCoords)
-      .filter(key => dir.#moveCoords[key].equals(moveCoord))
-      .map(name => Direction.named(name))
+    const
+      dir = Direction.None,
+      dirs = Object
+        .keys(dir.#moveCoords)
+        .filter(key => dir.#moveCoords[key].equals(moveCoord))
+        .map(name => Direction.named(name))
     return dirs.length === 1 ? dirs[0] : dirs
   }
 
   static moveCoordFromAngle(angle) {
-    let [x, y] = [cos(angle), sin(angle)]
-    let [absX, absY] = [abs(x), abs(y)]
-    // DeBug.group(`moveCoordFromAngle`)
-    // DeBug.warn(`angle`, angle)
-    // DeBug.warn(`degrees`, degrees(angle))
-    // DeBug.warn(`cos,sin`, [x, y])
-    // DeBug.groupEnd()
+    let
+      [x, y] = [cos(angle), sin(angle)],
+      [absX, absY] = [abs(x), abs(y)]
 
     // const epsilon = 0.0001 // Small threshold for floating-point comparison
 
@@ -328,33 +296,35 @@ class Direction {
   }
 
   valOp(fn) {
-    if (this.isSingle) { return fn(this.vals[0]) }
+    if (this.isSingle) return fn(this.vals[0])
     return OpArray.from(this.vals.map(e => fn(e)))
   }
   //NOTE: some functions that use this might error as they previously always received just a value
   directOp(fn) {
-    if (this.isSingle) { return fn(this.directions[0]) }
+    if (this.isSingle) return fn(this.directions[0])
     return OpArray.from(this.directions.map(e => fn(e)))
   }
 
   equals(direction) { return this.vals.equalsSorted(direction.vals) }
 
   static named(name) {
-    if (name === `up`) { return Direction.Up }
-    const dir = Direction.None
-    const index = dir.#descriptions.findIndex(e => e === name)
-    if (index) { return new Direction(index / 2) }
+    if (name === `up`) return Direction.Up
+    const
+      dir = Direction.None,
+      index = dir.#descriptions.findIndex(e => e === name)
+    if (index) return new Direction(index / 2)
   }
 
   #getName(number) {
     if (number instanceof Array) {
-      if (number.length === 0) { return 'none' }
-      if (number.length === 1) { number = number[0] } else {
+      if (number.length === 0) return 'none'
+      if (number.length === 1) number = number[0]
+      else {
         return Object
           .keys(this.#generalNames)
           .find(key => OpArray.from(this.#generalNames[key]).equalsSorted(OpArray.from(number)))
       }
-      if (number.length > 1) { return number.map(n => this.#descriptions[n * 2]).join(', ') }
+      if (number.length > 1) return number.map(n => this.#descriptions[n * 2]).join(', ')
     }
     return this.#descriptions[number * 2]
   }
@@ -401,11 +371,11 @@ class Direction {
     'left': (PI),
     'upLeft': (PI * -3 / 4),
   }
-
 }
+
 //MARK: Corner
-// ENUM: Corner
-// SIZE: 27 lines
+// ENUM: Corner : Represents a corner in 2D space
+// SIZE: 32 lines
 class Corner {
   static UpLeft = new Corner(0)
   static UpRight = new Corner(1)
@@ -433,39 +403,32 @@ class Corner {
   equals(corner) { return this.value === corner.value }
 
   #descriptions = [
-    'upLeft',  // 0
-    'upRight', // 1
-    'downRight', // 2
-    'downLeft',  // 3
+    'upLeft',     // 0
+    'upRight',    // 1
+    'downRight',  // 2
+    'downLeft',   // 3
   ]
 }
 
-// //MARK: Corners
-// // // ENUM: Corners
+//MARK: Corners
+// ENUM: Corners : Represents a rectangular set of corners in 2D space
+// SIZE: 70 lines
 class Corners {
   static Directions = new Corners(Direction.Ordinal.directions.shifted(-1))   // Corner of corresponding directions. Requires shifting to match
 
   values
 
   constructor(values) {
-    // DeBug.log(`values`, values)
-    if (values instanceof Segment) { values = [values.start, values.end] }
+    if (values instanceof Segment) values = [values.start, values.end]
     if (values instanceof Array) {
-      if (values.length === 2 && values.every(v => v instanceof Vertex)) {
-        // DeBug.log(`values`, values)
+      if (values.length === 2 && values.every(v => v instanceof Vertex))
         values = this.#valuesFromBoundsVerts(values[0], values[1])
-      }
-      // DeBug.log(`after valuesFromBoundsVerts`, values)
-      if (values.length === 4) { this.values = values }
-    } else if (isCornerObj(values)) {
+      if (values.length === 4) this.values = values
+    } else if (isCornerObj(values))
       values = [values.upLeft, values.upRight, values.downRight, values.downLeft]
-    } else {
-      DeBug.error(`Corners failed to initialize`)
-    }
+    else DeBug.error(`Corners failed to initialize`)
     this.values = OpArray.format(values)
-    if (this.values.length !== 4) {
-      DeBug.error(`Corners expects 4 values: expect problems!`)
-    }
+    if (this.values.length !== 4) DeBug.error(`Corners expects 4 values: expect problems!`)
   }
 
   get upLeft() { return this.values[0] }
@@ -523,26 +486,19 @@ class Corners {
 }
 
 //MARK: Sides
-// ENUM: Sides
+// ENUM: Sides : Represents a set of rectangular sides in 2D space
+// SIZE: 32 lines
 class Sides {
   static Directions = new Sides(Direction.Cardinal.directions)
 
   values
 
   constructor(values) {
-    // DeBug.log(`Sides values`, values)
-    if (values instanceof Array) {
-      values = values
-    } else if (isSideObj(values)) {
-      // DeBug.log(`values is isSideObj`, values)
-      values = [values.up, values.right, values.down, values.left]
-    } else {
-      DeBug.error(`Sides require an array to initialize`, values)
-    }
+    if (values instanceof Array) values = values
+    else if (isSideObj(values)) values = [values.up, values.right, values.down, values.left]
+    else DeBug.error(`Sides require an array to initialize`, values)
     this.values = OpArray.format(values)
-    if (this.values.length !== 4) {
-      DeBug.error(`Sides expects 4 values: expect problems!`)
-    }
+    if (this.values.length !== 4) DeBug.error(`Sides expects 4 values: expect problems!`)
   }
 
   get up() { return this.values[0] }
@@ -567,8 +523,8 @@ class Sides {
 }
 
 //MARK: Turn
-// ENUM: Turn
-// SIZE: 58 lines
+// ENUM: Turn : Represents a turn in 2D space ( 2 connected segments )
+// SIZE: 64 lines
 class Turn {
   static Left = new Turn(-1)
   static Straight = new Turn(0)
@@ -585,7 +541,7 @@ class Turn {
   // static UR = new Turn(2)      // U-Turn Right
 
   static from(segPair) {
-    if (segPair.length !== 2) { DeBug.error('expected 2 segments') }
+    if (segPair.length !== 2) DeBug.error('expected 2 segments')
     let d1 = segPair[0].direction
     let d2 = segPair[0].direction
     return d1.turnTo(d2)
@@ -608,22 +564,16 @@ class Turn {
 
   get direction() {
     switch (this.value) {
-      case -1:                        // Left
-        return Direction.Left
-      case -0.5:                      // Soft Left
-        return Direction.UpLeft
-      case 0:                         // Straight
-        return Direction.Up
-      case 0.5:                       // Soft Right
-        return Direction.UpRight
-      case 1:                         // Right
-        return Direction.Right
-
+      case -1: return Direction.Left        // Left
+      case -0.5: return Direction.UpLeft    // Soft Left
+      case 0: return Direction.Up           // Straight
+      case 0.5: return Direction.UpRight    // Soft Right
+      case 1: return Direction.Right        // Right
     }
   }
   get normalRotAngle() { return PI * (0.5 - this.value / 4) }
 
-  #getName(value) { return this.#name[`${this.value}`] }
+  #getName(value) { return this.#name[`${value}`] }
 
   #name = {
     '-1': 'Left',
@@ -640,14 +590,15 @@ class Turn {
     '1': 'R',
   }
 }
+
 //MARK: EdgePart
-// ENUM: EdgePart
-// SIZE: 102 lines
+// ENUM: EdgePart : Represents a part of a shape's edge in 2D space ( 2 connected turns / 3 connected segments )
+// SIZE: 97 lines
 class EdgePart {
-  // static Flat = new EdgePart(0)     // SS
-  // static Corner = new EdgePart(10)  // LS, RS, SL, SR
-  // static Stair = new EdgePart(20)    // RL, LR
-  // static UTurn = new EdgePart(30)   // RR, LL
+  // static Flat = new EdgePart(0)        // SS
+  // static Corner = new EdgePart(10)     // LS, RS, SL, SR
+  // static Stair = new EdgePart(20)      // RL, LR
+  // static UTurn = new EdgePart(30)      // RR, LL
 
   static F = new EdgePart('F')         // SS              --> 'Flat'
 
@@ -680,11 +631,11 @@ class EdgePart {
 
   get isFlat() { return this.isBaseType('Flat') }
 
-  get isUTurn() { return this.isBaseType('UTurn') }
+  get isUTurn() { return this.isBaseType('UTurn') }   // LL / RR
   get isUTurnIn() { return this.isType('UI') }        // LL
   get isUTurnOut() { return this.isType('UO') }       // RR
 
-  get isStair() { return this.isBaseType('Stair') }
+  get isStair() { return this.isBaseType('Stair') }   // RL / LR
   get isStairIn() { return this.isType('StI') }       // RL
   get isStairOut() { return this.isType('StO') }      // LR
 
@@ -732,38 +683,37 @@ class EdgePart {
     'UO': 'RR',
   }
 
-  static fromTurns(turns) {
-    // DeBug.log('turns', turns)
-    // DeBug.log('turnPatterns', this.turnPatterns)
-    if (turns.length === 2) { return this.from2(turns) }
-  }
+  static fromTurns(turns) { if (turns.length === 2) return this.from2(turns) }
 
   static from2(turns) {
-    // DeBug.error(`from2(turns): `, turns)
-    // DeBug.error(turns.map(t => t.shortName))
-    const pair = turns.map(e => e.shortName).join('')
-    const name = getKeyByValue(this.turnPatterns, pair)
+    const
+      pair = turns.map(e => e.shortName).join(''),
+      name = getKeyByValue(this.turnPatterns, pair)
     return new EdgePart(name)
   }
 }
 
 //MARK: Bounds
+// SIZE: 122 lines
 // #region Bounds
 //TODO: Make this into a class and incorporate SelectionBounds, possibly making it a subclass of Bounds?
-// FUNC: isBoundsObj()
+// FUNC: isBoundsObj() : BOOL : checks if object has bounds properties
 function isBoundsObj(obj) { return hasProperties(obj, [`xMin`, `xMax`, `yMin`, `yMax`]) }
-// FUNC: isCoordsObj()
+
+// FUNC: isCoordsObj() : BOOL : checks if object has coords properties
 function isCoordsObj(obj) { return hasProperties(obj, [`x`, `y`]) }
-// FUNC: isCornerObj()
+
+// FUNC: isCornerObj() : BOOL : checks if object has corner properties
 function isCornerObj(obj) { return hasProperties(obj, [`upLeft`, `upRight`, `downRight`, `downLeft`]) }
-// FUNC: isSideObj()
+
+// FUNC: isSideObj() : BOOL : checks if object has side properties 
 function isSideObj(obj) { return hasProperties(obj, [`up`, `right`, `down`, `left`]) }
+
 // FUNC: findBounds() : {BoundsObject} : get bounds for combos of [segments, verts] or objects that contain bounds props
 function findBounds(...geo) {
-  // DeBug.log(`geo`, geo)
   let boundsVerts, xMin, xMax, yMin, yMax
-  //ARROW: bounds() : assemble bounds obj from mins & maxes
-  const bounds = () => { return { xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax, } }
+  //ARROW: bounds() : {BoundsObject}  :assemble bounds obj from mins & maxes
+  const bounds = () => { return { xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax } }
 
   if (geo.length === 1 && isBoundsObj(geo[0])) {                        // geo is obj with mins & maxes
     xMin = geo[0].xMin
@@ -774,33 +724,36 @@ function findBounds(...geo) {
   } else {                                                              // geo is rest param array
     boundsVerts = geo
   }
-  // DeBug.log(`boundsVerts`, boundsVerts)
+
   boundsVerts = OpArray.format(boundsVerts).flat(Infinity).compacted
     .map(e => {                                                         // map segs to verts
-      if (e instanceof Segment) { return [e.start, e.end] }
-      if (e instanceof Vertex) { return e }
+      if (e instanceof Segment) return [e.start, e.end]
+      if (e instanceof Vertex) return e
       //TODO: I could also check for bounds objects and arrays here to unpack all combos of madness
       DeBug.error(`findBounds failed: geo contains item  of unrecognized type`, e)
     }).flat()
   const xVals = boundsVerts.map(v => v.x)
   const yVals = boundsVerts.map(v => v.y)
-  xMin = min(xVals)                                  // calculate mins and maxes
+  xMin = min(xVals)                                                     // calculate mins and maxes
   xMax = max(xVals)
   yMin = min(yVals)
   yMax = max(yVals)
   return bounds()
 }
+
 // FUNC: vertIsWithinBounds() : BOOL : finds if vert is within bounds of boundsVerts
 //NOTE: boundsVerts can be any number of verts above zero, the bounds of those points is calculated with min/max
 function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, deviation) {
-  if (!vert || !bounds) { return false }
-  const x = approxToDec(vert.x, accuracy, 0)
-  const y = approxToDec(vert.y, accuracy, 0)
+  if (!vert || !bounds) return false
+
+  const
+    x = approxToDec(vert.x, accuracy, 0),
+    y = approxToDec(vert.y, accuracy, 0)
   bounds = { ...bounds }.map(val => approxToDec(val, accuracy, 0))
-  // DeBug.log(`x: ${x}, y: ${y}`)
-  // DeBug.log(`bounds`, bounds)
+
   const { xMin, xMax, yMin, yMax } = bounds
   let result
+
   if (includeBorder) {
     result = x >= xMin
       && x <= xMax
@@ -818,157 +771,133 @@ function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, de
       && abs(y - yMin) < deviation
       && abs(y - yMax) < deviation
   }
-  // DeBug.error(`result`, result)
   return result
 }
+
 // FUNC: boundsIsWithinTestBounds() : BOOL : finds if vert is within bounds of testBounds
 function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, justOverlaps = false, accuracy = 2) {
   bounds = findBounds(bounds)
   const boundsVerts = [vert(bounds.xMin, bounds.yMin), vert(bounds.xMax, bounds.yMax)]
   testBounds = findBounds(testBounds)
-  if (justOverlaps) {
-    return boundsVerts.some(v => vertIsWithinBounds(v, testBounds, includeBorder, accuracy))
-  } else {
-    return boundsVerts.every(v => vertIsWithinBounds(v, testBounds, includeBorder, accuracy))
-  }
+  if (justOverlaps) return boundsVerts.some(v => vertIsWithinBounds(v, testBounds, includeBorder, accuracy))
+  else return boundsVerts.every(v => vertIsWithinBounds(v, testBounds, includeBorder, accuracy))
 }
+
 // FUNC: boundsOverlap() : BOUNDS : finds overlap of two pieces of GEO
 function boundsOverlap({ geo, accuracy = 3 } = {}) {
-  // DeBug.log(`boundsOverlap geo`, geo)                                                                  //LOGGING:
   let boundsArray
 
-  if (Array.isArray(geo[0])) {
-    // DeBug.log(`boundsOverlap found subArray`)
-    boundsArray = geo[0]
-  } else {
-    boundsArray = geo
-  }
-  // DeBug.log(`boundsOverlap boundsArray`, boundsArray.map(s => [s.start?.string, s.end?.string]))                     //LOGGING:
+  if (Array.isArray(geo[0])) boundsArray = geo[0]
+  else boundsArray = geo
+
   //ARROW: overlap(geo1, geo2)
   const overlap = (geo1, geo2) => {
-    // DeBug.log()
-    const bounds1 = findBounds(geo1).map(v => roundToDec(v, accuracy))
-    const bounds2 = findBounds(geo2).map(v => roundToDec(v, accuracy))
-    // DeBug.log(`overlap() bounds1`, bounds1)
-    // DeBug.log(`overlap() bounds2`, bounds2)
 
-    const minOverlap = vert(max(bounds1.xMin, bounds2.xMin), max(bounds1.yMin, bounds2.yMin))
-    const maxOverlap = vert(min(bounds1.xMax, bounds2.xMax), min(bounds1.yMax, bounds2.yMax))
+    const
+      bounds1 = findBounds(geo1).map(v => roundToDec(v, accuracy)),
+      bounds2 = findBounds(geo2).map(v => roundToDec(v, accuracy)),
+      minOverlap = vert(max(bounds1.xMin, bounds2.xMin), max(bounds1.yMin, bounds2.yMin)),
+      maxOverlap = vert(min(bounds1.xMax, bounds2.xMax), min(bounds1.yMax, bounds2.yMax))
 
-    if (minOverlap.x > maxOverlap.x || minOverlap.y > maxOverlap.y) return          // no overlap
-
+    if (minOverlap.x > maxOverlap.x || minOverlap.y > maxOverlap.y) return   // no overlap
     return findBounds(minOverlap, maxOverlap)
   }
+  if (boundsArray.length === 0) return          // no bounds
 
-
-  if (boundsArray.length === 0) return
-  // DeBug.error(`boundsArray`, boundsArray)
-
-  const initialBounds = boundsArray[0]        // Initial bounds should be the first geo's bounds
-
-  // Reduce over the geo array to find the cumulative overlap
-  const result = boundsArray
-    // .slice(1)                                    //FIXME: this might be breaking things, re-enable if so
-    .reduce((prevBounds, currentGeo) => {
-      if (!prevBounds) return null
-      return overlap(prevBounds, currentGeo)
-    }, initialBounds)
+  const
+    initialBounds = boundsArray[0],             // Initial bounds should be the first geo's bounds
+    result = boundsArray                        // Reduce over the geo array to find the cumulative overlap
+      // .slice(1)                                    //TODO: this might be breaking things, re-enable if so
+      .reduce((prevBounds, currentGeo) => {
+        if (!prevBounds) return null
+        return overlap(prevBounds, currentGeo)
+      }, initialBounds)
 
   if (!result) return
-
   return result
 }
-
 // #endregion
 
 // MARK: Loop Utilities
-//FUNC: safeWhile()
+//FUNC: safeWhile() : null : executes actionFunc() while conditionFunc() is true, up to maxIterations  
+//NOTE: this is used to prevent infinite loops in cases where the conditionFunc() is not guaranteed to eventually return false
 function safeWhile(conditionFunc, actionFunc, maxIterations = 10) {
   let iterations = 0
   while (conditionFunc() && iterations < maxIterations) {
     actionFunc()
     iterations++
   }
-  if (iterations >= maxIterations) {
-    DeBug.error('Reached the maximum iteration limit of ' + maxIterations)
-  }
+  if (iterations >= maxIterations) DeBug.error('Reached the maximum iteration limit of ' + maxIterations)
 }
-//FUNC: safeArrayWhile()
+//FUNC: safeArrayWhile() : null : executes actionFunc() while conditionArrayFunc() is true, up to maxIterations
+//NOTE: this is a more complex version of safeWhile() that checks for changes in the array length
 function safeArrayWhile(conditionArrayFunc, actionFunc, arrayMin = 0, maxRepeats = 5) {
-  let repeats = 0
-  let minCount = Infinity // Initialize minCount to a very large number
-  let currentCount
+  let
+    repeats = 0,
+    minCount = Infinity,  // Initialize minCount to a very large number
+    currentCount
   while (conditionArrayFunc().length > arrayMin && repeats < maxRepeats) {
     currentCount = conditionArrayFunc().length
-    DeBug.log(`currentCount`, currentCount)
-    if (currentCount < minCount) {
-      minCount = currentCount
-    }
+
+    if (currentCount < minCount) minCount = currentCount
+
     actionFunc()
     let newCount = conditionArrayFunc().length
-    if (newCount >= minCount) {
-      repeats++
-    } else {
+    if (newCount >= minCount) repeats++
+    else {
       minCount = newCount // Update minCount since we found a new lower count
       repeats = 0
     }
   }
-  if (repeats >= maxRepeats) {
-    DeBug.error('Reached the maximum iteration limit of ' + maxRepeats)
-  }
+  if (repeats >= maxRepeats) DeBug.error('Reached the maximum iteration limit of ' + maxRepeats)
 }
-
 
 //MARK: Geometry, Angles and Rotation
-// FUNC: gridPointIndex() calculates 2D array index given coords(x,y) and array width
+// FUNC: gridPointIndex() : [Vertex] : calculates 2D array index given coords(x,y) and array width
 function gridPointIndex(x, y, width, offset = 0) { return (x + y * width) + offset }
-// FUNC: gridCoords() calculates coords(x,y) given and index and array width
+
+// FUNC: gridCoords() : Vertex : calculates coords(x,y) given and index and array width
 function gridCoords(index, width, offset = 0) {
   index = index - offset
-  const x = index % width
-  const y = floor(index / width)
+  const
+    x = index % width,
+    y = floor(index / width)
   return vert(x, y)
 }
-// FUNC: rotateCoords() calculates rotated coords(x,y) given coords(x,y) and degree of rotation
+
+// FUNC: rotateCoords() : [x,y] : calculates rotated coords(x,y) given coords(x,y) and degree of rotation
 function rotateCoords(x, y, degree) {
   switch (degree) {
-    case 90:
-      return [y, -x]
-    case 180:
-      return [-x, -y]
-    case 270:
-      return [-y, x]
-    default:
-      throw new Error("Invalid degree. Must be 90, 180, or 270.")
+    case 90: return [y, -x]
+    case 180: return [-x, -y]
+    case 270: return [-y, x]
+    default: throw new Error("Invalid degree. Must be 90, 180, or 270.")
   }
 }
-// FUNC: constrainAngle(angle) : keep angle between -PI and PI
+
+// FUNC: constrainAngle(angle) : RADIAN angle (Number) : keep angle between -PI and PI
 function constrainAngle(angle) {
-  angle = angle % (2 * PI)              // modulo 
-  if (angle > PI) { angle -= 2 * PI }
-  if (angle < -PI) { angle += 2 * PI }
-  if (equalsRoundedDec(angle, -PI, 3)) { angle = PI }
+  angle = angle % (2 * PI)
+  if (angle > PI) angle -= 2 * PI
+  if (angle < -PI) angle += 2 * PI
+  if (equalsRoundedDec(angle, -PI, 3)) angle = PI
   return angle
 }
 
-// FUNC: normalizeDegree() normalize any positive or negative degree to 0-360 range
-function normalizeDegree(degree) {
-  // return range(0, 359).normalize(degree)
-  return ((degree % 360) + 360) % 360
-}
-// FUNC: normRadToDeg() convert rad to normalized degrees
+// FUNC: normalizeDegree() : DEGREES angle (number) : normalize any positive or negative degree to 0-360 range
+function normalizeDegree(degree) { return ((degree % 360) + 360) % 360 }
+
+// FUNC: normRadToDeg() : DEGREES angle (number) : convert RADIAN angle to normalized DEGREES angle
 function normRadToDeg(radians) {
   const radPipe = pipe(degrees, normalizeDegree)
   return radPipe(radians)
 }
-//FUNC: cosDeg()
-function cosDeg(deg) {
-  return cos(deg * PI / 180)
-}
-//FUNC: sinDeg()
-function sinDeg(deg) {
-  return sin(deg * PI / 180)
-}
+
+//FUNC: cosDeg() : DEGREES angle (number) : calculate cosine of angle in DEGREES
+function cosDeg(deg) { return cos(deg * PI / 180) }
+
+//FUNC: sinDeg()  : DEGREES angle (number) : calculate sine of angle in DEGREES
+function sinDeg(deg) { return sin(deg * PI / 180) }
 
 //MARK: Function Composition
 // NOTE: https://itnext.io/write-better-javascript-function-composition-with-pipe-and-compose-93cc39ab16ee
@@ -980,26 +909,24 @@ const pipe = (...fns) => x => fns.reduce((res, fn) => fn(res), x)
 
 // FUNC: reduce() reduces initial to % if reducer is 0-1, and to target count if reducer >=1
 function reduce(initial, reducer) {
-  if (reducer < 1) { return initial * (1 - reducer) }
-  else { return initial - reducer }
+  if (reducer < 1) return initial * (1 - reducer)
+  else return initial - reducer
 }
 
 //MARK: Object Utilities
-// FUNC: getKeyByValue() get key by value in any object
-function getKeyByValue(object, value) {
-  return Object.keys(object).find(key => object[key] === value);
-}
-//FUNC: isObject() : checks to see if obj is really an object
+// FUNC: getKeyByValue() : Key : get key by value in any object
+function getKeyByValue(object, value) { return Object.keys(object).find(key => object[key] === value) }
+
+//FUNC: isObject() : BOOL : checks to see if obj is really an object
 function isObject(obj) { return obj !== null && typeof obj === 'object' }
-//FUNC: hasProperties() : checks to see if obj is really an object and has certain named properties
-function hasProperties(obj, props) {
-  // if (typeof obj !== 'object' || obj === null) return false
-  return isObject(obj) ? props.every(prop => prop in obj) : false
-}
+
+//FUNC: hasProperties() : BOOL : checks to see if obj is really an object and has certain named properties
+function hasProperties(obj, props) { return isObject(obj) ? props.every(prop => prop in obj) : false }
 
 //MARK: Math Utilities
+
+// FUNC: getDivisors() : [Number] : get array of prime divisors
 //NOTE: made with ChatGPT 4.0 June30.2023
-// FUNC: getDivisors() get array of prime divisors
 function getDivisors(number, prime = false) {
   const divisors = []
   for (let i = 2; i <= sqrt(number); i++) {
@@ -1010,37 +937,34 @@ function getDivisors(number, prime = false) {
       }
     }
   }
-  if (prime) {
-    return divisors.filter((divisor) => isPrime(divisor)).sort((a, b) => a - b)
-  }
+  if (prime) return divisors.filter((divisor) => isPrime(divisor)).sort((a, b) => a - b)
   return divisors.sort((a, b) => a - b)
 }
+
+// FUNC: isPrime() : BOOL : check if number is prime
 //NOTE: made with ChatGPT 4.0 June30.2023
-// FUNC: isPrime() 
 function isPrime(number) {
-  if (number < 2) { return false }
+  if (number < 2) return false
   for (let i = 2; i <= Math.sqrt(number); i++) {
-    if (number % i === 0) { return false }
+    if (number % i === 0) return false
   }
   return true
 }
-// FUNC: roundToDec() round to number of decimal places
-function roundToDec(number, decimalPlaces) {
-  return approxToDec(number, decimalPlaces)
-}
-// FUNC: approxToDec() round/floor/ceil to number of decimal places
+// FUNC: roundToDec() : Number : round to number of decimal places
+function roundToDec(number, decimalPlaces) { return approxToDec(number, decimalPlaces) }
+
+// FUNC: approxToDec() : Number : round/floor/ceil to number of decimal places
 function approxToDec(number, decimalPlaces = 2, mode = 0) {
-  const factor = 10 ** decimalPlaces
-  const mult = number * factor
+  const
+    factor = 10 ** decimalPlaces,
+    mult = number * factor
   switch (mode) {
-    case 0: // round
-      return round(mult) / factor
-    case 1: // floor
-      return floor(mult) / factor
-    case 2: // ceiling
-      return ceil(mult) / factor
+    case 0: return round(mult) / factor     // round
+    case 1: return floor(mult) / factor     // floor
+    case 2: return ceil(mult) / factor      // ceiling   
   }
 }
+
 // FUNC: swapLets() swap values of `let` variables
 //FIXME: this won't work, only possible with arrays or objects. ask chat for implementation
 // function swapVals(a, b) {
@@ -1048,7 +972,8 @@ function approxToDec(number, decimalPlaces = 2, mode = 0) {
 //   a = b
 //   b = temp
 // }
-// FUNC: equalsRoundedDec() round to number of decimal places
+
+// FUNC: equalsRoundedDec() : Number : round to number of decimal places
 function equalsRoundedDec(num1, num2, accuracy) {
   num1 = roundToDec(num1, accuracy)
   num2 = roundToDec(num2, accuracy)
@@ -1057,74 +982,61 @@ function equalsRoundedDec(num1, num2, accuracy) {
 
 // TODO: consider the intersection with the DOM Range interface
 // CLASS: Range
-// SIZE: 45 lines
+// SIZE: 52 lines
 function range(start = 0, end = 1) { return new Range(start, end) }
 class Range {
   start
   end
 
   constructor(start = 0, end = 1) {
-    // DeBug.log(`Range start/end`, start, end)
     if (arguments.length === 1) {
-      if (start instanceof Array) {
-        this.start = start[0], this.end = start[1]
-      } else {
-        this.start = start, this.end = start
-      }
-    } else {
-      this.end = end, this.start = start
+      if (start instanceof Array) this.start = start[0], this.end = start[1]
+      else this.start = start, this.end = start
     }
+    else this.end = end, this.start = start
   }
+
   //MARK: Computed
   get usesIntegers() { return Number.isInteger(this.start) && Number.isInteger(this.end) }
   get size() { return abs(this.end - this.start) }
   get cycleSize() { return this.size + 1 }
 
   //MARK: Methods
-  //METH: array() : OpArray : creates an array of numbers within range given the step size
+  //METH: array() : [Number] : creates an array of numbers within range given the step size
   array(step = 1) {
-    // if (!this.usesIntegers) { return }4
     return OpArray.from({ length: (this.end - this.start) / step + 1 }, (_, i) => this.start + (i * step))
   }
-  //METH: forEach() : 
-  forEach(callbackFn) { return this.array().forEach(callbackFn) }             //UNUSED?
-  between(x) { return x >= this.start && x <= this.end }                      //UNUSED? -only used in ABFeaturesScript
+  //METH: forEach() : null : executes callback function for each number in range (like a for loop)
+  forEach(callbackFn) { return this.array().forEach(callbackFn) }             //UNUSED:
+  //METH: between() : BOOL : checks if number is between start and end of range
+  between(x) { return x >= this.start && x <= this.end }                      //UNUSED: -only used in ABFeaturesScript
+  //METH: convertRange() : Number : converts a number from one range to another
   convertRange(x, range2) {
     return (x - this.start) * (range2.end - range2.start) / (this.end - this.start) + range2.start
   }
+  //METH: normalize() : Number : normalizes a number to a range of 0-1
   normalize(x) { return this.convertRange(x, range()) }
+  //METH: normalizeSubRange() : Range : normalizes a subrange to a range of 0-1
   normalizeSubRange(subrange) {
-    return range(normalize(subrange.start, this), normalize(subrange.end, this))
+    return range(this.normalize(subrange.start), this.normalize(subrange.end))
   }
+  //METH: cycle() : Number : cycles a number within the range
   cycle(x) { return ((x - this.start) % this.cycleSize + this.cycleSize) % this.cycleSize + this.start }
+  //METH: subRanges() : [Range] : splits the range into subranges of equal size
   subRanges(amount) {
     // if (amount === 1) { return OpArray.from([this]) }
     const subSize = this.size / amount
     // DeBug.log(`subRanges subSize`, subSize)
     return new OpArray(amount).fill(0).map((u, i) => {
-      const start = this.start + i * subSize
-      const end = start + subSize
-      DeBug.log(`subRanges start/end`, start, end)
+      const
+        start = this.start + i * subSize,
+        end = start + subSize
+      // DeBug.log(`subRanges start/end`, start, end)
       return range(start, end)
     })
   }
 }
 
-
-
-
-// Sequence generator function (commonly referred to as "range", e.g. Clojure, PHP etc)
-//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
-function rangeArray(start, stop, step = 1) { return OpArray.from({ length: (stop - start) / step + 1 }, (_, i) => start + (i * step)) }
-
-//TODO: DEPRECATE? - included in ABFeatureScript.js - actually no, because they are wrapped in calculateFeatures()
-// MARK: Helper Methods
-function between(x, range = [0, 1]) { return x >= range[0] && x <= range[1] }
-function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
-function normalize(value, range) { return convertRange(value, range, [0, 1]) }
-function normalizeSubRange(subrange, range) {
-  return [normalize(subrange[0], range), normalize(subrange[1], range)]
-}
 
 
 
