@@ -624,38 +624,38 @@ class Grid extends ProtoLayer {
 
   //METH: curveCellRadiusCorners() : null : curve all corners that have min radius
   curveMinRadiusCorners({ corners = this.allMinRadiusCorners, all = false } = {}) {
-    if (all) { corners = this.allSimpleSubShapesSegs }
+    if (all) corners = this.allSimpleSubShapesSegs
     DeBug.log(`this.allMinRadiusCorners`, this.allMinRadiusCorners)
     DeBug.log(`corners`, corners)
-    // if (!all) { DeBug.log(`allMinRadiusCorners`, corners) }
 
+    //NOTE: If cellAspect non-square, process double min radius corners first to allow proper wrapping
+    if (!this.cellAspect.isSquare) {
+      const
+        radius = this.cellRadius * 2,
+        otherMins = this.allSimpleSubShapesSegs.filter(s => equalsRoundedDec(s.arcRadius, radius))
+
+      otherMins.forEach(s => {
+        s.addDistancedEndCornerVerts(radius)
+        if (!all
+          && !s.flushWrapper?.isMinCorner
+          && s.flushWrapper?.isCoinOutWrapper
+        )
+          s.flushWrap()
+      })
+    }
+
+    //NOTE: process min radius corners
     // corners = corners.slice(0, 5)                                        //TESTING: reduce processed
     corners.forEach(s => {
-      // if (s.id.includes('cell081')                                                                   //LOGGING:
-      //   // || s.id.includes('cell008')                                                               //LOGGING:
-      //   // || s.id.includes('cell001')                                                               //LOGGING:
-      // ) { report = true }                                                                            //LOGGING:
-      // let report = false                                                                             //LOGGING:
-      // if (report) {                                                                                  //LOGGING:
-      //   DeBug.log(``)                                                                              //LOGGING:
-      // DeBug.log(s.id)                                                                            //LOGGING:
-      //   DeBug.log(`this before`, s.cubicVerts)                                                     //LOGGING:
-      // }                                                                                              //LOGGING:
       if (s.isMinCorner) s.setMinEndCorner(true)
       else s.setMinEndCorner()
-      // if (report) { DeBug.log(`this after`, s.cubicVerts) }                                        //LOGGING:
       if (!all
         && !s.flushWrapper?.isMinCorner
         && s.flushWrapper?.isCoinOutWrapper
-      )
-        s.flushWrap()
-      // if (report) {                                                                                //LOGGING:
-      //   DeBug.log(`calling flushWrap:`, s.coincidentWrapper?.id)                                    //LOGGING:
-      //   DeBug.log(`flushWrap:`, s.coincidentWrapper)                                                //LOGGING:
-      //   DeBug.log(`cubicVerts:`, s.coincidentWrapper?.cubicVerts, s.coincidentWrapper?.endNeighbor.cubicVerts)
-      // }                                                                                            //LOGGING:
-
+      ) s.flushWrap()
     })
+
+
   }
   //METH: completeEnds() : null : complete all segment ends that are incomplete
   completeEnds = (testPool, wrap = true) => {
@@ -670,7 +670,10 @@ class Grid extends ProtoLayer {
     testPool.forEach(s => {
       // DeBug.log(`current Seg`, s)
       s.matchEndCorner()
-      if (wrap) s.flushWrap()
+      if (wrap && !s.inWrappers) {
+        if (s.flushOutWrapper) s.flushWrap()
+        if (s.adjOutWrapper) s.adjWrap()
+      }
     })
   }
 
@@ -986,12 +989,17 @@ class Grid extends ProtoLayer {
         )
       DeBug.log(`badFlushWraps`, testPool)
 
-      testPool = testPool.slice(0, 1)                                      //TESTING: reduce processed
+      // testPool = testPool.slice(0, 1)                                      //TESTING: reduce processed
       testPool.forEach(s => {
         //ARROW: checkNeighbors() : null : check neighbors for bad adjWraps
         const checkNeighbors = (neighbors) => {
           neighbors = neighbors.filter(n => n.adjWrapIsNonEquidistant)
           if (!neighbors.isEmpty) fixBadAdjWraps(neighbors)
+        }
+        //ARROW: checkWrappers() : null : check wrappers for bad adjWraps
+        const checkWrappers = (wrappers) => {
+          wrappers = wrappers.filter(w => w.adjWrapIsNonEquidistant)
+          if (!wrappers.isEmpty) fixBadAdjWraps(wrappers)
         }
 
         //ARROW: wrapOutFix() : null : wrap out to self
@@ -1005,6 +1013,7 @@ class Grid extends ProtoLayer {
               s.adjWrap(true)                                     //TODO: fixes hor aspect cell bug, remove if problematic       
             }
             checkNeighbors(s.neighborsArray)
+            if (s.outWrappers) checkWrappers(s.outWrappers)
           }
         }
         //ARROW: wrapInFix() : null : wrap in to self
@@ -1015,6 +1024,7 @@ class Grid extends ProtoLayer {
             s.inWrapper.replaceEndRadiantOutWrapsOrigin()
           }
           checkNeighbors(s.neighborsArray)
+          if (s.outWrappers) checkWrappers(s.outWrappers)
         }
 
         DeBug.error(`current badFlushWrap: `, s)
@@ -1485,7 +1495,7 @@ class Grid extends ProtoLayer {
       DeBug.warn(`fixBadFlushWraps`)                                                            //LOGGING:
       fixBadFlushWraps()
       DeBug.warn(`fixLoosies`)                                                                  //LOGGING:
-      // fixLoosies()
+      fixLoosies()
 
       DeBug.warn(`roundQuads`)                                                                  //LOGGING:
       // roundQuads()
