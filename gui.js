@@ -2,7 +2,7 @@ let
   gui,
 
   testingControls = {
-    hashNumber: 1291,
+    hashNumber: 1311,
     lastHash: false,
     blackMode: false,
   },
@@ -92,4 +92,3 @@ function getCurrentTime(format24Hr = false) {
   hours = String(hours).padStart(2, '0')
   return `${hours}.${minutes}.${seconds}${amPm ? '' + amPm : ''}`
 }
-

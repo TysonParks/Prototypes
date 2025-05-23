@@ -1315,6 +1315,24 @@ const lastHash = [
   '0xba5dd42727a6ce531108bd18c3099da608bcd33c57f4ce13587d1a173d8e59cf', // 1305 METH:(8)
   '0x65bf6ac7ace6d7ad1a64429f059aaa466f24322fd00dd42b46c35948231269fa',
   '0x74f66546baf5842b00e3876a9983f892f1c5649b5a4d4e45b1644a51e9897233',
+  '0x27640a4f4091da377c9e509d916667c0e5ee7e19c8b47f6ef9d943257313f9a3',
+  '0x1f3965e4be7354f7890f1f3bb81d6115e4625d017c941ac0a06dff76c69da932',
+  '0x94457389b5a1da68045205d266341f6e34347d9f159470671e1793516536ccac', // 1310 METH:(8)
+  '0x065e0cd05ee724fd01de0a6e3a65efa523cd8e74f426fc8e85318a8e80a21d89',
+  '0xd35b23127c3224e301925279daecd18925aa4b2a869eb00c81ece7c4d1a6b6c2',
+  '0xe506b62e6eab1e7475ee84b6c3522355a94bb059b8fee70b17b4cbcac81b7ff1',
+  '0xc64724229f6f48e0a606e4449b6667509d997c27df9aecb92849c96520b61151',
+  '0x27054ee8e9f707e312a36ce601cc1c174ed650c45392205274eb5c825cc69921', // 1315 METH:(8)
+  '0xdb3749ff4b2e263c78184b25daa819fbdb855bacc62a1862beacdef5fcc272b0',
+  '0xac9b75346b2b1fcd2c69877f9a60f577baca62cb7529082a940cbf09b16d99c2',
+  '0xf59c3bf504ea6bcafd77e0ccbdbd78ac3e0e077fa284e0acc0a6dedc4de297b6',
+  '0xa999da4071329b80853f9c4a7af121201b0bf14482d610f138cc4c93475ce9dc',
+  '0x12171f6f5991084d251833e7242a8ccb53c6e73f63b0ccd0dfb08916e1504201', // 1320 METH:(8) 
+  '0xe233cccb91f495e1c1a8868455f7c7ccb720e7513213ef18c86a9d079a62bd5f',
+  '0x53ef5fb29736971fecc38a1f85833814f185c495cdee03e64f6d0476333b57ef',
+  '0xa571122ae9beb2022809bebac11f205b23cc001813d26fb9e8f29a79a607058b',
+  '0xb856f297f87ceb969f7f2d885901136c088be316170441d946038ba957a4d13f',
+  '0x44f170489b76c97876eecef90c6eafde7e121d9854c5d154493204838a301f2a', // 1325 METH:(8)
 ]
 
 function currentHash() {
@@ -1379,21 +1397,21 @@ const hex5 = "0123456789abcdefghijklmnopqrstuv"
 
 // MARK: FUNCTIONS
 
-// FUNC: pointToHex5() : hex5 (String):  convert a point to a hex5 string
-function pointToHex5(x, y) { return hex5[x] + hex5[y] }
+// // FUNC: pointToHex5() : hex5 (String):  convert a point to a hex5 string
+// function pointToHex5(x, y) { return hex5[x] + hex5[y] }
 
-// FUNC: hex5ToPoint() : [x, y] : convert a hex5 string to a point
-function hex5ToPoint(hexString) {
-  const pair = Array.from(hexString)
-  return [parseInt(pair[0], 32), parseInt(pair[1], 32)]
-}
+// // FUNC: hex5ToPoint() : [x, y] : convert a hex5 string to a point
+// function hex5ToPoint(hexString) {
+//   const pair = Array.from(hexString)
+//   return [parseInt(pair[0], 32), parseInt(pair[1], 32)]
+// }
 
-// FUNC: pointsToHex5s() : [hex5] : convert an array of points to an array of hex5 strings
-function pointsToHex5s(array = []) {
-  let hashes = []
-  for (e of array) {
-    const hash = pointToHex5(e[0], e[1])
-    hashes.push(hash)
-  }
-  return hashes
-}
+// // FUNC: pointsToHex5s() : [hex5] : convert an array of points to an array of hex5 strings
+// function pointsToHex5s(array = []) {
+//   let hashes = []
+//   for (e of array) {
+//     const hash = pointToHex5(e[0], e[1])
+//     hashes.push(hash)
+//   }
+//   return hashes
+// }
