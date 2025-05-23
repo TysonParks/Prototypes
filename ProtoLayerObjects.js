@@ -357,8 +357,8 @@ class Frame extends ProtoLayer {
     this.backGrid.frontGrid = grid
     BGRID = this.backGrid
 
-    console.log(`this.grid`, this.grid)
-    console.log(`this.backGrid`, this.backGrid)
+    DeBug.log(`this.grid`, this.grid)
+    DeBug.log(`this.backGrid`, this.backGrid)
     this.backGrid.backElt = this.grid.backElt
     this.backGrid.comboElt = this.grid.comboElt
     this.backGrid.highElt = this.grid.highElt
@@ -692,6 +692,51 @@ class SelectionBounds {
     return this.boundCellColumns.map(c => c.filter(r => this.selection.some(s => s.id === r.id)))
   }
 
+  get selectionRowsGrouped() {
+    return memoize(() => {
+      return this.#groupSelectionStrips(true)
+    }, `selectionRowsGrouped`).call(this)
+  }
+  get selectionColumnsGrouped() {
+    return memoize(() => {
+      return this.#groupSelectionStrips(false)
+    }, `selectionColumnsGrouped`).call(this)
+  }
+  //METH: groupSelectionStrips() : Object : group selection strips (rows or columns) into groups of neighboring cells
+  #groupSelectionStrips(hor) {
+    const maxWidth = hor ? this.rowCount : this.columnCount,
+      selStrips = hor ? this.selectionRows : this.selectionColumns,
+      selGroups = selStrips.map((strip, i) => {
+        // DeBug.error(`strip start`, i)
+        if (strip.isEmpty || strip.length === maxWidth)           // if strip is empty or full, just return strip
+          return [{ i: i, groups: strip }]
+
+        let prev, group, groups = new OpArray
+        strip.forEach((cell, j) => {
+          // DeBug.warn(`group start`, group)
+          if (j !== 0) prev = strip[j - 1]                             // set prev to previous cell
+
+          // DeBug.log(`cell`, cell.id)
+          // DeBug.log(`prev`, prev?.id)
+          // DeBug.log(`prev.neighbors`, prev?.neighbors.map(n => n.id))
+
+          if (prev?.neighbors?.some(n => n.id === cell.id)) {           // if prev and cell are neighbors
+            // DeBug.log(`Yes neighbors`)
+            group.push(cell)                                            // add to group 
+          } else {                                                      // if not neighbors
+            // DeBug.log(`NOT neighbors`)
+            groups.push(group)                                          // add group to groups
+            group = [cell]                                              // reset group
+          }
+          if (j === strip.lastIndex) groups.push(group)                // if last cell, push group to groups
+          // DeBug.log(`group end`, group)
+          // DeBug.log(`groups`, groups)
+        })
+        return { i: i, groups: groups.compacted }                       // return index and groups
+      })
+    return selGroups
+  }
+
   get outerCells() {
     //ARROW: calcCells()
     const calcCells = (row, min) => {
@@ -753,50 +798,150 @@ class SelectionBounds {
   #checkCellThickness(minimum, hor) {
     const minMaxStart = hor ? this.columnCount : this.rowCount
 
-    if (!this.isGroupBounds && !this.isIslandBounds) {
+    if (!this.isGroupBounds && !this.isIslandBounds) {          //TODO: check if this is needed, not sure what case this supports
       if (this.isFull) return minMaxStart
       else return
     }
 
-    const
-      colRows = hor ? this.boundCellRows : this.boundCellColumns,
-      isIsland = this.isIslandBounds,
-      idName = isIsland ? `islandID` : `groupID`,
-      id = this[idName]
+    const colRows = hor ? this.boundCellRows : this.boundCellColumns
 
-    //ARROW: checkID()
-    const checkID = (cell) => isIsland ? cell.islandIDs.has(id) : cell.groupID === id
-
-    //ARROW: checkSel()
+    //ARROW: checkSel() : BOOL : check if cell is within selection
     const checkSel = (cell) => this.selection.some(sel => sel.id === cell.id)
 
     let minMax = minimum ? minMaxStart : 0
-    //ARROW: getMinMax()
+    //ARROW: getMinMax() : get min or max of count and previous minMax
     const getMinMax = (count) => minimum ? min(count, minMax) : max(count, minMax)
 
     colRows.forEach(row => {
-      let count = 0
+      let count = 0                                         // count of currently neighboring cells
       row.forEach(c => {
-        if (checkSel(c)) {
-          count += 1
-          // DeBug.log(`new count`, count)
-        } else {
-          // DeBug.log(`end count`, count)
-          if (count > 0) {
-            minMax = getMinMax(count)
-            // DeBug.warn(`new minMax`, minMax)
-          }
-          count = 0
+        if (checkSel(c)) count += 1                         // if cell is within selection, increment count
+        else {                                              // if not, count ends
+          if (count > 0) minMax = getMinMax(count)          // if count > 0, get minMax of count
+          count = 0                                         // reset count
         }
       })
-      if (!minimum || count > 0) {
-        minMax = getMinMax(count)
-        // DeBug.warn(`new minMax`, minMax)
+      if (!minimum || count > 0) minMax = getMinMax(count)  // if at end of row checks, max or count not reset, get minMax of count
+    })
+    return minMax
+  }
+
+  get maxSquareWidth() {
+    DeBug.warn(`maxSquareWidth called`)
+    if (this.isFull) {                      // if selection is full, means it's a rectangle or square
+      DeBug.error(`maxSquareWidth isFull`)
+      return this.minCellThickness          // return minCellThickness
+    }
+
+    //ARROW: maxGroupLength() : get max length of group in strip
+    const maxGroupLength = (strip) => max(strip.groups.map(g => g.length))
+
+    const
+      maxHor = this.maxHorCellThickness,
+      maxVert = this.maxVertCellThickness
+    let
+      scanRows = maxHor > maxVert,                                                    // scan rows with max thickness
+      lowestMax = 1,                                                                  // lowest calculated max thickness
+      maxWidth = min(this.maxCellThickness, this.rowCount, this.columnCount),         // maxWidth is maximum possible width
+      selStrips = scanRows ? this.selectionRowsGrouped : this.selectionColumnsGrouped // get selection strips based on scanRows
+    // .sort((a, b) => maxGroupLength(b) - maxGroupLength(a))
+
+    selStrips = selStrips.slice(0, 1)                                                 // TESTING: take only the first strip
+
+    //ARROW: testRange() : get array of squares from 1 to maxWidth - lowestMax
+    const testRange = (group) => range(1, group.length - lowestMax).array()
+
+    //ARROW: hasSquare() : BOOL : check if group has square the size of lowestMax
+    const hasSquare = (group, index) => {
+      const
+        cell = group[index - 1],
+        amount = lowestMax,
+        outline = this.grid.tempOutlineSelection([cell], amount, Direction.Cartesian)
+      return outline.every(cell => this.selection.some(s => s.id === cell.id))
+    }
+
+
+    while (lowestMax < maxWidth) {                                                    // once lowestMax is less than maxWidth, we've hit the max
+      selStrips = selStrips.filter(strip => maxGroupLength(strip) >= lowestMax)       // filter out strips where maxGroupLength is less than lowestMax
+      selStrips.forEach(strip => {
+        strip.groups = strip.groups.filter(g => g.length >= lowestMax)                // filter out groups where length is less than lowestMax
+        let groupIndex = 0
+        while (groupIndex < strip.groups.length) {
+          const
+            group = strip.groups[i],
+            squareRange = testRange(group)
+          let cellIndex = 0
+          while (cellIndex < squareRange.length) {
+            const
+              square = squareRange[cellIndex],
+              hasSquare = hasSquare(group, square)
+            if (hasSquare) {
+              lowestMax = max(lowestMax, square)                                  // set lowestMax to max of lowestMax and square
+              break
+            }
+            cellIndex++
+          }
+
+
+
+          i++
+
+        }
+
+      })
+    }
+
+
+    DeBug.log(`selStrips`, selStrips)
+    selStrips.forEach((strip) => {
+      if (maxGroupLength(strip) >= maxWidth) {
+        const
+          groupIndex = strip.groups.findIndex(g => g.length === maxWidth),
+          group = strip.groups[groupIndex]
+        let
+          squareWidth = maxWidth - 1,
+          squares, squaresGroup = new OpArray
+
+        while (squareWidth > 1) {
+          squares = range(1, group.length - squareWidth).array()
+            .map(sq => {
+              const cell = group[sq - 1],
+                amount = squareWidth
+              return this.grid.tempOutlineSelection([cell], amount, Direction.Cartesian).union([cell], ['id']).gridVertSorted
+            })
+            .filter(sq => sq.every(cell => this.selection.some(s => s.id === cell.id)))
+            .map(sq => this.grid.cellBounds({ selection: sq }).minCellThickness)
+
+          squaresGroup.push(squares)
+          squareWidth--
+        }
+        DeBug.log(`squaresGroup`, squaresGroup)
       }
     })
-    // DeBug.error(`final minMax`, minMax)
-    // DeBug.log(``)
-    return minMax
+
+    return selStrips
+  }
+
+
+
+  get maxRect() {
+    if (this.isFull) return this.selection
+
+  }
+
+
+  //METH: checkCellRectThickness()
+  #checkCellRectThickness() {
+    const
+      maxHor = this.maxHorCellThickness,
+      maxVer = this.maxVertCellThickness,
+      minHor = this.minHorCellThickness,
+      minVer = this.minVerCellThickness
+    let rects = new OpArray
+
+
+
+
   }
 
   get anchor() { return Vertex.mult(this.cornerCellVerts.upLeft, this.cellSize) }
@@ -1414,7 +1559,7 @@ class CellGroup extends ProtoLayer {
             // useExtHighDepth: profile.isR ? amount < 2 : true,   //FIXME: also check 'cuts' for consecutive rCuts!
             useExtHighDepth: !isFrame,
           })
-        } else console.error(`cut profile is undefined!`)
+        } else DeBug.error(`cut profile is undefined!`)
 
         DeBug.log(`loft`, loft)
         DeBug.log(`cut`, cut)
@@ -1770,10 +1915,10 @@ class ShapeGroup extends ProtoLayer {
     // .attribute('stroke-width', this.cellGroup.isBackGroup ? 0 : this.grid.cellRadius * .25)
     // .attribute('stroke-opacity', this.cellGroup.isBackGroup ? 0 : 1)
     // .attribute('fill-opacity', this.cellGroup.isBackGroup ? 1 : 0)
-    // console.warn(`ShapeGroup`, this.id)
-    // console.warn(`this.padding`, this.padding)
-    // console.warn(`this.cut`, this.cut)
-    // console.warn(`this.drawFilter`, this.drawFilter)
+    // DeBug.warn(`ShapeGroup`, this.id)
+    // DeBug.warn(`this.padding`, this.padding)
+    // DeBug.warn(`this.cut`, this.cut)
+    // DeBug.warn(`this.drawFilter`, this.drawFilter)
 
 
     const vintage = [
@@ -1947,7 +2092,7 @@ class Cell extends ProtoLayer {
     }, `minRadius`).call(this)
   }
 
-  get arcOrigins() { // origins for arcs when rect is given max rounded corners
+  get arcOrigins() { // origins for arcs when rect is given max rounded corners, cell center for square cells, two points for rects
     let start, end
     if (this.aspect.isSquare) {
       start = this.center
@@ -2006,6 +2151,7 @@ class Cell extends ProtoLayer {
     }, `ordinalNeighbors`).call(this)
   }
 
+
   get availableCardinalNeighbors() { return this.cardinalNeighbors.filter(c => c.isAvailable) }
   get takenCardinalNeighbors() { return this.cardinalNeighbors.filter(c => !c.isAvailable) }
   get hasTwoCardinalNeighbors() { return this.takenCardinalNeighbors.length === 2 }
@@ -2014,8 +2160,28 @@ class Cell extends ProtoLayer {
     return (n.horizontals.every(c => c?.isTaken) || n.verticals.every(c => c?.isTaken))
   }
 
+  get groupNeighbors() { return this.neighbors.filter(c => c.groupID === this.groupID) }
   get cardinalGroupNeighbors() { return this.cardinalNeighbors.filter(c => c?.groupID === this.groupID) }
   get ordinalGroupNeighbors() { return this.ordinalNeighbors.filter(c => c?.groupID === this.groupID) }
+
+  get neighborDirections() {
+    const dirsMap = Directions.Direction.values.map(dir => {
+      let bool = false
+      const cell = this.grid.neighbor(this.index, dir)
+      if (cell) bool = true
+      return [bool, dir]
+    })
+    return new Directions(dirsMap)
+  }
+
+  get groupNeighborsDirection() {
+    const vals = this.validNeighborsDirections(Direction.All)
+      .filter(dir => this.grid.neighbor(this.index, dir).groupID === this.groupID)
+      .map(dir => dir.vals)
+      .flat(2).unique().numSorted
+    return new Direction(vals)
+  }
+
   get hasOppositeCardinalGroupNeighbors() {
     const n = this.sideNeighbors
     return (n.horizontals.every(c => c?.groupID === this.groupID) && n.verticals.every(c => c?.groupID !== this.groupID))
@@ -2047,6 +2213,23 @@ class Cell extends ProtoLayer {
     )
     return ordinals
   }
+
+  get needsMask() {
+    return memoize(() => {
+      // DeBug.log(`cell.needsMask`, this.id)
+      return this.groupNeighborsDirection.needsMask
+    }, `needsMask`).call(this)
+  }
+  get canInset() {
+    return memoize(() => {
+      // DeBug.log(`cell.canInset`, this.id)
+      // DeBug.groupCollapsed(`cell.canInset`, this.id)
+      const result = this.groupNeighborsDirection.canInset
+      DeBug.groupEnd()
+      return result
+    }, `canInset`).call(this)
+  }
+
   // #endregion
   // MARK: Cell Geometry Methods
   // #region Geometry Methods
@@ -2057,7 +2240,7 @@ class Cell extends ProtoLayer {
   //METH: validNeighborsCoords()
   //FIXME: check to see if this method is being used. Seems like no, because bounds was not properly assigned before!
   validNeighborsCoords(direction = Direction.All, bounds = this.grid.gridCellBounds,) {
-    // console.log(`cell.validNeighborsCoords direction`, direction.vals)
+    // DeBug.log(`cell.validNeighborsCoords direction`, direction.vals)
     return this.allNeighborsCoords(direction).filter(e => this.grid.coordsAreInBounds(e.x, e.y, bounds))
   }
   //METH: validNeighbors()
@@ -2229,7 +2412,8 @@ class Island extends ProtoLayer {
 
   get isCardinal() {
     return !this.isSingleCell
-      && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Ordinal))
+      // && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Ordinal))
+      && this.cells.every(c => c.groupNeighborsDirection.allAreCardinal)
   }
   get isOrdinal() { return !this.isSingleCell && this.cells.every(e => this.cellIsIsolated(e.index)) }
 
@@ -2241,6 +2425,13 @@ class Island extends ProtoLayer {
   get offsetConnections() { return this.cells.filter(c => c.hasOffsetConnection) }
 
   get directionHierarchy() { return this.direction.hierarchy }
+
+  get needsMask() {
+    return this.cells.some(c => c.needsMask)
+  }
+  get canInset() {
+    return this.cells.some(c => c.canInset)
+  }
 
   get exposedSegments() {
     return memoize(() => {
@@ -2464,7 +2655,7 @@ class Island extends ProtoLayer {
         i.createSimpleSubShapes()            // must create SimpleSubShapes for new Islands
         DeBug.warn(`newIslands simples`, i.shape.simpleSubShapes)
         const simples = i.shape.allSimpleSegs
-        console.log(`simples`, simples)
+        DeBug.log(`simples`, simples)
         this.grid.completeEnds(simples, false)
       })
       return newIsles
@@ -2579,13 +2770,14 @@ class Island extends ProtoLayer {
     cellIslands?.forEach((isle, i) => {
       const shape = isle.shape
       isle.createSimpleSubShapes()
-
+      DeBug.log(`isle`, isle)
+      DeBug.log(`shape`, shape)
       const simpleSubShapes = isle.shape.simpleSubShapes
       this.grid.inWrapPerimeter(simpleSubShapes.flat(), parentSimpleSubShapes.flat()) // wrap inner perimeter to match outer parent segements
 
       DeBug.log(`this group`, this.grid.groupNamed(this.groupID))
       DeBug.log(`shape`, shape)
-      DeBug.log(`shape.svg`, shape.svg)
+      // DeBug.log(`shape.svg`, shape.svg)
     })
     return cellIslands
   }
@@ -2668,7 +2860,7 @@ class Island extends ProtoLayer {
         findSubShape(segment)
         segments = segments.exclude(subShape, ['id'])
         subShapes.push(subShape)
-        if (subShapes.length === 1) { // re-sort inner subshapes for counter-clockwise processing
+        if (subShapes.length === 1) {                 // re-sort inner subshapes for counter-clockwise processing
           segments = segments.counterGridVertSorted
         }
       }
@@ -2781,6 +2973,7 @@ class Shape extends ProtoLayer {
   get groupID() { return this.island.groupID }
   get grid() { return this.island.grid }
   get simpleSegPaths() { return this.simpleSubShapes.map(sub => new SegPath(sub, this)) }
+  get simpleInsetSegPaths() { return this.insetSubShapes.map(sub => new SegPath(sub, this)) }
   get cells() { return this.island.cells }
 
   get cutOutCells() {
@@ -2918,44 +3111,18 @@ class Shape extends ProtoLayer {
   //NOTE: inset first: 2. might be some hierarchical or derivative scaling advantage to successive inset knowledge
   //NOTE: ultimately both have advantages. could make inset transform a method with two inset compProps: sub & simpleSub
   get insetSubShapes() {
-    // return memoize(() => {
-    const subs = this.simpleSubShapes
     if (this.insetScale <= 0) {
       // TODO: future use with interGrids
     }
-    DeBug.log(`subs`, subs)
-
-    let insetSubShapes = subs?.map(sub => {
-      let
-        insetSubShape = new OpArray,
-        prevInsetSeg
-
-      sub.forEach((seg, i) => {
-        let newInsetSeg = seg.insetCopy(this.insetScale) //create inset segment
-
-        if (prevInsetSeg) { // only assignNeighbors once there are two inset segments
-          prevInsetSeg.assignNeighbors({ end: newInsetSeg })
-          newInsetSeg.assignNeighbors({ start: prevInsetSeg })
-        }
-        if (i === sub.lastIndex) { // last inset segment is neghbors with first inset segment
-          newInsetSeg.assignNeighbors({ end: insetSubShape[0] })
-          insetSubShape[0].assignNeighbors({ start: newInsetSeg })
-        }
-        insetSubShape.push(newInsetSeg)
-        prevInsetSeg = newInsetSeg
-      })
-      return insetSubShape
-    })
-    return insetSubShapes
-    // }, `insetSubShapes`).call(this)
+    return this.simpleSegPaths?.map(sub => sub.inset(this.insetScale))
   }
 
   //MARK: SVG Paths
   get svg() {
-    DeBug.groupCollapsed(`svg creation`)
+    // DeBug.groupCollapsed(`svg creation`)
     let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({ segPath: e }))
     if (result instanceof Array) result = result.join(' ')
-    DeBug.groupEnd()
+    // DeBug.groupEnd()
 
     return result
   }
@@ -3032,9 +3199,9 @@ class Shape extends ProtoLayer {
 
   //METH: drawElement()
   drawElement() {
-    DeBug.group()
-    DeBug.error('drawElement: ', this.id, this)
-    DeBug.warn(`Shape.drawElement() this.svg`, this.svg)
+    // DeBug.group()
+    // DeBug.error('drawElement: ', this.id, this)
+    // DeBug.warn(`Shape.drawElement() this.svg`, this.svg)
 
     if (this.drawSVG) {
       this.svgElt
@@ -3051,7 +3218,7 @@ class Shape extends ProtoLayer {
           .layout(this.anchor, this.size)
       }
     }
-    DeBug.groupEnd()
+    // DeBug.groupEnd()
   }
   // #endregion
 }
