@@ -71,7 +71,6 @@ function sizeFrame() {
 
 // FUNC: setupPrefs()
 function setupPrefs() {
-  // angleMode(DEGREES)
   R = new Random()
   S = new Store()
   RuID = new Random()
@@ -92,14 +91,12 @@ function setupFeatures() {
 function setupColors() {
   backgroundColor = achromic(0)
   frameColor = achromic(0.9)
-  // frameColor = color(`oklch(70% 0.1 49)`)
 }
 
 // FUNC: setupBackground()
 function setupBackground() {
   BG = createDiv().id('BG')
     .size(windowWidth, windowHeight)
-    // .look(Look.centeredFlex(backgroundColor, 'column'))      // FIXME: deprecating Look, assign CSS styling directly
     .style('background', backgroundColor)
     .style('margin', 0)
     .style('display', 'flex')
@@ -191,11 +188,11 @@ class ProtoMill {
       const startCount = G.groups.length
       if (G.cellCount === 1) G.groupFromIndices(0)
       else {
-        console.log('group', group)
+        DeBug.log('group', group)
         G.seed(group.method, { coverage: group.coverage, minSize: group.minSize })
       }
       if (group.method !== 'Empty' && startCount === G.groups.length) {
-        console.log('regroup!', group)
+        DeBug.log('regroup!', group)
         G.seed(group.method, { useAllTaken: true })
       }
       if (group.method === 'Empty'
@@ -210,19 +207,19 @@ class ProtoMill {
   //METH: nestleGroups()
   nestleGroups() {
     //NOTE: set outsetGroup
-    console.warn(`Groups OrdinalConnects`, this.grid.groups.map(g => g.ordinalConnections))
+    DeBug.warn(`Groups OrdinalConnects`, this.grid.groups.map(g => g.ordinalConnections))
     const ordinalIndices = this.grid.groups.map((g, i) => {
-      console.log(`ordinalConnections`, i, g.hasOrdinalConnections)
+      DeBug.log(`ordinalConnections`, i, g.hasOrdinalConnections)
       if (g.hasOrdinalConnections) return i
     }).compacted
-    console.log(`ordinalIndices`, ordinalIndices)
+    DeBug.log(`ordinalIndices`, ordinalIndices)
     // const useOrdinal = R.random_bool(0.25)
     // this.outsetIndex = !ordinalIndices.isEmpty && useOrdinal ? R.random_choice(ordinalIndices) : R.random_int(0, this.grid.groups.lastIndex)
     this.outsetIndex = !ordinalIndices.isEmpty ? R.random_choice(ordinalIndices) : R.random_int(0, this.grid.groups.lastIndex)
-    console.log(`outsetIndex`, this.outsetIndex)
+    DeBug.log(`outsetIndex`, this.outsetIndex)
     const outsetGroup = this.grid.groups[this.outsetIndex]
-    console.log(`outsetGroup`, outsetGroup)
-    console.log(`groups`, this.grid.groups)
+    DeBug.log(`outsetGroup`, outsetGroup)
+    DeBug.log(`groups`, this.grid.groups)
 
     //NOTE: group perimeters
     DeBug.groupCollapsed(`createPerimiters`)
@@ -740,7 +737,7 @@ function gridTests2(features) {
   const mill = new ProtoMill(features)
   //                                                                  //NOTE: 2. Create Grid
   mill.mkGrid()
-  console.log(`mill.grid.`, mill.grid.gridSize)
+  DeBug.log(`mill.grid.`, mill.grid.gridSize)
   const minInsetScale = mill.minInsetScale
   DeBug.groupEnd()
   //                                                                  //NOTE: 3. Populate Groups
@@ -770,15 +767,17 @@ function gridTests2(features) {
   DeBug.groupEnd()
   DeBug.log(``)
 
-  console.error(`GRID`, GRID.shapeGroups)
-  console.error(`backGrid`, BGRID.shapeGroups)
+  DeBug.error(`GRID`, GRID.shapeGroups)
+  DeBug.error(`backGrid`, BGRID.shapeGroups)
 
   GRID.shapeGroups.forEach(shgrp => shgrp.drawElement())
   BGRID.shapeGroups.forEach(shgrp => shgrp.drawElement())
 
-  // console.error(`S.Cuts`, S.Cuts)
+  // DeBug.error(`S.Cuts`, S.Cuts)
 
   S.Cuts.db.map(c => c[1]).forEach(c => c.setLayouts())
+
+
 
   // DeBug.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
   // FRAME.backGrid.showCellsDebug()
@@ -790,33 +789,65 @@ function gridTests2(features) {
   // GRID.showFrameRate(animationController)
   // GRID.showSizeGrid(4)
 
-  // globalAnimation()
-  // GRID.maxCuddle()
+  // DeBug.error(`UnitRefined Test`)
+  // DeBug.groupCollapsed(`UnitRefined Test`)
+  // GRID.groups.forEach((g, i) => {
+  //   DeBug.warn(`group`, g.id, g)
+  //   g.perimeterIslands.forEach((i, j) => {
+  //     DeBug.warn(`island`, i.id, i)
+  //     const zeroScaled = i.shape.copy({ insetScale: 0, protoParent: i.grid, island: i })
+  //     DeBug.log(`zeroScaled`, zeroScaled)
+  //     DeBug.log(`zeroScaled paths`, zeroScaled.insetSubShapes)
+
+  //     let newShapes
+  //     if (i.cellBounds.isFull) {
+  //       if (i.cellBounds.minCellThickness > 1) {
+  //         DeBug.warn(`NEW SHAPES! is Rect with minThickness:`, i.cellBounds.minCellThickness)
+  //         newShapes = zeroScaled.insetSubShapes
+  //         DeBug.log(``)
+  //       } else {
+  //         DeBug.error(`NO ZERO PATH! is Rect with minThickness 1`)
+  //         newShapes = []
+  //         DeBug.log(``)
+  //       }
+  //     } else {
+  //       newShapes = new SegPool(zeroScaled.insetSubShapes, i.shape)
+  //         .unitRefined()
+  //     }
+
+  //     // const newShapes = zeroScaled.simpleInsetSegPaths.map((p, i) => p.unitRefined())
+  //     DeBug.log(`newShapes`, newShapes)
+  //     // DeBug.log(`newPool`, newPool)
+  //   })
+  // })
+  // DeBug.groupEnd()
+
 
   // DeBug.log(`  ######################   `)
-  // console.error(`GRID`, GRID.shapeGroups)
-  // console.error(`backGrid`, BGRID.shapeGroups)
-  console.log('hash', tokenData.hash)
-  console.log(`Features`, features)
+  // DeBug.error(`GRID`, GRID.shapeGroups)
+  // DeBug.error(`backGrid`, BGRID.shapeGroups)
+  DeBug.log('hash', tokenData.hash)
+  DeBug.log(`Features`, features)
   DeBug.warn(`InsideCuts`, features.insideCuts)
   DeBug.warn(`Linear Cuts`, features.linearCuts)
-  console.log(`Mill`, mill)
-  console.log('all ProtoLayers', S.allLayers)
-  console.log(`GRID`, GRID)
-  console.warn(`cellSize`, GRID.cellSize)
-  console.warn(`GRID cells`, features.x, features.y)
-  console.error(`F.groups`, features.groups)
-  console.error(`mill.grid.groups`, mill.grid.groups)
-  console.warn(`uniformCutsStyle`, mill.F.uniformCutsStyle)
-  console.warn(`extraGroups avail`, mill.F.enums.extraGroups.options)
-  // console.warn(`GRID cells`, gridSize)
+  DeBug.log(`Mill`, mill)
+  DeBug.log('all ProtoLayers', S.allLayers)
+  DeBug.log(`GRID`, GRID)
+  DeBug.warn(`cellSize`, GRID.cellSize)
+  DeBug.warn(`GRID cells`, features.x, features.y)
+  DeBug.error(`F.groups`, features.groups)
+  DeBug.error(`mill.grid.groups`, mill.grid.groups)
+  DeBug.warn(`uniformCutsStyle`, mill.F.uniformCutsStyle)
+  DeBug.warn(`extraGroups avail`, mill.F.enums.extraGroups.options)
+  DeBug.warn(`Islands needMask, canIset`, mill.grid.perimeterIslands.map(i => [i.id, i.needsMask, i.canInset]))
+  // DeBug.warn(`GRID cells`, gridSize)
   DeBug.warn(`minInsetScale`, minInsetScale)
   // DeBug.warn(`minInsetAmount`, (1 - minInsetScale) * GRID.minCellWidth)
   DeBug.warn(`minInsetAmount`, mill.minInsetAmount)
   DeBug.warn(`FRAME Cuts`, GRID.protoParent.backGroup.cuts)
   DeBug.warn(`BGRID`, BGRID)
   DeBug.warn(`GRID Ratio: ${mill.gridRatio / 2}:1`)
-  // console.warn(`gridInsetScale:`, mill.gridInsetScale)
+  // DeBug.warn(`gridInsetScale:`, mill.gridInsetScale)
   DeBug.warn(`GRID.insetAmount.x:`, GRID.insetAmount.x)
   DeBug.warn(`GRID size:`, GRID.insetSize)
   DeBug.warn(`Groups OrdinalConnects`, GRID.groups.map(g => g.ordinalConnections))
