@@ -267,6 +267,139 @@ class SegPath {
     return new SegPath(newPath, this.shape)
   }
 
+  //METH: inset() : SegPath : create a new path with inset segments
+  inset(scale) {
+    let prevInsetSeg,
+      newPath = new OpArray
+    this.path.forEach((seg, i) => {
+      let newInsetSeg = seg.insetCopy(scale)                  // create inset segment
+
+      if (prevInsetSeg) {                                     // once there is a pair, assign neighbors
+        prevInsetSeg.assignNeighbors({ end: newInsetSeg })
+        newInsetSeg.assignNeighbors({ start: prevInsetSeg })
+      }
+      if (i === this.path.lastIndex) {                        // last seg: assign neighbors with first seg
+        newInsetSeg.assignNeighbors({ end: newPath.first })
+        newPath.first.assignNeighbors({ start: newInsetSeg })
+      }
+      newPath.push(newInsetSeg)                               // add new inset seg to newPath
+      prevInsetSeg = newInsetSeg                              // set prevInsetSeg to newInsetSeg
+    })
+    return newPath
+  }
+
+  //METH: unitRefined() : SegPath : take a unit inset/outset path and remove collinear and zero length segments
+  unitRefined() {
+    DeBug.error(`unitRefined()`, this.path)
+    let
+      pathCopy = this.path.copy,
+      zeroSegs = pathCopy.filter(s => s.isVert),
+      newPath = new OpArray,
+      overlaps = new OpArray,
+      removed = new OpArray,
+      length = pathCopy.length
+
+    pathCopy = pathCopy.exclude(zeroSegs, `id`)                     // exclude zero segs from pathCopy
+
+    //ARROW: remove() : null : remove seg from neighbors' neighbors
+    const remove = (seg) => {
+      seg.removeBothNeighbors()
+    }
+
+    while (length > 0) {
+      DeBug.warn(`pathCopy start`, pathCopy.map(s => s.id))
+      const seg = pathCopy.shift()                                  // remove first seg
+      DeBug.log(`current seg`, seg)
+
+      if (seg.length > 0) {
+        let overlap = pathCopy.filter(s => s.isOverlappingWith({ seg: seg, includeEnds: true }))
+        DeBug.log(`overlap`, overlap)
+        if (!overlap.isEmpty) {
+          // DeBug.log(`overlap`, overlap)
+
+          if (overlap.length === 1) {                               // single overlap
+            DeBug.error(`single overlap`, overlap)
+            overlaps.push(seg)
+            const
+              singleSeg = overlap[0],                               // single overlap seg
+              intersection = seg.intersectionWith(singleSeg),       // intersection of seg and singleSeg
+              isPartialXOfThis = !intersection.equals(seg),         // intersection only partially covers this seg
+              isPartialXOfOverlap = !intersection.equals(singleSeg) // intersection only partially covers singleSeg
+
+            if (isPartialXOfThis) {
+              DeBug.error(`isPartialXOfThis`, isPartialXOfThis)
+              const newSegs = seg.exclude(intersection)             // exclude intersection seg from seg
+              DeBug.log(`newSegs`, newSegs)
+            }
+            if (isPartialXOfOverlap) {
+              DeBug.error(`isPartialXOfOverlap`, isPartialXOfOverlap)
+              const newSegs = singleSeg.exclude(intersection)       // exclude intersection seg from singleSeg
+              DeBug.log(`newSegs`, newSegs)
+            }
+            overlaps.push(singleSeg)
+            pathCopy = pathCopy.exclude(singleSeg, `id`)            // exclude overlap seg from pathCopy
+          }
+
+          if (overlap.length > 1) {                                 // multiple overlaps
+            DeBug.error(`Multiple overlaps!!!`, overlap)
+
+
+          }
+
+        } else {
+          DeBug.error(`no overlap`, seg)
+          newPath.push(seg)
+        }
+      }
+      else {
+        DeBug.error(`zero length seg`, seg)
+        removed.push(seg)
+      }
+      length = pathCopy.length
+      DeBug.warn(`pathCopy end`, pathCopy.map(s => s.id))
+    }
+    DeBug.log(`newPath`, newPath)
+    DeBug.log(`overlaps`, overlaps)
+    DeBug.log(`removed`, removed)
+    DeBug.log(`zeroSegs`, zeroSegs)
+    DeBug.log(``)
+
+    if (!newPath.isEmpty) {
+      removed.forEach(seg => remove(seg))                           // remove zero segs from neighbors  
+      overlaps.forEach(seg => remove(seg))                          // remove overlaps from neighbors
+      return new SegPath(newPath, this.shape)
+    }
+    else {
+      DeBug.error(`NO ZERO PATH!, Shape ${this.shape.parentID} has max thickness of 1!!!`)
+      DeBug.log(``)
+    }
+
+
+    // this.path.forEach((seg, i) => {
+    //   // DeBug.log(`current Seg`, seg)
+    //   if (roundToDec(seg.length) > 0) {
+    //     const
+    //       pathNoSeg = this.path.exclude(seg, `id`)                     // exclude current seg
+    //     // DeBug.log(`pathNoSeg`, pathNoSeg)
+    //     const
+    //       overlaps = pathNoSeg.filter(s => s.isOverlappingWith({ seg: seg, includeEnds: false }))    // find overlaps
+    //     DeBug.log(`overlaps`, overlaps)
+    //     let removed = new OpArray, newSeg
+
+    //     if (!overlaps.isEmpty) {
+    //       overlaps.forEach(overlap => {
+    //         const remove = seg.intersectionWith(overlap)
+    //         if (remove && remove instanceof Segment) {
+    //           DeBug.log(`remove`, remove)
+    //         }
+    //       })
+    //     }
+
+    //   } else {
+    //     DeBug.error(`zero length seg`, seg)
+    //   }
+    // })
+  }
 
   //FIXME: still have an issue recognizing final stairs on #559
   get stairSets() {
@@ -755,20 +888,21 @@ class Vertex extends p5.Vector {
     this.y = roundToDec(this.y, dec)
   }
   //METH: equals() : Bool : check if two vertices are equal
-  equals(vert, accuracy = 3, deviation) {
+  equals(vert, accuracy = 3, deviation = 0) {
     let ax, ay, bx, by
-    if (arguments.length === 2) {
-      ax = approxToDec(this.x, accuracy, 0)
-      ay = approxToDec(this.y, accuracy, 0)
-      bx = approxToDec(vert.x, accuracy, 0)
-      by = approxToDec(vert.y, accuracy, 0)
-    } else {
-      ax = this.x
-      ay = this.y
-      bx = vert.x
-      by = vert.y
-    }
-    return deviation ? abs(ax - bx) < deviation && abs(ay - by) < deviation : ax === bx && ay === by
+    // if (arguments.length > 1) {
+    ax = roundToDec(this.x, accuracy)
+    ay = roundToDec(this.y, accuracy)
+    bx = roundToDec(vert.x, accuracy)
+    by = roundToDec(vert.y, accuracy)
+    // } else {
+    //   ax = this.x
+    //   ay = this.y
+    //   bx = vert.x
+    //   by = vert.y
+    // }
+    // if (equalsRoundedDec(ax, 44.11764)) DeBug.log(`equals`, ax, ay, bx, by)
+    return deviation > 0 ? abs(ax - bx) < deviation && abs(ay - by) < deviation : ax === bx && ay === by
   }
 
   //TODO: If we run into Vertex arithemtic errors, test this
@@ -1003,17 +1137,39 @@ class Segment {
   }
   //METH: isCollinearWith() : Bool : check if two segments are collinear
   isCollinearWith(seg) { return this.isOverlappingWith({ seg: seg, infinite: true }) }
+  //METH: isEndToEnd() : Bool : check if two segments are end-to-end
+  isEndToEnd(seg) {
+    // DeBug.log(`isEndToEnd this`, this)                                                   //LOGGING:
+    // DeBug.log(`isEndToEnd seg`, seg)                                                     //LOGGING:
+    // DeBug.log(`isEndToEnd this`, [this.start, this.end])                                 //LOGGING:
+    // DeBug.log(`isEndToEnd seg`, [seg.start, seg.end])                                    //LOGGING:
+    // DeBug.log(`isEndToEnd WTF!`, this.end, seg.start, this.end.equals(seg.start))        //LOGGING:
+    if (this.isParallelTo(seg)) {
+      const
+        sameDir = this.direction.equals(seg.direction),
+        isEndToEnd = sameDir ? this.start.equals(seg.end) || this.end.equals(seg.start)
+          : this.start.equals(seg.start) || this.end.equals(seg.end)
+      // DeBug.log(`sameDir`, sameDir)                                                      //LOGGING:
+      // DeBug.log(`isEndToEnd`, isEndToEnd)                                                //LOGGING:
+      return isEndToEnd
+    }
+  }
   //METH: isOverlappingWith() : Bool : check if two segments are overlapping
-  isOverlappingWith({ seg, includeEnds = true, decimal = 0, mode = 2, infinite = false, accuracy = 0 } = {}) {
-    // DeBug.log(`seg`, seg)
+  isOverlappingWith({ seg, includeEnds = true, includeEndToEnd = true, decimal = 0, mode = 2, infinite = false, accuracy = 0 } = {}) {
+    // let report = false
+    // if (this.id.includes('cel191')) { report = true }                                        //LOGGING:
+    // if (report) {
+    //   DeBug.log(`isOverlappingWith this`, this)
+    //   DeBug.log(`isOverlappingWith seg`, seg)
+    // }
     if (this.isVert || seg.isVert) {
       if (this.isVert && seg.isVert) return this.start.equals(seg.start, 3)
       if (this.isVert && !infinite) return seg.vertIsOnLine(this.start)
       if (seg.isVert && !infinite) return this.vertIsOnLine(seg.start)
     }
 
-    if (!this.isParallelTo(seg)) {                                  // false if not parallel
-      // DeBug.warn(`isOverlappingWith is not parallel`)                                            //LOGGING:
+    if (!this.isParallelTo(seg)) {                                      // false if not parallel
+      // if (report) DeBug.warn(`isOverlappingWith is not parallel`)                                            //LOGGING:
       return false
     }
 
@@ -1023,7 +1179,7 @@ class Segment {
       const
         connectiveVector = Vertex.sub(seg.start, this.start),
         cross = abs(roundToDec(Vertex.cross(connectiveVector, this.lineVector).z, 1))
-      // DeBug.warn(`isOverlappingWith ${seg.id}, crossProduct: ${cross}`)                          //LOGGING:
+      // if (report) DeBug.warn(`isOverlappingWith ${seg.id}, crossProduct: ${cross}`)                          //LOGGING:
       if (accuracy > 0) return abs(cross) < accuracy
       return cross === 0
     }
@@ -1032,25 +1188,30 @@ class Segment {
       sameDir = this.direction.equals(seg.direction),
       isExactOverlap = sameDir ? this.start.equals(seg.start) && this.end.equals(seg.end)
         : this.start.equals(seg.end) && this.end.equals(seg.start)
-    if (isExactOverlap) return true                                 // true if exact overlap, either direction
+    if (isExactOverlap) return true                                     // true if exact overlap, either direction
 
-    const isEndToEnd = sameDir ? this.start.equals(seg.end) || this.end.equals(seg.start)
-      : this.start.equals(seg.start) || this.end.equals(seg.end)
-    if (isEndToEnd) return includeEnds                              // false if end-to-end contact without overlap
+    const isEndToEnd = this.isEndToEnd(seg)                     // check if end-to-end
+    // if (report) DeBug.log(`isOverlappingWith isEndToEnd`, isEndToEnd)                                            //LOGGING:
+    if (isEndToEnd) return includeEndToEnd                              // false if end-to-end contact without overlap
+
 
     const
-      segInsideThis = this.vertIsOnLine(seg.start, includeEnds, decimal)
+      segIsInsideOfThis = this.vertIsOnLine(seg.start, includeEnds, decimal)
         || this.vertIsOnLine(seg.end, includeEnds, decimal),
-      thisInsideSeg = seg.vertIsOnLine(this.start, includeEnds, decimal)
+      thisIsInsideOfSeg = seg.vertIsOnLine(this.start, includeEnds, decimal)
         || seg.vertIsOnLine(this.end, includeEnds, decimal)
+    // if (report) {
+    // DeBug.log(`isOverlappingWith segIsInsideOfThis`, segIsInsideOfThis)                            //LOGGING:
+    // DeBug.log(`isOverlappingWith thisIsInsideOfSeg`, thisIsInsideOfSeg)                            //LOGGING:
+    // }
 
     switch (mode) {
       case 0:
-        return segInsideThis
+        return segIsInsideOfThis
       case 1:
-        return thisInsideSeg
+        return thisIsInsideOfSeg
       case 2:
-        return segInsideThis || thisInsideSeg
+        return segIsInsideOfThis || thisIsInsideOfSeg
     }
   }
   //METH: perpendicularIntersectionWith() : Vertex : find the perpendicular intersection of a vertex with the segment
@@ -1096,8 +1257,10 @@ class Segment {
         const overlapSeg = segment(overlapStart, overlapEnd)                          // create overlapSeg
         return overlapSeg.direction.equals(this.direction) ? overlapSeg : overlapSeg.opposite // align to this direction
       }
+      // else DeBug.warn(`IS NOT overlapping`)                                                  //LOGGING:
       return                                                                          // No overlap, or parallel but not collinear
     }
+    // else DeBug.warn(`IS NOT Parallel`)                                                       //LOGGING:
     const
       crossZ = Vertex.cross(r, s).z,
       t = Vertex.cross(Vertex.sub(q, p), s).z / crossZ,                               // intersection t value for this seg
@@ -1110,14 +1273,53 @@ class Segment {
 
     return Vertex.add(p, Vertex.mult(r, t))                                           // calculated intersection point
   }
+  //METH: union() : Segment : union two segments, direction determined by this segment
+  union(seg) {
+    if (this.isOverlappingWith({ seg: seg })) {
+      if (this.isVert) return seg                                       // if this seg is a vert, return the other segment
+      if (seg.isVert) return this                                       // if the other seg is a vert, return this segment
+      const
+        sameDir = this.direction.equals(seg.direction),                 // check if the segments have the same direction
+        testStart = sameDir ? seg.start : seg.end,                      // test start point based on direction
+        testEnd = sameDir ? seg.end : seg.start,                        // test end point based on direction
+        start = this.vertIsOnLine(testStart) ? this.start : testStart,  // if testStart is on this segment
+        end = this.vertIsOnLine(testEnd) ? this.end : testEnd           // if testEnd is on this segment 
+      return segment(start, end)                                        // return new segment
+    }
+  }
+  //METH: exclude() : [Segment] : exclude a segment from this segment resulting in up to two new segments, direction determined by this segment
+  exclude(seg) {
+    if (this.isOverlappingWith({ seg: seg })) {
+      if (this.isVert) return
+      const
+        sameDir = this.direction.equals(seg.direction),                 // check if the segments have the same direction
+        testStart = sameDir ? seg.start : seg.end,                      // test start point based on direction
+        testEnd = sameDir ? seg.end : seg.start,                        // test end point based on direction
+        startIsOnLine = this.vertIsOnLine(testStart),                   // check if testStart is on this segment (results in 1 new seg)
+        endIsOnLine = this.vertIsOnLine(testEnd),                       // check if testEnd is on this segment (results in 1 new seg, 2 total if both true)
+        start = startIsOnLine ? this.start : testStart,                 // new start point based on startIsOnLine
+        end = endIsOnLine ? this.end : testEnd                          // new end point based on endIsOnLine
+      let newSegs = new OpArray()
+      if (startIsOnLine && !start.equals(testStart))
+        newSegs.push(segment(start, testStart))                         // add new segment from start to testStart
+      if (endIsOnLine && !end.equals(testEnd))
+        newSegs.push(segment(testEnd, end))                             // add new segment from testEnd to end
+      if (!newSegs.isEmpty) return newSegs
+    }
+  }
   // //METH: roundToDec() : null : roundToDec start and end verts
   roundVertsToDec(dec = 4) {
     this.start.roundCoordsToDec(dec)
     this.end.roundCoordsToDec(dec)
   }
   //METH: equals() : Bool : check if two segments are equal
-  equals(segment, accuracy = 3) {
-    return this.start.equals(segment.start, accuracy) && this.end.equals(segment.end, accuracy)
+  equals(segment, accuracy = 3, biDirectional = false) {
+    const
+      primary = this.start.equals(segment.start, accuracy) && this.end.equals(segment.end, accuracy),
+      reverse = this.start.equals(segment.end, accuracy) && this.end.equals(segment.start, accuracy)
+    // DeBug.log(`equals: primary`, primary)                                                         //LOGGING:
+    // DeBug.log(`equals: reverse`, reverse)                                                         //LOGGING:
+    return biDirectional ? primary || reverse : primary
   }
   //METH: pointOnsegment() : Vertex : get point on segment given lerp from start to end
   pointOnsegment(lerp) {
@@ -1247,16 +1449,15 @@ class ProtoSegment extends Segment {
   get endTurn() { return this.turns.end }
 
   get normals() {
+    if (!this.hasBothNeighbors) {
+      DeBug.error(`segment ${this.id} without neighbors has no normals`)
+      return
+    }
+    if (this.angle === undefined) {
+      DeBug.error(`segment ${this.id} has no angle!`, this)
+      DeBug.log(`this.angle = ${this.angle}`)
+    }
     return memoize(() => {
-      if (!this.hasBothNeighbors) {
-        DeBug.error(`segment ${this.id} without neighbors has no normals`)
-        return
-      }
-      if (this.angle === undefined) {
-        DeBug.error(`segment ${this.id} has no angle!`, this)
-        DeBug.log(`this.angle = ${this.angle}`)
-      }
-
       const normals =
       {
         start: this.startNeighbor.angle - this.turns.start.normalRotAngle,
@@ -1499,7 +1700,7 @@ class ProtoSegment extends Segment {
   #setCurveOrigin(toVert, replace = false, start = false) {
     const seg = start ? this.startNeighbor : this             // seg/corner to reference
     let report = false                                                                                  //LOGGING:
-    if (this.id.includes('cel000')                                                                     //LOGGING:
+    if (this.id.includes('cel224')                                                                     //LOGGING:
       // || this.id.includes('cell185')                                                                       //LOGGING:
       // || s.id.includes('cell001')                                                                       //LOGGING:
     ) { report = true }                                                                                 //LOGGING:
@@ -1511,12 +1712,12 @@ class ProtoSegment extends Segment {
       DeBug.log(`seg.viableArcOrigins`, seg.viableArcOrigins)                                         //LOGGING:
       DeBug.log(`toVert`, toVert)                                                                     //LOGGING:
     }
-    if (seg.viableArcOrigins.some(v => toVert.equals(v, 1, 0.1))) {
+    if (seg.viableArcOrigins.some(v => toVert.equals(v, 2, 0.1))) {
       const
         intersect = seg.perpendicularIntersectionWith(toVert),
         newRadius = toVert.dist(intersect)
       if (report) {                                                                                     //LOGGING:
-        // DeBug.log(`intersect`, intersect)                                                             //LOGGING:
+        DeBug.log(`intersect`, intersect)                                                             //LOGGING:
         DeBug.log(`newRadius`, newRadius)                                                             //LOGGING:
       }
       seg.addDistancedEndCornerVerts(newRadius, replace)
@@ -1609,7 +1810,7 @@ class ProtoSegment extends Segment {
   // //MARK: Combined Cubic Verts
   // #region Combined Cubic Verts
   get maxCubicLength() { return this.length - this.cellRadius * this.insetScale }
-  get hasArc() { return this.hasCubicEndVert && this.endNeighbor.hasCubicStartVert }
+  get hasArc() { return this.hasCubicEndVert && this.endNeighbor?.hasCubicStartVert }
 
   get hasCompleteStartCorner() {
     return memoize(() => {
@@ -1878,24 +2079,36 @@ class ProtoSegment extends Segment {
 
   //MARK: Edges
   get adjStartShapeBoundsEdge() {
+    if (!this.hasArc) return
     const
       dir = this.normals.cubic,
       arcDir = this.startNeighbor.isOutsideCorner ? dir : dir.opposites
     return this.shape.sides[arcDir.name]
   }
   get adjEndShapeBoundsEdge() {
+    if (!this.hasArc) return
     const
       dir = this.normals.cubic,
       arcDir = this.isOutsideCorner ? dir : dir.opposites
     return this.shape.sides[arcDir.name]
   }
   get arcStartToShapeBoundsEdgeSeg() {
+    if (!this.hasArc) return
     const edgeIntersect = this.arcOriginToStart.intersectionWith(this.adjEndShapeBoundsEdge, true)
     return segment(this.arcStartCorner, edgeIntersect)
   }
   get arcEndToShapeBoundsEdgeSeg() {
+    if (!this.hasArc) return
     const edgeIntersect = this.arcOriginToEnd.intersectionWith(this.endNeighbor.adjStartShapeBoundsEdge, true)
     return segment(this.arcEndCorner, edgeIntersect)
+  }
+  get insideAdjGridEdge() { return this.grid.sides[this.sideDir.opposites.name] }
+  get outsideAdjGridEdge() { return this.grid.sides[this.sideDir.name] }
+  get insideBoundsEdgeSeg() {
+    const
+      startNormal = segment(this.start, Vertex.add(this.start, this.sideDir.lineVector)),
+      startIntersect = startNormal.intersectionWith(this.insideAdjGridEdge, true)
+    return segment(this.end, startIntersect)
   }
 
   //MARK: Corner Orientations
@@ -2237,7 +2450,7 @@ class ProtoSegment extends Segment {
     const wrapType = flush ? `flushWrap()` : `adjWrap()`                                        //LOGGING:
 
     let report = false                                                                            //LOGGING:
-    if (this.id.includes('cel00')                                                               //LOGGING:
+    if (this.id.includes('cel224')                                                               //LOGGING:
       // || this.id.includes('cel027')                                                              //LOGGING:
     ) {                                                                                           //LOGGING:
       report = true                                                                               //LOGGING:
@@ -2724,12 +2937,102 @@ class ProtoSegment extends Segment {
       islandIDs: this.islandIDs,
       cubicVerts: insetCubicVerts,
       insetScale: insetScale,
+      grid: this.grid,
       cells: this.cells,
       points: insetPoints,
       sideDir: this.sideDir,
       shape: this.shape,
       _direction: this.direction,
     })
+  }
+  //METH: exclude() : [ProtoSegment] : segment.exclude but carry over ProtoSegment properties
+  exclude(seg) {
+    let segs = super.exclude(seg)
+    if (segs) {
+      DeBug.log(`exclude segs`, segs)                                                                   //LOGGING:
+      const
+        insetScale = this.insetScale.x,
+        sameDir = this.direction.equals(seg.direction),                                                 // same direction          
+        [testStart, testEnd] = sameDir ? [seg.start, seg.end] : [seg.end, seg.start],                   // testStart and testEnd points 
+        addDir = this.direction.allAreHorizontal ? Direction.Horizontal : Direction.Vertical,           // addDirection to use for adding extra cells
+        comboCells = this.cells.union(seg.cells, `id`),                                                 // combine cells of this and seg
+        extraCells = this.grid.tempOutlineSelection(comboCells, 1, addDir),                             // extra cells at ends of selection
+        testCells = comboCells.union(extraCells, `id`).gridVertSorted                                   // add extra cells to selection
+      DeBug.log(`testCells`, testCells)                                                        //LOGGING:
+      segs = segs.map(s => {
+
+        let
+          cellStart, cellEnd,
+          neighbors,
+          id
+
+        //ARROW: findCell() : Cell : find the closest cell to the segment start or end
+        const findCell = (testSeg, start = true) => {
+          DeBug.log(`findCell testSeg`, testSeg)                                                        //LOGGING:
+          const
+            testVert = start ? testSeg.start : testSeg.end,                                             // testVert point
+            testIntersect = this.insideAdjGridEdge.perpendicularIntersectionWith(testSeg.start),        // testIntersect point
+            testBoundsSeg = segment(testSeg.end, testIntersect),                                        // inside bounds seg of segment
+            aspect = this.grid.cellAspect,                                                              // cell aspect
+            segIsHorizontal = testSeg.direction.allAreHorizontal                                        // seg is horizontal
+
+          let testCenter
+          if (aspect.isSquare) testCenter = `start`                                                     // square cells, use start (both use cell center)
+          if (aspect.isHorizontal === segIsHorizontal)                                                  // cellAspect:testSeg matching orientation
+            testCenter = testSeg.direction.allAreCartesian === start ? `start` : `end`      // match logic: cell.arcOrigin calculates in Cartesian dirs
+          else                                                                                          // NOT matching orientation cellAspect:testSeg
+            testCenter = testSeg.sideDir.allAreCardinal !== start ? `end` : `start`         // same logic: but sideDir orients in anti-cardinal direction
+
+          //FIXME: replace with testCenter below
+
+          // DeBug.log(`insideAdjGridEdge`, this.insideAdjGridEdge)                                        //LOGGING:
+          // DeBug.log(`testIntersect`, testIntersect)                                                     //LOGGING:
+          // DeBug.log(`testBoundsSeg`, testBoundsSeg)                                                     //LOGGING:
+          DeBug.log(`testCells bounds`, testCells.map(c => [c.id, c.bounds]))                           //LOGGING:
+          let found = testCells
+            .filter(c => vertIsWithinBounds(c.arcOrigins[testCenter], testBoundsSeg, true))            // filter cells within bounds of seg
+            .reduce((a, b) => {
+              return a.arcOrigins[testCenter].dist(testVert) < b.arcOrigins[testCenter].dist(testVert) // find the closest cell to testVert       
+                ? a : b
+            })
+          return found
+        }
+
+        DeBug.warn(`current result seg`, s)                                                             //LOGGING:
+        cellStart = findCell(s, true)                                                                   // so starting cell is the same as this
+        cellEnd = findCell(s, false)                                                                    // and find the closest cell to the new end
+
+        DeBug.log(`this.cells`, this.cells)                                                             //LOGGING:
+        DeBug.log(`cellStart`, cellStart)                                                               //LOGGING:
+        DeBug.log(`cellEnd`, cellEnd)                                                                   //LOGGING:
+        let cells = this.grid.cellSpanBetween(cellStart.index, cellEnd.index)                           // create new cells array from start to end
+        if (!this.direction.allAreCartesian) cells = cells.reversed
+        const points = this.points.filter(p => seg.vertIsOnLine(p))                                     // filter previous points laying on new seg
+
+        const
+          cellsString = cells.length === 1 ? `${cellStart.id}` : `${cellStart.id}-to-${cellEnd.id}`,    // create cells string, based on more than one cell
+          sideString = isOdd(insetScale) ? `-${this.sideDir.name}Side` : `-INSIDE`,                     // create side string, based on odd/even insetScale
+          insetString = insetScale !== 1 ? `-inset(${roundToDec(insetScale, 1)})` : ``                  // create inset string, based on insetScale
+        id = `${this.shape.id}-${cells.length}${this.direction.name}-${cellsString}${sideString}${insetString}`  //  create new id
+
+        return protoSegment({
+          start: s.start,
+          end: s.end,
+          parentID: this.parentID,
+          grid: this.grid,
+          id: id,
+          islandIDs: this.islandIDs,
+          cubicVerts: this.cubicVerts,
+          insetScale: this.insetScale,
+          neighbors: neighbors,
+          cells: cells,
+          points: points,
+          sideDir: this.sideDir,
+          shape: this.shape,
+        })
+      })
+      return segs
+    }
   }
   // #endregion
   //MARK: Neighbors 
@@ -2797,6 +3100,25 @@ class ProtoSegment extends Segment {
       }
       this.neighbors.end = end
     }
+  }
+  //METH: removeStartNeighbor() : null : remove the start neighbor
+  removeStartNeighbor() {
+    if (this.startNeighbor) {
+      this.startNeighbor.neighbors.end = undefined
+      this.neighbors.start = undefined
+    }
+  }
+  //METH: removeEndNeighbor() : null : remove the end neighbor    
+  removeEndNeighbor() {
+    if (this.endNeighbor) {
+      this.endNeighbor.neighbors.start = undefined
+      this.neighbors.end = undefined
+    }
+  }
+  //METH: removeBothNeighbors() : null : remove both neighbors
+  removeBothNeighbors() {
+    this.removeStartNeighbor()
+    this.removeEndNeighbor()
   }
   // #endregion
 }
