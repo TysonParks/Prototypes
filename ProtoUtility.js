@@ -44,6 +44,8 @@ class Aspect {
   get isSquare() { return this.value === 0 }
   get isPortrait() { return this.value === 1 }
   get isLandscape() { return this.value === 2 }
+  get isVertical() { return this.value === 1 }
+  get isHorizontal() { return this.value === 2 }
 
   #getName(number) { return this.#descriptions[number] }
 
@@ -107,11 +109,6 @@ class Direction {
     this.vals = OpArray.from(this.vals)
   }
 
-  get directions() {
-    return memoize(() => {
-      return OpArray.from(this.vals.map(a => new Direction(a)))
-    }, `directions`).call(this)
-  }
   get names() { return OpArray.from(this.vals.map(a => this.#getName(a))) }
   get value() { return this.valOp(a => a) }
 
@@ -126,6 +123,119 @@ class Direction {
   get angleDegrees() { return this.directOp(a => degrees(a.angle)) }
 
   get lineVector() { if (this.isSingle) { return this.moveCoord.normalize() } }
+
+  get directions() {
+    return memoize(() => {
+      return OpArray.from(this.vals.map(a => new Direction(a)))
+    }, `directions`).call(this)
+  }
+  get cardinalsValues() {
+    return memoize(() => {
+      return this.vals.filter(a => a % 1 === 0)
+    }, `cardinals`).call(this)
+  }
+  get ordinalsValues() {
+    return memoize(() => {
+      return this.vals.filter(a => a % 1 === 0.5)
+    }, `ordinals`).call(this)
+  }
+  get cardinalsDirection() {
+    return memoize(() => {
+      return new Direction(this.cardinalsValues)
+    }, `cardinalsDirection`).call(this)
+  }
+  get ordinalsDirection() {
+    return memoize(() => {
+      return new Direction(this.ordinalsValues)
+    }, `ordinalsDirection`).call(this)
+  }
+  get valuesCount() {
+    return memoize(() => {
+      return this.vals.length
+    }, `valuesCount`).call(this)
+  }
+  get cardinalsCount() {
+    return memoize(() => {
+      return this.cardinalsValues.length
+    }, `cardinalCount`).call(this)
+  }
+  get ordinalsCount() {
+    return memoize(() => {
+      return this.ordinalsValues.length
+    }, `ordinalCount`).call(this)
+  }
+
+  //MARK: -Ominoes : Finding possible shapes in the 3x3 Grid of a Direction Object
+  //NOTE: Traditionally, all cell connections are orthogonal (cardinal), so each must have at least one cardinal direction
+  //NOTE: Internal (None) Direction counts as 1, so counts are all +1, ie: hasTetraCount = 3 outer directions ( + internal None)
+
+  //NOTE: Triominoes
+  get hasTriCount() { return this.isDouble && this.cardinalsCount > 0 }                   // has 2 directions with at least one cardinal
+  get isIShape() { return this.isHorizontal || this.isVertical }                          // 2 directions are either horizontal or vertical
+
+  //NOTE: Tetrominoes : Tetris shapes!
+  get hasTetraCount() { return this.valuesCount === 3 && this.cardinalsCount > 0 }        // has 3 directions with at least one cardinal
+
+  get hasCommonTetraCount() { return this.hasTetraCount && this.cardinalsCount === 2 }    // has 3 directions with 2 cardinals (covers O, S, L Tetronimoes)
+  get isOShape() {
+    return this.hasCommonTetraCount && this.equals(this.ordinalsValues[0].andAdjacents)   // is a 2x2 square shape (1 ordinal direction and its adjacents)
+  }
+  get isSShape() {
+    return this.hasCommonTetraCount                                                       // has common tetromino count
+      && this.cardinalsDirection.isTwoPerpendiculars                                      // cardinal directions are perpindicular 
+      && this.cardinalsValues.some(c => abs(c - this.ordinalsValues[0]) === 0.5)          // ordinal direction is adjacent (45deg) to one of the cardinal directions (absDif is 0.5)
+      && !this.isOShape                                                                   // is not an OShape
+  }
+  get isLShape() {
+    return this.hasCommonTetraCount                                                       // has common tetromino count
+      && this.cardinalsDirection.isTwoOpposites                                           // cardinal directions are opposite /parallel
+  }
+  get isTetraTShape() {
+    if (this.hasTetraCount) {
+      if (this.cardinalsCount === 1)
+        return this.equals(this.cardinalsValues[0].andAdjacents)                          // Minor T shape hugging edge
+      else return this.cardinalsCount === 3                                               // Minor T shape hugging middle  
+    }
+    return false
+  }
+
+  get isCardYShape() {
+    return this.hasTetraCount && this.cardinalsCount === 1                               // has 3 directions with 2 cardinals
+      && this.ordinalsValues.every(o => abs(this.cardinalsValues[0] - o)) // both ord directions adjacent to one of the cards
+  }
+
+  //NOTE: Pentominoes
+  get hasPentaCount() { return this.valuesCount === 4 && this.cardinalsCount > 0 }        // has 4 directions with at least one cardinal
+
+  get isPentaTShape() {                                                                   // Major T shape
+    return this.hasPentaCount                                                             // has penta count
+      && this.cardinalsDirection.isTwoOpposites                                           // has opposite cardinal directions
+      && this.ordinalsValues.some(o => this.cardinalsValues.every(c => abs(c - o) === 0.5)) // both ord directions adjacent to one of the cards
+  }
+  get isPlusShape() { return this.hasPentaCount && this.cardinalsCount === 4 }            // has only 4 cardinal directions
+
+  //NOTE: Ominoes Extras
+  get isTShape() { return this.isTetraTShape || this.isPentaTShape || this.isPlusShape }  // 3 T Shape variants
+  get isHShape() {
+    return this.cardinalsCount === 2                                                      // has only 2 cardinal directions
+      && abs(this.cardinalsValues[0] - this.cardinalsValues[1]) === 2                       // cardinal directions parallel (180deg) to each other (absDif is 2)
+      && this.ordinalsCount > 2                                                           // has 3-4 ordinal directions
+  }
+  get isXShape() { return this.cardinalsCount === 0 && this.ordinalsCount === 4 }            // has 4 ordinal directions
+
+  get isAllSquareShape() { return this.isAll }                                            // is a 3x3 square shape (all directions)
+  get isSquareShape() { return this.isOShape || this.isAllSquareShape }                   // is a square shape (OShape (2x2) or All (3x3))
+
+
+  get needsMask() {                                                                    // cell with groupNeighborsDirection will need mask for 'r' Shade
+    if (this.valuesCount < 3 || this.cardinalsCount < 1) return false                     // 2 or less total or no cardinals always false 
+    if (this.valuesCount > 4 || this.cardinalsCount > 2) return true                      // 5 or more total or 3-4 cardinals always true
+    if (this.cardinalsDirection.hasTwoPerpindiculars) return true       // 2 or more cardinals are perpindicular (contains S, middleMinorT, or ordinalY shape)
+    if (this.hasThreeAdjacents) return true                                               // 3 or more directions are adjacent ( contains O or edgeMinorT shape)
+    return false
+  }
+
+  get canInset() { return this.hasOShape }                                                // cell with groupNeighborsDirection can inset (contains O shape)
 
   get adjacents() {
     const directionsVals = this.directOp(a => OpArray.from([a.previous(), a.next()]))
@@ -156,12 +266,14 @@ class Direction {
     if (this.allAreNegOrdinal) return Direction.PosOrdinal
   }
 
-  get isAll() { return this.vals.length === 8 }
-  get isNone() { return this.vals.length === 0 }
+  get isAll() { return this.valuesCount === 8 }
+  get isNone() { return this.valuesCount === 0 }
 
-  get isSingle() { return this.vals.length === 1 }
-  get isDouble() { return this.vals.length === 2 }
+  get isSingle() { return this.valuesCount === 1 }
+  get isDouble() { return this.valuesCount === 2 }
   get isTwoOpposites() { return this.isDouble && this.equals(this.andOpposites) } //is Horizontal, Vertical, PosOrdinal, or NegOrdinal
+  get isTwoPerpendiculars() { return this.isDouble && isOdd(abs(this.values[0] - this.values[1])) }
+  get isTwoAdjacent() { return this.isDouble && abs(this.values[0] - this.values[1]) === 0.5 }
 
   get isUp() { return this.equals(Direction.Up) }
   get isRight() { return this.equals(Direction.Right) }
@@ -184,6 +296,7 @@ class Direction {
   get allAreNegOrdinal() { return this.vals.every(a => (a + .5) % 2 === 0) }
   get allAreCardinal() { return this.directions.every(a => a.isEachHorizontal || a.isEachVertical) }
   get allAreOrdinal() { return this.vals.every(a => a % 1 === 0.5) }
+  get allAreCartesian() { return this.vals.every(a => [1, 1.5, 2].some(v => v === a)) }
 
   get someAreHorizontal() { return this.vals.some(a => a % 2 === 1) }
   get someAreVertical() { return this.vals.some(a => a % 2 === 0) }
@@ -203,8 +316,48 @@ class Direction {
     DeBug.error('Undefined directionHierachy')
   }
 
+  get hasTwoPerpindiculars() { return this.#hasConsecutiveDirections(2, true) }
+  get hasThreeAdjacents() { return this.#hasConsecutiveDirections(3) }
+  get hasOShape() { return this.#hasConsecutiveDirections(3, false, 1) }
+
+  //METH: hasConsecutiveDirections() : Boolean : checks if the direction contains a min amount of consecutive (sub)directions
+  //NOTE: modes: 0 = all directions, 1 = cardinal directions, 2 = ordinal directions
+  #hasConsecutiveDirections(amount, perpindicular = false, mode = 0) {
+    if (this.isSingle) return false                             // single direction can't have consecutive directions
+    if (this.isAll) return true                                 // 'All' directions are completely consecutive
+
+
+
+    const dif = perpindicular ? 1 : .5                          // difference between consecutive directions
+    // DeBug.log(``)
+    // DeBug.warn(`hasConsecutiveDirections!`, this.vals)
+    // DeBug.warn(` dif: ${dif}, amount: ${amount}, mode: ${mode}`)
+    let maxConsec = 1,
+      testVals = mode === 0 ? this.vals : mode === 1 ? this.cardinalsValues : this.ordinalsValues
+    testVals.numSorted.forEach(val => {
+      // DeBug.warn(`value: ${val}, dif: ${dif}`)
+      let testVal = val, consec = 1
+      while (testVal < 4) {
+        // DeBug.log(`testVal:`, testVal)
+        if (this.vals.some(v => v === testVal + dif)) {
+          // DeBug.log(`found: ${testVal + dif}`)
+          testVal = testVal + dif
+          consec++
+        }
+        else {
+          // DeBug.log(`not found: ${testVal + dif}`)
+          testVal = 4
+        }
+      }
+      maxConsec = max(consec, maxConsec)
+      // DeBug.error(`maxConsec:`, maxConsec)
+    })
+    // DeBug.warn(` final maxConsec: ${maxConsec}, amount: ${amount}`)
+    return maxConsec >= amount
+  }
+
   random(amount = 1) {
-    const reducer = min(amount / this.vals.length, 0.999999)
+    const reducer = min(amount / this.valuesCount, 0.999999)
     //NOTE: when 'copy' is removed here it creates a cool shadow stacking effect with findIslands (see Aug 2,2023 captures)
     return new Direction(this.vals.copy.randReduce(reducer))
     return new Direction(this.vals.randReduce(reducer))
@@ -307,6 +460,19 @@ class Direction {
 
   equals(direction) { return this.vals.equalsSorted(direction.vals) }
 
+  get obj() {
+    return {
+      up: this.values.some(v => v === 0),
+      upRight: this.values.some(v => v === 0.5),
+      right: this.values.some(v => v === 1),
+      downRight: this.values.some(v => v === 1.5),
+      down: this.values.some(v => v === 2),
+      downLeft: this.values.some(v => v === 2.5),
+      left: this.values.some(v => v === 3),
+      upLeft: this.values.some(v => v === 3.5),
+    }
+  }
+
   static named(name) {
     if (name === `up`) return Direction.Up
     const
@@ -370,6 +536,59 @@ class Direction {
     'downLeft': (PI * 3 / 4),
     'left': (PI),
     'upLeft': (PI * -3 / 4),
+  }
+}
+
+//MARK: Directions
+// ENUM: Directions : Represents a set of directions in 2D space
+class Directions {
+  static Direction = new Directions(Direction.All.directions)
+
+  values
+
+  constructor(values, indexSorted = false) {
+    if (values instanceof Array) {
+      if (indexSorted) {
+        [values[3], values[4]] = [values[4], values[3]]
+        this.values = values
+      }
+      this.values = OpArray.format(values)
+    } else if (isDirectionObj(values)) {
+      this.values = [
+        values.up,
+        values.upRight,
+        values.right,
+        values.downRight,
+        values.down,
+        values.downLeft,
+        values.left,
+        values.upLeft,
+      ]
+    } else DeBug.error(`Directions failed to initialize`)
+    this.values = OpArray.format(this.values)
+    if (this.values.length !== 4) DeBug.error(`Directions expects 4 values: expect problems!`)
+  }
+
+  get up() { return this.values[0] }
+  get upRight() { return this.values[1] }
+  get right() { return this.values[2] }
+  get downRight() { return this.values[3] }
+  get down() { return this.values[4] }
+  get downLeft() { return this.values[5] }
+  get left() { return this.values[6] }
+  get upLeft() { return this.values[7] }
+
+  get obj() {
+    return {
+      up: this.up,
+      upRight: this.upRight,
+      right: this.right,
+      downRight: this.downRight,
+      down: this.down,
+      downLeft: this.downLeft,
+      left: this.left,
+      upLeft: this.upLeft,
+    }
   }
 }
 
@@ -698,16 +917,19 @@ class EdgePart {
 // #region Bounds
 //TODO: Make this into a class and incorporate SelectionBounds, possibly making it a subclass of Bounds?
 // FUNC: isBoundsObj() : BOOL : checks if object has bounds properties
-function isBoundsObj(obj) { return hasProperties(obj, [`xMin`, `xMax`, `yMin`, `yMax`]) }
+function isBoundsObj(obj, every = true) { return hasProperties(obj, [`xMin`, `xMax`, `yMin`, `yMax`], every) }
 
 // FUNC: isCoordsObj() : BOOL : checks if object has coords properties
-function isCoordsObj(obj) { return hasProperties(obj, [`x`, `y`]) }
+function isCoordsObj(obj, every = true) { return hasProperties(obj, [`x`, `y`], every) }
 
 // FUNC: isCornerObj() : BOOL : checks if object has corner properties
-function isCornerObj(obj) { return hasProperties(obj, [`upLeft`, `upRight`, `downRight`, `downLeft`]) }
+function isCornerObj(obj, every = true) { return hasProperties(obj, [`upLeft`, `upRight`, `downRight`, `downLeft`], every) }
 
 // FUNC: isSideObj() : BOOL : checks if object has side properties 
-function isSideObj(obj) { return hasProperties(obj, [`up`, `right`, `down`, `left`]) }
+function isSideObj(obj, every = true) { return hasProperties(obj, [`up`, `right`, `down`, `left`], every) }
+
+// FUNC: isDirectionObj() : BOOL : checks if object has direction properties
+function isDirectionObj(obj, every = true) { return hasProperties(obj, [`upLeft`, `up`, `upRight`, `right`, `downRight`, `down`, `downLeft`, `left`], every) }
 
 // FUNC: findBounds() : {BoundsObject} : get bounds for combos of [segments, verts] or objects that contain bounds props
 function findBounds(...geo) {
@@ -743,17 +965,21 @@ function findBounds(...geo) {
 
 // FUNC: vertIsWithinBounds() : BOOL : finds if vert is within bounds of boundsVerts
 //NOTE: boundsVerts can be any number of verts above zero, the bounds of those points is calculated with min/max
-function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, deviation) {
+function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, deviation = 0) {
   if (!vert || !bounds) return false
-
+  let report = false                                                                                        //LOGGING:
+  // if (bounds.xMin === 25 && bounds.xMax === 100) report = true                                              //LOGGING:
+  if (report) DeBug.log('vertIsWithinBounds deviation', deviation)                                          //LOGGING:
   const
-    x = approxToDec(vert.x, accuracy, 0),
-    y = approxToDec(vert.y, accuracy, 0)
-  bounds = { ...bounds }.map(val => approxToDec(val, accuracy, 0))
+    x = roundToDec(vert.x, accuracy),
+    y = roundToDec(vert.y, accuracy)
+  bounds = findBounds(bounds).map(val => roundToDec(val, accuracy))
 
   const { xMin, xMax, yMin, yMax } = bounds
+  if (report) DeBug.log('vertIsWithinBounds', { x, y, xMin, xMax, yMin, yMax })                             //LOGGING:
   let result
 
+  if (report) DeBug.log('vertIsWithinBounds', x >= xMin, x <= xMax, y >= yMin, y <= yMax)                   //LOGGING:
   if (includeBorder) {
     result = x >= xMin
       && x <= xMax
@@ -765,7 +991,8 @@ function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, de
       && y > yMin
       && y < yMax
   }
-  if (deviation) {
+  if (report) DeBug.log('vertIsWithinBounds', abs(x - xMin), abs(x - xMax), abs(y - yMin), abs(y - yMax))   //LOGGING:
+  if (deviation > 0) {
     result = abs(x - xMin) < deviation
       && abs(x - xMax) < deviation
       && abs(y - yMin) < deviation
@@ -774,10 +1001,15 @@ function vertIsWithinBounds(vert, bounds, includeBorder = true, accuracy = 3, de
   return result
 }
 
-// FUNC: boundsIsWithinTestBounds() : BOOL : finds if vert is within bounds of testBounds
+// FUNC: boundsIsWithinTestBounds() : BOOL : finds if bounds is within testBounds
 function boundsIsWithinTestBounds(bounds, testBounds, includeBorder = true, justOverlaps = false, accuracy = 2) {
   bounds = findBounds(bounds)
-  const boundsVerts = [vert(bounds.xMin, bounds.yMin), vert(bounds.xMax, bounds.yMax)]
+  const boundsVerts = [
+    vert(bounds.xMin, bounds.yMin),
+    vert(bounds.xMax, bounds.yMin),
+    vert(bounds.xMax, bounds.yMax),
+    vert(bounds.xMin, bounds.yMax),
+  ]
   testBounds = findBounds(testBounds)
   if (justOverlaps) return boundsVerts.some(v => vertIsWithinBounds(v, testBounds, includeBorder, accuracy))
   else return boundsVerts.every(v => vertIsWithinBounds(v, testBounds, includeBorder, accuracy))
@@ -921,7 +1153,10 @@ function getKeyByValue(object, value) { return Object.keys(object).find(key => o
 function isObject(obj) { return obj !== null && typeof obj === 'object' }
 
 //FUNC: hasProperties() : BOOL : checks to see if obj is really an object and has certain named properties
-function hasProperties(obj, props) { return isObject(obj) ? props.every(prop => prop in obj) : false }
+function hasProperties(obj, props, every = true) {
+  if (isObject(obj)) return every ? props.every(prop => prop in obj) : props.some(prop => prop in obj)
+  return false
+}
 
 //MARK: Math Utilities
 
@@ -950,6 +1185,10 @@ function isPrime(number) {
   }
   return true
 }
+//FUNC: isEven() : BOOL : check if number is even
+function isEven(number) { return number % 2 === 0 }
+//FUNC: isOdd() : BOOL : check if number is odd
+function isOdd(number) { return number % 2 !== 0 }
 // FUNC: roundToDec() : Number : round to number of decimal places
 function roundToDec(number, decimalPlaces) { return approxToDec(number, decimalPlaces) }
 
@@ -1036,10 +1275,3 @@ class Range {
     })
   }
 }
-
-
-
-
-
-
-
