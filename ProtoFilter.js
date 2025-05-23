@@ -48,8 +48,8 @@ class ProtoFilter {
       .parent(this.filter)
 
     let previousResult = 'SourceGraphic',
-      //  insetResult = clearInset ?  : 'SourceGraphic',
-      //  insetResult = clearInset ? 'SourceGraphic' : 'SourceGraphic',
+      // insetResult = clearInset ?  : 'SourceGraphic',
+      // insetResult = clearInset ? 'SourceGraphic' : 'SourceGraphic',
       insetResult = 'transparentInput',
       outsetResult = 'SourceGraphic'
 
@@ -79,8 +79,8 @@ class ProtoFilter {
           // return lighten ? 'multiply' : 'darken'
           // return 'hard-light'
           return 'exclusion'
-          return 'difference'
-          return 'overlay'
+          // return 'difference'
+          // return 'overlay'
           // return lighten ? 'darken' : 'screen'
           // return lighten ? 'hard-light' : 'multiply'
           return lighten ? 'multiply' : 'screen'
@@ -380,7 +380,7 @@ p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
 //PROTOTYPE: p5.Element.blur(radius) : p5.Element : apply a blur filter to the element
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
 p5.Element.prototype.blur = function (radius) {
-  // console.log(`parent`, this.parent())
+  // DeBug.log(`parent`, this.parent())
   const parent = this.parent(),
     viewBox = parent.getAttribute('viewBox'),
     [x, y, width, height] = viewBox ? viewBox.split(' ').map(Number) : [parent.x, parent.y, parent.width, parent.height],
@@ -446,4 +446,3 @@ p5.Element.prototype.applyStrokeMask = function (color, width) {
   return this
 }
 // #endregion
-

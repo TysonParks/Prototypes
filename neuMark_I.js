@@ -409,14 +409,14 @@ class Shade {
       .slice(start, keep())       // reduce layers based upon start and keep()
     // offsets = createOffsets()
 
-    console.error('offsets', offsets)
+    DeBug.error('offsets', offsets)
     offsets = offsets
       .map(e => rounding(e))      // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
       .numSorted                  // sort small-large
       .unique()                   // remove duplicates
 
-    console.error('offsets filter-sort', offsets)
+    DeBug.error('offsets filter-sort', offsets)
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
@@ -722,5 +722,3 @@ class ProtoColor extends p5.Color {
   //METH: achromic() : ProtoColor : create achromic color
   static achromic(l) { return protoColor(l * 255) }
 }
-
-

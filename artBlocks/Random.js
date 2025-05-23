@@ -55,19 +55,6 @@ class Random {
   random_choice(list) {
     return list[this.random_int(0, list.length - 1)];
   }
-
-  // // NOTE: (my implementation) random hash (default length 4 -> 16bit)
-  // // NOTE: I need to flag this modification to the AB in my application
-  // // NOTE: More likely I just need to implement this myself since I only use this un-seeded
-  // random_hash(length = 4, prefix = '0x') {
-  //   let x = "0123456789abcdef", hash = prefix
-  //   for (let i = length; i > 0; --i) {
-  //     hash += x[Math.floor(this.random_dec() * x.length)]
-  //   }
-  //   return hash
-  // }
-
 }
-
 //MARK: assign randomExtended mixin to Random
 Object.assign(Random.prototype, RandomExtended)

@@ -39,10 +39,10 @@ class OpArray extends Array {
     return this.reduce((a, b) => a + b)
   }
 
-  get compacted() { return this.filter(e => e !== undefined && e !== null && e !== '') } // from lodash?
-  get reversed() { return this.copy.reverse() }
-  get numSorted() { return this.copy.sort((a, b) => a - b) }
-  get gridVertSorted() { return this.copy.sort((a, b) => a.y - b.y || a.x - b.x) } // sort by y then x values
+  get compacted() { return this.filter(e => e !== undefined && e !== null && e !== '') }  // from lodash?
+  get reversed() { return this.copy.reverse() }                                           // reverse the array
+  get numSorted() { return this.copy.sort((a, b) => a - b) }                              // sort by numeric values, low to high
+  get gridVertSorted() { return this.copy.sort((a, b) => a.y - b.y || a.x - b.x) }        // sort by y then x values
   get counterGridVertSorted() { return this.copy.sort((a, b) => a.y - b.y || b.x - a.x) } // sort by y then -x values
 
   // MARK: 2D operations

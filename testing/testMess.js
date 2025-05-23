@@ -1642,4 +1642,3 @@ class DeprecatedFrameMethods {
 
   }
 }
-

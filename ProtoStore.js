@@ -3,22 +3,16 @@
 class Store {
   constructor() {
     this.Frame = new ProtoStorage('frame', 1)
-    // this.Layers = new ProtoStorage('layr', 1)
     this.Grids = new ProtoStorage('grd', 1)
     this.Cells = new ProtoStorage('cel')
     this.CellGroups = new ProtoStorage('celGrp', 1)
     this.ShapeGroups = new ProtoStorage('shpGrp', 2)
     this.Islands = new ProtoStorage('isl')
     this.Shapes = new ProtoStorage('shp')
-    // this.Segments = new ProtoStorage('seg')
-    // this.Verts = new ProtoStorage('vert')
-
-    // this.Grammars = new ProtoStorage('grmr', 2)
-    // this.Looks = new ProtoStorage('look', 2)
-    // this.Actions = new ProtoStorage('axn')
     this.Cuts = new ProtoStorage('cut', 2)
     this.Effects = new ProtoStorage('fx', 2)
-    // this.ElmtGroups = new ProtoStorage('eltGrp', 4)
+    // this.Segments = new ProtoStorage('seg')
+    // this.Verts = new ProtoStorage('vert')
   }
 
   get allLayers() {
@@ -65,27 +59,21 @@ class ProtoStorage {
   //MARK: Methods
   //METH: add() :
   add(value) {
-    // let alreadyAssigned = this.#db.findIndex(e => ProtoLayer.equal(e, value))
-    // if (alreadyAssigned) {
-    //   return alreadyAssigned.idq
-    // } else {
     let nextKey = this.nextKey
     this.#db.push([nextKey, value])
     return nextKey
-    // }
   }
   //METH: remove() :
   remove(key) {
     let index = this.#db.findIndex(e => e[0] === key)
-    if (index) { this.#db.splice(index, 1) }
+    if (index) this.#db.splice(index, 1)
   }
+  //METH: find() :
   find(callback) {
     for (let item of this.db) {
-      if (callback(item[1])) {
-        return item[1]  // Return the first item that matches the condition
-      }
+      if (callback(item[1])) return item[1]    // Return the first item that matches the condition 
     }
-    return undefined // Return undefined if no matching item is found
+    return undefined                            // Return undefined if no matching item is found
   }
   //METH: named() :
   named(id) { return this.item({ key: id }) }
@@ -96,10 +84,10 @@ class ProtoStorage {
   }
   //METH: item() :
   item({ index, key } = {}) {
-    if (arguments.length === 0) { return this.random(1) }
-    if (index && key) { return }
-    if (index) { return this.#db[index] }
-    if (key) { return this.#db.find(e => e[0] === key) }
+    if (arguments.length === 0) return this.random(1)
+    if (index && key) return
+    if (index) return this.#db[index]
+    if (key) return this.#db.find(e => e[0] === key)
   }
 }
 
@@ -123,11 +111,9 @@ const Identifiable = {
   uid: 'unassigned',
   //METH: assignUID() :
   assignUID() { this.uid = RuID.random_hash() },
-
+  //METH: equals() :
   equals(identifiable) { return this.uid === identifiable.uid }
 }
 
 // MIXIN: IdentifiableStored: mixin composition of Stored and Identifiable
 const IdentifiableStored = Object.assign({}, Stored, Identifiable)
-
-
