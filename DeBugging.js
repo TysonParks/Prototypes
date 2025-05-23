@@ -148,8 +148,8 @@ const Debuggable = {
       lightHue = protoColor(randHue.red, randHue.green, randHue.blue)
     DeBug.groupCollapsed(this.id)
     if (this.isShapeGroup && this.cut?.profile) {
-      this.debugStartElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugStart`)
-      this.debugEndElt = createElementNS(SVG.xmlns, 'g').id(`${this.id}-debugEnd`)
+      this.debugStartElt = createElementNS(xmlns, 'g').id(`${this.id}-debugStart`)
+      this.debugEndElt = createElementNS(xmlns, 'g').id(`${this.id}-debugEnd`)
       const debugElts = OpArray.format([
         this.debugStartElt,
         this.debugEndElt
@@ -180,9 +180,9 @@ const Debuggable = {
           DeBug.log(`hasOutsetShade`)
           // startScale = Vertex.add(sh.insetScale, depthScale)
           startScale = Vertex.add(sh.insetScale, depthScale)
-          endScale = this.cut.start < 0 ? sh.insetScale : sh.insetScale
+          endScale = sh.insetScale
         } else {
-          DeBug.log(`no outsetShade`)
+          DeBug.log(`has insetShade`)
           startScale = sh.insetScale
           endScale = Vertex.sub(sh.insetScale, depthScale)
         }
