@@ -435,7 +435,7 @@ class Shade {
       // frameColor = achromic(0.9)
       const shadColSpread = 0.25
 
-      //MARK: "I" Cut
+      //MARK: "I" and "R2" Cast Shadows
       if (curve === 'i' || curve === 'r2') {
         const
           highColSpread = 0.04,                             // spread up from base (0.9) to max highlight luma (1!)
@@ -480,6 +480,7 @@ class Shade {
           }).flat()
       }
 
+      //MARK: "j" and "r" Cuts
       if (curve === 'j' || curve === 'r') {
         let reflLightRange
         // rotOffset = rotOffset + PI
@@ -494,7 +495,7 @@ class Shade {
         const
           highColSpread = 0.1,                            // spread up from base (0.9) to max highlight luma (1!)
           //  shadColSpread = 0.25,                       // spread down from base (0.9) to min shadow luma (0.7)
-          reflHighMult = 0.6,                             // 
+          reflHighMult = .6,                             // 
           reflShadMult = 1,                               //
           reflHighSpread = reflHighMult * shadColSpread,  // spread down from base (0.9) to min shadow luma (0.65)
           maxHighlight = 1,                                                         // 0.9 + 0.1 = 1!
@@ -512,7 +513,8 @@ class Shade {
         neuShades = offsets
           .map(offset => {
             let mag = offset / pixToUserUnits             // convert pixelUnit to userUnit magnitude
-            mag = curve === 'j' ? mag * 1 : mag * .65
+            //MARK: This is the main control for inner shade depth
+            mag = curve === 'j' ? mag * 1 : mag * .75
             let
               isSCurve = false,
               highBlurRad = mag * 1,
@@ -524,7 +526,7 @@ class Shade {
 
             let highColLuma, shadColLuma
 
-            // "r" curve
+            //MARK: "r" Cuts
             if (curve === 'r') {
               highColLuma =
                 !isSCurve ?
@@ -541,7 +543,8 @@ class Shade {
                     minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
                     : 1.2 * minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
               }
-              // "j" curve
+
+              //MARK: "j" Cuts
             } else if (curve === 'j') {
               // blur = false
               highColLuma = maxHighlight - (highColSpread * easeOutCircNormalized(offset) / perceptualDivisor)
