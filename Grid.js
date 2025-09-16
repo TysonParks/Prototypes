@@ -53,7 +53,6 @@ class Grid extends ProtoLayer {
       type: type,
       // drawSVG: false,
       // drawRect: true,
-      // drawFilter: true,
     })
 
     this.gridSize = gridSize
@@ -61,11 +60,6 @@ class Grid extends ProtoLayer {
     this.offset = isInterGrid ? 0.5 : 0
     this.cellOutset = cellOutset
     this.gridStyle = gridStyle
-
-    // this.drawLabel = true
-    // this.drawDeBugRect = true
-    // this.drawPerimeter = true
-    // this.drawInset = true
 
     this.finishSetup(S.Grids)
     this.cellRows = this.#createRowsArray()
@@ -456,7 +450,6 @@ class Grid extends ProtoLayer {
     isTaken = true,
     stored = true,
     insetScale = 1,
-    drawFilter = true,
     createShape = true,
   } = {}) {
     DeBug.groupCollapsed(`grid.createIslands`)
@@ -557,7 +550,6 @@ class Grid extends ProtoLayer {
         direction: direction,
         maxCorners: maxCorners,
         stored: stored,
-        drawFilter: drawFilter,
         cut: cut,
       })
 
@@ -2339,7 +2331,9 @@ class Grid extends ProtoLayer {
       this.highElt = createElementNS(xmlns, 'g').id(`${this.id}-highLayer`)
       this.shadElt = createElementNS(xmlns, 'g').id(`${this.id}-shadLayer`)
 
-      this.shaderElts = OpArray.format([this.backElt, this.comboElt, this.highElt, this.shadElt])
+      this.maskElt = createElementNS(xmlns, 'g').id(`${this.id}-mask`)
+
+      this.shaderElts = OpArray.format([this.backElt, this.comboElt, this.highElt, this.shadElt, this.maskElt])
       this.shaderElts.forEach(elt => {
         elt
           .parent(this.svgElt)
@@ -2403,6 +2397,17 @@ class Grid extends ProtoLayer {
       sh.drawLabel = label
       sh.drawLoft = true
       sh.assignElement()
+      sh.showDeBug()
+    })
+    DeBug.groupEnd()
+  }
+  showMasksDebug() {
+    DeBug.log(``)
+    DeBug.groupCollapsed(`DEBUG: showMasks`)
+    this.shapeGroups.forEach(sh => {
+      sh.drawSVG = true
+      sh.drawMask = true
+      // sh.assignElement()
       sh.showDeBug()
     })
     DeBug.groupEnd()
