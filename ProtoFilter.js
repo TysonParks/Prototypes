@@ -381,7 +381,8 @@ p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
 p5.Element.prototype.blur = function (radius) {
   // DeBug.log(`parent`, this.parent())
-  const parent = this.parent(),
+  const
+    parent = this.parent(),
     viewBox = parent.getAttribute('viewBox'),
     [x, y, width, height] = viewBox ? viewBox.split(' ').map(Number) : [parent.x, parent.y, parent.width, parent.height],
     padding = Math.ceil(radius * 3),
@@ -403,6 +404,52 @@ p5.Element.prototype.blur = function (radius) {
 
   this
     .attribute('filter', `url(#${filterID})`)
+    .attribute('viewBox', newViewBox)
+
+  return this
+}
+//PROTOTYPE: p5.Element.mask() : p5.Element : apply a mask filter to the element
+p5.Element.prototype.mask = function (shape, blur = 0, strokeWidth = 0) {
+  const
+    parent = this.parent(),
+    viewBox = parent.getAttribute('viewBox'),
+    [x, y, width, height] = viewBox ? viewBox.split(' ').map(Number) : [parent.x, parent.y, parent.width, parent.height],
+    padding = Math.ceil(blur * 3),
+    newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' '),
+    maskID = 'mask-' + Math.floor(Math.random() * 100000)
+
+  // Create defs element if it doesn't exist
+  let defs = parent.querySelector('defs')
+  if (!defs) defs = createSVGElt('defs').parent(parent)
+
+  // Clone the shape for the mask
+  const
+    maskShape = shape.elt.cloneNode(true),
+    maskShapeElement = addElement(maskShape, this._pInst)
+
+  // Step 1: Configure stroke or fill
+  if (strokeWidth > 0) {
+    maskShapeElement.attribute('stroke-width', strokeWidth)
+    maskShapeElement.attribute('stroke', 'white')
+    maskShapeElement.attribute('fill', 'none')
+  } else {
+    maskShapeElement.attribute('fill', 'white')
+    maskShapeElement.attribute('stroke', 'none')
+  }
+
+  // Step 2: Apply blur if specified
+  if (blur > 0) maskShapeElement.blur(blur)
+
+  // Create mask element
+  const mask = createSVGElt('mask')
+    .attribute('id', maskID)
+    .parent(defs)
+
+  mask.elt.appendChild(maskShapeElement.elt)
+
+  // Step 3: Apply mask to element
+  this
+    .attribute('mask', `url(#${maskID})`)
     .attribute('viewBox', newViewBox)
 
   return this
