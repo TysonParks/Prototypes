@@ -5,6 +5,7 @@ const Debuggable = {
   drawPerimeter: false,
   drawInset: false,
   drawLoft: false,
+  drawMask: false,
 
   //MARK: Debuggable Computed Properties
   get isPerimeterShape() { return this.type === `PerimeterShape` },
@@ -26,6 +27,7 @@ const Debuggable = {
     if (this.drawPerimeter) this.showPerimeter()
     if (this.drawInset) this.showInset()
     if (this.drawLoft) this.showLofts()
+    if (this.drawMask) this.showMasks()
   },
   //METH: showLabel() : null : show debug label
   showLabel() {
@@ -56,7 +58,7 @@ const Debuggable = {
   //METH: showRect() : null : show svg backing/layout rect
   showRect() {
     if (this.drawSVG) {
-      const radius = 2
+      const radius = this.size?.x / 8 || 1
       if (!this.deBugRectElt) this.deBugRectElt = createSVGElt('rect').id(`${this.id}-deBugRect`)
       // if (this.isShape) {
 
@@ -175,7 +177,9 @@ const Debuggable = {
         DeBug.log(`cut insetScale`, sh.insetScale)
         const depthScale = vert(this.cut.depth / this.grid.cellRadius / 2)
         DeBug.log(`depthScale`, depthScale)
-        let startScale, endScale, hasOutsetShade = this.cut.profile.hasOutsetShade
+        let
+          startScale, endScale,
+          hasOutsetShade = this.cut.profile.hasOutsetShade
         if (hasOutsetShade) {
           DeBug.log(`hasOutsetShade`)
           // startScale = Vertex.add(sh.insetScale, depthScale)
@@ -190,6 +194,7 @@ const Debuggable = {
         const newScales = [startScale, endScale]
         DeBug.log(`newScales`, newScales)
         const newPaths = newScales.map((scale, i) => {
+          DeBug.log(`index`, i)
           const shape = sh.copy({
             insetScale: scale,
             protoParent: sh.protoParent,
@@ -199,15 +204,88 @@ const Debuggable = {
             .attribute(`d`, shape.svg)
             .layout(shape.anchor, shape.size, shape.padding)
             .parent(i === 0 ? this.debugStartElt : this.debugEndElt)
-            .attribute(`stroke`, i = 0 ? lightHue : lightHue)
-          // .attribute('fill', protoColor(1, 100))
+            // .attribute(`stroke`, i = 0 ? lightHue : lightHue)
+            .attribute(`stroke`, i === 0 ? 'red' : 'blue')
+          // .attribute('fill', protoColor(255, 0, 0, 50))
           // .attribute('fill', i === 1 ? frameColor : protoColor(0, 0))
           // .attribute('fill', i === 1 ? `red` : protoColor(0, 0))
           // .blur(.1)
+          // if (i === 0 && sh.maskShape) {
+          //   DeBug.log(`maskShape index`, i)
+          //   const maskShape = createSVGElt('path').id(`${shape.id}-maskPath`)
+          //     .attribute(`d`, sh.maskSVG)
+          //     .parent(this.grid.maskElt)
+
+          //   if (sh.cut.profile.hasOutsetShade) {
+          //     maskShape
+          //       .attribute('stroke', protoColor(256, 0, 256, 25))
+          //       .attribute('stroke-width', sh.outerMaskSize)
+          //       .attribute('fill', protoColor(0, 0))
+          //   } else {
+          //     maskShape
+          //       .attribute('fill', protoColor(0, 0, 256, 50))
+          //   }
+          //   maskShape
+          //   // .blur(sh.outerMaskSize / 5)
+          // }
         })
+        // if (sh.maskShape) {
+        //   // DeBug.log(`maskShape index`, i)
+        //   const maskShape = createSVGElt('path').id(`${sh.id}-maskPath`)
+        //     .attribute(`d`, sh.maskSVG)
+        //     .parent(this.grid.maskElt)
+
+        //   if (sh.cut.profile.hasOutsetShade) {
+        //     maskShape
+        //       .attribute('stroke', protoColor(256, 0, 256, 25))
+        //       .attribute('stroke-width', sh.outerMaskSize)
+        //       .attribute('fill', protoColor(0, 0))
+        //   } else {
+        //     maskShape
+        //       .attribute('fill', protoColor(0, 0, 256, 50))
+        //   }
+        //   maskShape
+        //   // .blur(sh.outerMaskSize / 5)
+        // }
+
       })
 
 
+    }
+    DeBug.groupEnd()
+  },
+  // METH: showMask() : null : show mask for shapes
+  showMasks() {
+    DeBug.groupCollapsed(`showing Masks`, this.id)
+    DeBug.log(`this`, this)
+    DeBug.log(`this.cut`, this.cut)
+    DeBug.log(`this.isShapeGroup`, this.isShapeGroup)
+    if (this.isShapeGroup && this.cut?.profile) {
+      this.shapes.forEach(sh => {
+        if (sh.maskShape) {
+          // DeBug.log(`maskShape index`, i)
+          const maskShape = createSVGElt('path').id(`${sh.id}-maskPath`)
+            .attribute(`d`, sh.maskSVG)
+            .parent(this.grid.maskElt)
+
+          this.grid.maskElt
+            .attribute('fill-rule', `evenodd`)
+
+          if (sh.cut.profile.hasOutsetShade) {
+            maskShape
+              .attribute('stroke', protoColor(256, 0, 256, 25))
+              .attribute('stroke-width', sh.outerMaskSize)
+              .attribute('fill', protoColor(0, 0))
+          } else {
+            maskShape
+              .attribute('fill-rule', `evenodd`)
+              .attribute('fill', protoColor(127, 0, 255, 25))
+          }
+          maskShape
+            .attribute('fill-rule', `evenodd`)
+          // .blur(sh.outerMaskSize / 20)
+        }
+      })
     }
     DeBug.groupEnd()
   },
