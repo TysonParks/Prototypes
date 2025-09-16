@@ -326,8 +326,6 @@ class Direction {
     if (this.isSingle) return false                             // single direction can't have consecutive directions
     if (this.isAll) return true                                 // 'All' directions are completely consecutive
 
-
-
     const dif = perpindicular ? 1 : .5                          // difference between consecutive directions
     // DeBug.log(``)
     // DeBug.warn(`hasConsecutiveDirections!`, this.vals)
@@ -541,56 +539,56 @@ class Direction {
 
 //MARK: Directions
 // ENUM: Directions : Represents a set of directions in 2D space
-class Directions {
-  static Direction = new Directions(Direction.All.directions)
+// class Directions {
+//   static Direction = new Directions(Direction.All.directions)
 
-  values
+//   values
 
-  constructor(values, indexSorted = false) {
-    if (values instanceof Array) {
-      if (indexSorted) {
-        [values[3], values[4]] = [values[4], values[3]]
-        this.values = values
-      }
-      this.values = OpArray.format(values)
-    } else if (isDirectionObj(values)) {
-      this.values = [
-        values.up,
-        values.upRight,
-        values.right,
-        values.downRight,
-        values.down,
-        values.downLeft,
-        values.left,
-        values.upLeft,
-      ]
-    } else DeBug.error(`Directions failed to initialize`)
-    this.values = OpArray.format(this.values)
-    if (this.values.length !== 4) DeBug.error(`Directions expects 4 values: expect problems!`)
-  }
+//   constructor(values, indexSorted = false) {
+//     if (values instanceof Array) {
+//       if (indexSorted) {
+//         [values[3], values[4]] = [values[4], values[3]]
+//         this.values = values
+//       }
+//       this.values = OpArray.format(values)
+//     } else if (isDirectionObj(values)) {
+//       this.values = [
+//         values.up,
+//         values.upRight,
+//         values.right,
+//         values.downRight,
+//         values.down,
+//         values.downLeft,
+//         values.left,
+//         values.upLeft,
+//       ]
+//     } else DeBug.error(`Directions failed to initialize`)
+//     this.values = OpArray.format(this.values)
+//     if (this.values.length !== 4) DeBug.error(`Directions expects 4 values: expect problems!`)
+//   }
 
-  get up() { return this.values[0] }
-  get upRight() { return this.values[1] }
-  get right() { return this.values[2] }
-  get downRight() { return this.values[3] }
-  get down() { return this.values[4] }
-  get downLeft() { return this.values[5] }
-  get left() { return this.values[6] }
-  get upLeft() { return this.values[7] }
+//   get up() { return this.values[0] }
+//   get upRight() { return this.values[1] }
+//   get right() { return this.values[2] }
+//   get downRight() { return this.values[3] }
+//   get down() { return this.values[4] }
+//   get downLeft() { return this.values[5] }
+//   get left() { return this.values[6] }
+//   get upLeft() { return this.values[7] }
 
-  get obj() {
-    return {
-      up: this.up,
-      upRight: this.upRight,
-      right: this.right,
-      downRight: this.downRight,
-      down: this.down,
-      downLeft: this.downLeft,
-      left: this.left,
-      upLeft: this.upLeft,
-    }
-  }
-}
+//   get obj() {
+//     return {
+//       up: this.up,
+//       upRight: this.upRight,
+//       right: this.right,
+//       downRight: this.downRight,
+//       down: this.down,
+//       downLeft: this.downLeft,
+//       left: this.left,
+//       upLeft: this.upLeft,
+//     }
+//   }
+// }
 
 //MARK: Corner
 // ENUM: Corner : Represents a corner in 2D space
