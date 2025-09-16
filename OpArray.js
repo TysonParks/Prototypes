@@ -129,7 +129,7 @@ class OpArray extends Array {
 
   // MARK: Key Value / Boolean
   kvArray(props) {
-    if (this.isEmpty) { return new OpArray }
+    if (this.isEmpty) return new OpArray
     const clean = this.compacted
     props = OpArray.format(props).compacted
     // DeBug.log(`props`, props)
@@ -219,6 +219,42 @@ class OpArray extends Array {
       (a, b) => b.every(e => { return a.includes(e) })
     )
   }
+  //METH: sortedBy()
+  sortedBy(props, descending = false) {
+    if (this.isEmpty) return this
+    props = OpArray.format(props)
+    if (props.isEmpty) return this.numSorted
+    const sorted = this.copy.sort((a, b) => {
+      for (const prop of props) {
+        const
+          aProp = a[prop],
+          bProp = b[prop]
+        // If the property is a number, compare numerically
+        if (typeof aProp === 'number' && typeof bProp === 'number') {
+          if (aProp === bProp) return 0
+          if (aProp < bProp) return descending ? 1 : -1
+          if (aProp > bProp) return descending ? -1 : 1
+        }
+        // If the property is a string, compare lexicographically
+        if (typeof aProp === 'string' && typeof bProp === 'string') {
+          const
+            aStr = String(aProp),
+            bStr = String(bProp)
+          if (aStr === bStr) return 0
+          if (aStr < bStr) return descending ? 1 : -1
+          if (aStr > bStr) return descending ? -1 : 1
+        }
+        // If the property is a boolean, compare as numbers
+        if (typeof aProp === 'boolean' && typeof bProp === 'boolean') {
+          if (aProp === bProp) return 0
+          if (aProp < bProp) return descending ? 1 : -1
+          if (aProp > bProp) return descending ? -1 : 1
+        }
+      }
+      return 0
+    })
+    return OpArray.from(sorted)
+  }
   // MARK: BOOLEAN Operators
   // https://en.wikipedia.org/wiki/Venn_diagram
   //METH: A ⋃ B: return union or all unique values in both sets
@@ -275,6 +311,7 @@ class OpArray extends Array {
     }
     return OpArray.from(res)
   }
+
   // MARK: Shifting and reduction Methods
   shifted(index) {
     const shiftedIndex = index >= 0 ? index : this.length + index
