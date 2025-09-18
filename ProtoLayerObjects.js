@@ -3057,8 +3057,21 @@ class Shape extends ProtoLayer {
 
   get hasBulges() {
     if (!this.cut?.profile?.isR) return false                                       // bulges only happen with R profiles
+    let minCellThickness
     const
-      minWallRad = roundToDec(this.cellBounds.minCellThickness * this.cellRadius),  // radius of min cell wall
+      aspect = this.grid.cellAspect,                                                // cell aspect
+      bounds = this.cellBounds                                                      // cell bounds
+
+    if (aspect.isSquare) {
+      minCellThickness = bounds.minCellThickness                                    // square cells: use min cell thickness
+    } else {                                                                        // non-square cells: mult smaller side thickness by ratio
+      const
+        hor = bounds.minHorCellThickness,                                           // (fixes #1370 edge case)
+        vert = bounds.minVertCellThickness
+      minCellThickness = aspect.isPortrait ? min(hor, vert * aspect.ratio) : min(hor * aspect.ratio, vert)
+    }
+    const
+      minWallRad = roundToDec(minCellThickness * this.cellRadius),  // radius of min cell wall
       minOuterRad = roundToDec(this.minOutsideCornerRadius),                        // min outside corner radius
       larger = minWallRad < minOuterRad,                                            // minWallRad less than minOuterRad
       ordinal = this.island.isOrdinal                                               // ordinal connections create bulges
