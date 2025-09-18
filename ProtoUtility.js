@@ -35,10 +35,12 @@ class Aspect {
 
   name
   value
+  ratio
 
-  constructor(number) {
+  constructor(number, ratio) {
     this.value = number
     this.name = this.#getName(number)
+    this.ratio = ratio
   }
 
   get isSquare() { return this.value === 0 }
@@ -51,8 +53,8 @@ class Aspect {
 
   static fromRatio(ratio) {
     if (ratio === 1) return Aspect.Square
-    if (ratio < 1) return Aspect.Portrait
-    if (ratio > 1) return Aspect.Landscape
+    if (ratio < 1) return new Aspect(1, ratio)
+    if (ratio > 1) return new Aspect(2, ratio)
   }
 
   #descriptions = [
