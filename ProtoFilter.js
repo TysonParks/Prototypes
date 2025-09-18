@@ -380,32 +380,25 @@ p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
 //PROTOTYPE: p5.Element.blur(radius) : p5.Element : apply a blur filter to the element
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
 p5.Element.prototype.blur = function (radius) {
-  // DeBug.log(`parent`, this.parent())
-  const
-    parent = this.parent(),
-    viewBox = parent.getAttribute('viewBox'),
-    [x, y, width, height] = viewBox ? viewBox.split(' ').map(Number) : [parent.x, parent.y, parent.width, parent.height],
-    padding = Math.ceil(radius * 3),
-    newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' '),
-    filterID = 'blur-' + Math.floor(Math.random() * 100000),
+  const parentSVG = this.elt.ownerSVGElement || this.parent()
+  let defs = parentSVG.querySelector('defs')
+  if (!defs) defs = createSVGElt('defs').parent(parentSVG)
 
-    filter = createSVGElt('filter')
-      .attribute('id', filterID)
-      .attribute('x', '-50%')
-      .attribute('y', '-50%')
-      .attribute('width', '200%')
-      .attribute('height', '200%')
-      .parent(this.parent())
+  const filterID = 'blur-' + Math.floor(Math.random() * 100000)
+  const filter = createSVGElt('filter')
+    .attribute('id', filterID)
+    .attribute('x', '-50%')
+    .attribute('y', '-50%')
+    .attribute('width', '200%')
+    .attribute('height', '200%')
+    .parent(defs) // <-- parent to defs
 
   createSVGElt('feGaussianBlur')
     .attribute('in', 'SourceGraphic')
     .attribute('stdDeviation', radius)
     .parent(filter)
 
-  this
-    .attribute('filter', `url(#${filterID})`)
-    .attribute('viewBox', newViewBox)
-
+  this.attribute('filter', `url(#${filterID})`)
   return this
 }
 //PROTOTYPE: p5.Element.mask() : p5.Element : apply a mask filter to the element
