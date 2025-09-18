@@ -1283,7 +1283,7 @@ class CellGroup extends ProtoLayer {
 
       if (sh.hasInsideCorners) {
         if (profile?.hasOutsetShade) minRad = cellRadius
-        if (sh.cellBounds.minCellThickness * cellRadius < minRad) minRad = sh.cellBounds.minCellThickness * cellRadius
+        // if (sh.cellBounds.minCellThickness * cellRadius < minRad) minRad = sh.cellBounds.minCellThickness * cellRadius      // removes "BULGING" shapes
       }
 
       if (direction.hierarchy < 2) minRad = cellRadius
@@ -2024,7 +2024,7 @@ class ShapeGroup extends ProtoLayer {
     }
 
     this.svgGroupElt.applyFilter(this.filter)
-    // this.createMaskGroup()
+    this.createMaskGroup()
   }
 }
 
@@ -2953,7 +2953,7 @@ class Shape extends ProtoLayer {
   get boundsRect() { return this.cellBounds.boundsRect }
   // get insetAnchor() { return this.anchor }
   // get insetSize() { return this.size }
-  get padding() { return vert(this.grid.cellRadius) }
+  get padding() { return vert(this.cellRadius) }
 
   get group() { return this.grid.groupNamed(this.groupID) }
   get groupID() { return this.island.groupID }
@@ -3002,7 +3002,7 @@ class Shape extends ProtoLayer {
   }
 
   get isPerimeterShape() { return this.type === `PerimeterShape` }
-  get isSingleShape() { return this.subShapes.length === 1 }
+  get isSingleShape() { return this.simpleSubShapes.length === 1 }
 
   get isLine() { return this.island.isLine }
   get isQuad() { return this.island.isRectangle }
@@ -3054,6 +3054,16 @@ class Shape extends ProtoLayer {
   get hasOrdinalConnections() { return this.island.hasOrdinalConnections }
   get hasOffsetConnections() { return this.island.hasOffsetConnections }
   get hasInsideCorners() { return this.allInsideCorners.length > 0 }
+
+  get hasBulges() {
+    if (!this.cut?.profile?.isR) return false                                       // bulges only happen with R profiles
+    const
+      minWallRad = roundToDec(this.cellBounds.minCellThickness * this.cellRadius),  // radius of min cell wall
+      minOuterRad = roundToDec(this.minOutsideCornerRadius),                        // min outside corner radius
+      larger = minWallRad < minOuterRad,                                            // minWallRad less than minOuterRad
+      ordinal = this.island.isOrdinal                                               // ordinal connections create bulges
+    return larger || ordinal
+  }
 
   get minCornerRadius() { return min(this.allCornerRadii) }
   get maxCornerRadius() { return max(this.allCornerRadii) }
@@ -3111,7 +3121,7 @@ class Shape extends ProtoLayer {
   get cutDepthScale() {
     const profile = this.cut?.profile
     if (profile?.isR) {
-      return vert(this.cut.depth / this.grid.cellRadius / 2) // convert cut depth to cell scale
+      return vert(this.cut.depth / this.cellRadius / 2) // convert cut depth to cell scale
     }
   }
   // get outerMaskScale() {
@@ -3122,7 +3132,7 @@ class Shape extends ProtoLayer {
   //     return vert(2).sub(scale).div(4)
   //   }
   // }
-  get outerMaskSize() { return this.cutDepthScale?.x * this.grid.cellRadius } // convert cutDepthScale to cell size
+  get outerMaskSize() { return this.cutDepthScale?.x * this.cellRadius } // convert cutDepthScale to cell size
 
   get maskShape() {
     const
@@ -3131,8 +3141,9 @@ class Shape extends ProtoLayer {
     if (!profile?.isR) return                                                       // maskShape is only for R profiles
     if (!outsetShade                                                                // for insetShades, no maskShapes for: 
       && (this.isMaxEqualRadiusQuad                                                 // quads with max equal radius (circles, pills)  
-        || this.isTurnip || this.isLemon
-      )                                           // turnips or lemons
+        || this.isTurnip || this.isLemon                                            // turnips and lemons             
+        || this.hasBulges                                                           // has bulges
+      )
     ) return
 
     const
