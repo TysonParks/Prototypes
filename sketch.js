@@ -784,10 +784,10 @@ function gridTests2(features) {
   // FRAME.backGrid.showShapesDebug()
   // FRAME.backGrid.showShapeGroupsDebug(false)
   // FRAME.backGrid.showMasksDebug()
-  // GRID.showCellsDebug(false)
+  // GRID.showCellsDebug()
   // GRID.showShapesDebug()
   // GRID.showShapeGroupsDebug()
-  // GRID.showMasksDebug()
+  GRID.showMasksDebug()
   // GRID.showFrameRate(animationController)
   // GRID.showSizeGrid(4)
 
