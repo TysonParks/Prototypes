@@ -283,7 +283,7 @@ const Debuggable = {
           }
           maskShape
             .attribute('fill-rule', `evenodd`)
-          // .blur(sh.outerMaskSize / 20)
+          // .blur(sh.cut.depth / 8)
         }
       })
     }
