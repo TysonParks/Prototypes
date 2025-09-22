@@ -448,6 +448,29 @@ class Frame extends ProtoLayer {
       loftScale: 1 / 1,
       addBacking: false,
     })
+    //NOTE: this should be used as the inner mask of the frame
+    this.backGroup.cutIslands({
+      // profile: Profile.jIn,        // no profile creates flat backing
+      isFrame: true,
+      layerStart: scaled(0),
+      amount: 1,
+      loftScale: 1 / 1,
+      addBacking: false,
+    })
+
+    const
+      innerMaskDefs = createSVGElt(`defs`).parent(this.svgElt),                  // create <defs> element  
+      innerMaskID = `${this.id}-innerMask`,                       // ID for mask
+      innerMask = createSVGElt(`mask`)                  // create <mask> element
+        .id(innerMaskID)
+        .parent(innerMaskDefs),
+
+      gridClone = this.backGroup.shapeGroups[1].svgGroupElt.elt.cloneNode(true),
+      paths = gridClone.querySelectorAll('path')
+
+    paths.forEach(p => p.setAttribute(`fill`, `black`))
+    innerMask.elt.appendChild(gridClone)
+
     //NOTE: make real cuts
     cuts.forEach(cut => {
       this.backGroup.cutIslands({
@@ -458,40 +481,41 @@ class Frame extends ProtoLayer {
         amount: cut.amount,
         loftScale: 1 / 1,
       })
+      // const thisGroup = this.backGroup.shapeGroups.last
+      // if (thisGroup.type === 'ShapeGroup-combo')
+      //   thisGroup.svgGroupElt.attribute(`mask`, `url(#${innerMaskID})`)
     })
 
     DeBug.log(`backGroup`, this.backGroup)
 
     //NOTE: FAIL/EXP USAGE
-    this.backGroup.shapeGroups.forEach(sg => {
-      // DeBug.log(`svgGroupElt`, sg.svgGroupElt)
+    // this.backGroup.shapeGroups.forEach(sg => {
+    //   // DeBug.log(`svgGroupElt`, sg.svgGroupElt)
 
-      sg.svgGroupElt
-      // .attribute(`fill`, frameColor)
-      // .attribute('fill', protoColor(130))
-      // .attribute('fill', `green`)
-      // .attribute('opacity', .5)
-      // sg.drawElement()
-      // .attribute('opacity', 0)
-      // .attribute('stroke', 'white')
-      // .attribute('stroke-width', `.0625`)
-    })
+    //   sg.svgGroupElt
+    //   // .attribute(`fill`, frameColor)
+    //   // .attribute('fill', protoColor(130))
+    //   // .attribute('fill', `green`)
+    //   // .attribute('opacity', .5)
+    //   // sg.drawElement()
+    //   // .attribute('opacity', 0)
+    //   // .attribute('stroke', 'white')
+    //   // .attribute('stroke-width', `.0625`)
+    // })
 
     if (this.mask) this.maskFrame()
   }
 
   //METH: maskFrame()
   maskFrame() {
-    let defs = createSVGElt(`defs`)
-      .parent(this.svgElt)
+    const defs = createSVGElt(`defs`)                     // create <defs> element
+      .parent(this.svgElt),
 
-    const
-      maskID = `${this.id}-mask`,
-      frameMask = createSVGElt(`mask`)
+      maskID = `${this.id}-mask`,                       // ID for mask
+      frameMask = createSVGElt(`mask`)                  // create <mask> element
         .id(maskID)
-        .parent(defs)
+        .parent(defs),
 
-    const
       gridClone = this.backGroup.shapeGroups[0].svgGroupElt.elt.cloneNode(true),
       paths = gridClone.querySelectorAll('path')
 
@@ -499,7 +523,12 @@ class Frame extends ProtoLayer {
     DeBug.log(paths)
 
     paths.forEach(p => p.setAttribute(`fill`, `white`))
+
+    // const gridCloneP5 = addElement(gridClone, window)   // Wrap gridClone as a p5.Element
+    // gridCloneP5.blur(1 / 16)                            // apply blur to the clone
     frameMask.elt.appendChild(gridClone)
+
+
     this.svgElt.attribute(`mask`, `url(#${maskID})`)
   }
 
@@ -1768,6 +1797,7 @@ class ShapeGroup extends ProtoLayer {
   createMaskGroup() {
     if (this.type === 'ShapeGroup-combo'
       && this.cut?.profile.isR
+      // && !this.cut?.profile.hasOutsetShade
       // && !this.grid.isBackGrid
     ) {                              // if this is an R cut, create a mask group
 
@@ -1795,6 +1825,7 @@ class ShapeGroup extends ProtoLayer {
           .id(`${this.id}-maskGroup`)
           // .parent(this.svgGroupElt)
           .addToClassList(this.id)
+        // .attribute('maskUnits', 'userSpaceOnUse')
         // .viewBox(this.anchor, this.size, this.padding)
         // .layout(this.anchor, this.size, this.padding)
         // .attribute('fill-rule', `evenodd`)
@@ -1813,38 +1844,60 @@ class ShapeGroup extends ProtoLayer {
           // .attribute('fill', 'black')
           // .attribute('fill', randomLCH(0.9))
           .parent(this.maskGroupElt)
+        // .attribute('maskUnits', 'userSpaceOnUse')
 
+        //------------------------------------------------------------  
         this.masks.forEach(m => {
           m.parent(this.maskGroupElt)
+            .blur(this.cut.depth / 8)
 
           if (outsetShade) {
             this.maskGroupElt
               .attribute('stroke', 'black')
               .attribute('stroke-width', m.outerMaskSize || 1)
-              .attribute('fill', protoColor(0, 0))
+            // .attribute('fill', 'white')
+            // .attribute('overflow', 'visible')
           } else {
             this.maskGroupElt
               .attribute('fill', 'black')
           }
+
+          if (this.cut.depth > 16) {
+            const
+              blurred = m.elt.cloneNode(true),
+              blurredP5 = addElement(blurred, window)
+            blurredP5
+              .blur(this.cut.depth / 16)
+              .parent(this.maskGroupElt)
+          }
+          if (this.cut.depth > 32) {
+            const
+              blurred2 = m.elt.cloneNode(true),
+              blurred2P5 = addElement(blurred2, window)
+            blurred2P5
+              .blur(this.cut.depth / 32)
+              .parent(this.maskGroupElt)
+          }
         })
 
-        this.maskGroupElt.blur(this.cut.depth / 8) // apply blur to the maskGroupElt
-
         let defs = createSVGElt(`defs`)
-          .parent(this.svgElt)
+          // .parent(this.svgElt)
+          .parent(this.svgGroupElt)
 
         const
           maskID = `${this.id}-mask`,
           mask = createSVGElt(`mask`)
             .id(maskID)
+            // .attribute('maskUnits', 'userSpaceOnUse')
             .parent(defs)
 
-        // this.maskGroupElt.parent(this.elt)   // append the maskGroupElt to the groupElt
-
-        mask.elt.appendChild(this.maskGroupElt.elt) // append the clone to the mask
+        this.maskGroupElt.parent(mask.elt)   // append the maskGroupElt to the groupElt
+        // mask.elt.appendChild(this.maskGroupElt.elt) // append the clone to the mask
+        // mask.elt.appendChild(maskCompositeGroup.elt) // append the clone to the mask
         this.svgElt
           .attribute(`mask`, `url(#${maskID})`) // set the mask attribute on the svgElt
           .addToClassList(`masked`)
+        // .attribute('maskUnits', 'userSpaceOnUse')
       }
     }
   }
@@ -3152,7 +3205,10 @@ class Shape extends ProtoLayer {
       profile = this.cut?.profile,
       outsetShade = profile.hasOutsetShade                                          // hasOutsetShade
     if (!profile?.isR) return                                                       // maskShape is only for R profiles
-    if (!outsetShade                                                                // for insetShades, no maskShapes for: 
+    if (
+      // this.grid.isFrontGrid                                                       // backGrids always have maskShapes
+      // &&
+      !outsetShade                                                               // for insetShades, no maskShapes for: 
       && (this.isMaxEqualRadiusQuad                                                 // quads with max equal radius (circles, pills)  
         || this.isTurnip || this.isLemon                                            // turnips and lemons             
         || this.hasBulges                                                           // has bulges
