@@ -485,7 +485,8 @@ class Shade {
         let reflLightRange
         // rotOffset = rotOffset + PI
         const rangeSize = mag                             // shadow range
-        reflLightRange = rangeSize / 2.2                  // visual observation shows relfLight to be about 1/5 the shadow
+        //FIXME: reflLightRange set back to 2.2!
+        reflLightRange = rangeSize / 2.2                 // visual observation shows relfLight to be about 1/5 the shadow
         // DeBug.log(`reflLightRange`, reflLightRange)
         if (!offsets.includes(reflLightRange)) {          // if necessary, add extra shade layer at reflLightRange
           offsets.push(reflLightRange)
