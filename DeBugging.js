@@ -149,6 +149,7 @@ const Debuggable = {
       randHue = ProtoColor.randomShadHue(),
       lightHue = protoColor(randHue.red, randHue.green, randHue.blue)
     DeBug.groupCollapsed(this.id)
+    DeBug.log(`this`, this)
     if (this.isShapeGroup && this.cut?.profile) {
       this.debugStartElt = createElementNS(xmlns, 'g').id(`${this.id}-debugStart`)
       this.debugEndElt = createElementNS(xmlns, 'g').id(`${this.id}-debugEnd`)
@@ -171,86 +172,66 @@ const Debuggable = {
       })
 
       this.shapes.forEach(sh => {
-        DeBug.log(`this.cut`, this.cut)
-        DeBug.log(`cut start`, this.cut.start)
-        DeBug.log(`cut depth`, this.cut.depth)
-        DeBug.log(`cut insetScale`, sh.insetScale)
-        const depthScale = vert(this.cut.depth / this.grid.cellRadius / 2)
-        DeBug.log(`depthScale`, depthScale)
-        let
-          startScale, endScale,
-          hasOutsetShade = this.cut.profile.hasOutsetShade
-        if (hasOutsetShade) {
-          DeBug.log(`hasOutsetShade`)
-          // startScale = Vertex.add(sh.insetScale, depthScale)
-          startScale = Vertex.add(sh.insetScale, depthScale)
-          endScale = sh.insetScale
-        } else {
-          DeBug.log(`has insetShade`)
-          startScale = sh.insetScale
-          endScale = Vertex.sub(sh.insetScale, depthScale)
+        //ARROW:
+        const makeDeBugElt = (segPath, i, start) => {
+          const svgPath = SVGPath.fromProtoSegPath(segPath),
+            elt = createSVGElt('path').id(`${sh.id}-debug${start ? 'Start' : 'End'}Path-${i}`)
+              .attribute(`d`, svgPath)
+              .parent(start ? this.debugStartElt : this.debugEndElt)
+              .attribute(`stroke`, start ? 'red' : 'blue')
+          return elt
         }
 
-        const newScales = [startScale, endScale]
-        DeBug.log(`newScales`, newScales)
-        const newPaths = newScales.map((scale, i) => {
-          DeBug.log(`index`, i)
-          const shape = sh.copy({
-            insetScale: scale,
-            protoParent: sh.protoParent,
-            island: sh.island,
-          })
-          const path = createSVGElt('path').id(`${shape.id}-debugStartPath`)
-            .attribute(`d`, shape.svg)
-            .layout(shape.anchor, shape.size, shape.padding)
-            .parent(i === 0 ? this.debugStartElt : this.debugEndElt)
-            // .attribute(`stroke`, i = 0 ? lightHue : lightHue)
-            .attribute(`stroke`, i === 0 ? 'red' : 'blue')
-          // .attribute('fill', protoColor(255, 0, 0, 50))
-          // .attribute('fill', i === 1 ? frameColor : protoColor(0, 0))
-          // .attribute('fill', i === 1 ? `red` : protoColor(0, 0))
-          // .blur(.1)
-          // if (i === 0 && sh.maskShape) {
-          //   DeBug.log(`maskShape index`, i)
-          //   const maskShape = createSVGElt('path').id(`${shape.id}-maskPath`)
-          //     .attribute(`d`, sh.maskSVG)
-          //     .parent(this.grid.maskElt)
-
-          //   if (sh.cut.profile.hasOutsetShade) {
-          //     maskShape
-          //       .attribute('stroke', protoColor(256, 0, 256, 25))
-          //       .attribute('stroke-width', sh.outerMaskSize)
-          //       .attribute('fill', protoColor(0, 0))
-          //   } else {
-          //     maskShape
-          //       .attribute('fill', protoColor(0, 0, 256, 50))
-          //   }
-          //   maskShape
-          //   // .blur(sh.outerMaskSize / 5)
-          // }
-        })
-        // if (sh.maskShape) {
-        //   // DeBug.log(`maskShape index`, i)
-        //   const maskShape = createSVGElt('path').id(`${sh.id}-maskPath`)
-        //     .attribute(`d`, sh.maskSVG)
-        //     .parent(this.grid.maskElt)
-
-        //   if (sh.cut.profile.hasOutsetShade) {
-        //     maskShape
-        //       .attribute('stroke', protoColor(256, 0, 256, 25))
-        //       .attribute('stroke-width', sh.outerMaskSize)
-        //       .attribute('fill', protoColor(0, 0))
-        //   } else {
-        //     maskShape
-        //       .attribute('fill', protoColor(0, 0, 256, 50))
-        //   }
-        //   maskShape
-        //   // .blur(sh.outerMaskSize / 5)
-        // }
-
+        DeBug.log(`sh.segPathsCutStart`, sh.segPathsCutStart)
+        DeBug.log(`sh.segPathsCutEnd`, sh.segPathsCutEnd)
+        sh.segPathsCutStart.forEach((segPath, i) => makeDeBugElt(segPath, i, true))
+        sh.segPathsCutEnd.forEach((segPath, i) => makeDeBugElt(segPath, i, false))
       })
 
+      // this.shapes.forEach(sh => {
+      //   DeBug.log(`this.cut`, this.cut)
+      //   DeBug.log(`cut start`, this.cut.start)
+      //   DeBug.log(`cut depth`, this.cut.depth)
+      //   DeBug.log(`cut insetScale`, sh.insetScale)
+      //   const depthScale = vert(this.cut.depth / this.grid.cellRadius / 2)
+      //   DeBug.log(`depthScale`, depthScale)
+      //   let
+      //     startScale, endScale,
+      //     hasOutsetShade = this.cut.profile.hasOutsetShade
+      //   if (hasOutsetShade) {
+      //     DeBug.log(`hasOutsetShade`)
+      //     // startScale = Vertex.add(sh.insetScale, depthScale)
+      //     startScale = Vertex.add(sh.insetScale, depthScale)
+      //     endScale = sh.insetScale
+      //   } else {
+      //     DeBug.log(`has insetShade`)
+      //     startScale = sh.insetScale
+      //     endScale = Vertex.sub(sh.insetScale, depthScale)
+      //   }
 
+      //   const newScales = [startScale, endScale]
+      //   DeBug.log(`newScales`, newScales)
+      //   const newPaths = newScales.map((scale, i) => {
+      //     DeBug.log(`index`, i)
+      //     const shape = sh.copy({
+      //       insetScale: scale,
+      //       protoParent: sh.protoParent,
+      //       island: sh.island,
+      //       type: 'DeBugShape'
+      //     })
+
+      //     const svgPath = createSVGElt('path').id(`${shape.id}-debugStartPath`)
+      //       .attribute(`d`, shape.svg)
+      //       // .layout(shape.anchor, shape.size, shape.padding)
+      //       .parent(i === 0 ? this.debugStartElt : this.debugEndElt)
+      //       // .attribute(`stroke`, i = 0 ? lightHue : lightHue)
+      //       .attribute(`stroke`, i === 0 ? 'red' : 'blue')
+      //     // .attribute('fill', protoColor(255, 0, 0, 50))
+      //     // .attribute('fill', i === 1 ? frameColor : protoColor(0, 0))
+      //     // .attribute('fill', i === 1 ? `red` : protoColor(0, 0))
+      //     // .blur(.1)
+      //   })
+      // })
     }
     DeBug.groupEnd()
   },
@@ -273,13 +254,18 @@ const Debuggable = {
 
           if (sh.cut.profile.hasOutsetShade) {
             maskShape
-              .attribute('stroke', protoColor(256, 0, 256, 25))
-              .attribute('stroke-width', sh.outerMaskSize)
-              .attribute('fill', protoColor(0, 0))
+              // .attribute('stroke', protoColor(256, 0, 256, 25))
+              // .attribute('stroke-width', sh.outerMaskSize)
+              .attribute('fill', protoColor(256, 0, 256, 25))
+            // .attribute('fill', protoColor(0, 0))
+
+            // .attribute('stroke', protoColor(255, 0, 127))
+            // .attribute('fill', protoColor(255, 0, 127))
+
           } else {
             maskShape
               .attribute('fill-rule', `evenodd`)
-              .attribute('fill', protoColor(127, 0, 255, 25))
+              .attribute('fill', protoColor(127, 0, 255, 15))
           }
           maskShape
             .attribute('fill-rule', `evenodd`)

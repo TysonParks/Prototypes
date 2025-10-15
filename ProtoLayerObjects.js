@@ -1823,7 +1823,7 @@ class ShapeGroup extends ProtoLayer {
 
         this.maskGroupElt = createElementNS(xmlns, 'g')
           .id(`${this.id}-maskGroup`)
-          // .parent(this.svgGroupElt)
+          .parent(this.svgGroupElt)
           .addToClassList(this.id)
         // .attribute('maskUnits', 'userSpaceOnUse')
         // .viewBox(this.anchor, this.size, this.padding)
@@ -1849,35 +1849,30 @@ class ShapeGroup extends ProtoLayer {
         //------------------------------------------------------------  
         this.masks.forEach(m => {
           m.parent(this.maskGroupElt)
-            .blur(this.cut.depth / 8)
+            .blur(this.cut.depth / 4)
 
           if (outsetShade) {
             this.maskGroupElt
-              .attribute('stroke', 'black')
-              .attribute('stroke-width', m.outerMaskSize || 1)
-            // .attribute('fill', 'white')
+              // .attribute('stroke', 'white')
+              // .attribute('stroke-width', m.outerMaskSize || 1)
+              .attribute('fill', 'white')
             // .attribute('overflow', 'visible')
+            maskRect.attribute('fill', 'black')
           } else {
             this.maskGroupElt
               .attribute('fill', 'black')
           }
 
-          if (this.cut.depth > 16) {
+          const createBlurMask = (div) => {           // create additional blurred masks for deeper cuts
             const
               blurred = m.elt.cloneNode(true),
               blurredP5 = addElement(blurred, window)
             blurredP5
-              .blur(this.cut.depth / 16)
+              .blur(this.cut.depth / div)
               .parent(this.maskGroupElt)
           }
-          if (this.cut.depth > 32) {
-            const
-              blurred2 = m.elt.cloneNode(true),
-              blurred2P5 = addElement(blurred2, window)
-            blurred2P5
-              .blur(this.cut.depth / 32)
-              .parent(this.maskGroupElt)
-          }
+          const divs = [8, 16, 32]                       // divisors for additional masks, max cut is <50 so these should suffice
+          divs.forEach(d => { if (this.cut.depth > d) createBlurMask(d) }) // create additional masks as needed
         })
 
         let defs = createSVGElt(`defs`)
@@ -1891,9 +1886,9 @@ class ShapeGroup extends ProtoLayer {
             // .attribute('maskUnits', 'userSpaceOnUse')
             .parent(defs)
 
+        // this.maskGroupElt.parent(this.svgGroupElt)   // append the maskGroupElt to the groupElt
         this.maskGroupElt.parent(mask.elt)   // append the maskGroupElt to the groupElt
-        // mask.elt.appendChild(this.maskGroupElt.elt) // append the clone to the mask
-        // mask.elt.appendChild(maskCompositeGroup.elt) // append the clone to the mask
+
         this.svgElt
           .attribute(`mask`, `url(#${maskID})`) // set the mask attribute on the svgElt
           .addToClassList(`masked`)
@@ -2077,7 +2072,7 @@ class ShapeGroup extends ProtoLayer {
     }
 
     this.svgGroupElt.applyFilter(this.filter)
-    this.createMaskGroup()
+    // this.createMaskGroup()
   }
 }
 
@@ -2979,12 +2974,14 @@ class Shape extends ProtoLayer {
     protoParent,
     svgParent,
     island,
-    insetScale
+    insetScale,
+    type
   } = {}) {
+    const shptype = type ? type : (protoParent.type === `Island` ? 'Shape' : `PerimeterShape`)
     super({
       protoParent: protoParent,
       svgParent: svgParent,
-      type: protoParent.type === `Island` ? 'Shape' : `PerimeterShape`,
+      type: shptype,
       insetScale: insetScale,
       drawSVG: false,
       drawRect: false,
@@ -3182,82 +3179,114 @@ class Shape extends ProtoLayer {
     if (this.insetScale <= 0) {
       // TODO: future use with interGrids
     }
-    return this.simpleSegPaths?.map(sub => sub.inset(this.insetScale))
+    return this.simpleSegPaths?.map(sub => sub.insetPath(this.insetScale))
   }
+
   get cutDepthScale() {
     const profile = this.cut?.profile
     if (profile?.isR) {
       return vert(this.cut.depth / this.cellRadius / 2) // convert cut depth to cell scale
     }
   }
-  // get outerMaskScale() {
-  //   const profile = this.cut?.profile
-  //   if (profile.isR && profile.hasOutsetShade) {
-  //     const scale = Vertex.add(this.insetScale, this.cutDepthScale) // outsetShade scale is insetScale + cutDepthScale
-  //     return this.cutDepthScale
-  //     return vert(2).sub(scale).div(4)
-  //   }
-  // }
+
+  get segPathsCutStart() { return this.terminalSegPaths(true) }
+  get segPathsCutEnd() { return this.terminalSegPaths(false) }
+
+  //METH: terminalSegPaths(start) : return simpleSegPaths inset by insetScale + cutDepthScale if hasOutsetShade matches start
+  terminalSegPaths(start) {
+    if (this.simpleSegPaths.isEmpty || !this.cut) return                    // must have simpleSegPaths
+    const hasOutsetShade = this.cut?.profile?.hasOutsetShade                // hasOutsetShade
+    return hasOutsetShade === start ?                                       // hasOutsetShade matches start
+      this.scaledSegPaths(Vertex.add(this.insetScale, this.cutDepthScale))  // return inset by insetScale + cutDepthScale
+      : this.simpleInsetSegPaths                                            // otherwise return inset by insetScale
+  }
+  //METH: scaledSegPaths(insetScale) : return simpleSegPaths inset by insetScale
+  scaledSegPaths(insetScale) {
+    if (this.insetScale === insetScale) return this.simpleSegPaths                    // no change
+    return this.simpleSegPaths.map(sub => sub.inset(insetScale))                      // inset by insetScale
+  }
+
   get outerMaskSize() { return this.cutDepthScale?.x * this.cellRadius } // convert cutDepthScale to cell size
 
   get maskShape() {
-    const
-      profile = this.cut?.profile,
-      outsetShade = profile.hasOutsetShade                                          // hasOutsetShade
-    if (!profile?.isR) return                                                       // maskShape is only for R profiles
-    if (
-      // this.grid.isFrontGrid                                                       // backGrids always have maskShapes
-      // &&
-      !outsetShade                                                               // for insetShades, no maskShapes for: 
-      && (this.isMaxEqualRadiusQuad                                                 // quads with max equal radius (circles, pills)  
-        || this.isTurnip || this.isLemon                                            // turnips and lemons             
-        || this.hasBulges                                                           // has bulges
-      )
-    ) return
+    return memoize(() => {
+      const
+        profile = this.cut?.profile,
+        outsetShade = profile.hasOutsetShade                                            // hasOutsetShade
+      if (!profile?.isR) return                                                         // maskShape is only for R profiles
+      if (
+        this.grid.isFrontGrid                                                           // backGrids always have maskShapes
+        &&
+        !outsetShade                                                                    // for insetShades, no maskShapes for: 
+        && (this.isMaxEqualRadiusQuad                                                   // quads with max equal radius (circles, pills)  
+          || this.isTurnip || this.isLemon                                              // turnips and lemons             
+          || this.hasBulges                                                             // has bulges
+        )
+      ) return
 
-    const
-      depthScale = this.cutDepthScale,                                              // cut depthScale
-      scale = outsetShade ? Vertex.add(this.insetScale, depthScale)                 // outsetShade scale is insetScale + depthScale  
-        : Vertex.sub(this.insetScale, depthScale),                                  // insetShade scale is insetScale - depthScale
-      hasOrds = this.island.hasOrdinalConnections && this.island.direction.isAll,   // shapes with ordinal connections will mask badly
-      shapes = hasOrds ?
-        this.island.copyAllToCardinal(this.insetScale, this.cut)   // get cardinal islands
-          .map(isle => isle.shape)                                                  // map to shapes
-        : [this]                                                                    // otherwise just use this shape        
+      const
+        depthScale = this.cutDepthScale,                                                // cut depthScale
+        scale = outsetShade ?
+          this.insetScale
+          // Vertex.add(this.insetScale, depthScale)                                    // outsetShade scale is insetScale + depthScale
+          : Vertex.sub(this.insetScale, depthScale),                                    // insetShade scale is insetScale - depthScale
+        // : this.insetScale,                                                           // insetShade scale is insetScale - depthScale
+        hasOrds = this.island.hasOrdinalConnections && this.island.direction.isAll,     // shapes with ordinal connections will mask badly
+        shapes = hasOrds ?
+          this.island.copyAllToCardinal(this.insetScale, this.cut)                      // get cardinal islands
+            .map(isle => isle.shape)                                                    // map to shapes
+          : OpArray.format(this)                                                        // otherwise just use this shape
 
-    const paths = shapes.map(shape => {                                             // map shapes to inset paths
-      return shape.simpleSegPaths?.map((path, i) => {
-        return outsetShade ? path.inset(depthScale.div(2).add(scale))               // outsetShade paths used with stroking
-          : path.inset(scale)                                                       // insetShade paths used as-is with fill
-      })
-    }).flat()                                                                       // flatten paths
-      .filter(path => !(path.length === 4 && path.every(seg => equalsRoundedDec(seg.length, 0, 3)))) // filter out quads with 0 length segments
+      DeBug.log(`maskShape shapes`, shapes)
+      const paths = shapes.map(shape => {                                               // map shapes to inset paths
+        return shape.simpleSegPaths?.map((path, i) => {
+          return outsetShade ? path.insetPath(depthScale.div(2).add(scale))             // outsetShade paths used with stroking
+            : path.insetPath(scale)                                                     // insetShade paths used as-is with fill
+        })
+      }).flat()                                                                        // flatten paths
+        .filter(path => !(path.length === 4 && path.every(seg => equalsRoundedDec(seg.length, 0, 3)))) // filter out quads with 0 length segments
 
-    DeBug.log(`maskShape paths`, paths)
-    if (!paths.isEmpty) return paths
+      DeBug.log(`maskShape paths`, paths)
+      // const result = new SegPath(paths, this) // return new SegPath
+      const result = paths.map(path => new SegPath(path, this))
+      DeBug.log(`result`, result)
+      if (!result.isEmpty) return result
+      // return paths
+    }, `maskShape`).call(this)
   }
 
-  get maskSVG() {
-    const maskShape = this.maskShape
-    if (maskShape) {
-      let result = maskShape.map(e => SVGPath.fromProtoSegPath({ segPath: e }))
-      if (result instanceof Array) result = result.join(' ')
-      return result
-    }
+  get minMaskShape() {
+    const baseMask = this.maskShape
+    if (!baseMask) return
+
   }
 
   //MARK: SVG Paths
   get svg() {
-    // DeBug.groupCollapsed(`svg creation`)
-    let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({ segPath: e }))
-    if (result instanceof Array) result = result.join(' ')
-    // DeBug.groupEnd()
-
+    let segPaths
+    if (this.isPerimeterShape) { segPaths = this.simpleSegPaths }
+    else { if (this.simpleInsetSegPaths) segPaths = this.simpleInsetSegPaths }
+    DeBug.warn(`Shape.svg this`, this)
+    DeBug.warn(`Shape.svg this.simpleSegPaths`, this.simpleSegPaths)
+    DeBug.warn(`Shape.svg this.simpleInsetSegPaths`, this.simpleInsetSegPaths)
+    DeBug.warn(`Shape.svg segPaths`, segPaths)
+    if (!segPaths) return
+    let result = segPaths.map(segPath => SVGPath.fromProtoSegPath(segPath))
+    if (result.length > 1) result = result.join(` `)
+    else result = result[0]
+    DeBug.warn(`Shape.svg result`, result)
     return result
+
   }
+  get maskSVG() {
+    return memoize(() => {
+      if (this.maskShape) {
+        DeBug.warn(`Shape.maskSVG this.maskShape`, this.maskShape)
+        return this.maskShape.map(path => SVGPath.fromProtoSegPath(path))
+        // return SVGPath.fromProtoSegPath(this.maskShape)
 
-  get cropShape() {
-
+      }
+    }, `maskSVG`).call(this)
   }
 
   // MARK: methods
@@ -3296,6 +3325,7 @@ class Shape extends ProtoLayer {
     protoParent,
     island,
     simpleSubShapes = this.simpleSubShapes,
+    type
   } = {}) {
     const newShape = new Shape({
       // subShapes: this.subShapes.map(sub => sub.map(seg => seg.copy())),
@@ -3304,6 +3334,7 @@ class Shape extends ProtoLayer {
       svgParent: protoParent.svgParent,
       island: island,
       insetScale: insetScale,
+      type: type
     })
     return newShape
   }
