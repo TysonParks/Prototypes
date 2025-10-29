@@ -6,40 +6,26 @@ const bezCircle45DegConst = 0.265
 //MARK: SVGPath CLASS
 // SIZE: 73 lines
 class SVGPath {
-  //METH: fromProtoSegPath() : SVGPath : convert SegPath with cubic verts (finalSubShapes) to a valid SVG path string
+  //METH: fromProtoSegPath() : SVGPath : convert PrSeg path with cubic verts (finalSubShapes) to a valid SVG path string
   static fromProtoSegPath(segPath, cornerMin = 0, cornerScale = 1) {
     DeBug.warn(`segPath`, segPath)                                           //LOGGING:
-    // DeBug.warn(`segPath.shape.id`, segPath.shape.id)
-
-
-    // if (!segPath || !segPath.path) {
-    //   DeBug.error('SVGPath.fromProtoSegPath: segPath is not a SegPath instance!', segPath)
-    //   return ''
-    // }
     // cornerScale = R.random_int(0, 1)
-    // segPath = segPath.path.copy
-    let path
-    if (segPath instanceof SegPath) path = segPath.path
-    if (segPath instanceof OpArray) path = segPath.flat()
-
-    DeBug.warn(`path`, path)
-    // DeBug.warn(`segPath.shape.id`, segPath.shape.id)
-    path = path.copy
+    segPath = segPath.copy
     let
       curves = [],
       start, end, cornerStart, cornerEnd,
       startRadius, startSegment, endRadius, endSegment,
       controlStart, lineStart, lineEnd, controlEnd
-    DeBug.warn(`path`, path)
-    path.forEach((seg, i) => {
+
+    segPath.forEach((seg, i) => {
       let report = false                                                                                  //LOGGING:
       // if (seg.id.includes(`cell000`)
       //   // || seg.id.includes(`cell122`)
       // ) { report = true }                                                //LOGGING:
-      // if (report) {                                                                                       //LOGGING:
-      DeBug.log(`svg creation, seg:`, seg)                                                            //LOGGING:
-      //   DeBug.log(`cornerVerts`, seg.cornerVerts)
-      // }                                                                                                   //LOGGING:
+      if (report) {                                                                                       //LOGGING:
+        DeBug.log(`svg creation, seg:`, seg)                                                            //LOGGING:
+        DeBug.log(`cornerVerts`, seg.cornerVerts)
+      }                                                                                                   //LOGGING:
 
       startRadius = seg.hasCubicStartVert ? seg.availableStartLength : cornerMin  // radius of corner arc
       lineStart = seg.distancedStartPoint(startRadius * cornerScale)              // start point of line connecting corner arcs 
@@ -61,7 +47,7 @@ class SVGPath {
         start = [controlStart, lineStart]
         cornerStart = seg.start
       }
-      if (i === path.lastIndex) {                                      // lastLoop
+      if (i === segPath.lastIndex) {                                      // lastLoop
         end = [lineEnd, controlEnd]
         cornerEnd = seg.end
         if (!cornerStart.equals(cornerEnd, 3)) { // verify start and end meet at same point
@@ -92,11 +78,8 @@ class SVGPath {
     // DeBug.log(`svgPath`, svgPath)                                                                   //LOGGING:
     return svgPath
   }
-  //METH: fromSegPaths() : SVGPath : convert array of SegPaths with cubic verts (finalSubShapes) to a valid SVG path string
   static fromSegPaths(segPaths, cornerMin = 0, cornerScale = 1) {
-    if (segPaths instanceof SegPath) segPaths = OpArray.format(segPaths)
-    DeBug.error(`fromSegPaths segPaths`, segPaths)                                       //LOGGING:
-    let result = segPaths.map(path => SVGPath.fromProtoSegPath(path, cornerMin, cornerScale))
+    let result = segPaths.map(segPath => new SVGPath(segPath, cornerMin, cornerScale))
     if (result instanceof Array) result = result.join(' ')
     return result
   }
@@ -753,8 +736,6 @@ class SegPath {
 
 
 }
-
-
 
 //MARK: VertPath CLASS                                                                                       //UNUSED:
 //TODO: Adapt this code for SVG points and add to debugging
