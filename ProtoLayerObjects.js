@@ -1189,6 +1189,7 @@ class CellGroup extends ProtoLayer {
       direction: direction,
       maxCorners: maxCorners,
     })
+    // this.perimeterIslands.forEach(pIsle => pIsle.createSimpleSubShapes())
     this.islandLevel = 0
     DeBug.groupEnd()
     DeBug.log(``)
@@ -2661,7 +2662,6 @@ class Island extends ProtoLayer {
     DeBug.warn(`createSubIslands direction`, direction.name)
     let subIslands
 
-
     //NOTE: Create InterGrid
     // if (insetScale <= 0) {
     // const
@@ -2994,6 +2994,8 @@ class Shape extends ProtoLayer {
     this.testColor = `${R.random_hash(3, '#')}8`
     this.assignSegments()
 
+    if (shptype === `PerimeterShape`) this.createSimpleSubShapes()
+
     this.finishSetup(S.Shapes)
   }
 
@@ -3257,7 +3259,16 @@ class Shape extends ProtoLayer {
   }
 
   //MARK: SVG Paths
-  get svg() { if (this.simpleInsetSegPaths) return SVGPath.fromSegPaths(this.simpleInsetSegPaths) }
+  get svg() {
+    DeBug.warn(`this`, this)
+    const paths = this.simpleInsetSegPaths ? this.simpleInsetSegPaths : this.simpleSegPaths
+    const result = SVGPath.fromSegPaths(paths)
+    DeBug.warn(`paths`, paths)
+    DeBug.warn(`Shape.svg for ${this.id}`, result)
+    if (this.simpleInsetSegPaths) return result
+
+    // if (this.simpleInsetSegPaths) return SVGPath.fromSegPaths(this.simpleInsetSegPaths)
+  }
   get maskSVG() { if (this.maskShape) { return SVGPath.fromSegPaths(this.maskShape) } }
 
   // MARK: methods
