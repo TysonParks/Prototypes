@@ -10,7 +10,10 @@ class SVGPath {
   static fromProtoSegPath(segPath, cornerMin = 0, cornerScale = 1) {
     DeBug.warn(`segPath`, segPath)                                           //LOGGING:
     // cornerScale = R.random_int(0, 1)
+    // segPath = segPath.copy
+    segPath = segPath.path
     segPath = segPath.copy
+    DeBug.warn(`segPath`, segPath)                                           //LOGGING:
     let
       curves = [],
       start, end, cornerStart, cornerEnd,
@@ -26,7 +29,7 @@ class SVGPath {
         DeBug.log(`svg creation, seg:`, seg)                                                            //LOGGING:
         DeBug.log(`cornerVerts`, seg.cornerVerts)
       }                                                                                                   //LOGGING:
-
+      // const seg = segPath.path
       startRadius = seg.hasCubicStartVert ? seg.availableStartLength : cornerMin  // radius of corner arc
       lineStart = seg.distancedStartPoint(startRadius * cornerScale)              // start point of line connecting corner arcs 
       startSegment = segment(lineStart, seg.start)      // control point calculation segment, connects hard corner to mid line
@@ -72,16 +75,43 @@ class SVGPath {
       i === curves.lastIndex ? `${c[0]} ${c[1]} L ${c[2]} ` : `${c[0]} ${c[1]} L ${c[2]} C ${c[3]} `
     )
 
-    const svgPath = `${startSVG} ${curvesSVG} Z`
-    // DeBug.log(`end`, end)                                                                           //LOGGING:
-    // DeBug.log(`endSVG`, endSVG)                                                                     //LOGGING:
-    // DeBug.log(`svgPath`, svgPath)                                                                   //LOGGING:
+    const svgPath = `${startSVG} ${curvesSVG} Z`,
+      // DeBug.log(`end`, end)                                                                           //LOGGING:
+      // DeBug.log(`endSVG`, endSVG)                                                                     //LOGGING:
+      // DeBug.log(`svgPath`, svgPath)                                                                   //LOGGING:
+
+      isValid = SVGPath.looksLikePathString(svgPath)
+    if (!isValid) {
+      DeBug.error(`ERROR: Invalid SVG path string`)
+      DeBug.log(`svgPath`, svgPath)
+      // return
+    }
+
     return svgPath
   }
+
+  //METH: fromSegPaths() : SVGPath : convert array of SegPaths to SVG path string
   static fromSegPaths(segPaths, cornerMin = 0, cornerScale = 1) {
-    let result = segPaths.map(segPath => new SVGPath(segPath, cornerMin, cornerScale))
+    DeBug.warn(`segPaths`, segPaths)                                   //LOGGING:
+    let result = segPaths.map(segPath => SVGPath.fromProtoSegPath(segPath))
+    DeBug.log(`1st resulting SVG path`, result)                           //LOGGING:
     if (result instanceof Array) result = result.join(' ')
+    const isValid = SVGPath.looksLikePathString(result)
+    if (!isValid) {
+      DeBug.error(`ERROR: Invalid SVG path string`)
+      DeBug.log(`svgPath`, result)
+      return
+    }
+
+    DeBug.log(`resulting SVG path`, result)                           //LOGGING:
     return result
+  }
+
+  //METH: looksLikePathString() : Bool : check if string looks like an SVG path string
+  static looksLikePathString(d) {
+    if (!d || typeof d !== 'string') return false;
+    // must contain at least one MoveTo command and only allowed characters (commands, numbers, whitespace, comma, +/-/e/E/.)
+    return /[Mm]\s*[-\d.+eE]/.test(d) && /^[MmZzLlHhVvCcSsQqTtAa0-9eE+\-.,\s]*$/.test(d);
   }
 }
 
