@@ -3,7 +3,7 @@ let
 
   testingControls = {
     hashNumber: 1420,
-    lastHash: false,
+    lastHash: true,
     blackMode: false,
   },
 
@@ -52,9 +52,20 @@ function keyPressed() {
     const date = getCurrentDateString()
     const time = getCurrentTime()
     const hash = tokenData.hash
-    const name = `Prototype-${date}-${rezString}-${hash}.png`
+    const trimmedHash = `${hash.slice(0, 4)}\u2026${hash.slice(-4)}`
+    const name = `Prototypes-${trimmedHash}-${date}-${rezString}.png`
 
     Export.exportPNG(FRAME.svgMarkup, name, rez.x, rez.y, scale)
+  }
+  if (key === 'v') {
+    // Export video frames — full 360° light rotation
+    Export.exportFrames({
+      size: vert(533, 960),       // lower rez for speed; swap to vert(4000, 7200) for final
+      totalFrames: 360,             // 360 frames = 1° per frame
+      scale: 1,
+      startAngle: 90,
+      useDirectoryPicker: true,     // will prompt for folder in Chrome/Edge; falls back to downloads
+    })
   }
   if (key === 'l') {
     // use for cornerScale animation
