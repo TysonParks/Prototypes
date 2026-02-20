@@ -79,12 +79,12 @@ connecting them.
 ```
          cubicEndVert          cubicStartVert
               ●                     ●
-              |    ╲    arc    ╱    |
-              |       ╲     ╱      |
-  this seg    |         ● ←── arcCenterVert
-  ────────────┤       corner       ├──────────
-              |      vertex        |   endNeighbor
-              |                    |
+              |       ╲ arc ╱       |
+              |        ╲   ╱        |
+  this seg    |          ● ←── arcCerVert
+  ────────────┤          corner     ├──────────
+              |          vertex     |   endNeighbor
+              |                     |
               ●                    
          arcOrigin ← center of the arc circle
 ```
@@ -160,10 +160,10 @@ The bounding box of the arc, from `arcOrigin` to the corner vertex.
 
 ```
   ┌─────────────┐
-  │   arcBounds  │
-  │      ╱╲      │
-  │    ╱    ╲    │
-  │  ● origin  ● │ ← corner vertex
+  │  arcBounds  │
+  │      ╱╲     │
+  │    ╱    ╲   │
+  │  ●origin  ● │ ← corner vertex
   └─────────────┘
 ```
 
