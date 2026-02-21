@@ -61,7 +61,7 @@ function keyPressed() {
     // Export video frames — full 360° light rotation
     Export.exportFrames({
       size: vert(533, 960),       // lower rez for speed; swap to vert(4000, 7200) for final
-      totalFrames: 360,             // 360 frames = 1° per frame
+      totalFrames: 900,             // 360 frames = 1° per frame
       scale: 1,
       startAngle: 90,
       useDirectoryPicker: true,     // will prompt for folder in Chrome/Edge; falls back to downloads
