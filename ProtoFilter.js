@@ -115,8 +115,11 @@ class ProtoFilter {
           .attribute('result', 'offset-blurred')                      // verified attr
           .parent(filter)
 
-        // DeBug.log(`this.offsetElts`, this.offsetElts)
-        this.offsetElts.push({ elt: feOffset, mag: mag, })
+        // Store the full signed offset magnitude for runtime animation
+        // Build-time: dx = vector.x * mag, where vector may carry its own magnitude via setMag()
+        // Runtime needs: shadUnitVect.x * fullMag to reproduce the same offset at any angle
+        const fullMag = Math.sign(mag) * sqrt(dx * dx + dy * dy)
+        this.offsetElts.push({ elt: feOffset, mag: fullMag, })
 
         // 4a feComposite - 
         if (inset) {
