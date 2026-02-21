@@ -363,8 +363,8 @@ class Shade {
 
     //ARROW: rounding(): [number] : preserve precision of lower offsets, reduce duplicates for larger offsets
     const rounding = (e) => {
-      if (e < 4) return roundToDec(e)  // roundToDec values below 4, to preserve precision for small shade depths
-      else return floor(e)       // floor values at 4 and above to reduce duplicate shades for larger depths
+      if (e < 4) return roundToDec(e, 4)  // preserve 4 decimals for small shade depths (smooth animation)
+      else return roundToDec(e, 2)        // preserve 2 decimals for larger depths (smooth animation)
     }
 
     //ARROW: createOffsets() : [OpArray] : create offsets for shade layers
@@ -414,7 +414,8 @@ class Shade {
       .map(e => rounding(e))      // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
       .numSorted                  // sort small-large
-      .unique()                   // remove duplicates
+      .unique()
+    // .filter((e, i, a) => i === 0 || !equalsRoundedDec(e, a[i - 1], 0))  // deduplicate within tolerance of 1
 
     DeBug.error('offsets filter-sort', offsets)
     let neuShades
