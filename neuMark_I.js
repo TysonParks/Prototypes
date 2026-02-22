@@ -414,8 +414,7 @@ class Shade {
       .map(e => rounding(e))      // round offsets
       .filter(e => e > 0)         // remove negatives (shouldn't be necessary!)
       .numSorted                  // sort small-large
-      .unique()
-    // .filter((e, i, a) => i === 0 || !equalsRoundedDec(e, a[i - 1], 0))  // deduplicate within tolerance of 1
+      .filter((e, i, a) => i === 0 || !equalsRoundedDec(e, a[i - 1], 0))  // deduplicate within tolerance of 1
 
     DeBug.error('offsets filter-sort', offsets)
     let neuShades
