@@ -2,7 +2,7 @@ let
   gui,
 
   testingControls = {
-    hashNumber: 1420,
+    hashNumber: 1424,
     lastHash: true,
     blackMode: false,
   },
@@ -52,8 +52,8 @@ function keyPressed() {
     const date = getCurrentDateString()
     const time = getCurrentTime()
     const hash = tokenData.hash
-    const trimmedHash = `${hash.slice(0, 4)}\u2026${hash.slice(-4)}`
-    const name = `Prototypes-${trimmedHash}-${date}-${rezString}.png`
+    // const trimmedHash = `${hash.slice(0, 4)}\u2026${hash.slice(-4)}`
+    const name = `Prototypes-${hash}-${date}-${rezString}.png`
 
     Export.exportPNG(FRAME.svgMarkup, name, rez.x, rez.y, scale)
   }
