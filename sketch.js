@@ -24,7 +24,8 @@ let
   BG, FRAME, BGRID, GRID,   // Background, Frame, Background Grid, Grid
   ROT, frameRate,           // Rotation, Frame Rate
   R, S, RuID,               // Random, Store, Random UID
-  animationController       // Animation Controller
+  animationController,       // Animation Controller
+  protoBatch                 // Batch Renderer
 
 
 // MARK: setup
@@ -35,27 +36,13 @@ function setup() {
 
   functionTestPrint()
 
-  setupPrefs()
-  setupColors()
-  setupBackground()
-  DeBug.groupCollapsed(`setupFeatures`)
-  // DeBug.group(`setupFeatures`)
-  const features = setupFeatures()
-  //  DeBug.log(`setupFeatures`)
-  // DeBug.log('random R useage', R.useage)
-  DeBug.groupEnd()
-  DeBug.warn('Features', features)
-  DeBug.warn('Features R useage', R.useage)
-  gridTests2(features)
-
-  // areciboMonolith()
-  // const mill = new ProtoMill()
-  // mill.mkProtoType()
+  // Initialise ProtoBatch and build from the startup hash
+  protoBatch = new ProtoBatch()
+  protoBatch.buildFromHash(tokenData.hash)
+  // protoBatch.batchAnimationExport()
 
   //TESTING
   // createGUI()
-  DeBug.log('random R useage', R.useage)
-  DeBug.log('random RuID useage', RuID.useage)
 }
 
 // MARK: SETUP FUNCS
