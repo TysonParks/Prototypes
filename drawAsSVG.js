@@ -862,13 +862,16 @@ class Export {
     scale = 1,
     startAngle = 90,
     useDirectoryPicker = true,
+    _dirHandle = null,        // Pre-acquired handle from ProtoBatch (bypasses picker)
+    _hashPrefix = null,       // Custom prefix for batch filenames
   } = {}) {
     const degreesPerFrame = 360 / totalFrames
     const hash = tokenData.hash
-    const trimmedHash = `${hash.slice(0, 4)}\u2026${hash.slice(-4)}`
+    const trimmedHash = _hashPrefix || `${hash.slice(0, 4)}\u2026${hash.slice(-4)}`
     const date = getCurrentDateString()
     const padLength = String(totalFrames - 1).length
     const rezString = `${size.x * scale}x${size.y * scale}`
+    const framesString = `${totalFrames}fr`
 
     // Pre-create a single canvas and context to reuse across all frames
     const canvas = document.createElement('canvas')
@@ -876,9 +879,9 @@ class Export {
     canvas.height = size.y * scale
     const ctx = canvas.getContext('2d')
 
-    // Attempt to get a directory handle (Chromium only) so files go into one folder
-    let dirHandle = null
-    if (useDirectoryPicker && window.showDirectoryPicker) {
+    // Use pre-acquired handle, or attempt to get one via picker
+    let dirHandle = _dirHandle
+    if (!dirHandle && useDirectoryPicker && window.showDirectoryPicker) {
       try {
         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
       } catch (e) {
@@ -965,7 +968,7 @@ class Export {
       const angle = startAngle + (i * degreesPerFrame)
       const frameNum = String(i).padStart(padLength, '0')
       const angleStr = formatAngle(angle)
-      const fileName = `Prototypes-${trimmedHash}-${date}-fr${frameNum}of${totalFrames}-${angleStr}-${rezString}.png`
+      const fileName = `Prototypes-${trimmedHash}-${date}-${framesString}-${rezString}-${frameNum}.png`
 
       updateShadeAngle(angle)
 
