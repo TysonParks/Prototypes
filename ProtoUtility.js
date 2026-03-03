@@ -621,6 +621,9 @@ class Corner {
   //METH: equals()
   equals(corner) { return this.value === corner.value }
 
+  //METH: opposite : Corner : diagonal-opposite corner (0↔2, 1↔3) using XOR
+  get opposite() { return new Corner(this.value ^ 2) }
+
   #descriptions = [
     'upLeft',     // 0
     'upRight',    // 1
