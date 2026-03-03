@@ -2,8 +2,8 @@ let
   gui,
 
   testingControls = {
-    hashNumber: 1427,
-    lastHash: false,
+    hashNumber: 1428,
+    lastHash: true,
     blackMode: false,
   },
 
@@ -104,6 +104,14 @@ function keyPressed() {
   if (key === 'n') {
     // Generate a new random seed and rebuild
     protoBatch.buildFromNewSeed()
+  }
+  if (key === 't') {
+    // Generate wrapper test contact sheet
+    protoBatch.testContactSheet()
+  }
+  if (key === 'd') {
+    // Toggle wrapper debug overlay on current render
+    WrapperDebugOverlay.toggle(GRID)
   }
   if (key === 'l') {
     // use for cornerScale animation
