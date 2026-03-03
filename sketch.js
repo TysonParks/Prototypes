@@ -771,7 +771,7 @@ function gridTests2(features) {
   // FRAME.backGrid.showShapesDebug()
   // FRAME.backGrid.showShapeGroupsDebug(false)
   // FRAME.backGrid.showMasksDebug()
-  // GRID.showCellsDebug()
+  GRID.showCellsDebug()
   // GRID.showShapesDebug()
   // GRID.showShapeGroupsDebug(false)
   // GRID.showMasksDebug()
