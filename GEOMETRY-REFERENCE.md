@@ -665,6 +665,32 @@ get isFlushOutWrapper() { return !!this.flushInWrapper }
 get isAdjOutWrapper() { return !!this.adjInWrapper } flush  // ← stray 'flush' token
 ```
 
+### 9.5 `roundToDec()` Precision Sensitivity (Global)
+
+`roundToDec(value, decimals)` is used throughout the wrapping system for
+floating-point equality checks. The `decimals` parameter is currently
+hand-tuned per call site based on bug-fix experience — too few decimals
+collapses distinct values into false-equals; too many preserves
+floating-point noise that prevents true-equals from matching.
+
+**Root cause:** Different cell sizes produce arc radii and distances at
+different scales. A fixed decimal count that works for large cells can
+fail for small ones (and vice versa). For example, `wrapState()` at
+L2986–2988 uses the default (no explicit decimal arg), which may misclass
+equidistant↔diverging for certain cell aspect ratios.
+
+**Proposed fix direction:** Derive the rounding precision from cell size
+rather than hard-coding it. Something like:
+```
+const precision = Math.max(0, Math.floor(-Math.log10(cellSize.min())) + 2)
+```
+This would scale rounding tolerance with the geometric scale of the grid,
+avoiding both false-positive and false-negative equality across cell
+configurations.
+
+**Status:** ⚠️ Global refactor needed — every `roundToDec` call site
+should be audited once a cell-size-relative strategy is chosen.
+
 ---
 
 ## 10. Architecture: Evaluation vs. Opinion
