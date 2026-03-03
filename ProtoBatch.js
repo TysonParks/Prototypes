@@ -29,6 +29,9 @@ class ProtoBatch {
 
     gridTests2(features)
 
+    // Wrapper memoization integrity test
+    runWrapperTests(GRID)
+
     DeBug.log('random R useage', R.useage)
     DeBug.log('random RuID useage', RuID.useage)
   }
