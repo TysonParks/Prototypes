@@ -903,6 +903,33 @@ function functionTestPrint() {
   // print('Shade tests')
   // print(Look.neuShade())
 
+  //NOTE: Corner.opposite tests (Bug B — see GEOMETRY-REFERENCE § 9.7)
+  DeBug.log(`Corner.opposite tests`)
+  const cornerUL = Corner.UpLeft       // value 0
+  const cornerUR = Corner.UpRight      // value 1
+  const cornerDR = Corner.DownRight    // value 2
+  const cornerDL = Corner.DownLeft     // value 3
+
+  // XOR mapping: 0↔2, 1↔3 (diagonal-opposites)
+  DeBug.log(`UpLeft(0).opposite → expect DownRight(2):`, cornerUL.opposite.name, `value:`, cornerUL.opposite.value)
+  DeBug.log(`UpRight(1).opposite → expect DownLeft(3):`, cornerUR.opposite.name, `value:`, cornerUR.opposite.value)
+  DeBug.log(`DownRight(2).opposite → expect UpLeft(0):`, cornerDR.opposite.name, `value:`, cornerDR.opposite.value)
+  DeBug.log(`DownLeft(3).opposite → expect UpRight(1):`, cornerDL.opposite.name, `value:`, cornerDL.opposite.value)
+
+  // Round-trip: opposite of opposite should equal original
+  DeBug.log(`UpLeft.opposite.opposite equals UpLeft:`, cornerUL.opposite.opposite.equals(cornerUL))
+  DeBug.log(`UpRight.opposite.opposite equals UpRight:`, cornerUR.opposite.opposite.equals(cornerUR))
+  DeBug.log(`DownRight.opposite.opposite equals DownRight:`, cornerDR.opposite.opposite.equals(cornerDR))
+  DeBug.log(`DownLeft.opposite.opposite equals DownLeft:`, cornerDL.opposite.opposite.equals(cornerDL))
+
+  // Opposite should NOT equal self
+  DeBug.log(`UpLeft.opposite equals UpLeft (expect false):`, cornerUL.opposite.equals(cornerUL))
+  DeBug.log(`UpRight.opposite equals UpRight (expect false):`, cornerUR.opposite.equals(cornerUR))
+
+  // Opposite should equal the expected static
+  DeBug.log(`UpLeft.opposite equals DownRight (expect true):`, cornerUL.opposite.equals(cornerDR))
+  DeBug.log(`UpRight.opposite equals DownLeft (expect true):`, cornerUR.opposite.equals(cornerDL))
+
   DeBug.groupEnd()
 }
 
