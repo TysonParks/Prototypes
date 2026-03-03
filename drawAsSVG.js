@@ -2321,6 +2321,8 @@ class ProtoSegment extends Segment {
   minArcIsWithinThatCornerBounds(thatSeg) { return boundsIsWithinTestBounds(this.minArcBounds, thatSeg.maxCornerBounds) }
   //METH: hasSameFacingCorner() : BOOL : test if this endCorner is the same as that seg's endCorner
   hasSameFacingCorner(seg) { return this.endCorner.equals(seg.endCorner) }
+  //METH: hasOppositeFacingCorner() : BOOL : test if this endCorner is the diagonal-opposite of that seg's endCorner (0↔2, 1↔3)
+  hasOppositeFacingCorner(seg) { return this.endCorner.equals(seg.endCorner.opposite) }
   //METH: isDiagonalCorner() : BOOL : test if this endCorner is the same as that seg's endCorner
   hasDiagonalCorner(seg) {
     const
@@ -2329,13 +2331,28 @@ class ProtoSegment extends Segment {
     return facing && colBoundsSeg
   }
   //METH: hasCollinearCorner() : BOOL : test if this endCorner is collinear with that seg's endCorner
+  //       Bug B fix: accepts both same-facing AND opposite-facing corners (collinear pairs can face either way)
+  //       Neighbor-hopping restored: corners involve TWO segments each, collinearity can be through any pair
   hasCollinearCorner(seg) {
     const
-      facing = this.hasSameFacingCorner(seg),
+      facing = this.hasSameFacingCorner(seg) || this.hasOppositeFacingCorner(seg),
       collinear = this.isCollinearWith(seg) || this.isCollinearWith(seg.endNeighbor)
         || this.endNeighbor.isCollinearWith(seg) || this.endNeighbor.isCollinearWith(seg.endNeighbor),
       sharedCorner = this.end.equals(seg.end, 0)
     return facing && collinear && !sharedCorner
+  }
+  //METH: isMirroredCorner() : BOOL : test if two opposite-facing collinear corners are mirrored (end-to-end, NOT wrappable)
+  //       Mirrored corners share vertices at their ends — the shapes meet but don't overlap.
+  //       Wrappable corners have one segment overlapping inside the other.
+  //       See GEOMETRY-REFERENCE § 9.7.7
+  isMirroredCorner(seg) {
+    const pairs = [
+      [this, seg], [this, seg.endNeighbor],
+      [this.endNeighbor, seg], [this.endNeighbor, seg.endNeighbor]
+    ]
+    const collinearPairs = pairs.filter(([a, b]) => a.isCollinearWith(b))
+    if (collinearPairs.length === 0) return false
+    return collinearPairs.every(([a, b]) => a.isEndToEnd(b))
   }
   //METH: hasCoincidentCorner() : BOOL : test if this endCorner is coincident with that seg's endCorner
   hasCoincidentCorner(seg) {
@@ -2401,7 +2418,8 @@ class ProtoSegment extends Segment {
         this.grid.allSimpleSubShapesSegs
           .exclude(this, 'id')
           .filter(s => this.hasSameFacingCorner(s))
-      return segs.filter(s => this.minArcIsWithinThatMaxArc(s) || this.minArcIsWithinThatCornerBounds(s))
+      const arcMatches = segs.filter(s => this.minArcIsWithinThatMaxArc(s) || this.minArcIsWithinThatCornerBounds(s))
+      return arcMatches
     }, `viableOutWrappers`).call(this)
   }
   get viableWrappers() {            // all possible wrappers
@@ -2424,7 +2442,10 @@ class ProtoSegment extends Segment {
         name = start !== this.isOutsideCorner ? `arcStartCorner` : `arcEndCorner` // choose arcCorner that's collinear 
       return segs
         .filter(s => {
-          const testVertsSeg = testSeg.isHorizontal ? s.horVertSides[0] : s.horVertSides[1]
+          const horVert = s.horVertSides
+          if (!horVert) return false                          // guard: skip segs without horVert sides
+          const testVertsSeg = testSeg.isHorizontal ? horVert[0] : horVert[1]
+          if (!testVertsSeg) return false                     // guard: skip if side is missing
           return testSeg.vertIsOnLine(testVertsSeg.start) || testSeg.vertIsOnLine(testVertsSeg.end)
             || testVertsSeg.vertIsOnLine(testSeg.start) || testVertsSeg.vertIsOnLine(testSeg.end)
             && (this.hasCollinearCorner(s) || this.hasCoincidentCorner(s))
@@ -2451,6 +2472,7 @@ class ProtoSegment extends Segment {
     const flushWraps = this.flushDistanceObjs
     return flushWraps
       .map(obj => this.intersectObj(obj.seg, obj.isStart))
+      .filter(obj => obj !== undefined)
       .sort((a, b) => a.dist - b.dist)
   }
   get flushWrapperObjsFinal() {
@@ -2471,6 +2493,21 @@ class ProtoSegment extends Segment {
     // return memoize(() => {
     if (this.flushWrapper?.hasCollinearCorner(this)) return this.flushWrapper
     // }, `collinearWrapper`).call(this)
+  }
+
+  //METH: oppFacingCollinearSegs : [ProtoSegment] : opposite-facing collinear segments that are wrappable (not mirrored)
+  //       Bypasses viableOutWrappers entirely — uses overlapSegs pool (no same-facing gate).
+  //       Filters: opposite-facing + collinear + NOT mirrored (end-to-end).
+  //       See GEOMETRY-REFERENCE § 9.7.7
+  get oppFacingCollinearSegs() {
+    return memoize(() => {
+      return this.overlapSegs
+        .filter(s =>
+          this.hasOppositeFacingCorner(s)
+          && this.hasCollinearCorner(s)
+          && !this.isMirroredCorner(s)
+        )
+    }, `oppFacingCollinearSegs`).call(this)
   }
 
   get flushIsInWrapper() { if (this.flushWrapper) return this.couldHaveInWrapper(this.flushWrapper) }
@@ -2521,8 +2558,9 @@ class ProtoSegment extends Segment {
       //FIXME: test this works with flush (collinear) wraps   
       intersect =
         side.perpendicularIntersectionWith(inWrapper.arcOrigin)
-        || side.perpendicularIntersectionWith(inWrapper.minArcOrigin),          // calc intersection
-      distToCorner = roundToDec(intersect.dist(outWrapper.end))                 // calc distance
+        || side.perpendicularIntersectionWith(inWrapper.minArcOrigin)           // calc intersection
+    if (!intersect) return undefined                                            // no perpendicular intersection found
+    const distToCorner = roundToDec(intersect.dist(outWrapper.end))             // calc distance
     return { seg: seg, dist: distToCorner, intersect: intersect, isStart: isStart }
   }
 
