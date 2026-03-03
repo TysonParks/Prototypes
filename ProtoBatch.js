@@ -158,4 +158,27 @@ class ProtoBatch {
     console.log(`batchSeedCapture is a stub — not yet implemented`)
     // Future: generate N random hashes, build each, export a single PNG
   }
+
+  // ──────────────────────────────────────────────
+  // MARK: Wrapper Test Batch
+  // ──────────────────────────────────────────────
+
+  //METH: testContactSheet({cols, cellSize}) — renders all WRAPPER_TEST_CASES into a contact sheet
+  async testContactSheet({ cols = 4, cellSize = { x: 400, y: 720 } } = {}) {
+    await batchContactSheet({ cols, cellSize, label: `wrapper-test-contact-sheet` })
+  }
+
+  //METH: testSnapshots({size}) — renders each WRAPPER_TEST_CASES hash as individual PNG
+  async testSnapshots({ size = { x: 800, y: 1440 } } = {}) {
+    await batchSnapshotExport({ size })
+  }
+
+  //METH: quickContactSheet(hashes, cols) — renders arbitrary hashes into a contact sheet
+  async quickContactSheet(hashes, cols = 4) {
+    await batchContactSheet({
+      hashes: hashes.map((h, i) => ({ hash: h, name: `#${i}`, status: `untested` })),
+      cols,
+      label: `quick-contact-sheet`,
+    })
+  }
 }
