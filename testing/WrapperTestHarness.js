@@ -554,7 +554,7 @@ const WRAPPER_TEST_CASES = {
     hash: '0x148d16d3ece96ae5b788fc03f6dcf3fb3e41a421610a5aa744c94c2058d82241',
     description: 'Two same-facing corners with one shared collinear segment',
     wrapTypes: ['collinear'],
-    status: 'untested',
+    status: 'broken',
   },
 
   // MARK: Adjacent Wrapper Cases
@@ -593,20 +593,38 @@ const WRAPPER_TEST_CASES = {
   // Add hashes that currently produce incorrect output
   broken_01: {
     hash: '0x1410e2bed3f8683cbead76732fb0def423f94ee0d9fa3af1471f36e8bb384d53',
-    description: '',
+    description: 'grouping error, multiple groups contain same cell',
     wrapTypes: [],
     status: 'broken',
   },
   broken_02: {
     hash: '0x74ba9710dc22263597460e7899d958af8a2c14fa3c8bace495a5a77ead058da4',
-    description: '',
+    description: 'grouping error, multiple groups contain same cell',
     wrapTypes: [],
     status: 'broken',
   },
   broken_03: {
     hash: '0x9ffd10e7d83db6dd960f42912f0fd29708c01d4361a06c68e2afbab85db4e62f',
-    description: '',
+    description: 'grouping error, multiple groups contain same cell',
     wrapTypes: [],
+    status: 'broken',
+  },
+  broken_04: {
+    hash: '0x55a53f6999f4bb6bfc914285079ab9138340d170b681fbfdf90a746fbd0500b3',
+    description: 'broken proximal wrap, outer wrapper is converging and intersecting inner wrapper',
+    wrapTypes: ['proximal'],
+    status: 'broken',
+  },
+  broken_05: {
+    hash: '0xd687aa24d49094b2d25db0992fab8680a82b31791b80c162c1b2395e409b2c47',
+    description: 'broken proximal wrap, outer wrapper is converging and almost/barely intersecting inner wrapper',
+    wrapTypes: ['proximal'],
+    status: 'broken',
+  },
+  broken_06: {
+    hash: '0x008054ead8201c6888edfc591d011535247cb655099b0eea5e751a62353faf5b',
+    description: 'broken proximal wrap, outer wrapper is converging and almost/barely intersecting inner wrapper',
+    wrapTypes: ['proximal'],
     status: 'broken',
   },
 
