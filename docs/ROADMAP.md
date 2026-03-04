@@ -32,7 +32,7 @@ failures.
 | 0 | Foundation (illustrations, GEOMETRY-REFERENCE, geometric vocab) | ✅ Done | Sessions 1-2 | Hand-drawn sketches analyzed, GEOMETRY-REFERENCE built |
 | 1 | Coincident wrappers | ✅ Done | Session 1 | Shared-corner geometry, `hasCoincidentCorner` |
 | 2 | Collinear wrappers | ✅ Done | Session 2 | Found Bug A (misdiagnosed, KNOWN-ISSUES § 9.6) + Bug B (opposite-facing, KNOWN-ISSUES § 9.7) |
-| 3 | Adjacent wrappers | ⏸ Deferred | — | `minAdjWrapperDistanceObj`, `adjDistanceObjs`, tangent intersection. Deferred — needs better test example. |
+| 3 | Adjacent wrappers | ⏸ Deferred | — | `minAdjWrapperDistanceObj`, `adjDistanceObjs`, tangent intersection. Deferred — needs intershape restoration first (KNOWN-ISSUES § 9.11). |
 | 4 | Radiant wrappers | ✅ Done | Session 3 | Detection + resolution traced. Priority system confirmed working (KNOWN-ISSUES § 9.8). |
 | 5 | Interference | ✅ Done | Session 4 | 9 issues found (KNOWN-ISSUES § 9.10). Key: `removeDuplicates` loop bug (G), missing `canCurveTo` guard (H). |
 
@@ -72,12 +72,20 @@ because understanding the geometry is prerequisite to knowing which
 | 5 | Implement cycle fixes in ProtoSegment | Agent + verify | 2 | ❌ Not started | Small, targeted. Test with known problem hashes. |
 | 6 | Implement missing `resetMemoized()` calls | Agent + verify | 4, 5 | ❌ Not started | Safe to fix invalidation gaps after cycles broken. `#resetMemoProps` only invalidates ~12 of 30+ keys (ARCHITECTURE § 10.2.5). |
 
-### PHASE C — Reimplement inner mask
+### PHASE C — Restore Intershapes + Reimplement Masking
+
+> **Revised 2026-03-04:** Task 10 completed — BrokenFuture branch
+> analyzed, root cause identified (KNOWN-ISSUES § 9.11). Phase C
+> restructured into three sub-phases. Intershape restoration moved
+> ahead of Phase B because intershapes are needed to analyze the
+> remaining wrapper types (adjacent, intershape-specific wrapping).
 
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
-| 10 | Read abandoned branch, summarize inner mask intent + what broke | Ask | 5, 6 | ❌ Not started | ProtoSegment health must be solid first. Stuck since Nov 2024. |
-| 11 | Design inner mask implementation plan against working branch | Ask | 10 | ❌ Not started | Step-by-step plan, no code yet. |
+| 10 | Read abandoned branch, summarize inner mask intent + what broke | Ask | — | ✅ Done | BrokenFuture analyzed. Root cause: `createSimpleSubShapes` in Shape constructor (KNOWN-ISSUES § 9.11). |
+| 10a | **Restore intershapes** — remove constructor blocker + revert svg getter | Agent + verify | 10 | ❌ Not started | Minimal 2-line fix. Test with intershape-producing hashes. |
+| 10b | Add `intershape` test hash to WRAPPER_TEST_CASES | Agent | 10a | ❌ Not started | Find/create a golden hash. Enables adjacent wrapper audit. |
+| 11 | Design inner mask implementation plan against working branch | Ask | 10a | ❌ Not started | Port BrokenFuture's `maskShape`/`maskSVG`/`svg` changes incrementally. |
 | 12 | Implement inner mask feature incrementally | Agent + verify | 11 | ❌ Not started | One small change at a time, browser-verify between each. |
 | 13 | Add structured corner-tracing debug log to `maximizeCuddles` | Agent | 5 | ❌ Not started | Useful during step 12 and all future debugging. |
 
@@ -104,4 +112,4 @@ because understanding the geometry is prerequisite to knowing which
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-03*
+*Last updated: 2026-03-04*
