@@ -22,6 +22,7 @@
 - [9.6 Bug A — `hasCollinearCorner` False Positive (Misdiagnosed)](#96-bug-a--hascollinearcorner-false-positive-misdiagnosed)
 - [9.7 Bug B — Collinear Wrappers with Opposite-Facing Corners](#97-bug-b--collinear-wrappers-with-opposite-facing-corners-unresolved)
 - [9.8 Radiant Wrappers Audit](#98-radiant-wrappers-audit-session-3)
+- [9.9 Cache Staleness Baseline (WTH Report)](#99-cache-staleness-baseline-wth-report)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -412,6 +413,88 @@ are involved in the detection path.
 - Opposing radiant stacks constraining each other
 - `viableInterferenceOrigins` calculation
 - `wrapInterferenceCorners` priority/ordering
+
+---
+
+## 9.9 Cache Staleness Baseline (WTH Report)
+
+**Status:** ⚠️ Documented — 29 volatile keys are not reset.
+**Source:** WrapperTestHarness auto-run on hash #1428 (default
+`testingControls.hashNumber`). See TESTING § 2.7 for full breakdown.
+
+### 9.9.1 The Gap
+
+`#resetMemoProps` clears **19** of the **48** arc-volatile keys.
+The remaining **29** volatile keys survive arc mutations and can
+serve stale data. The 14 topology-stable keys are correctly excluded
+from reset.
+
+| Set | Count | Status |
+|-----|-------|--------|
+| Total memoized keys | 62 | — |
+| Arc-volatile keys | 48 | — |
+| Keys in `#resetMemoProps` | 19 | ✅ Reset on mutation |
+| Volatile NOT in reset | 29 | ⚠️ Stale risk |
+| Topology-stable keys | 14 | ✅ Safe to keep |
+
+### 9.9.2 What IS Reset (19 Keys)
+
+The 19 keys in `#resetMemoProps` cover core arc geometry and
+direct wrapper identity:
+
+`adjDistanceObjs`, `adjWrapperObjsFinal`, `arcCenterTangent`,
+`arcCenterVert`, `arcOrigin`, `arcOriginCorner`, `arcOriginToStart`,
+`arcOriginToNormal`, `arcOriginToEnd`, `arcOriginToArcCenter`,
+`arcRadius`, `flatAmount`, `hasNoFlatness`, `hasCompleteStartCorner`,
+`hasCompleteEndCorner`, `inWrappers`, `outWrappers`,
+`outWrapsOfThisShapeAndNeighbors`, `overlapSegs`.
+
+### 9.9.3 What is NOT Reset (29 Keys)
+
+Grouped by concern:
+
+**Wrapper lists** (10):
+`hasNoWrappers`, `inOutAdjWrappers`, `inOutFlushWrappers`,
+`isInnerMostRadiantWrapper`, `isInnerMostWrapper`,
+`radiantInWrappers`, `radiantOutWrappers`, `viableInWrappers`,
+`viableOutWrappers`, `viableWrappers`
+
+**Viable origins** (8):
+`viableAdjWrapOrigins`, `viableArcOrigins`, `viableArcOriginsSeg`,
+`viableCoinWrapOriginBounds`, `viableCoinWrapOrigins`,
+`viableOutWrapOriginBounds`, `viableRadiantOriginBounds`,
+`viableRadiantOrigins`
+
+**Bounds / derived geometry** (7):
+`cornerVerts`, `maxArcBounds`, `maxArcBoundsSeg`, `maxArcOrigin`,
+`maxArcRadius`, `middleArcOrigin`, `minArcBounds`, `minArcBoundsSeg`,
+`minArcOrigin`, `minArcRadius`, `shapesWithinThisMaxArcBounds`
+
+### 9.9.4 Stale Test Results
+
+16 of 48 segments flagged stale caches. All 16 were triggered by
+`setArcToMiddle` — not by `flushWrap` or `adjWrap` (those mutations
+call `resetMemoized()` internally, clearing the 19 core keys, and
+the harness detects no further staleness from them).
+
+Each failing segment showed:
+- **42 stale keys on self** (the 29 uncovered volatile + 13 that
+  were reset then re-cached between mutation and snapshot)
+- **42–46 stale keys on neighboring segments** — neighbors sometimes
+  show 4 additional arc-geometry keys (`arcCenterVert`, `arcOrigin`,
+  `arcOriginToStart`, `arcOriginToArcCenter`) proving the neighbor's
+  cache was NOT invalidated by the mutated segment's `setArcToMiddle`
+
+### 9.9.5 Practical Impact
+
+During `maximizeCuddles()`, the pipeline calls `setArcToMiddle`,
+`flushWrap`, and `adjWrap` in sequence. In practice the ordering
+may mask some staleness — later mutations re-trigger getters,
+effectively refreshing stale values. But any pipeline reordering
+or new getter access between mutations could expose the stale data.
+
+This is the root cause motivating ARCHITECTURE § 10.2.5 and the
+Unified Wrapper Funnel proposal.
 
 ---
 
