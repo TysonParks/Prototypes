@@ -2344,7 +2344,7 @@ class ProtoSegment extends Segment {
   //METH: isMirroredCorner() : BOOL : test if two opposite-facing collinear corners are mirrored (end-to-end, NOT wrappable)
   //       Mirrored corners share vertices at their ends — the shapes meet but don't overlap.
   //       Wrappable corners have one segment overlapping inside the other.
-  //       See GEOMETRY-REFERENCE § 9.7.7
+  //       See docs/KNOWN-ISSUES § 9.7.7
   isMirroredCorner(seg) {
     const pairs = [
       [this, seg], [this, seg.endNeighbor],
@@ -2498,7 +2498,7 @@ class ProtoSegment extends Segment {
   //METH: oppFacingCollinearSegs : [ProtoSegment] : opposite-facing collinear segments that are wrappable (not mirrored)
   //       Bypasses viableOutWrappers entirely — uses overlapSegs pool (no same-facing gate).
   //       Filters: opposite-facing + collinear + NOT mirrored (end-to-end).
-  //       See GEOMETRY-REFERENCE § 9.7.7
+  //       See docs/KNOWN-ISSUES § 9.7.7
   get oppFacingCollinearSegs() {
     return memoize(() => {
       return this.overlapSegs
