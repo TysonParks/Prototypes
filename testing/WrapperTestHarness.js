@@ -546,7 +546,7 @@ const WRAPPER_TEST_CASES = {
     hash: '0x4d477f3bbd4ed6923933ea640f395ab46fa634f0c793b200543e14e0258e1fa1',
     description: 'Two shapes meeting at a grid intersection with same-facing corners',
     wrapTypes: ['coincident'],
-    status: 'untested',
+    status: 'golden',
   },
 
   // MARK: Collinear Wrapper Cases
@@ -570,7 +570,7 @@ const WRAPPER_TEST_CASES = {
     hash: '0xf526785ff29b4e8876379299b91b01c0ed77b10074031c462489990da4a1b56e',
     description: '3+ diagonally aligned same-facing corners sharing an arc origin',
     wrapTypes: ['radiant'],
-    status: 'untested',
+    status: 'golden',
   },
 
   // MARK: Interference Cases
