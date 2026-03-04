@@ -169,6 +169,40 @@ harness file.
 These run in the browser and use `ProtoBatch.buildFromHash()` to
 load each hash sequentially.
 
+### 2.7 Baseline Results (Hash #1428)
+
+The harness runs automatically on every `buildFromHash()` call
+(see `ProtoBatch.js` L33–37). Below are the baseline findings from
+the default hash (`testingControls.hashNumber: 1428`).
+
+#### Reset Coverage
+
+```
+Total memoized keys:                          62
+Keys in #resetMemoProps:                      19
+Topology-stable keys (safe to keep cached):   14
+Arc-volatile keys (must reset on mutation):   48
+⚠️ VOLATILE keys NOT in #resetMemoProps:      29
+```
+
+The 29 uncovered volatile keys are documented in KNOWN-ISSUES § 9.9.3.
+
+#### Stale Cache Detection
+
+- **16 of 48 segments** detected stale cache entries
+- All 16 failures triggered by `setArcToMiddle` mutations
+- `flushWrap` and `adjWrap` tests produced **no** stale results
+  (those mutations call `resetMemoized()` internally)
+- Each failure shows 42 stale keys on self + 42–46 on neighbors
+
+#### Survived Keys
+
+- **56 total** keys survived across all mutations
+- 42 were arc-volatile (should have been invalidated) — ⚠️
+- 14 were topology-stable (expected — safe permanent cache) — ✅
+
+See KNOWN-ISSUES § 9.9 for full analysis and impact assessment.
+
 ---
 
 ## 3. WrapperDebugOverlay
