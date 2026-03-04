@@ -34,7 +34,7 @@ failures.
 | 2 | Collinear wrappers | ✅ Done | Session 2 | Found Bug A (misdiagnosed, KNOWN-ISSUES § 9.6) + Bug B (opposite-facing, KNOWN-ISSUES § 9.7) |
 | 3 | Adjacent wrappers | ⏸ Deferred | — | `minAdjWrapperDistanceObj`, `adjDistanceObjs`, tangent intersection. Deferred — needs better test example. |
 | 4 | Radiant wrappers | ✅ Done | Session 3 | Detection + resolution traced. Priority system confirmed working (KNOWN-ISSUES § 9.8). |
-| 5 | Interference | ❌ Not started | — | Opposing radiant stacks, `wrapInterferenceCorners`, `viableInterferenceOrigins` |
+| 5 | Interference | ✅ Done | Session 4 | 9 issues found (KNOWN-ISSUES § 9.10). Key: `removeDuplicates` loop bug (G), missing `canCurveTo` guard (H). |
 
 **Bug B status:** Detection implemented (KNOWN-ISSUES § 9.7.7 —
 `isMirroredCorner`, `oppFacingCollinearSegs`). Wrapping action deferred
