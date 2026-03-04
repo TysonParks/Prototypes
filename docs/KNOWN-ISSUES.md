@@ -24,6 +24,7 @@
 - [9.8 Radiant Wrappers Audit](#98-radiant-wrappers-audit-session-3)
 - [9.9 Cache Staleness Baseline (WTH Report)](#99-cache-staleness-baseline-wth-report)
 - [9.10 Interference Wrappers Audit](#910-interference-wrappers-audit-session-4)
+- [9.11 Intershape Regression](#911-intershape-regression)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -672,5 +673,117 @@ Unified Wrapper Funnel proposal.
 
 ---
 
+## 9.11 Intershape Regression
+
+**Status:** 🔴 Active regression — intershapes not produced, causing
+crashes on hashes that generate them.
+
+### 9.11.1 Background
+
+"Intershapes" are shapes that sit inside other shapes, created when the
+pipeline recalculates and splits a parent shape's cells into multiple
+smaller child shapes. This is the `recalcdCells → newIslands` path in
+`Island.createSubIslands()` (ProtoLayerObjects.js ~L2745).
+
+Intershapes last worked in the Sept 22, 2025 codebase state (commit
+`3c2ae52`). They broke during an attempt to implement shape masking
+(BrokenFuture branch, `685ab58`), and the regression persisted through
+subsequent rollbacks and re-application of changes.
+
+### 9.11.2 Root Cause
+
+Commit `974bbc5` (Nov 4, 2025) added this line to the Shape constructor
+(~L2997):
+
+```javascript
+if (shptype === `PerimeterShape`) this.createSimpleSubShapes()
+```
+
+This calls `createSimpleSubShapes()` on PerimeterShapes **during
+construction** — before the island/layer hierarchy is fully built.
+When `cutIslands` later calls `createSubIslands → recalcdCells →
+newIslands`, the parent shape already has `simpleSubShapes` populated,
+and the intershape pipeline either skips creation or crashes because
+the parent geometry was already finalized.
+
+### 9.11.3 Additional Regression: `svg` Getter
+
+The same commit also changed `Shape.svg` from the working version:
+
+```javascript
+// Sept 22 (working):
+get svg() { if (this.simpleInsetSegPaths) return SVGPath.fromSegPaths(this.simpleInsetSegPaths) }
+```
+
+to a version that computes paths from `simpleSegPaths` as a fallback
+but still gates the return on `this.simpleInsetSegPaths`:
+
+```javascript
+// Current (broken hybrid):
+get svg() {
+  const paths = this.simpleInsetSegPaths ? this.simpleInsetSegPaths : this.simpleSegPaths
+  const result = SVGPath.fromSegPaths(paths)
+  if (this.simpleInsetSegPaths) return result  // only returns for inset shapes!
+}
+```
+
+This means PerimeterShapes compute an SVG path from `simpleSegPaths`
+but never return it (the `if` gate blocks it). The BrokenFuture branch
+had a different approach that explicitly branched on `isPerimeterShape`.
+
+### 9.11.4 BrokenFuture Branch State
+
+BrokenFuture (`685ab58`) represents the "furthest forward" attempt at
+masking. Key changes vs. Sept 22 working state:
+
+| Area | Sept 22 (working) | BrokenFuture |
+|------|-------------------|---------------|
+| Shape constructor | No `createSimpleSubShapes` call | No `createSimpleSubShapes` call |
+| `svg` getter | `fromSegPaths(simpleInsetSegPaths)` | Branches: PerimeterShape → `simpleSegPaths`, others → `simpleInsetSegPaths`, maps through `fromProtoSegPath` individually |
+| `maskShape` | Unmemoized, returns single `SegPath` | Memoized, returns `SegPath[]` |
+| `maskSVG` | `fromSegPaths(this.maskShape)` | Memoized, maps each path through `fromProtoSegPath` |
+| Frame inner mask | Commented out | Uncommented — second `cutIslands` + SVG `<mask>` cloning |
+| `createMaskGroup` | Exists, commented out at call sites | Exists, commented out at call sites |
+
+Notably, BrokenFuture did NOT add `createSimpleSubShapes` to the
+constructor — that was added later in `974bbc5`. The masking code in
+BrokenFuture may have had other issues but did not contain the
+intershape blocker.
+
+### 9.11.5 Restoration Plan
+
+See ROADMAP § 2 Phase C (revised) for the implementation plan.
+
+**Phase 1 — Restore intershapes (minimal, safe):**
+1. Remove `createSimpleSubShapes()` from Shape constructor (~L2997)
+2. Revert `svg` getter to Sept 22 working version
+3. Test: intershapes should produce again
+
+**Phase 2 — Rebuild masking (on working intershapes):**
+4. Port `maskShape` from BrokenFuture (memoized, returns `SegPath[]`)
+5. Port `maskSVG` from BrokenFuture (memoized, per-path mapping)
+6. Port `svg` getter from BrokenFuture (PerimeterShape branching)
+7. Re-enable `createMaskGroup()` at call sites
+8. Uncomment Frame inner mask in `setBackGridGroup`
+
+**Phase 3 — Validate:**
+9. Test intershape-producing hashes
+10. Test masking on R-profile cuts
+11. Add `intershape` entry to WRAPPER_TEST_CASES
+
+### 9.11.6 Git Archaeology
+
+| Commit | Date | Description | Intershapes? |
+|--------|------|-------------|-------------|
+| `3c2ae52` | Sept 22, 2025 | Last known working state | ✅ Working |
+| `685ab58` | Sept 25, 2025 | BrokenFuture tip — masking WIP | ⚠️ Unknown (masking issues, but no constructor blocker) |
+| `8f88a5b` | Oct 2025 | "Regress to previous state" | ✅ Rolled back |
+| `3c2ae52` (re) | Oct 2025 | "Regress to Sept 22nd state" | ✅ Rolled back |
+| `fd1e59a` | Nov 2025 | SVGPath refactor | ⚠️ Possibly still working |
+| `974bbc5` | Nov 4, 2025 | **Shape constructor + svg change** | 🔴 **Broken here** |
+| `5ff17d8` | Nov 2025 | Main tip (testing update) | 🔴 Still broken |
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-03*
+*Last updated: 2026-03-04*
