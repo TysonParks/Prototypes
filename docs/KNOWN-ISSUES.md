@@ -23,6 +23,7 @@
 - [9.7 Bug B — Collinear Wrappers with Opposite-Facing Corners](#97-bug-b--collinear-wrappers-with-opposite-facing-corners-unresolved)
 - [9.8 Radiant Wrappers Audit](#98-radiant-wrappers-audit-session-3)
 - [9.9 Cache Staleness Baseline (WTH Report)](#99-cache-staleness-baseline-wth-report)
+- [9.10 Interference Wrappers Audit](#910-interference-wrappers-audit-session-4)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -409,10 +410,183 @@ only reads `viableArcOriginsSeg` (topology-stable) and
 `hasDiagonalCorner` (topology-stable). No arc-volatile properties
 are involved in the detection path.
 
-**Edge cases deferred to interference audit (ROADMAP § 1 #5):**
-- Opposing radiant stacks constraining each other
-- `viableInterferenceOrigins` calculation
-- `wrapInterferenceCorners` priority/ordering
+**Edge cases resolved in interference audit (§ 9.10):**
+- Opposing radiant stacks constraining each other → § 9.10.1
+- `viableInterferenceOrigins` calculation → § 9.10.2
+- `wrapInterferenceCorners` priority/ordering → § 9.10.3
+- Visual analysis of both test hashes (with/without) → § 9.10.6
+
+---
+
+## 9.10 Interference Wrappers Audit (Session 4)
+
+**Status:** ⚠️ Audited — multiple issues found. No code changes made.
+
+### 9.10.1 Detection: `interferenceWrappers` (drawAsSVG.js L2916)
+
+**Entry conditions** (all required):
+1. `this.isInnerMostRadiantWrapper` — only innermost radiant wrappers detect
+2. `this.radiantOutWrappers?.length > 1` — must have a real radiant stack (2+)
+
+**Search logic:**
+- Walks `this.outerMostRadiantWrapper.neighborsArray` (start+end neighbors
+  of the chain's outermost segment)
+- Filters for opposite-facing segments (`arcNormalDirection.opposites`)
+  that are themselves radiant (innerMost, outerMost, or coin-linked)
+- Maps through coin wrappers to resolve to the correct innerMost/outerMost
+- Splits into `{ start, end }` based on `maxArcBoundsSeg.vertOrientation`
+
+**Issue A — Limited detection radius:**
+`neighborsArray` is only 2 elements (start+end of outerMost). Interference
+detection only finds opposing stacks **directly adjacent** to the outermost
+radiant wrapper. Opposing stacks separated by any gap are invisible.
+
+**Issue B — `hasDoubleInterference` null crash risk:**
+`hasDoubleInterference` accesses `this.interferenceWrappers.start` without
+checking `hasInterference` first. If `interferenceWrappers` returns
+`undefined`, this throws `TypeError`. In practice safe (callers filter
+by `hasInterference` first) but the getter is not defensively guarded.
+
+**Issue C — Not memoized, reads stale-risk props:**
+`interferenceWrappers` has no `memoize()` call. Computed fresh each
+access, but reads `radiantOutWrappers` (arc-volatile, NOT in
+`#resetMemoProps` — see § 9.9.3). If `radiantOutWrappers` has stale
+data, the result will be wrong.
+
+### 9.10.2 Resolution: `viableInterferenceOrigins` (drawAsSVG.js L2945)
+
+**Logic:** For each interference corner (start/end), copies its
+`viableArcOriginsSeg.bounds` then **zeroes out half** (x-axis for
+vertical segments, y-axis for horizontal), relaxing them to allow
+any position along one axis. Filters viable origins against relaxed
+bounds. If both start+end produce results, returns their intersection.
+
+**Issue D — Hardcoded canvas dimensions:**
+Bounds-zeroing uses `xMax: 100` and `yMax: 200` — hardcoded assumptions
+about canvas size. If canvas dimensions change, these silently break.
+
+**Issue E — Memoization commented out:**
+The `memoize()` wrapper is commented out:
+```javascript
+// return memoize(() => {
+...
+// }, `viableInterferenceOrigins`).call(this)
+```
+No cache staleness risk here, but repeated access evaluates the full
+filter chain each time.
+
+**Issue F — Axis-relaxation coupling:**
+The `isStart === this.isOutsideCorner` ternary selects which segment
+(`this` vs `this.endNeighbor`) determines the vertical/horizontal axis
+relaxation. This compact coupling makes the directional logic hard to
+verify from code alone — needs visual testing.
+
+### 9.10.3 Pipeline: `wrapInterferenceCorners()` (Grid.js L686-811)
+
+**Pool construction (L687-694):**
+```
+defaultPool
+  .filter(s => s.hasInterference && !s.isMinCorner)
+  .sort(maxArcRadius ascending)
+  .sort(radiantOutWrappers.length descending)
+  .sort(hasDoubleInterference descending)
+```
+Priority: double-interference first → longest chain → tightest radius.
+
+**Duplicate removal (`removeDuplicates`, L709-738):**
+Finds cross-referenced pairs (A interferes with B, B interferes with A)
+and keeps only the first occurrence.
+
+**Issue G — `removeDuplicates` loop bug:**
+The `while (reducePool.length > 0)` loop consumes `reducePool` via
+`shift()` but never refills it. After the first dupe is processed,
+`reducePool` is empty and `dupes.forEach` skips all subsequent dupes.
+This means only the **first** cross-referenced pair is correctly
+de-duplicated; additional pairs are silently ignored.
+
+**Wrapping action (L740-811):**
+- Gets `viableInterferenceOrigins` for each segment
+- Prefers shape center if `preserveQuads && isEdgeOfQuad`
+- Otherwise uses `viables.last` (furthest viable origin)
+- Guard: `outerMostRadiantWrapper.canCurveTo(origin, true)` only
+- Calls `setEndRadiantOutWrapsOrigin(origin)` to propagate through chain
+- For each interference corner, `setCurve()` projects a perpendicular
+  from origin onto the interference wrapper's `maxArcBoundsSeg`
+
+**Issue H — Commented-out interference guard:**
+The additional guard is commented out:
+```javascript
+// && Object.values(s.interferenceWrappers).every(i => i.canCurveTo(origin, true))
+```
+Interference wrappers are NOT checked for whether they can actually
+curve to the chosen origin. Only the wrapped segment's own
+`outerMostRadiantWrapper` is validated.
+
+**Issue I — `setCurve` direction coupling:**
+The `setCurve` inner function uses `s.direction` (the *wrapped*
+segment's direction) not the *interference wrapper's* direction to
+determine the perpendicular projection. This couples the geometry
+calculation to the detecting segment's orientation.
+
+### 9.10.4 Cache Impact
+
+All cache invalidation within the interference pipeline flows through
+`setEndRadiantOutWrapsOrigin` → `#setRadiantOrigin` → `#setCurveOrigin`
+→ `#addCubicVert` → `#resetMemoProps`. The 19-key reset applies, but
+the 29 uncovered volatile keys (§ 9.9.3) remain stale through
+interference processing — same baseline gap.
+
+### 9.10.5 Issue Summary
+
+| Issue | Severity | Description |
+|-------|----------|-------------|
+| A | ⚠️ Design limit | Detection limited to directly adjacent opposing stacks |
+| B | 🟡 Latent crash | `hasDoubleInterference` unguarded null access |
+| C | 🟡 Stale risk | `interferenceWrappers` reads stale-risk `radiantOutWrappers` |
+| D | 🟡 Fragile | Hardcoded canvas dimensions (100×200) in bounds |
+| E | ℹ️ Perf note | `viableInterferenceOrigins` memoization commented out |
+| F | ℹ️ Review | Axis-relaxation direction coupling — needs visual test |
+| G | 🔴 Logic bug | `removeDuplicates` loop only processes first dupe |
+| H | ⚠️ Missing guard | Interference wrappers not checked for `canCurveTo` |
+| I | ℹ️ Review | `setCurve` direction derived from wrapped seg, not wrapper |
+
+### 9.10.6 Visual Analysis
+
+Two golden test hashes exercise the interference pipeline:
+
+**`interference_02`** — Multi-shape interference (shp000, shp001, shp011,
+plus many intermediates). Opposing radiant stacks from shp001 (left) and
+shp011 (right) sandwich ~4 intermediate bands. With interference ON: all
+bands sweep as harmonic parallel arcs sharing a concentric origin. With
+interference OFF: root shapes retain their curvature but intermediate
+bands lose coherence — the third band visibly "wobbles" because each
+segment follows its own default radiant origin independently.
+
+**`interference_01`** — Single-intermediate interference (3 shapes:
+shp000, shp001, shp002 with only 1 intermediate band between opposing
+stacks). Initially appeared too simple to trigger interference, but
+console verification confirmed it fires:
+```
+GRID.allSimpleSubShapesSegs.filter(s => s.hasInterference).map(s => s.id)
+// → ['shp000-3down-cel014-rightSide-to-cel022-rightSide']
+```
+The `radiantOutWrappers.length > 1` gate counts **wrapper layers**
+(segments wrapping a corner), not intermediate shapes — shp002 provides
+multiple wrapping segments around shp000's corner, satisfying the gate.
+With interference OFF, shp000's right side loses harmonic alignment with
+the opposing stacks from shp002 (above) and shp001 (below). The effect
+is subtler than interference_02 since there's only one intermediate band
+to correct, but still visibly improves output quality.
+
+**Key insight from Issue F:** The axis-relaxation coupling
+(`isStart === this.isOutsideCorner`) was validated visually — both test
+cases show correct directional behavior for their respective
+vertical/horizontal orientations. Issue F remains a readability concern
+but is functionally correct in tested cases.
+
+WTH report for interference_01 (20 segments, 11 stale) shows the same
+29-key gap pattern as the baseline (§ 9.9), confirming no
+interference-specific cache regression.
 
 ---
 
