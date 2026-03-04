@@ -574,11 +574,17 @@ const WRAPPER_TEST_CASES = {
   },
 
   // MARK: Interference Cases
-  interference: {
+  interference_01: {
     hash: '0x2b784a305e9dc169458e8e8c11f3a77bc06574c89ec7bd097c7bc586ac19fc1d',
-    description: 'Opposing radiant stacks constraining each other',
+    description: 'Single-intermediate interference: 3 shapes (shp000/shp001/shp002), 1 intermediate band. Proves radiantOutWrappers.length counts wrapper layers, not shapes.',
     wrapTypes: ['radiant', 'interference'],
-    status: 'untested',
+    status: 'golden',
+  },
+  interference_02: {
+    hash: '0x1cee4f76739fa057af9faadece94b8ee7b77939ce6a36a0567ae455cd6215c7e',
+    description: 'Multi-shape interference: opposing radiant stacks with ~4 harmonic intermediate bands. Disabling wrapInterferenceCorners causes visible wobble in 3rd band.',
+    wrapTypes: ['radiant', 'interference'],
+    status: 'golden',
   },
 
   // MARK: CW/CCW Inter-shape Cases
