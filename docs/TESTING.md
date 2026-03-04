@@ -151,7 +151,8 @@ harness file.
 | `collinear_basic` | collinear | broken | Two same-facing corners with shared collinear segment |
 | `adjacent_basic` | adjacent | untested | Nearby same-facing corners |
 | `radiant_stack` | radiant | golden | 3+ diagonally aligned corners sharing arc origin |
-| `interference` | radiant, interference | untested | Opposing radiant stacks constraining each other |
+| `interference_01` | radiant, interference | golden | Single-intermediate interference — 3 shapes, 1 band, proves wrapper-layer gate |
+| `interference_02` | radiant, interference | golden | Multi-shape interference — ~4 harmonic bands, wobble visible when disabled |
 | `broken_01` – `broken_03` | — | broken | Grouping errors (multiple groups contain same cell) |
 | `broken_04` – `broken_06` | proximal | broken | Outer wrapper converging/intersecting inner wrapper |
 
