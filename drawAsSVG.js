@@ -968,7 +968,7 @@ class Export {
       const angle = startAngle + (i * degreesPerFrame)
       const frameNum = String(i).padStart(padLength, '0')
       const angleStr = formatAngle(angle)
-      const fileName = `Prototypes-${trimmedHash}-${date}-${framesString}-${rezString}-${frameNum}.png`
+      const fileName = `Prototypes-${trimmedHash}-${date}-fr${frameNum}of${totalFrames}-${angleStr}-${rezString}.png`
 
       updateShadeAngle(angle)
 
