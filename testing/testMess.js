@@ -903,7 +903,7 @@ function functionTestPrint() {
   // print('Shade tests')
   // print(Look.neuShade())
 
-  //NOTE: Corner.opposite tests (Bug B — see GEOMETRY-REFERENCE § 9.7)
+  //NOTE: Corner.opposite tests (Bug B — see docs/KNOWN-ISSUES § 9.7)
   DeBug.log(`Corner.opposite tests`)
   const cornerUL = Corner.UpLeft       // value 0
   const cornerUR = Corner.UpRight      // value 1
