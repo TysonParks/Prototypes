@@ -2994,7 +2994,7 @@ class Shape extends ProtoLayer {
     this.testColor = `${R.random_hash(3, '#')}8`
     this.assignSegments()
 
-    if (shptype === `PerimeterShape`) this.createSimpleSubShapes()
+    // if (shptype === `PerimeterShape`) this.createSimpleSubShapes() // REMOVED: broke intershapes — see KNOWN-ISSUES § 9.11
 
     this.finishSetup(S.Shapes)
   }
@@ -3260,14 +3260,8 @@ class Shape extends ProtoLayer {
 
   //MARK: SVG Paths
   get svg() {
-    DeBug.warn(`this`, this)
-    const paths = this.simpleInsetSegPaths ? this.simpleInsetSegPaths : this.simpleSegPaths
-    const result = SVGPath.fromSegPaths(paths)
-    DeBug.warn(`paths`, paths)
-    DeBug.warn(`Shape.svg for ${this.id}`, result)
-    if (this.simpleInsetSegPaths) return result
-
-    // if (this.simpleInsetSegPaths) return SVGPath.fromSegPaths(this.simpleInsetSegPaths)
+    const paths = this.simpleInsetSegPaths
+    if (paths?.length) return SVGPath.fromSegPaths(paths)
   }
   get maskSVG() { if (this.maskShape) { return SVGPath.fromSegPaths(this.maskShape) } }
 
@@ -3327,13 +3321,7 @@ class Shape extends ProtoLayer {
   //METH: assignElement()
   assignElement() {
     super.assignElement()
-    // this.svgElt = createSVGElt().id(this.id)
-    //   .parent(this.svgParent)
-    //   .addToClassList(this.id)
-    //   .addToClassList(this.svgParent.elt.classList.value)
-    //   .layout(this.anchor, this.size, 20)
-    //   .viewBox(this.anchor, this.size, 20)
-    // DeBug.warn(`Shape.assignElement() this.svg?`, this.svg)
+    if (!this.svg) return  // no SVG path yet — intershapes get theirs later
     this.path = createSVGElt('path')
       .attribute('d', this.svg)
       // .parent(this.svgElt)
