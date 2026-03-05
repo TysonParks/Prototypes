@@ -148,13 +148,18 @@ harness file.
 | Key | Wrapper Types | Status | Description |
 |-----|--------------|--------|-------------|
 | `coincident_basic` | coincident | golden | Two shapes meeting at grid intersection |
-| `collinear_basic` | collinear | broken | Two same-facing corners with shared collinear segment |
+| `collinear_basic_1` | collinear | broken | Two same-facing corners with shared collinear segment |
+| `collinear_basic_2` | collinear | golden | Two same-facing corners with shared collinear segment |
 | `adjacent_basic` | adjacent | untested | Nearby same-facing corners |
 | `radiant_stack` | radiant | golden | 3+ diagonally aligned corners sharing arc origin |
 | `interference_01` | radiant, interference | golden | Single-intermediate interference — 3 shapes, 1 band, proves wrapper-layer gate |
 | `interference_02` | radiant, interference | golden | Multi-shape interference — ~4 harmonic bands, wobble visible when disabled |
+| `intershape_1` | coincident, adjacent | untested | Intershape placed inside larger shape |
+| `intershape_2` | coincident, adjacent | untested | Intershape placed inside larger shape |
+| `intershape_3` | coincident, adjacent | untested | Intershape placed inside larger shape (most representative) |
 | `broken_01` – `broken_03` | — | broken | Grouping errors (multiple groups contain same cell) |
 | `broken_04` – `broken_06` | proximal | broken | Outer wrapper converging/intersecting inner wrapper |
+| `broken_07` | adjacent | broken | Outer wrapper converging/barely intersecting inner wrapper |
 
 **Adding new cases:** Edit `WRAPPER_TEST_CASES` in
 `testing/WrapperTestHarness.js`. Set `status` to `golden` (known good),
