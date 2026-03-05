@@ -550,11 +550,17 @@ const WRAPPER_TEST_CASES = {
   },
 
   // MARK: Collinear Wrapper Cases
-  collinear_basic: {
+  collinear_basic_1: {
     hash: '0x148d16d3ece96ae5b788fc03f6dcf3fb3e41a421610a5aa744c94c2058d82241',
     description: 'Two same-facing corners with one shared collinear segment',
     wrapTypes: ['collinear'],
     status: 'broken',
+  },
+  collinear_basic_2: {
+    hash: '0xea81099bcdcba24cebee5a92f74f5904219139848a208d1001f6e1fdba6a2026',
+    description: 'Two same-facing corners with one shared collinear segment',
+    wrapTypes: ['collinear'],
+    status: 'golden',
   },
 
   // MARK: Adjacent Wrapper Cases
@@ -588,12 +594,24 @@ const WRAPPER_TEST_CASES = {
   },
 
   // MARK: CW/CCW Inter-shape Cases
-  // intershape: {
-  //   hash: '0x...',
-  //   description: 'Inter-shape placed inside a larger shape',
-  //   wrapTypes: ['coincident', 'adjacent'],
-  //   status: 'untested',
-  // },
+  intershape_1: {
+    hash: '0xea81099bcdcba24cebee5a92f74f5904219139848a208d1001f6e1fdba6a2026',
+    description: 'Inter-shape placed inside a larger shape',
+    wrapTypes: ['coincident', 'adjacent'],
+    status: 'untested',
+  },
+  intershape_2: {
+    hash: '0xe91bbc42ec19afa2f4f6c01e6b197ce5e4dac847ec709957fdf955125273bd94',
+    description: 'Inter-shape placed inside a larger shape',
+    wrapTypes: ['coincident', 'adjacent'],
+    status: 'untested',
+  },
+  intershape_3: {
+    hash: '0x97f986cdf74eefc34d1a7e986c481089525588e4ac775c4aa2756f5787f57f4a',
+    description: 'Inter-shape placed inside a larger shape',
+    wrapTypes: ['coincident', 'adjacent'],
+    status: 'untested',
+  },
 
   // MARK: Known Broken
   // Add hashes that currently produce incorrect output
@@ -631,6 +649,12 @@ const WRAPPER_TEST_CASES = {
     hash: '0x008054ead8201c6888edfc591d011535247cb655099b0eea5e751a62353faf5b',
     description: 'broken proximal wrap, outer wrapper is converging and almost/barely intersecting inner wrapper',
     wrapTypes: ['proximal'],
+    status: 'broken',
+  },
+  broken_07: {
+    hash: '0xe77a297196f3b596d167669c4677d1ccd10e37537568523ba90f466ec8b7aff8',
+    description: 'broken proximal wrap, outer wrapper is converging and almost/barely intersecting inner wrapper',
+    wrapTypes: ['adjacent'],
     status: 'broken',
   },
 
