@@ -1888,7 +1888,8 @@ class ShapeGroup extends ProtoLayer {
           maskID = `${this.id}-mask`,
           mask = createSVGElt(`mask`)
             .id(maskID)
-            // .attribute('maskUnits', 'userSpaceOnUse')
+            .attribute('maskUnits', 'userSpaceOnUse')
+            .layout(this.anchor, this.size, this.padding)
             .parent(defs)
 
         // this.maskGroupElt.parent(this.svgGroupElt)   // append the maskGroupElt to the groupElt
