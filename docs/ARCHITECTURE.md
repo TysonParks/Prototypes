@@ -24,6 +24,12 @@
   - [11.3 Why Unification Is Geometrically Sound](#113-why-unification-is-geometrically-sound)
   - [11.4 CW/CCW Orientation Normalization](#114-cwccw-orientation-normalization)
   - [11.5 What Unification Would Simplify](#115-what-unification-would-simplify)
+- [12. Frame Wrapping](#12-frame-wrapping)
+  - [12.1 Frame Architecture](#121-frame-architecture)
+  - [12.2 Frame Wrapping Pipeline](#122-frame-wrapping-pipeline)
+  - [12.3 `inWrapPerimeter` — Inner→Outer Wrapping](#123-inwrapperimeter--innerouter-wrapping)
+  - [12.4 Intershape Wrapping Context](#124-intershape-wrapping-context)
+  - [12.5 Future: Second Frame Wrapping Mode](#125-future-second-frame-wrapping-mode)
 
 > **Note on numbering:** Section numbers 10–11 preserved from the
 > original GEOMETRY-REFERENCE.md for consistency with any existing
@@ -289,5 +295,120 @@ See [ROADMAP § 1](ROADMAP.md#1-wrapper-audit-checklist) for audit status.
 
 ---
 
+## 12. Frame Wrapping
+
+### 12.1 Frame Architecture
+
+The Frame class (ProtoLayerObjects.js L250–482) manages the
+outer border around the entire artwork. It operates on a
+**dual-grid** system:
+
+- **`this.grid`** — the main (front) grid containing shapes
+- **`this.backGrid`** — a separate Grid instance (`gridType: 3`)
+  that fills the space behind/around the main shapes
+
+These are linked bidirectionally:
+```
+grid.backGrid = backGrid
+backGrid.frontGrid = grid
+```
+
+The backGrid’s shapes must wrap **toward** the frontGrid’s
+perimeter curves — this is inner→outer wrapping.
+
+### 12.2 Frame Wrapping Pipeline
+
+`setBackGridGroup()` (L327–482) runs its own wrapping pipeline,
+independent of `maximizeCuddles()`:
+
+1. **Group creation** — builds `backGroup` from taken cell indices
+2. **Hole removal** — fills cells with opposite neighbors taken
+   (`hasOppositeNeighborsTaken`)
+3. **Perimeter creation** — `createPerimiters(Direction.All, true)`
+4. **createSimpleSubShapes** — builds initial corner geometry
+5. **curveMinRadiusCorners** — `{ all: true }` flag
+6. **Custom wrapping loop** — for each loose corner:
+   - If has both flush+adj wrappers: pick closer one (coincident
+     check or distance comparison)
+   - If has only flush: `flushWrap(true, false)`
+   - If has only adj: `adjWrap(true, false)`
+   - If has no wrapper: `setArcToMiddle()` or `maxArcOrigin` fallback
+7. **padWidth calculation** — scaled frame dimensions
+8. **Flat backing cut** — `cutIslands` with no profile
+9. **Real cuts** — iterates `cuts` array for frame molding profiles
+
+**Key difference from `maximizeCuddles()`:** Frame wrapping calls
+`flushWrap` and `adjWrap` directly with `(true, false)` arguments
+(force=true, resetMemo=false), bypassing the priority negotiation
+and radiant/interference pipeline entirely. This is simpler but
+means Frame corners never get radiant or interference treatment.
+
+### 12.3 `inWrapPerimeter` — Inner→Outer Wrapping
+
+`Grid.inWrapPerimeter(simpleSegs, parentSegs)` (Grid.js L595–617)
+is the core method for making inner shapes adopt outer shapes’
+curvature:
+
+```
+For each inner segment:
+  1. Find a parent segment with a coincident corner
+  2. If found: adopt parent’s arcOrigin → setEndCurveOrigin(match.arcOrigin)
+  3. If not found: add to unmatched pool
+
+For each unmatched:
+  1. If has inWrapper and canCurveTo: adopt inWrapper’s arcOrigin
+  2. Otherwise: matchEndCorner() (geometric fallback)
+```
+
+This is **unidirectional**: inner shapes conform to outer shapes,
+not vice versa. The outer shapes’ curves are already established.
+
+Used in:
+- `copyAllToCardinal()` (L2813) — when All→Cardinal direction
+  conversion splits shapes, inner perimeters wrap to parent
+- Intershape creation via `newIslands()` (L2699) calls
+  `completeEnds(simples, false)` — related but different path
+
+### 12.4 Intershape Wrapping Context
+
+Intershapes are shapes created inside other shapes via
+`recalcdCells → newIslands` in `Island.createSubIslands()`.
+They exercise the same wrapper types (coincident, adjacent,
+collinear, radiant) but with a critical direction difference:
+
+| Aspect | Normal wrapping | Intershape/Frame wrapping |
+|--------|----------------|---------------------------|
+| Direction | Mutual — peers negotiate | Inner adopts outer’s curves |
+| Target | Same-shape neighbor corners | Parent shape’s perimeter |
+| Method | `maximizeCuddles()` pipeline | `inWrapPerimeter()` or custom loop |
+| Radiant/interference | Full pipeline | Not applied |
+
+The `viableOutWrappers` / `viableInWrappers` distinction matters
+here: `viableOutWrappers` are segments whose arc **contains** this
+segment’s arc (larger envelope), while `viableInWrappers` are
+segments whose arc **fits inside** this segment’s arc.
+
+### 12.5 Future: Second Frame Wrapping Mode
+
+**Status:** ⭐ Future feature
+
+The current Frame wrapping in `setBackGridGroup()` uses a simplified
+custom loop that bypasses `maximizeCuddles()`. A second mode could:
+
+- Apply the full `maximizeCuddles()` pipeline to backGrid shapes,
+  including radiant chains and interference detection
+- Enable more intricate frame molding profiles that respond to
+  the geometry of adjacent shapes (rather than just flushing/adj
+  to the nearest corner)
+- Potentially use `inWrapPerimeter` to first establish outer
+  conformity, then run `maximizeCuddles()` refinement on top
+
+The inner mask code (currently commented out in `setBackGridGroup`
+L456–470) was an early step toward this — creating an SVG `<mask>`
+from the backGroup’s second shapeGroup to clip the frame interior.
+See KNOWN-ISSUES § 9.11.4 for the BrokenFuture state of this code.
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-03*
+*Last updated: 2026-03-04*
