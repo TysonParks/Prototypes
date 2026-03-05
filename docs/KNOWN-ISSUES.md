@@ -1252,34 +1252,63 @@ providing room for filter overflow.
 
 **Test hash:** `cascade_frame_crop_1` in WrapperTestHarness.js
 
-### 9.14.2 Issue 2: R-Out Profile Mask Cropping
+### 9.14.2 Issue 2: R-Profile Mask Cropping
 
-**Symptom:** Shapes with R-out profile (`hasOutsetShade`) that now have
-group masks (re-enabled `createMaskGroup()`) show clipped mask effects —
-the blurred mask paths extend beyond the `<mask>` element's bounds.
+**Status:** ✅ Fixed
 
-**Root cause:** `createMaskGroup()` creates a `<mask>` element whose
-`maskRect` is sized to `(this.anchor, this.size, this.padding)` — the
-ShapeGroup's computed bounds. The mask paths are blurred by
-`cut.depth / 4` (and additionally `/8`, `/16`, `/32` for deep cuts).
-The blur extends the visual footprint of the mask path beyond the rect
-bounds, but the `<mask>` element clips to its own coordinate system.
+**Symptom:** Shapes with R-profile cuts that have group masks (re-enabled
+`createMaskGroup()`) show clipped mask effects — the blurred mask paths
+extend beyond the `<mask>` element's default bounds, causing hard crop
+lines. Particularly visible on r-in (`hasOutsetShade`) profiles where
+shading extends outward, but affects all R-profile masks.
 
-The SVG `<mask>` default `maskUnits="objectBoundingBox"` clips the mask
-content to the bounding box of the masked element. Several commented-out
-lines in `createMaskGroup()` show previous attempts:
+**Root cause:** The SVG `<mask>` element was created with no explicit
+bounds, defaulting to `maskUnits="objectBoundingBox"` with a region of
+`-10%,-10%,120%,120%` relative to the masked element. The mask paths
+are blurred by `cut.depth / 4` (primary) plus additional `/8`, `/16`,
+`/32` copies for deep cuts. This blur extends the visual footprint of
+the mask path well beyond the default 10% margin, especially for
+smaller shapes with deeper cuts.
+
+**Fix:** Set `maskUnits="userSpaceOnUse"` on the `<mask>` element with
+explicit bounds matching the ShapeGroup's viewport:
+```js
+mask = createSVGElt('mask')
+  .attribute('maskUnits', 'userSpaceOnUse')
+  .layout(this.anchor, this.size, this.padding)
 ```
-// .attribute('maskUnits', 'userSpaceOnUse')  ← L1830, L1851, L1890, L1896
-// .attribute('overflow', 'visible')          ← L1835
-```
+This gives the mask the same coordinate space as the ShapeGroup's
+`<svg>` viewport, so the blurred mask paths have the full padding
+region to bleed into. No separate filter instances are created —
+the existing shared filters are unaffected.
+
+**Failed approaches:**
+1. **Increasing `ProtoCut.padding` multiplier** (from `depth * 2` to
+   `depth * 3` for outset shade) — no visual effect because the mask's
+   default `objectBoundingBox` region clips independently of the
+   viewport's padding. The bottleneck was the mask, not the viewport.
+
+**Performance notes:**
+- The fix adds no extra DOM elements — just attributes on the existing
+  `<mask>` element.
+- **Future optimization:** `ProtoCut.padding` is currently `depth * 2`
+  for all profile types. Precise per-shade-type padding would be:
+  - `hasInsetShade` (rOut, jIn, iIn): shade inward, minimal overflow
+  - `hasOutsetShade` (rIn, jOut, iOut): shade outward by ~depth
+  - `hasCastShadow` (iOut, rOut): cast shadow vector magnitude
+  Reducing padding to exact requirements shrinks viewport area and
+  reduces render overhead, especially for animation.
 
 **Key code paths:**
-- `createMaskGroup()`: ProtoLayerObjects L1798-1901
+- `createMaskGroup()`: ProtoLayerObjects L1798-1901 ← **THE FIX**
 - `maskRect` sizing: L1838-1848
 - Blur application: L1854 (primary), L1869-1877 (layered)
-- `p5.Element.blur()`: ProtoFilter L385-405 — creates `<filter>` with
-  `x="-50%" y="-50%" width="200%" height="200%"` (generous, but this is
-  on the *blur filter*, not the *mask* element)
+- `p5.Element.blur()`: ProtoFilter L385-405
+- `ProtoCut.padding`: neuMark_I L136
+- `Profile.hasOutsetShade` / `hasInsetShade` / `hasCastShadow`:
+  neuMark_I L61-63
+
+**Test hash:** `cascade_grid_crop_1` in WrapperTestHarness.js
 
 ### 9.14.3 Issue 3: Waves + Ordinal Connection Mask Mismatch
 
