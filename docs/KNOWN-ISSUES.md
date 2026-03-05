@@ -25,6 +25,8 @@
 - [9.9 Cache Staleness Baseline (WTH Report)](#99-cache-staleness-baseline-wth-report)
 - [9.10 Interference Wrappers Audit](#910-interference-wrappers-audit-session-4)
 - [9.11 Intershape Regression](#911-intershape-regression)
+- [9.12 Adjacent/Intershape Wrappers Audit](#912-adjacentintershape-wrappers-audit-session-5)
+- [9.13 Group Mask Pipeline](#913-group-mask-pipeline)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -848,6 +850,328 @@ masking, the `svg` getter should:
 - Use `fromProtoSegPath` per-path (not `fromSegPaths` which joins)
 - Always return a value (even `""`) to avoid construction crashes
 - OR keep the `assignElement` guard and accept `undefined` returns
+
+---
+
+## 9.12 Adjacent/Intershape Wrappers Audit (Session 5)
+
+**Status:** 🟡 In progress — code traced, adjacent wrappers confirmed active in `intershape_3`
+
+**Test hash:** `intershape_3` (`0x97f9...f57f4a`) — most representative
+
+> **Visual note:** Adjacent (green) markers were initially believed absent in the overlay
+> screenshot. They are present but were hidden behind the radiant (orange) lines because
+> `_drawRadiantConnections` was called *after* `_drawConnections`, painting orange on top of
+> green. Fixed in overlay v2: radiant is now drawn first (solid, bottommost layer) and all
+> flush/adjacent connections draw above it with `1 1` equal dashes so the radiant layer shows
+> through the gaps.
+
+### 9.12.1 Adjacent Detection Pipeline
+
+Adjacent wrapping handles corners that face the same direction but
+don’t share a coincident or collinear relationship. The detection
+chain lives in drawAsSVG.js:
+
+```
+adjDistanceObjs (L2567)
+  │  viableWrappers = viableOutWrappers ∪ viableInWrappers
+  │    .filter(sameFacing && !coincident && !collinear
+  │            && canHaveCorrectBounds && canHaveCorrectSize)
+  │    .map(minAdjWrapperDistanceObj).flat()
+  │    .sort(dist).sort(tangDist)
+  ▼
+adjIntersectObjs (L2593)
+  │  filter to matching tangDist+dist
+  │  inOutSorted() — sort by in/out wrapper status
+  │  .map(intersectObj) — perpendicular projection
+  ▼
+adjWrapperObjsFinal (L2635)
+  │  filter to matching dist
+  ▼
+adjacentWrapper = adjWrappersFinal[0]
+```
+
+### 9.12.2 Key Methods
+
+**`minAdjWrapperDistanceObj(seg)`** (L2523)
+- Determines in/out wrappers via `couldHaveInWrapper(seg)`
+- Calculates horizontal and vertical side distances
+- Computes `arcCenterMidPointTangent` from inWrapper
+- Finds `tangentIntersect` — where tangent crosses outWrapper
+- Returns `{seg, tang, tangX, tangDist, dist, isStart}` objects
+- Selection logic: if same in/out-corner parity → picks larger
+  dist; if different → picks smaller dist
+
+**`intersectObj(seg, isStart)`** (L2555)
+- Projects inWrapper’s `arcOrigin` perpendicularly onto outWrapper
+  (or its `endNeighbor` if isStart)
+- Falls back to `minArcOrigin` if `arcOrigin` projection fails
+- Returns `{seg, dist, intersect, isStart}` or `undefined`
+- **FIXME in code:** `side` assignment “seems opposite?” — the
+  isStart/false mapping may be inverted
+
+**`couldHaveInWrapper(seg)`** (L2367)
+- For coincident corners: compares shape bounds, or checks
+  outside/inside corner status
+- For non-coincident: `seg.minArcIsWithinThatMaxArc(this)`
+- This determines the wrap direction (inner adopts outer’s arc)
+
+### 9.12.3 `#wrap()` Resolution (L2660)
+
+Both `flushWrap()` and `adjWrap()` delegate to `#wrap(flush, replace, wrapOut)`.
+
+The method branches on:
+1. **Diagonal (coincident/concentric)** corners:
+   - If non-equidistant or forced: `target.replaceEndCurveOrigin(source.arcOrigin)`
+   - Otherwise: `target.setEndCurveOrigin(source.arcOrigin)`
+2. **Non-diagonal (collinear/proximal)** corners:
+   - Gets `adjIntersectObjs[0]` or `flushIntersectObjs[0]`
+   - If `obj.dist <= target.maxArcRadius`: `addDistancedEndCornerVerts(dist, true)`
+   - Otherwise: `replaceEndCurveOrigin(currentMaxArcOrigin)`
+3. **No arc yet:** assigns `viableAdjWrapOrigins.last` to both wrappers
+
+### 9.12.4 `fixIssues()` Execution Order (Grid.js L1477)
+
+```
+fixIssues()
+  1. wrapInterferenceCorners()     — mode 0 only
+  2. wrapInnerMost()               — mode 0 only
+  3. curveMinRadiusCorners()
+  4. completeEnds()
+  5. fixBadAdjWraps()              ← primary adj fix
+  6. fixBadFlushWraps()            ← also triggers fixBadAdjWraps internally
+  7. fixLoosies()                  ← can curve more, triggers flush/adj
+```
+
+**`fixBadAdjWraps`** (L888): Filters for `isAdjOutWrapper &&
+(adjWrapIsDiverging || adjWrapIsConverging)`, then either:
+- `wrapOutFix()` — re-adjWrap the inWrapper with replace=true
+- `wrapInFix()` — adjWrap self with replace=true
+
+Selection depends on:
+- `isOutWrappedToRadiants` → special radiant-aware path
+- Converging → prefer curve-outer-less or curve-inner-more
+- Diverging → prefer curve-outer-more or curve-inner-less
+
+### 9.12.5 Intershape-Specific Differences
+
+Intershapes (created by `createSubIslands → newIslands()`) exercise
+the same wrapper pipeline with key differences:
+
+1. **`viableInWrappers` (L2402)** checks `grid.isBackGrid` — if true,
+   uses `frontGrid.allSimpleSubShapesSegs` instead of `shapesWithinThisMaxArcBounds`.
+   Normal shapes use their own enclosed/bounds cells.
+
+2. **`viableOutWrappers` (L2415)** checks `grid.isFull` — if full
+   grid, uses `andNeighborSameFacingCorners` (fast path); otherwise
+   scans `allSimpleSubShapesSegs`.
+
+3. **`completeEnds(simples, false)`** is called on intershape segs
+   after creation (L2712), with `wrapOut=false` — this means intershape
+   corners adopt the parent shape’s curvature, not vice versa.
+
+4. **`canHaveCorrectBounds`** (L2571) — for shapes with no neighbors
+   (common for intershapes), uses the looser
+   `minArcIsWithinThatCornerBounds` test.
+
+5. **`canHaveCorrectSize`** (L2576) — outside corners need
+   `maxArcRadius > cellRadius`; inside corners need
+   `cellRadius < seg.maxArcRadius`. This can fail for intershapes
+   that are very small relative to enclosing shape.
+
+### 9.12.6 Known FIXMEs in Adjacent Pipeline
+
+| Location | FIXME | Risk |
+|----------|-------|------|
+| L2524 | “issues with non-square cell aspects triggering longer intersect corners” | 🟡 Medium — aspect-dependent geometry bugs (see § 9.2) |
+| L2525 | “all wrappers should be wrapped in one object, using tangX to choose” | 🔵 Low — design note for unified funnel (ARCHITECTURE § 11) |
+| L2558 | `side` assignment “seems opposite?” (isStart/endNeighbor mapping) | 🟠 Potential — may cause wrong projection for start-side intersections |
+| L2559 | “test this works with flush (collinear) wraps” | 🟠 Potential — untested code path |
+| L2567 | `adjDistanceObjs` memoization commented out | 🟡 Medium — recalculated every access, performance hit |
+| L2635 | `adjWrapperObjsFinal` memoization commented out | 🟡 Medium — same as above |
+| L2642 | `adjacentWrapper` memoization commented out | 🟡 Medium — same as above |
+
+### 9.12.7 Memoization Gaps
+
+Three adjacent-related getters have memoization commented out:
+`adjDistanceObjs`, `adjWrapperObjsFinal`, `adjacentWrapper`. This
+means every access to `adjacentWrapper` triggers the full detection
+chain. These were likely disabled during debugging because:
+- They depend on arc-volatile properties that change during `maximizeCuddles`
+- Stale memos would produce incorrect wrapper selections
+
+If re-enabled, they must be added to `arcVolatileKeys` for proper
+invalidation (see ARCHITECTURE § 5, TESTING § 3).
+
+### 9.12.8 `inOutAdjWrappers` Orientation Bug
+
+```javascript
+get inOutAdjWrappers() {
+  return memoize(() => {
+    return this.#inOutWrappers(false)
+  }, `inOutAdjWrappers`).call(this)
+}
+#inOutWrappers(flush) {
+  const wrapper = flush ? this.flushWrapper : this.adjacentWrapper
+  return this.isOutsideCorner === flush ? [this, wrapper] : [wrapper, this]
+}
+```
+
+For adj wrapping (`flush=false`): the expression `this.isOutsideCorner === false`
+means outside corners return `[wrapper, this]` and inside corners
+return `[this, wrapper]`. This inverts the in/out assignment compared
+to flush wrapping — **by design**, not a bug. The adj wrapper’s
+“outer” is the one with the smaller arc (the one being wrapped to),
+which is the opposite convention from flush wrapping where “outer”
+is the containing arc.
+
+However, `wrapState()` uses this ordering to compute divergence/
+convergence. If the ordering doesn’t match the geometric reality
+for intershapes (where in/out is determined by shape nesting,
+not arc size), `adjWrapIsDiverging`/`adjWrapIsConverging` could
+be inverted.
+
+**Risk:** 🟠 Needs console inspection — `wrapState()` values cannot be determined visually.
+Use `WrapperDebugOverlay.seg('celXXX')` at an intershape corner and check `adjWrapState`.
+
+---
+
+## 9.13 Group Mask Pipeline
+
+**Status:** 🔴 Disabled — both call sites commented out since BrokenFuture commit `685ab58`
+
+**Purpose:** Apply SVG `<mask>` to ShapeGroup elements so loft/shade
+cuts (R-profile) reveal their depth through soft-edged luminance
+masks rather than hard shape boundaries.
+
+### 9.13.1 Timeline
+
+| Commit | Date | What happened |
+|--------|------|---------------|
+| `e396f61` | Sep 16 2025 | Created `createMaskGroup()`, `maskShape`, `maskSVG`, `needsMask`. Initial call site in `finishSetup()` commented out from the start. |
+| `754028b` | Sep 18 2025 | Enabled `createMaskGroup()` at second call site (`drawElement()`). Fixed multiple “bulge masking bugs.” |
+| `685ab58` | Oct 15 2025 | Disabled again at `drawElement()` — **same BrokenFuture commit** that broke intershapes (§ 9.11). Both call sites now commented out. |
+
+### 9.13.2 Architecture
+
+Two separate mask systems exist:
+
+**A) Frame mask** (`maskFrame()`, ProtoLayerObjects L509-533):
+- Clones `backGroup.shapeGroups[0].svgGroupElt`, fills all paths white
+- Creates `<mask>` in `<defs>`, attaches to `Frame.svgElt`
+- Gated by `this.mask` boolean (currently not set)
+- Only masks the *Frame* element so inner grid shows through
+
+**B) ShapeGroup mask** (`createMaskGroup()`, ProtoLayerObjects L1798-1901):
+- Only for `ShapeGroup-combo` type with `cut.profile.isR`
+- For each shape: if `shape.maskShape` exists, creates a path from `shape.maskSVG`
+- Builds a `<mask>` with: white `<rect>` (reveal base) + black mask paths (cut holes)
+  - For `outsetShade`: inverts — black rect, white mask paths
+- Blurs mask paths by `cut.depth / 4` for soft edges
+- Creates additional blur copies at `/8`, `/16`, `/32` for deeper cuts
+- Attaches mask to `svgElt`, adds `.masked` class
+
+### 9.13.3 `maskShape` Getter (Shape, L3213)
+
+Computes the scaled path used as mask content:
+
+```
+maskShape:
+  if NOT isR profile → return (no mask)
+  if isFrontGrid AND NOT outsetShade AND (isMaxEqualRadiusQuad OR isTurnip OR isLemon OR hasBulges)
+    → return (skip these shapes)
+  depthScale = cutDepthScale = cut.depth / cellRadius / 2
+  scale = outsetShade ? insetScale : (insetScale - depthScale)
+  if hasOrdinalConnections + direction.isAll:
+    shapes = island.copyAllToCardinal(insetScale, cut)  ← ENCAPSULATION RISK
+  else:
+    shapes = [this]
+  paths = shapes.map(shape.simpleSegPaths.map(path.insetPath(scale))
+  return new SegPath(paths)
+```
+
+### 9.13.4 Known Encapsulation Issue
+
+The user reports difficulty reasoning about nesting depth during
+mask development. Key concern: the object passed to build mask shapes
+was “either too nested or not nested enough.”
+
+**Root cause candidates:**
+
+1. **`copyAllToCardinal()` round-trip** (L2794): Creates new temporary
+   islands from `grid.createIslands()`, calls `createSimpleSubShapes()`
+   and `inWrapPerimeter()` on them. These temporary islands have their
+   own `shape` property — but that shape has a different `protoParent`
+   chain than the original. If mask code later accesses `this.grid` or
+   `this.island` on the copied shape, it may resolve to an unexpected
+   layer.
+
+2. **`Shape.cut` is delegated** (L3014): `get cut() { return this.island.cut }`.
+   For mask shapes built from copied islands, `this.island` may be
+   a temporary island that doesn’t have `cut` set. The `copyAllToCardinal`
+   method passes `cut` to `createIslands`, but it’s stored on the Island
+   constructor arg — confirm it propagates.
+
+3. **`maskShape` reads `this.grid.isFrontGrid`** (L3218): This
+   determines whether to skip certain shapes. For backGrid shapes,
+   `isFrontGrid` is false, so the early-return guard is skipped and
+   all R-profile shapes get masks. But `createMaskGroup` previously
+   had `&& !this.grid.isBackGrid` commented out (L1801) — meaning
+   backGrid ShapeGroups were *intentionally* being considered at some
+   point, then the filter was removed.
+
+4. **Nesting confusion in `createMaskGroup`**: The mask group is
+   parented to `mask.elt` (L1895) — not to the SVG group directly. This
+   puts the entire mask subtree inside `<defs>/<mask>`, which is correct
+   SVG structure. But during debugging, if mask shapes were temporarily
+   parented to the visible SVG tree (as suggested by the colored fills
+   in comments), the nesting would appear wrong.
+
+### 9.13.5 Debug Mask Shapes (`showMasks()` in DeBugging.js)
+
+The `Debuggable.showMasks()` mixin (DeBugging.js ~L240) creates
+visible-fill test versions of mask shapes:
+- Parents mask paths to `this.grid.maskElt` (a `<g>` in the shader stack)
+- OutsetShade: fills purple-tinted at 25% opacity
+- InsetShade: fills violet-tinted at 15% opacity with `fill-rule: evenodd`
+- These debug shapes bypass the `<mask>/<defs>` structure entirely
+
+The debug shapes should be correct if `maskShape`/`maskSVG` compute
+correctly. They can be used to verify mask accuracy before re-enabling
+the actual `<mask>` element pipeline.
+
+### 9.13.6 `p5.Element.mask()` Prototype (ProtoFilter.js L408)
+
+A separate helper `p5.Element.prototype.mask(shape, blur, strokeWidth)`
+exists in ProtoFilter.js. This is a standalone utility that:
+- Clones a shape element, fills it white (or strokes it white)
+- Creates a `<mask>` and applies it to `this`
+- NOT used by `createMaskGroup()` — they are parallel implementations
+
+The cut Filter pipeline (`ProtoFilter` L127-144) has `feComposite`
+`insetMask` operations for inset shading. These are separate from
+the SVG `<mask>` element approach.
+
+### 9.13.7 Re-enablement Plan
+
+1. **Verify `maskShape`/`maskSVG`** are correct: enable `showMasks()`
+   via `Debuggable.drawMask = true` on a ShapeGroup with R-profile cut.
+   Compare debug shapes against expected mask boundaries.
+
+2. **Uncomment at `drawElement()`** (L2076): Re-enable
+   `this.createMaskGroup()` at the second call site only (the one that
+   was last working in `754028b`).
+
+3. **Verify SVG `<mask>` structure**: Inspect DOM to confirm mask is in
+   `<defs>/<mask>`, maskGroup is child of mask, and `svgElt` has
+   `mask="url(#id)"` attribute.
+
+4. **Test ordinal shapes**: Use a hash with ordinal connections to
+   exercise the `copyAllToCardinal` path and verify the encapsulation
+   doesn’t break.
+
+5. **Re-enable `finishSetup()` call** (L1775): Only after step 2 works.
+   This earlier call site may trigger before SVG elements are ready.
 
 ---
 
