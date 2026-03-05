@@ -1190,36 +1190,64 @@ the SVG `<mask>` element approach.
 
 ### 9.14.1 Issue 1: Cascade SVG Cropping
 
+**Status:** ✅ Fixed
+
 **Symptom:** Islands with `amount > 1` and `insideCutStyle = 'Cascades'` (or
 `'Waves'`) show clipped filter effects — the shadow/highlight bleeds are
 cut off at SVG element boundaries.
 
-**Root cause:** Each cascade step in `cutIslands()` creates a new
-`ProtoCut` (neuMark_I L113) with its own `depth` value. The `ProtoCut`
-collects `shapeGroups` that share its filters. At sketch.js L765,
-`S.Cuts.db.forEach(c => c.setLayouts())` calls `ProtoCut.maxLayout`
-which iterates all shapeGroups and computes the *maximum* percentage
-bounds needed across all shapes sharing that filter.
+**Root cause (actual):** `ShapeGroup.boundsRect` was computed from
+`this.cellBounds.boundsRect`, which returned the tight CellGroup
+interior (approx 12.75, 12.75, 74.5, 174.5 for a typical frame) —
+**not** the full frame area (0, 0, 100, 200). Each ShapeGroup's `<svg>`
+viewport was sized to these tight bounds plus padding, so filter effects
+extending beyond were clipped at the ShapeGroup level regardless of
+parent viewport sizes.
 
-**The problem:** `maxLayout` (neuMark_I L149-164) computes bounding box
-from `grp.insetSize` and `grp.padding`, then `setLayouts()` (L169-176)
-applies this as percentage-based `x`, `y`, `width`, `height` on the
-SVG `<filter>` element. When cascaded layers stack progressively deeper
-cuts, the *deepest* cut's filter may need a larger layout than the
-*shallowest* — but each `ProtoCut` only sees its own shapeGroups.
+**Fix:** One-line change in `ShapeGroup.boundsRect` getter
+(ProtoLayerObjects L1732):
+```js
+return this.isFrame ? FRAME.boundsRect : this.cellBounds.boundsRect
+```
+Frame-layer ShapeGroups now use `FRAME.boundsRect` (0, 0, 100, 200) as
+their viewport base, giving their `<svg>` elements full-frame coverage.
+Combined with the existing `padding` logic (inherited from `ProtoCut`),
+the viewport expands to approximately (-10.6, -10.6, 121.2, 221.2),
+providing room for filter overflow.
 
-Cascade steps with the same `profile.breed` and `depth` share a single
-`ProtoCut` (via the `S.Cuts.find()` dedup at neuMark_I L131). But
-cascade steps with *different* profiles (e.g., Waves alternating `j`↔`r`)
-create separate ProtoCuts — each computing `maxLayout` independently,
-without knowing the other layers also occupy the same visual space.
+**Failed approaches (for reference):**
+1. **`ShapeGroup.padding` override for backGroup** — `CellGroup.isBackGroup`
+   is never set to `true` (`setType('BackGroup')` only sets `_type`), so
+   the if-branch in `padding` was dead code. No visual change.
+2. **`overflow: visible` on `Grid.svgElt`** — No visual change; the
+   clipping happened at ShapeGroup level, not Grid level.
+3. **Explicit viewport expansion of parent SVGs** (GRID, BGRID, FRAME,
+   bleed) — All correctly expanded per diagnostic, but the problem was
+   at ShapeGroup level. Removing the tight ShapeGroup viewport was the
+   actual fix.
+
+**Performance notes:**
+- Frame cascades generate many ShapeGroups (e.g. 37 for a typical
+  multi-step cascade — roughly 3 per step × ~12 steps). Each now has
+  a full-frame viewport rather than a tight interior viewport.
+- During animation, all frame ShapeGroups are re-rendered each frame.
+  The larger viewports may impact animation performance.
+- **Future optimization:** Consider `filterUnits="userSpaceOnUse"` with
+  absolute user-unit coordinates for frame layers instead of the current
+  percentage-based filter regions. Since frame bounds are always known
+  (0, 0, 100, 200), absolute coordinates would avoid percentage
+  resolution overhead and could simplify the layout pipeline for frame
+  layers. See § 9.14.4 for related Safari considerations.
 
 **Key code paths:**
+- `ShapeGroup.boundsRect`: ProtoLayerObjects L1732 ← **THE FIX**
 - `cutIslands()` Cutting Loop: ProtoLayerObjects L1456-1600
 - `ProtoCut` constructor dedup: neuMark_I L131
 - `ProtoCut.maxLayout`: neuMark_I L149-164
 - `ProtoCut.setLayouts()`: neuMark_I L169-176
 - `S.Cuts.db...setLayouts()`: sketch.js L765
+
+**Test hash:** `cascade_frame_crop_1` in WrapperTestHarness.js
 
 ### 9.14.2 Issue 2: R-Out Profile Mask Cropping
 
