@@ -32,7 +32,7 @@ failures.
 | 0 | Foundation (illustrations, GEOMETRY-REFERENCE, geometric vocab) | ✅ Done | Sessions 1-2 | Hand-drawn sketches analyzed, GEOMETRY-REFERENCE built |
 | 1 | Coincident wrappers | ✅ Done | Session 1 | Shared-corner geometry, `hasCoincidentCorner` |
 | 2 | Collinear wrappers | ✅ Done | Session 2 | Found Bug A (misdiagnosed, KNOWN-ISSUES § 9.6) + Bug B (opposite-facing, KNOWN-ISSUES § 9.7) |
-| 3 | Adjacent wrappers | 🟡 Unblocked | — | `minAdjWrapperDistanceObj`, `adjDistanceObjs`, tangent intersection. Intershapes restored (KNOWN-ISSUES § 9.11.7). Starting with `intershape_3`. |
+| 3 | Adjacent wrappers | 🟡 In progress | Session 5 | Code traced, detection+resolution documented (KNOWN-ISSUES § 9.12). Visual testing with `intershape_3` pending. |
 | 4 | Radiant wrappers | ✅ Done | Session 3 | Detection + resolution traced. Priority system confirmed working (KNOWN-ISSUES § 9.8). |
 | 5 | Interference | ✅ Done | Session 4 | 9 issues found (KNOWN-ISSUES § 9.10). Key: `removeDuplicates` loop bug (G), missing `canCurveTo` guard (H). |
 
@@ -85,8 +85,8 @@ because understanding the geometry is prerequisite to knowing which
 | 10 | Read abandoned branch, summarize inner mask intent + what broke | Ask | — | ✅ Done | BrokenFuture analyzed. Root cause: `createSimpleSubShapes` in Shape constructor (KNOWN-ISSUES § 9.11). |
 | 10a | **Restore intershapes** — remove constructor blocker + fix svg/assignElement | Agent + verify | 10 | ✅ Done | 3 changes: constructor blocker removed, `svg` length check, `assignElement` guard (KNOWN-ISSUES § 9.11.7). |
 | 10b | Add `intershape` test hash to WRAPPER_TEST_CASES | Agent | 10a | ✅ Done | User added `intershape_1/2/3` + `collinear_basic_2` + `broken_07` hashes manually. |
-| 11 | Design inner mask implementation plan against working branch | Ask | 10a | ❌ Not started | Port BrokenFuture's `maskShape`/`maskSVG`/`svg` changes incrementally. |
-| 12 | Implement inner mask feature incrementally | Agent + verify | 11 | ❌ Not started | One small change at a time, browser-verify between each. |
+| 11 | Design inner mask implementation plan against working branch | Ask | 10a | 🟡 Documented | Mask pipeline audited (KNOWN-ISSUES § 9.13). Re-enablement plan in § 9.13.7. |
+| 12 | Implement inner mask feature incrementally | Agent + verify | 11 | ❌ Not started | Follow § 9.13.7 steps: showMasks→uncomment drawElement→verify DOM→test ordinals. |
 | 13 | Add structured corner-tracing debug log to `maximizeCuddles` | Agent | 5 | ❌ Not started | Useful during step 12 and all future debugging. |
 
 ### PHASE D — Document and reorganize
