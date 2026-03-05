@@ -619,7 +619,14 @@ const WRAPPER_TEST_CASES = {
     description: 'Frame cascade cuts cropped — filter layout percentages too small for stacked cascade depth (§ 9.14.1)',
     wrapTypes: [],
     issues: ['cascade-crop'],
-    status: 'broken',
+    status: 'fixed',
+  },
+  r_mask_crop_1: {
+    hash: '0x7e1c7d95efd660f751e839ed4b63e000c1c45f8d9b0c9b82bfa145cab08509b2',
+    description: 'R-profile mask cropping — blurred mask paths clipped by default mask bounds (§ 9.14.2)',
+    wrapTypes: [],
+    issues: ['mask-crop'],
+    status: 'fixed',
   },
 
   // MARK: Known Broken
