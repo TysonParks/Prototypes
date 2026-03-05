@@ -675,8 +675,7 @@ Unified Wrapper Funnel proposal.
 
 ## 9.11 Intershape Regression
 
-**Status:** 🔴 Active regression — intershapes not produced, causing
-crashes on hashes that generate them.
+**Status:** ✅ Fixed (Phase 1) — intershapes restored. Masking rebuild pending.
 
 ### 9.11.1 Background
 
@@ -685,10 +684,12 @@ pipeline recalculates and splits a parent shape's cells into multiple
 smaller child shapes. This is the `recalcdCells → newIslands` path in
 `Island.createSubIslands()` (ProtoLayerObjects.js ~L2745).
 
-Intershapes last worked in the Sept 22, 2025 codebase state (commit
-`3c2ae52`). They broke during an attempt to implement shape masking
-(BrokenFuture branch, `685ab58`), and the regression persisted through
-subsequent rollbacks and re-application of changes.
+Intershapes last worked in a pre-Sept 2025 codebase state. The exact
+last-working commit is uncertain due to messy rollbacks, but commit
+`e396f61` (pre-Sept 22) had a `svg` getter that always returned a
+value (even empty string), preventing construction crashes. The
+regression persisted through subsequent rollbacks and re-application
+of changes because the `svg` getter was never fully restored.
 
 ### 9.11.2 Root Cause
 
@@ -708,28 +709,42 @@ the parent geometry was already finalized.
 
 ### 9.11.3 Additional Regression: `svg` Getter
 
-The same commit also changed `Shape.svg` from the working version:
+The `svg` getter went through three states:
 
+**Pre-masking (`e396f61` and earlier — working):**
 ```javascript
-// Sept 22 (working):
+get svg() {
+  let result = this.insetSubShapes.map(e => SVGPath.fromProtoSegPath({ segPath: e }))
+  if (result instanceof Array) result = result.join(' ')
+  return result  // always returns — empty string for empty arrays
+}
+```
+This version bypasses `simpleInsetSegPaths` entirely, maps
+`insetSubShapes` directly through `fromProtoSegPath`, and always
+returns a value. An empty `insetSubShapes` produces `""` (safe for
+SVG `d` attribute — renders nothing).
+
+**Sept 22 (`3c2ae52`) and later — already fragile:**
+```javascript
 get svg() { if (this.simpleInsetSegPaths) return SVGPath.fromSegPaths(this.simpleInsetSegPaths) }
 ```
+The `if` check is truthy for empty `OpArray`/`Array` objects, so
+empty paths pass the gate → `fromSegPaths([])` → invalid SVG →
+`createSVGElt` returns null → `.addToClassList()` crashes. This was
+likely masked in Sept 22 by pipeline ordering (shapes without
+`simpleSubShapes` may not have hit this path on working hashes).
 
-to a version that computes paths from `simpleSegPaths` as a fallback
-but still gates the return on `this.simpleInsetSegPaths`:
-
+**`974bbc5` (Nov 4) — explicit crash:**
 ```javascript
-// Current (broken hybrid):
 get svg() {
   const paths = this.simpleInsetSegPaths ? this.simpleInsetSegPaths : this.simpleSegPaths
   const result = SVGPath.fromSegPaths(paths)
-  if (this.simpleInsetSegPaths) return result  // only returns for inset shapes!
+  if (this.simpleInsetSegPaths) return result
 }
 ```
-
-This means PerimeterShapes compute an SVG path from `simpleSegPaths`
-but never return it (the `if` gate blocks it). The BrokenFuture branch
-had a different approach that explicitly branched on `isPerimeterShape`.
+Computes path but gates return on `simpleInsetSegPaths` — same
+truthy-empty-array problem, plus PerimeterShapes compute from
+`simpleSegPaths` fallback but never return the result.
 
 ### 9.11.4 BrokenFuture Branch State
 
@@ -754,10 +769,14 @@ intershape blocker.
 
 See ROADMAP § 2 Phase C (revised) for the implementation plan.
 
-**Phase 1 — Restore intershapes (minimal, safe):**
-1. Remove `createSimpleSubShapes()` from Shape constructor (~L2997)
-2. Revert `svg` getter to Sept 22 working version
-3. Test: intershapes should produce again
+**Phase 1 — Restore intershapes (minimal, safe):** ✅ Done
+1. ✅ Removed `createSimpleSubShapes()` from Shape constructor (~L2997)
+2. ✅ Fixed `svg` getter: `paths?.length` check instead of truthy test
+3. ✅ Added early return in `Shape.assignElement()` when `this.svg` is
+   falsy — shapes without paths yet (PerimeterShapes, intershape
+   parents) skip element creation safely; paths are assigned later
+   by the pipeline
+4. Test: intershapes now produce again ✅
 
 **Phase 2 — Rebuild masking (on working intershapes):**
 4. Port `maskShape` from BrokenFuture (memoized, returns `SegPath[]`)
@@ -775,13 +794,60 @@ See ROADMAP § 2 Phase C (revised) for the implementation plan.
 
 | Commit | Date | Description | Intershapes? |
 |--------|------|-------------|-------------|
-| `3c2ae52` | Sept 22, 2025 | Last known working state | ✅ Working |
+| `3c2ae52` | Sept 22, 2025 | Last known "working" state | ⚠️ `svg` getter already fragile (truthy empty array) |
 | `685ab58` | Sept 25, 2025 | BrokenFuture tip — masking WIP | ⚠️ Unknown (masking issues, but no constructor blocker) |
 | `8f88a5b` | Oct 2025 | "Regress to previous state" | ✅ Rolled back |
 | `3c2ae52` (re) | Oct 2025 | "Regress to Sept 22nd state" | ✅ Rolled back |
 | `fd1e59a` | Nov 2025 | SVGPath refactor | ⚠️ Possibly still working |
 | `974bbc5` | Nov 4, 2025 | **Shape constructor + svg change** | 🔴 **Broken here** |
 | `5ff17d8` | Nov 2025 | Main tip (testing update) | 🔴 Still broken |
+
+### 9.11.7 Actual Fix (Phase 1)
+
+Three changes to ProtoLayerObjects.js:
+
+**1. Shape constructor (~L2997):** Commented out premature call.
+```javascript
+// if (shptype === `PerimeterShape`) this.createSimpleSubShapes()
+// REMOVED: broke intershapes — see KNOWN-ISSUES § 9.11
+```
+
+**2. `svg` getter (~L3262):** Length check instead of truthy test.
+```javascript
+get svg() {
+  const paths = this.simpleInsetSegPaths
+  if (paths?.length) return SVGPath.fromSegPaths(paths)
+}
+```
+Empty arrays no longer pass the gate. `undefined` and `[]` both
+correctly return `undefined` → no SVG path → shapes skip rendering
+until the pipeline populates their `simpleSubShapes`.
+
+**3. `Shape.assignElement()` (~L3323):** Early return guard.
+```javascript
+assignElement() {
+  super.assignElement()
+  if (!this.svg) return  // no SVG path yet — intershapes get theirs later
+  this.path = createSVGElt('path')
+    .attribute('d', this.svg)
+    ...
+}
+```
+Prevents the `createSVGElt('path').attribute('d', undefined)` → null
+→ `.addToClassList()` crash. Shapes without paths at construction
+time are safe — they get paths assigned when `createSimpleSubShapes()`
+is called later by the pipeline.
+
+**Key insight for Phase 2 (masking):** The pre-masking `svg` getter
+(`e396f61`) used `insetSubShapes` directly with `fromProtoSegPath`,
+not `simpleInsetSegPaths` with `fromSegPaths`. BrokenFuture's approach
+of branching on `isPerimeterShape` and mapping through `fromProtoSegPath`
+individually is closer to the original working pattern. When rebuilding
+masking, the `svg` getter should:
+- Branch on `isPerimeterShape` vs regular Shape
+- Use `fromProtoSegPath` per-path (not `fromSegPaths` which joins)
+- Always return a value (even `""`) to avoid construction crashes
+- OR keep the `assignElement` guard and accept `undefined` returns
 
 ---
 
