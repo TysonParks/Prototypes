@@ -613,6 +613,15 @@ const WRAPPER_TEST_CASES = {
     status: 'untested',
   },
 
+  // MARK: SVG Filter/Mask Cases
+  cascade_frame_crop_1: {
+    hash: '0xfc1214679c09114f623503e0444221e975873c9c5920a427d1bd3ffca215af4a',
+    description: 'Frame cascade cuts cropped — filter layout percentages too small for stacked cascade depth (§ 9.14.1)',
+    wrapTypes: [],
+    issues: ['cascade-crop'],
+    status: 'broken',
+  },
+
   // MARK: Known Broken
   // Add hashes that currently produce incorrect output
   broken_01: {
