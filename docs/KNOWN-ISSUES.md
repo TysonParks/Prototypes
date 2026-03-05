@@ -1232,12 +1232,15 @@ providing room for filter overflow.
   a full-frame viewport rather than a tight interior viewport.
 - During animation, all frame ShapeGroups are re-rendered each frame.
   The larger viewports may impact animation performance.
-- **Future optimization:** Consider `filterUnits="userSpaceOnUse"` with
-  absolute user-unit coordinates for frame layers instead of the current
-  percentage-based filter regions. Since frame bounds are always known
-  (0, 0, 100, 200), absolute coordinates would avoid percentage
-  resolution overhead and could simplify the layout pipeline for frame
-  layers. See § 9.14.4 for related Safari considerations.
+- **Future optimization:** Since all frame ShapeGroups now share the
+  same coordinate space (`FRAME.boundsRect` = 0, 0, 100, 200), the
+  `maxLayout` per-shapeGroup iteration is redundant for frame ProtoCuts.
+  Use `filterUnits="userSpaceOnUse"` with fixed user-unit bounds (e.g.
+  `x="-10" y="-10" width="120" height="220"`) on the shared `<filter>`
+  element — filter sharing is preserved because every frame ShapeGroup
+  lives in the same coordinate space. This skips `maxLayout` iteration
+  entirely for frame layers and avoids percentage resolution overhead.
+  See § 9.14.4 for related Safari considerations.
 
 **Key code paths:**
 - `ShapeGroup.boundsRect`: ProtoLayerObjects L1732 ← **THE FIX**
