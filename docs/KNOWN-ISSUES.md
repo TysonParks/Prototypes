@@ -27,6 +27,7 @@
 - [9.11 Intershape Regression](#911-intershape-regression)
 - [9.12 Adjacent/Intershape Wrappers Audit](#912-adjacentintershape-wrappers-audit-session-5)
 - [9.13 Group Mask Pipeline](#913-group-mask-pipeline)
+- [9.14 SVG Filter Layout & Mask Cropping Issues](#914-svg-filter-layout--mask-cropping-issues)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -1038,7 +1039,7 @@ Use `WrapperDebugOverlay.seg('celXXX')` at an intershape corner and check `adjWr
 
 ## 9.13 Group Mask Pipeline
 
-**Status:** 🔴 Disabled — both call sites commented out since BrokenFuture commit `685ab58`
+**Status:** � Partially re-enabled — `createMaskGroup()` active at `drawElement()` (L2080); `finishSetup()` call site still commented out
 
 **Purpose:** Apply SVG `<mask>` to ShapeGroup elements so loft/shade
 cuts (R-profile) reveal their depth through soft-edged luminance
@@ -1051,6 +1052,9 @@ masks rather than hard shape boundaries.
 | `e396f61` | Sep 16 2025 | Created `createMaskGroup()`, `maskShape`, `maskSVG`, `needsMask`. Initial call site in `finishSetup()` commented out from the start. |
 | `754028b` | Sep 18 2025 | Enabled `createMaskGroup()` at second call site (`drawElement()`). Fixed multiple “bulge masking bugs.” |
 | `685ab58` | Oct 15 2025 | Disabled again at `drawElement()` — **same BrokenFuture commit** that broke intershapes (§ 9.11). Both call sites now commented out. |
+| session 6 | Mar 5 2026  | **`maskShape` return type fix:** Changed from `new SegPath(paths, this)` (single SegPath wrapping array of OpArrays) to array of individually-wrapped `new SegPath(inset, shape)`. Verified with `showMasksDebug()` — purple overlays correct. |
+| session 6 | Mar 5 2026  | **`createMaskGroup` degenerate path guard:** Changed `if (s.maskShape)` to `const svg = s.maskSVG; if (svg)` — prevents crash when `SVGPath.fromSegPaths()` returns undefined for degenerate paths (all points collinear). Also avoids double-computing `maskShape`. |
+| session 6 | Mar 5 2026  | **Re-enabled** `createMaskGroup()` at `drawElement()` (L2080). Masks now apply to R-profile ShapeGroup-combo elements. |
 
 ### 9.13.2 Architecture
 
@@ -1071,9 +1075,10 @@ Two separate mask systems exist:
 - Creates additional blur copies at `/8`, `/16`, `/32` for deeper cuts
 - Attaches mask to `svgElt`, adds `.masked` class
 
-### 9.13.3 `maskShape` Getter (Shape, L3213)
+### 9.13.3 `maskShape` Getter (Shape, L3218)
 
-Computes the scaled path used as mask content:
+Computes the scaled path used as mask content.
+**Updated in session 6** — now returns `SegPath[]` (array) instead of single `SegPath`:
 
 ```
 maskShape:
@@ -1086,8 +1091,12 @@ maskShape:
     shapes = island.copyAllToCardinal(insetScale, cut)  ← ENCAPSULATION RISK
   else:
     shapes = [this]
-  paths = shapes.map(shape.simpleSegPaths.map(path.insetPath(scale))
-  return new SegPath(paths)
+  paths = shapes.flatMap(shape.simpleSegPaths.map(path => {
+    inset = path.insetPath(scale)
+    return new SegPath(inset, shape)     ← individually wrapped (session 6 fix)
+  }))
+  filter out degenerate paths (length=4, all segments length≈0)
+  return paths                           ← array of SegPaths
 ```
 
 ### 9.13.4 Known Encapsulation Issue
@@ -1175,5 +1184,181 @@ the SVG `<mask>` element approach.
 
 ---
 
+## 9.14 SVG Filter Layout & Mask Cropping Issues
+
+**Status:** 🔴 Active — multiple visual cropping bugs across cascades, r-out masks, and waves+ordinal masks
+
+### 9.14.1 Issue 1: Cascade SVG Cropping
+
+**Symptom:** Islands with `amount > 1` and `insideCutStyle = 'Cascades'` (or
+`'Waves'`) show clipped filter effects — the shadow/highlight bleeds are
+cut off at SVG element boundaries.
+
+**Root cause:** Each cascade step in `cutIslands()` creates a new
+`ProtoCut` (neuMark_I L113) with its own `depth` value. The `ProtoCut`
+collects `shapeGroups` that share its filters. At sketch.js L765,
+`S.Cuts.db.forEach(c => c.setLayouts())` calls `ProtoCut.maxLayout`
+which iterates all shapeGroups and computes the *maximum* percentage
+bounds needed across all shapes sharing that filter.
+
+**The problem:** `maxLayout` (neuMark_I L149-164) computes bounding box
+from `grp.insetSize` and `grp.padding`, then `setLayouts()` (L169-176)
+applies this as percentage-based `x`, `y`, `width`, `height` on the
+SVG `<filter>` element. When cascaded layers stack progressively deeper
+cuts, the *deepest* cut's filter may need a larger layout than the
+*shallowest* — but each `ProtoCut` only sees its own shapeGroups.
+
+Cascade steps with the same `profile.breed` and `depth` share a single
+`ProtoCut` (via the `S.Cuts.find()` dedup at neuMark_I L131). But
+cascade steps with *different* profiles (e.g., Waves alternating `j`↔`r`)
+create separate ProtoCuts — each computing `maxLayout` independently,
+without knowing the other layers also occupy the same visual space.
+
+**Key code paths:**
+- `cutIslands()` Cutting Loop: ProtoLayerObjects L1456-1600
+- `ProtoCut` constructor dedup: neuMark_I L131
+- `ProtoCut.maxLayout`: neuMark_I L149-164
+- `ProtoCut.setLayouts()`: neuMark_I L169-176
+- `S.Cuts.db...setLayouts()`: sketch.js L765
+
+### 9.14.2 Issue 2: R-Out Profile Mask Cropping
+
+**Symptom:** Shapes with R-out profile (`hasOutsetShade`) that now have
+group masks (re-enabled `createMaskGroup()`) show clipped mask effects —
+the blurred mask paths extend beyond the `<mask>` element's bounds.
+
+**Root cause:** `createMaskGroup()` creates a `<mask>` element whose
+`maskRect` is sized to `(this.anchor, this.size, this.padding)` — the
+ShapeGroup's computed bounds. The mask paths are blurred by
+`cut.depth / 4` (and additionally `/8`, `/16`, `/32` for deep cuts).
+The blur extends the visual footprint of the mask path beyond the rect
+bounds, but the `<mask>` element clips to its own coordinate system.
+
+The SVG `<mask>` default `maskUnits="objectBoundingBox"` clips the mask
+content to the bounding box of the masked element. Several commented-out
+lines in `createMaskGroup()` show previous attempts:
+```
+// .attribute('maskUnits', 'userSpaceOnUse')  ← L1830, L1851, L1890, L1896
+// .attribute('overflow', 'visible')          ← L1835
+```
+
+**Key code paths:**
+- `createMaskGroup()`: ProtoLayerObjects L1798-1901
+- `maskRect` sizing: L1838-1848
+- Blur application: L1854 (primary), L1869-1877 (layered)
+- `p5.Element.blur()`: ProtoFilter L385-405 — creates `<filter>` with
+  `x="-50%" y="-50%" width="200%" height="200%"` (generous, but this is
+  on the *blur filter*, not the *mask* element)
+
+### 9.14.3 Issue 3: Waves + Ordinal Connection Mask Mismatch
+
+**Symptom:** When `insideCutStyle = 'Waves'` and a shape has ordinal
+connections, mask shapes in the cascade stack progressively reduce to
+cardinal-only geometry. The stack shows `.all` shapes transitioning to
+`.cardinal` shapes as they inset smaller, creating mismatched mask
+boundaries.
+
+**Root cause:** The Cutting Loop (ProtoLayerObjects L1497-1504)
+alternates `profile = profile.wave` on each cascade step for
+`insideCutStyle = 'Waves'`. This flips `j`↔`r` profiles. Meanwhile,
+`maskShape` (L3239-3241) checks:
+```
+hasOrds = island.hasOrdinalConnections && island.direction.isAll
+shapes = hasOrds ? island.copyAllToCardinal(insetScale, cut) : [this]
+```
+
+The `copyAllToCardinal()` returns cardinal-only islands. As cascade steps
+inset further, successive islands may lose ordinal connections (shapes
+shrink away from corners), causing some steps to use `.all` geometry and
+others to use `.cardinal` geometry. The masks are computed per-shape
+but applied per-ShapeGroup — so a ShapeGroup containing a mix of
+all-direction and cardinal-direction shapes gets inconsistent masks.
+
+**The deeper issue:** Mask shapes should ideally be calculated
+specifically per the shape they are masking, at each cascade level,
+rather than relying on the top-level island's ordinal status.
+
+**Key code paths:**
+- `profile.wave` toggle: ProtoLayerObjects L1499
+- `maskShape` ordinal branch: ProtoLayerObjects L3239-3245
+- `copyAllToCardinal()`: ProtoLayerObjects L2797-2860
+- `createSubIslands()` direction downgrade: ProtoLayerObjects L2721
+
+### 9.14.4 Issue 4: Safari vs Chrome Rendering (Percentage Layout)
+
+**Symptom:** Filter effects render correctly in Chrome but show
+cropping, misalignment, or missing effects in Safari.
+
+**Root cause (suspected):** SVG filter regions are specified as
+percentages (e.g., `x="-15%"`, `width="130%"`) via `setLayouts()`.
+Chrome interprets percentage-based filter regions more leniently than
+Safari. The SVG spec defines `filterUnits="objectBoundingBox"` (default)
+as using percentages relative to the bounding box, but implementations
+differ in edge cases — especially with nested viewBox transforms and
+non-uniform scaling.
+
+**Current percentage pipeline:**
+1. `ProtoCut.maxLayout` (neuMark_I L149) computes max `{x, y, width,
+   height}` as percentages from `padding / size * 100`
+2. `setLayouts()` (L169) applies these as `filter.attribute("x", "${x}%")`
+3. `p5.Element.blur()` (ProtoFilter L393) uses fixed `x="-50%"` etc.
+4. Mask `<rect>` uses `viewBox/layout` helpers that output user units
+
+**Performance tradeoff:** Percentage layout enables filter reuse — a
+single `ProtoCut` with one set of filters can be shared across all
+shapeGroups with the same `breed` (profile+depth combo). Switching to
+`filterUnits="userSpaceOnUse"` would require per-shapeGroup filter
+instances, multiplying DOM elements.
+
+**Potential approach:** Detect Safari at runtime and either:
+- Apply a separate `setLayouts()` pass with `userSpaceOnUse` + explicit
+  pixel coordinates (sacrificing filter sharing)
+- Or add extra padding margins to the percentage values to account for
+  Safari's stricter clipping
+
+### 9.14.5 Recommended Approach
+
+**Priority order:** Fix 1-3 first (concrete visual bugs), defer 4
+(Safari) until the layout system is stable.
+
+**Phase A — Audit (read-only)**
+1. Trace a specific cascade hash through `cutIslands()` to log the
+   actual `ProtoCut.breed` values, `depth` values, and resulting
+   `maxLayout` percentages for each cascade step.
+2. Trace a specific r-out hash to log the `<mask>` bounds vs the
+   blurred mask path's actual visual extent.
+3. Trace a Waves+ordinal hash to log the `direction` and
+   `hasOrdinalConnections` state at each cascade level.
+
+**Phase B — Fix cascade filter cropping (Issue 1)**
+- Option B1: After all cuts, compute a *global* maxLayout across all
+  ProtoCuts that share shapeGroups within the same CellGroup. Apply
+  the union of all layouts. Preserves filter sharing.
+- Option B2: Track `maxDepth` across cascade steps in `cutIslands()`
+  and pass it to `ProtoCut` so `maxLayout` can account for the full
+  cascade stack height.
+
+**Phase C — Fix mask cropping (Issue 2)**
+- Add padding to the `<mask>` element (or use `maskUnits="userSpaceOnUse"`)
+  sized to account for `cut.depth / 4` blur radius plus the layered
+  blur copies.
+- Alternatively, expand the `maskRect` by the blur extent.
+
+**Phase D — Fix waves+ordinal masks (Issue 3)**
+- Compute `maskShape` per cascade level using each shape's actual
+  direction state at that level, rather than inheriting from the
+  top-level island.
+- May require passing `direction` into `maskShape` as a parameter
+  instead of reading `this.island.direction`.
+
+**Phase E — Safari compatibility (Issue 4, deferred)**
+- After B-D stabilize the layout system, test in Safari.
+- If cropping persists, implement Safari-detect branch with
+  `userSpaceOnUse` filter regions. Keep percentage path for Chrome
+  (performance).
+- `const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)`
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-04*
+*Last updated: 2026-03-05*
