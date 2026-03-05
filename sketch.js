@@ -765,7 +765,6 @@ function gridTests2(features) {
   S.Cuts.db.map(c => c[1]).forEach(c => c.setLayouts())
 
 
-
   // DeBug.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
   // FRAME.backGrid.showCellsDebug()
   // FRAME.backGrid.showShapesDebug()
@@ -774,7 +773,7 @@ function gridTests2(features) {
   // GRID.showCellsDebug(false)
   // GRID.showShapesDebug()
   // GRID.showShapeGroupsDebug(false)
-  // GRID.showMasksDebug()
+  // GRID.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
   // GRID.showFrameRate(animationController)
   // GRID.showSizeGrid(4)
 
