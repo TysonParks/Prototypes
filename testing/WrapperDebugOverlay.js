@@ -13,29 +13,29 @@ class WrapperDebugOverlay {
   //MARK: Color Palette
   static colors = {
     coincident: `rgba(255, 60, 60, 0.9)`,       // red
-    collinear:  `rgba(60, 180, 255, 0.9)`,       // blue
-    adjacent:   `rgba(60, 255, 120, 0.9)`,       // green
-    radiant:    `rgba(255, 180, 60, 0.9)`,       // orange
-    segLabel:   `rgba(255, 255, 255, 0.85)`,     // white
-    segDot:     `rgba(255, 255, 0, 0.9)`,        // yellow (corner dot)
-    inWrapper:  `rgba(180, 60, 255, 0.9)`,       // purple
+    collinear: `rgba(60, 180, 255, 0.9)`,       // blue
+    adjacent: `rgba(60, 255, 120, 0.9)`,       // green
+    radiant: `rgba(255, 180, 60, 0.9)`,       // orange
+    segLabel: `rgba(255, 255, 255, 0.85)`,     // white
+    segDot: `rgba(255, 255, 0, 0.9)`,        // yellow (corner dot)
+    inWrapper: `rgba(180, 60, 255, 0.9)`,       // purple
     outWrapper: `rgba(255, 120, 60, 0.9)`,       // coral
-    arcOrigin:  `rgba(0, 255, 200, 0.6)`,        // cyan
-    bgPill:     `rgba(0, 0, 0, 0.6)`,            // label background
+    arcOrigin: `rgba(0, 255, 200, 0.6)`,        // cyan
+    bgPill: `rgba(0, 0, 0, 0.6)`,            // label background
   }
 
   //MARK: Toggle
-  static toggle(grid) {
+  static toggle(grid, frameGrid) {
     if (!grid) { console.warn(`WrapperDebugOverlay: no grid provided`); return }
     WrapperDebugOverlay._grid = grid
     if (WrapperDebugOverlay._visible) {
       WrapperDebugOverlay.hide()
     } else {
-      WrapperDebugOverlay.show(grid)
+      WrapperDebugOverlay.show(grid, frameGrid)
     }
   }
 
-  static show(grid) {
+  static show(grid, frameGrid) {
     WrapperDebugOverlay.hide()  // remove any existing overlay
     WrapperDebugOverlay._visible = true
     WrapperDebugOverlay._grid = grid
@@ -56,15 +56,28 @@ class WrapperDebugOverlay {
       return
     }
 
-    // Draw in layers: connections first, then dots/labels on top
-    WrapperDebugOverlay._drawConnections(g, segs)
-    WrapperDebugOverlay._drawRadiantConnections(g, segs)
-    WrapperDebugOverlay._drawCornerDots(g, segs)
-    WrapperDebugOverlay._drawCornerLabels(g, segs)
-    WrapperDebugOverlay._drawLegend(g)
+    // Auto-detect frame grid: prefer explicit arg, fall back to global BGRID
+    const bgrid = frameGrid ?? (typeof BGRID !== 'undefined' ? BGRID : null)
+    const frameSegs = bgrid ? bgrid.allSimpleSubShapesSegs : []
 
-    console.log(`%c[WrapperDebugOverlay] ON — ${segs.length} segments`, 'color: lime')
-    WrapperDebugOverlay._logSummary(segs)
+    // Draw order: bottom → top
+    //   radiant (solid, bottommost) — upper dashed layers reveal it through their gaps
+    //   adjacent → collinear → coincident  (dashed 1 1, each type on top of previous)
+    //   frame versions of the above (dashed 2 2, lower opacity)
+    //   corner dots → labels (always on top)
+    WrapperDebugOverlay._drawRadiantConnections(g, segs)
+    if (frameSegs.length) WrapperDebugOverlay._drawRadiantConnections(g, frameSegs, true)
+    WrapperDebugOverlay._drawConnections(g, segs)
+    if (frameSegs.length) WrapperDebugOverlay._drawConnections(g, frameSegs, true)
+    WrapperDebugOverlay._drawCornerDots(g, segs)
+    if (frameSegs.length) WrapperDebugOverlay._drawCornerDots(g, frameSegs, true)
+    WrapperDebugOverlay._drawCornerLabels(g, segs)
+    if (frameSegs.length) WrapperDebugOverlay._drawCornerLabels(g, frameSegs, true)
+    WrapperDebugOverlay._drawLegend(g, !!frameSegs.length)
+
+    const frameNote = frameSegs.length ? ` + ${frameSegs.length} frame segs` : ''
+    console.log(`%c[WrapperDebugOverlay] ON — ${segs.length} segs${frameNote}`, 'color: lime')
+    WrapperDebugOverlay._logSummary(segs, frameSegs)
   }
 
   static hide() {
@@ -76,44 +89,59 @@ class WrapperDebugOverlay {
   }
 
   //MARK: Drawing — Connections (Flush + Adjacent)
-  static _drawConnections(g, segs) {
-    const drawn = new Set()
+  // Three ordered passes so coincident (rarest) always renders above collinear above adjacent.
+  // isFrame=true uses longer dash period (2 2) and lower opacity to distinguish frame segs.
+  static _drawConnections(g, segs, isFrame = false) {
     const C = WrapperDebugOverlay.colors
+    const dash = isFrame ? '2 2' : '1 1'
+    const opacity = isFrame ? 0.6 : 0.85
+    const sw = isFrame ? '0.22' : '0.3'
 
+    // Pass 1: Adjacent (bottommost of the flush group)
+    const drawnAdj = new Set()
     segs.forEach(seg => {
-      // Coincident wrapper — true coincident only (shared vertex + collinear overlap)
-      // Diagonal/radiant pairs are drawn separately in _drawRadiantConnections
-      if (seg.coincidentWrapper) {
-        const w = seg.coincidentWrapper
-        const key = WrapperDebugOverlay._pairKey(seg, w)
-        if (!drawn.has(key)) {
-          drawn.add(key)
-          WrapperDebugOverlay._drawWrapperLine(g, seg, w, C.coincident, 'coin')
-        }
-      }
-      // Collinear wrapper (non-coincident flush)
-      if (seg.collinearWrapper && !seg.coincidentWrapper) {
-        const key = WrapperDebugOverlay._pairKey(seg, seg.collinearWrapper)
-        if (!drawn.has(key)) {
-          drawn.add(key)
-          WrapperDebugOverlay._drawWrapperLine(g, seg, seg.collinearWrapper, C.collinear, 'coll')
-        }
-      }
-      // Adjacent wrapper
       if (seg.adjacentWrapper) {
         const key = WrapperDebugOverlay._pairKey(seg, seg.adjacentWrapper)
-        if (!drawn.has(key)) {
-          drawn.add(key)
-          WrapperDebugOverlay._drawWrapperLine(g, seg, seg.adjacentWrapper, C.adjacent, 'adj')
+        if (!drawnAdj.has(key)) {
+          drawnAdj.add(key)
+          WrapperDebugOverlay._drawWrapperLine(g, seg, seg.adjacentWrapper, C.adjacent, 'adj', dash, opacity, sw)
+        }
+      }
+    })
+
+    // Pass 2: Collinear
+    const drawnColl = new Set()
+    segs.forEach(seg => {
+      if (seg.collinearWrapper && !seg.coincidentWrapper) {
+        const key = WrapperDebugOverlay._pairKey(seg, seg.collinearWrapper)
+        if (!drawnColl.has(key)) {
+          drawnColl.add(key)
+          WrapperDebugOverlay._drawWrapperLine(g, seg, seg.collinearWrapper, C.collinear, 'coll', dash, opacity, sw)
+        }
+      }
+    })
+
+    // Pass 3: Coincident (topmost — rarest, most diagnostic)
+    const drawnCoin = new Set()
+    segs.forEach(seg => {
+      if (seg.coincidentWrapper) {
+        const key = WrapperDebugOverlay._pairKey(seg, seg.coincidentWrapper)
+        if (!drawnCoin.has(key)) {
+          drawnCoin.add(key)
+          WrapperDebugOverlay._drawWrapperLine(g, seg, seg.coincidentWrapper, C.coincident, 'coin', dash, opacity, sw)
         }
       }
     })
   }
 
   //MARK: Drawing — Radiant/Diagonal Connections
-  static _drawRadiantConnections(g, segs) {
+  // Drawn first (bottommost layer). Solid stroke (no dash) so upper dashed layers
+  // reveal radiant through their gaps — radiant shows between the dashes of adj/coll/coin.
+  static _drawRadiantConnections(g, segs, isFrame = false) {
     const drawn = new Set()
     const C = WrapperDebugOverlay.colors
+    const opacity = isFrame ? 0.5 : 0.7
+    const sw = isFrame ? '0.2' : '0.25'
 
     segs.forEach(seg => {
       const radOuts = seg.radiantOutWrappers
@@ -122,14 +150,16 @@ class WrapperDebugOverlay {
           const key = WrapperDebugOverlay._pairKey(seg, rw)
           if (!drawn.has(key)) {
             drawn.add(key)
-            WrapperDebugOverlay._drawWrapperLine(g, seg, rw, C.radiant, 'rad')
+            // null dashArray = solid (no stroke-dasharray attribute set)
+            WrapperDebugOverlay._drawWrapperLine(g, seg, rw, C.radiant, 'rad', null, opacity, sw)
           }
         })
       }
     })
   }
 
-  static _drawWrapperLine(g, segA, segB, color, label) {
+  // dashArray: string like '1 1' for dashed, or null for solid (no attribute set).
+  static _drawWrapperLine(g, segA, segB, color, label, dashArray = '1 1', opacity = 0.85, strokeWidth = '0.3') {
     const
       ax = segA.end.x,
       ay = segA.end.y,
@@ -143,9 +173,9 @@ class WrapperDebugOverlay {
     line.setAttribute('x2', bx)
     line.setAttribute('y2', by)
     line.setAttribute('stroke', color)
-    line.setAttribute('stroke-width', '0.3')
-    line.setAttribute('stroke-dasharray', '1 0.5')
-    line.setAttribute('opacity', '0.8')
+    line.setAttribute('stroke-width', strokeWidth)
+    if (dashArray) line.setAttribute('stroke-dasharray', dashArray)
+    line.setAttribute('opacity', String(opacity))
     g.appendChild(line)
 
     // Midpoint label
@@ -155,27 +185,34 @@ class WrapperDebugOverlay {
   }
 
   //MARK: Drawing — Corner Dots
-  static _drawCornerDots(g, segs) {
+  // isFrame=true uses slightly smaller radii and lower opacity to de-emphasise frame corners.
+  static _drawCornerDots(g, segs, isFrame = false) {
     const C = WrapperDebugOverlay.colors
+    const dotR = isFrame ? '0.3' : '0.4'
+    const ringR = isFrame ? '0.55' : '0.7'
+    const innerR = isFrame ? '0.15' : '0.2'
+    const dotOpacity = isFrame ? '0.65' : '1'
 
     segs.forEach(seg => {
       const ex = seg.end.x
       const ey = seg.end.y
 
-      // Determine dot color based on wrapper status
+      // Dot color reflects the highest-priority wrapper type present
       let dotColor = C.segDot
       if (seg.coincidentWrapper) dotColor = C.coincident
       else if (seg.collinearWrapper) dotColor = C.collinear
       else if (seg.adjacentWrapper) dotColor = C.adjacent
+      else if (seg.radiantOutWrappers?.length > 0) dotColor = C.radiant
 
       // Corner dot
       const circle = document.createElementNS(xmlns, 'circle')
       circle.setAttribute('cx', ex)
       circle.setAttribute('cy', ey)
-      circle.setAttribute('r', '0.4')
+      circle.setAttribute('r', dotR)
       circle.setAttribute('fill', dotColor)
       circle.setAttribute('stroke', 'black')
       circle.setAttribute('stroke-width', '0.1')
+      circle.setAttribute('opacity', dotOpacity)
       g.appendChild(circle)
 
       // In/Out indicator
@@ -184,18 +221,20 @@ class WrapperDebugOverlay {
         const ring = document.createElementNS(xmlns, 'circle')
         ring.setAttribute('cx', ex)
         ring.setAttribute('cy', ey)
-        ring.setAttribute('r', '0.7')
+        ring.setAttribute('r', ringR)
         ring.setAttribute('fill', 'none')
         ring.setAttribute('stroke', C.outWrapper)
         ring.setAttribute('stroke-width', '0.15')
+        ring.setAttribute('opacity', dotOpacity)
         g.appendChild(ring)
       } else {
         // Small filled inner dot for inside corners
         const inner = document.createElementNS(xmlns, 'circle')
         inner.setAttribute('cx', ex)
         inner.setAttribute('cy', ey)
-        inner.setAttribute('r', '0.2')
+        inner.setAttribute('r', innerR)
         inner.setAttribute('fill', C.inWrapper)
+        inner.setAttribute('opacity', dotOpacity)
         g.appendChild(inner)
       }
 
@@ -215,8 +254,10 @@ class WrapperDebugOverlay {
   }
 
   //MARK: Drawing — Corner Labels (positioned at segment start vertex)
-  static _drawCornerLabels(g, segs) {
+  // isFrame=true uses a dark-blue pill background so frame labels are visually distinct.
+  static _drawCornerLabels(g, segs, isFrame = false) {
     const C = WrapperDebugOverlay.colors
+    const pillColor = isFrame ? 'rgba(0,30,90,0.75)' : C.bgPill
     // Track drawn corners to avoid duplicate labels at shared vertices
     const drawnCorners = new Set()
 
@@ -245,7 +286,7 @@ class WrapperDebugOverlay {
       pill.setAttribute('width', labelWidth)
       pill.setAttribute('height', 1.1)
       pill.setAttribute('rx', '0.3')
-      pill.setAttribute('fill', C.bgPill)
+      pill.setAttribute('fill', pillColor)
       g.appendChild(pill)
 
       // Text label
@@ -262,24 +303,25 @@ class WrapperDebugOverlay {
   }
 
   //MARK: Drawing — Legend
-  static _drawLegend(g) {
+  static _drawLegend(g, hasFrame = false) {
     const C = WrapperDebugOverlay.colors
     const entries = [
-      { label: 'Coincident', color: C.coincident },
-      { label: 'Collinear', color: C.collinear },
-      { label: 'Adjacent', color: C.adjacent },
-      { label: 'Radiant', color: C.radiant },
-      { label: 'OutCorner ○', color: C.outWrapper },
-      { label: 'InCorner ●', color: C.inWrapper },
-      { label: 'ArcOrigin', color: C.arcOrigin },
+      { label: 'Coincident', color: C.coincident, note: '— 1 1' },
+      { label: 'Collinear', color: C.collinear, note: '— 1 1' },
+      { label: 'Adjacent', color: C.adjacent, note: '— 1 1' },
+      { label: 'Radiant', color: C.radiant, note: '——— solid' },
+      { label: 'OutCorner ○', color: C.outWrapper, note: '' },
+      { label: 'InCorner ●', color: C.inWrapper, note: '' },
+      { label: 'ArcOrigin', color: C.arcOrigin, note: '' },
     ]
+    if (hasFrame) entries.push({ label: 'Frame segs', color: 'rgba(120,160,255,0.85)', note: '-- 2 2' })
 
     // Legend background
     const lx = -4, ly = -9
     const lbg = document.createElementNS(xmlns, 'rect')
     lbg.setAttribute('x', lx)
     lbg.setAttribute('y', ly)
-    lbg.setAttribute('width', 18)
+    lbg.setAttribute('width', 22)
     lbg.setAttribute('height', entries.length * 2.2 + 0.8)
     lbg.setAttribute('rx', '0.5')
     lbg.setAttribute('fill', 'rgba(0,0,0,0.75)')
@@ -300,7 +342,7 @@ class WrapperDebugOverlay {
 
       // Label
       const text = document.createElementNS(xmlns, 'text')
-      text.textContent = entry.label
+      text.textContent = entry.note ? `${entry.label}  ${entry.note}` : entry.label
       text.setAttribute('x', lx + 2.5)
       text.setAttribute('y', ey + 0.35)
       text.setAttribute('font-size', '1.8')
@@ -342,7 +384,7 @@ class WrapperDebugOverlay {
   }
 
   //MARK: Console Logging
-  static _logSummary(segs) {
+  static _logSummary(segs, frameSegs = []) {
     const coin = segs.filter(s => s.coincidentWrapper)
     const coll = segs.filter(s => s.collinearWrapper && !s.coincidentWrapper)
     const adj = segs.filter(s => s.adjacentWrapper)
@@ -391,6 +433,16 @@ class WrapperDebugOverlay {
     })
 
     console.groupEnd()
+
+    if (frameSegs.length > 0) {
+      const fCoin = frameSegs.filter(s => s.coincidentWrapper)
+      const fColl = frameSegs.filter(s => s.collinearWrapper && !s.coincidentWrapper)
+      const fAdj = frameSegs.filter(s => s.adjacentWrapper)
+      const fRad = frameSegs.filter(s => s.radiantOutWrappers?.length > 0)
+      console.groupCollapsed(`%c[WrapperDebugOverlay] Frame Summary (${frameSegs.length} segs)`, 'color: #88aaff')
+      console.log(`Frame coincident: ${fCoin.length} | collinear: ${fColl.length} | adjacent: ${fAdj.length} | radiant: ${fRad.length}`)
+      console.groupEnd()
+    }
   }
 
   //MARK: Console Inspection Helpers
