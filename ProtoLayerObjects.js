@@ -1729,7 +1729,7 @@ class ShapeGroup extends ProtoLayer {
 
   // MARK: ShapeGroup Computed Properties
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
-  get boundsRect() { return this.cellBounds.boundsRect }
+  get boundsRect() { return this.isFrame ? FRAME.boundsRect : this.cellBounds.boundsRect }
   get padding() {
     const
       backGroupPadding = Vertex.mult(this.grid.insetAmount, 2),
@@ -1803,9 +1803,10 @@ class ShapeGroup extends ProtoLayer {
     ) {                              // if this is an R cut, create a mask group
 
       this.shapes.forEach(s => {                              // find maskShapes in shapes
-        if (s.maskShape) {
+        const svg = s.maskSVG                                 // get maskSVG once (avoids double-computing maskShape)
+        if (svg) {
           const path = createSVGElt('path')                   // create a path for the maskShape
-            .attribute(`d`, s.maskSVG)
+            .attribute(`d`, svg)
             .addToClassList(s.id)
             .id(`${s.id}-Mask-copy`)
           this.masks.push(path)                               // add maskShapes to masks array
@@ -1857,8 +1858,11 @@ class ShapeGroup extends ProtoLayer {
               // .attribute('stroke', 'white')
               // .attribute('stroke-width', m.outerMaskSize || 1)
               .attribute('fill', 'white')
+            // .attribute('fill', 'black')
             // .attribute('overflow', 'visible')
-            maskRect.attribute('fill', 'black')
+            maskRect
+              .attribute('fill', 'black')
+            // .attribute('fill', 'white')
           } else {
             this.maskGroupElt
               .attribute('fill', 'black')
@@ -2073,7 +2077,7 @@ class ShapeGroup extends ProtoLayer {
     }
 
     this.svgGroupElt.applyFilter(this.filter)
-    // this.createMaskGroup()
+    this.createMaskGroup()                       // § 9.13.7 Step 2: re-enabled
   }
 }
 
@@ -3240,15 +3244,16 @@ class Shape extends ProtoLayer {
 
     const paths = shapes.map(shape => {                                             // map shapes to inset paths
       return shape.simpleSegPaths?.map((path, i) => {
-        return outsetShade ? path.insetPath(depthScale.div(2).add(scale))               // outsetShade paths used with stroking
-          : path.insetPath(scale)                                                       // insetShade paths used as-is with fill
+        const inset = outsetShade ? path.insetPath(depthScale.div(2).add(scale))       // outsetShade paths used with stroking
+          : path.insetPath(scale)                                                     // insetShade paths used as-is with fill
+        return new SegPath(inset, shape)                                               // wrap each inset path as a SegPath
       })
-    }).flat()                                                                       // flatten paths
-      .filter(path => !(path.length === 4 && path.every(seg => equalsRoundedDec(seg.length, 0, 3)))) // filter out quads with 0 length segments
+    }).flat()                                                                       // flatten to array of SegPaths
+      .filter(sp => !(sp.path.length === 4 && sp.path.every(seg => equalsRoundedDec(seg.length, 0, 3)))) // filter out quads with 0 length segments
 
     DeBug.log(`maskShape paths`, paths)
     if (!paths.isEmpty)
-      return new SegPath(paths, this) // return new SegPath
+      return paths                                                                  // return array of SegPaths
     // return paths
   }
 
@@ -3263,7 +3268,7 @@ class Shape extends ProtoLayer {
     const paths = this.simpleInsetSegPaths
     if (paths?.length) return SVGPath.fromSegPaths(paths)
   }
-  get maskSVG() { if (this.maskShape) { return SVGPath.fromSegPaths(this.maskShape) } }
+  get maskSVG() { if (this.maskShape) { return SVGPath.fromSegPaths(this.maskShape) } }  // maskShape returns array of SegPaths
 
   // MARK: methods
   // #region methods
