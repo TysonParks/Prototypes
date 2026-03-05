@@ -28,6 +28,8 @@
 - [9.12 Adjacent/Intershape Wrappers Audit](#912-adjacentintershape-wrappers-audit-session-5)
 - [9.13 Group Mask Pipeline](#913-group-mask-pipeline)
 - [9.14 SVG Filter Layout & Mask Cropping Issues](#914-svg-filter-layout--mask-cropping-issues)
+  - [9.14.4b Cross-SVG Filter ID Resolution (Safari Risk)](#9144-issue-4-safari-vs-chrome-rendering-percentage-layout)
+  - [9.14.6 Future Optimization: User-Unit Filter Layout](#9146-future-optimization-user-unit-filter-layout)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -1186,61 +1188,62 @@ the SVG `<mask>` element approach.
 
 ## 9.14 SVG Filter Layout & Mask Cropping Issues
 
-**Status:** 🔴 Active — multiple visual cropping bugs across cascades, r-out masks, and waves+ordinal masks
+**Status:** � Active — cascade and mask cropping fixed; waves+ordinal remains
 
-### 9.14.1 Issue 1: Cascade SVG Cropping
+### 9.14.1 Issue 1: Cascade SVG Cropping (Frame & Grid)
 
-**Status:** ✅ Fixed
+**Status:** ✅ Fixed (both frame-layer and grid-layer cascades)
 
 **Symptom:** Islands with `amount > 1` and `insideCutStyle = 'Cascades'` (or
 `'Waves'`) show clipped filter effects — the shadow/highlight bleeds are
-cut off at SVG element boundaries.
+cut off at SVG element boundaries. Affects both frame-layer cascades and
+grid-layer cascades.
 
-**Root cause (actual):** `ShapeGroup.boundsRect` was computed from
+**Root cause:** `ShapeGroup.boundsRect` was computed from
 `this.cellBounds.boundsRect`, which returned the tight CellGroup
-interior (approx 12.75, 12.75, 74.5, 174.5 for a typical frame) —
-**not** the full frame area (0, 0, 100, 200). Each ShapeGroup's `<svg>`
-viewport was sized to these tight bounds plus padding, so filter effects
-extending beyond were clipped at the ShapeGroup level regardless of
-parent viewport sizes.
+interior — **not** the full frame area (0, 0, 100, 200). Each
+ShapeGroup's `<svg>` viewport was sized to these tight bounds plus
+padding, so filter effects extending beyond were clipped at the
+ShapeGroup level regardless of parent viewport sizes.
+
+For grid-layer cascades specifically, outset profile shapes (r-in)
+physically extend beyond cell grid boundaries. The cellBounds-based
+viewport couldn't contain the actual shape geometry, let alone its
+filter effects. The default ProtoLayer `boundsRect` (which inherits
+`protoParent.insetBoundsRect`) returned `grid.insetBoundsRect` — the
+same tight value — making it a no-op to override to that.
 
 **Fix:** One-line change in `ShapeGroup.boundsRect` getter
 (ProtoLayerObjects L1732):
 ```js
-return this.isFrame ? FRAME.boundsRect : this.cellBounds.boundsRect
+if (this.isFrame || this.cut) return FRAME.boundsRect
 ```
-Frame-layer ShapeGroups now use `FRAME.boundsRect` (0, 0, 100, 200) as
-their viewport base, giving their `<svg>` elements full-frame coverage.
-Combined with the existing `padding` logic (inherited from `ProtoCut`),
-the viewport expands to approximately (-10.6, -10.6, 121.2, 221.2),
-providing room for filter overflow.
+All cascade ShapeGroups (frame AND grid) now use `FRAME.boundsRect`
+(0, 0, 100, 200) as their viewport base. Combined with the existing
+`padding` logic (inherited from `ProtoCut`), the viewport expands
+to accommodate filter overflow. Filter sharing is preserved — all
+ShapeGroups in the same ProtoCut still reference the same `<filter>`
+element.
 
 **Failed approaches (for reference):**
 1. **`ShapeGroup.padding` override for backGroup** — `CellGroup.isBackGroup`
-   is never set to `true` (`setType('BackGroup')` only sets `_type`), so
-   the if-branch in `padding` was dead code. No visual change.
-2. **`overflow: visible` on `Grid.svgElt`** — No visual change; the
-   clipping happened at ShapeGroup level, not Grid level.
-3. **Explicit viewport expansion of parent SVGs** (GRID, BGRID, FRAME,
-   bleed) — All correctly expanded per diagnostic, but the problem was
-   at ShapeGroup level. Removing the tight ShapeGroup viewport was the
-   actual fix.
+   is never set to `true`, so the if-branch was dead code.
+2. **`overflow: visible` on `Grid.svgElt`** — No change; clipping was
+   at ShapeGroup level.
+3. **`this.grid.insetBoundsRect` for grid cascades** — Identical to
+   `protoParent.insetBoundsRect` (the default), so a no-op.
+4. **`this.cellGroup.boundsRect` for grid cascades** — All cascade
+   sub-islands share the same cells → same cellBounds → no expansion.
+5. **`overflow: visible` on cascade ShapeGroup `<svg>`** — Partially
+   fixed rendering (unfiltered backing layers visible) but filter
+   regions still clipped at their `%`-based bounds.
 
 **Performance notes:**
-- Frame cascades generate many ShapeGroups (e.g. 37 for a typical
-  multi-step cascade — roughly 3 per step × ~12 steps). Each now has
-  a full-frame viewport rather than a tight interior viewport.
-- During animation, all frame ShapeGroups are re-rendered each frame.
-  The larger viewports may impact animation performance.
-- **Future optimization:** Since all frame ShapeGroups now share the
-  same coordinate space (`FRAME.boundsRect` = 0, 0, 100, 200), the
-  `maxLayout` per-shapeGroup iteration is redundant for frame ProtoCuts.
-  Use `filterUnits="userSpaceOnUse"` with fixed user-unit bounds (e.g.
-  `x="-10" y="-10" width="120" height="220"`) on the shared `<filter>`
-  element — filter sharing is preserved because every frame ShapeGroup
-  lives in the same coordinate space. This skips `maxLayout` iteration
-  entirely for frame layers and avoids percentage resolution overhead.
-  See § 9.14.4 for related Safari considerations.
+- Cascade ShapeGroups now have full-frame viewports rather than tight
+  interior viewports. This may slightly increase render area.
+- **Future optimization (§ 9.14.6):** `filterUnits="userSpaceOnUse"`
+  with fixed user-unit bounds would eliminate `maxLayout` iteration
+  entirely. See § 9.14.6 for details and implementation plan.
 
 **Key code paths:**
 - `ShapeGroup.boundsRect`: ProtoLayerObjects L1732 ← **THE FIX**
@@ -1250,7 +1253,8 @@ providing room for filter overflow.
 - `ProtoCut.setLayouts()`: neuMark_I L169-176
 - `S.Cuts.db...setLayouts()`: sketch.js L765
 
-**Test hash:** `cascade_frame_crop_1` in WrapperTestHarness.js
+**Test hashes:** `cascade_frame_crop_1`, `cascade_grid_crop_1` in
+WrapperTestHarness.js
 
 ### 9.14.2 Issue 2: R-Profile Mask Cropping
 
@@ -1310,6 +1314,29 @@ the existing shared filters are unaffected.
 
 **Test hash:** `cascade_grid_crop_1` in WrapperTestHarness.js
 
+### 9.14.2b Bug Report: Duplicate Overlapping Shapes (Grouping)
+
+**Status:** 🔴 Open — undiagnosed
+
+**Hash:** `0x96659ca308edda09ab8a4dd403dde3b5058b54669261d9cd258bec389916aeda`
+
+**Symptom:** Two shapes rendered directly on top of each other in the
+upper-center area (just below the snake shape running along the top).
+Both shapes occupy the same cells, producing doubled/overlapping
+geometry with compounded shading.
+
+**Likely cause:** Possible grouping or island duplication bug — similar
+to `broken_01`/`broken_02`/`broken_03` in WrapperTestHarness which are
+all tagged "grouping error, multiple groups contain same cell."
+
+**Additional note:** This hash also causes `WrapperTestHarness.testPool()`
+to hang during `flushWrap`/`adjWrap` mutation tests, suggesting a
+wrapper cycle may be related to the grouping issue.
+
+**Test case:** `broken_08` in WrapperTestHarness.js
+
+---
+
 ### 9.14.3 Issue 3: Waves + Ordinal Connection Mask Mismatch
 
 **Symptom:** When `insideCutStyle = 'Waves'` and a shape has ordinal
@@ -1364,17 +1391,66 @@ non-uniform scaling.
 3. `p5.Element.blur()` (ProtoFilter L393) uses fixed `x="-50%"` etc.
 4. Mask `<rect>` uses `viewBox/layout` helpers that output user units
 
-**Performance tradeoff:** Percentage layout enables filter reuse — a
-single `ProtoCut` with one set of filters can be shared across all
-shapeGroups with the same `breed` (profile+depth combo). Switching to
-`filterUnits="userSpaceOnUse"` would require per-shapeGroup filter
-instances, multiplying DOM elements.
+**Performance tradeoff (updated):** With the § 9.14.1 fix, all cascade
+ShapeGroups now share `FRAME.boundsRect` as their coordinate space.
+This means `filterUnits="userSpaceOnUse"` with fixed bounds **preserves
+filter sharing** — no per-shapeGroup filter instances needed. The original
+concern about multiplying DOM elements no longer applies for cascade
+layers. See § 9.14.6 for the recommended optimization.
 
-**Potential approach:** Detect Safari at runtime and either:
-- Apply a separate `setLayouts()` pass with `userSpaceOnUse` + explicit
-  pixel coordinates (sacrificing filter sharing)
-- Or add extra padding margins to the percentage values to account for
-  Safari's stricter clipping
+**Known risk — cross-SVG filter ID resolution (§ 9.14.4b):**
+`applyFilterToElement()` (ProtoFilter L190) uses `.child(this.defs)` to
+attach the `<defs>` containing the shared `<filter>` element into the
+calling ShapeGroup's `<svg>`. Because `.child()` is a DOM **move** (not
+a clone), the `<defs>` is physically relocated to whichever ShapeGroup
+calls `applyFilterToElement` last. All earlier ShapeGroups that reference
+the same `filter="url(#id)"` now have **dangling references** — no
+`<filter>` definition exists within their SVG subtree.
+
+Chrome resolves `url(#id)` document-wide (across nested `<svg>` element
+boundaries), so the filter is found regardless of where its `<defs>`
+physically resides. Safari, however, may resolve `url(#id)` references
+within the **nearest SVG viewport scope** or be stricter about
+cross-`<svg>` ID resolution. This is a known divergence point in SVG
+implementations.
+
+**Impact:** If Safari scopes ID resolution to the containing `<svg>`,
+then only the *last* ShapeGroup per shared filter will render correctly;
+all others will silently fail to apply the filter (no shadow/highlight).
+This would appear as missing filter effects on some but not all shapes
+using the same cut profile.
+
+**Potential approaches to fix:**
+
+1. **Clone defs instead of moving:** Change `.child(this.defs)` to
+   clone the `<defs>` node into each ShapeGroup's `<svg>`. Guarantees
+   each SVG subtree has its own `<filter>` definition. Downside:
+   duplicated DOM nodes (one `<filter>` per ShapeGroup instead of one
+   per cut). Could use unique IDs per clone to avoid ID collisions.
+
+2. **Hoist filter defs to a common ancestor:** Place all `<filter>`
+   definitions in a single `<defs>` block at the top-level `<svg>`
+   (bleed element) or in the FRAME `<svg>`. All nested ShapeGroups
+   reference upward. This matches the SVG spec's intended `<defs>`
+   pattern and should work in all browsers. Requires restructuring
+   where `createFilter()` attaches its output.
+
+3. **Detect Safari + clone on demand:** Keep the current move-based
+   approach for Chrome (minimal DOM). On Safari, clone defs into each
+   ShapeGroup's SVG. Combines best performance with compatibility.
+   `const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)`
+
+4. **Move defs to the filter wrapper `<g>`'s parent `<svg>` directly:**
+   Ensure `this.defs` is always a child of the specific `<svg>` that
+   contains the referencing `<g filter="url(#...)">` — i.e. the
+   ShapeGroup's own `<svg>`. Currently this IS what happens for the
+   last caller, but not for earlier ones. Would need one clone per
+   ShapeGroup.
+
+**Recommended:** Approach 2 (hoist to common ancestor) is cleanest and
+spec-compliant. The top-level `<svg>` or FRAME `<svg>` `<defs>` block
+is the natural home for shared filter definitions. This also eliminates
+the accidental coupling between call order and DOM placement.
 
 ### 9.14.5 Recommended Approach
 
@@ -1390,19 +1466,14 @@ instances, multiplying DOM elements.
 3. Trace a Waves+ordinal hash to log the `direction` and
    `hasOrdinalConnections` state at each cascade level.
 
-**Phase B — Fix cascade filter cropping (Issue 1)**
-- Option B1: After all cuts, compute a *global* maxLayout across all
-  ProtoCuts that share shapeGroups within the same CellGroup. Apply
-  the union of all layouts. Preserves filter sharing.
-- Option B2: Track `maxDepth` across cascade steps in `cutIslands()`
-  and pass it to `ProtoCut` so `maxLayout` can account for the full
-  cascade stack height.
+**Phase B — Fix cascade filter cropping (Issue 1)** ✅ Fixed
+- Final approach: `ShapeGroup.boundsRect` returns `FRAME.boundsRect` for
+  all cascade layers (frame + grid). Single-line fix, filter sharing
+  preserved. See § 9.14.1.
 
-**Phase C — Fix mask cropping (Issue 2)**
-- Add padding to the `<mask>` element (or use `maskUnits="userSpaceOnUse"`)
-  sized to account for `cut.depth / 4` blur radius plus the layered
-  blur copies.
-- Alternatively, expand the `maskRect` by the blur extent.
+**Phase C — Fix mask cropping (Issue 2)** ✅ Fixed
+- Final approach: `maskUnits="userSpaceOnUse"` with explicit bounds on the
+  `<mask>` element. See § 9.14.2.
 
 **Phase D — Fix waves+ordinal masks (Issue 3)**
 - Compute `maskShape` per cascade level using each shape's actual
@@ -1411,12 +1482,59 @@ instances, multiplying DOM elements.
 - May require passing `direction` into `maskShape` as a parameter
   instead of reading `this.island.direction`.
 
-**Phase E — Safari compatibility (Issue 4, deferred)**
+**Phase E — Safari compatibility (Issues 4 + 4b, deferred)**
 - After B-D stabilize the layout system, test in Safari.
 - If cropping persists, implement Safari-detect branch with
   `userSpaceOnUse` filter regions. Keep percentage path for Chrome
   (performance).
+- If filter effects are missing on some shapes, investigate cross-SVG
+  `url(#id)` resolution (§ 9.14.4b). Fix by hoisting `<defs>` to a
+  common ancestor `<svg>`, or cloning per ShapeGroup.
 - `const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)`
+
+---
+
+### 9.14.6 Future Optimization: User-Unit Filter Layout
+
+**Status:** ❌ Not started — optimization opportunity, not a bug
+
+**Summary:** With the § 9.14.1 fix, all cascade ShapeGroups share the
+same coordinate space (`FRAME.boundsRect` = 0, 0, 100, 200). This
+enables switching from `%`-based `filterUnits` to `userSpaceOnUse` with
+fixed user-unit bounds, eliminating the `maxLayout` iteration entirely.
+
+**Current pipeline (percentage-based):**
+1. `ProtoCut.maxLayout` iterates all shapeGroups, computes
+   `padding / insetSize * ±100` as percentage bounds
+2. `setLayouts()` applies these percentages to `<filter>` attributes
+3. Browser resolves percentages against each ShapeGroup's bounding box
+   at render time
+
+**Proposed pipeline (user-unit-based):**
+1. Set `filterUnits="userSpaceOnUse"` on shared `<filter>` elements
+2. Compute fixed user-unit bounds once: `FRAME.boundsRect` expanded by
+   `ProtoCut.padding` (e.g. `x=-10 y=-10 width=120 height=220`)
+3. Skip `maxLayout` iteration entirely — no per-shapeGroup calculation
+4. Filter sharing preserved — same coordinate space, same filter def
+
+**Why filter sharing works:** All cascade ShapeGroups now have viewports
+based on `FRAME.boundsRect`, so they share the same user-unit coordinate
+system. A single `<filter>` with fixed `userSpaceOnUse` bounds covers
+all of them identically.
+
+**Additional optimizations to bundle:**
+- **Per-shade-type precise padding:** `ProtoCut.padding` is currently
+  `depth * 2` for all profiles. Precise values:
+  - `hasInsetShade` (rOut, jIn, iIn): shade inward, `depth * 1` may
+    suffice
+  - `hasOutsetShade` (rIn, jOut, iOut): shade outward, `depth * 2`
+    needed
+  - `hasCastShadow` (iOut, rOut): cast shadow vector magnitude added
+  - Reducing padding shrinks viewport area & render overhead
+
+**Prerequisites:**
+- Performance testing workflow to measure before/after
+- Safari compatibility testing (§ 9.14.4) — may solve Safari issues too
 
 ---
 
