@@ -83,7 +83,7 @@ because understanding the geometry is prerequisite to knowing which
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
 | 10 | Read abandoned branch, summarize inner mask intent + what broke | Ask | — | ✅ Done | BrokenFuture analyzed. Root cause: `createSimpleSubShapes` in Shape constructor (KNOWN-ISSUES § 9.11). |
-| 10a | **Restore intershapes** — remove constructor blocker + revert svg getter | Agent + verify | 10 | ❌ Not started | Minimal 2-line fix. Test with intershape-producing hashes. |
+| 10a | **Restore intershapes** — remove constructor blocker + fix svg/assignElement | Agent + verify | 10 | ✅ Done | 3 changes: constructor blocker removed, `svg` length check, `assignElement` guard (KNOWN-ISSUES § 9.11.7). |
 | 10b | Add `intershape` test hash to WRAPPER_TEST_CASES | Agent | 10a | ❌ Not started | Find/create a golden hash. Enables adjacent wrapper audit. |
 | 11 | Design inner mask implementation plan against working branch | Ask | 10a | ❌ Not started | Port BrokenFuture's `maskShape`/`maskSVG`/`svg` changes incrementally. |
 | 12 | Implement inner mask feature incrementally | Agent + verify | 11 | ❌ Not started | One small change at a time, browser-verify between each. |
