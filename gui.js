@@ -2,7 +2,7 @@ let
   gui,
 
   testingControls = {
-    hashNumber: 1388,
+    hashNumber: 1417,
     lastHash: true,
     blackMode: false,
   },
@@ -41,8 +41,9 @@ function keyPressed() {
     // const rez = vert(1000, 1800)
     // const rez = vert(1138, 2048)
     // const rez = vert(2000, 3600)
+    const rez = vert(3000, 5400)
     // const rez = vert(2276, 4096)
-    const rez = vert(4000, 7200) // MY DEFAULT
+    // const rez = vert(4000, 7200) // MY DEFAULT
     // const rez = vert(4551, 8192)
     // const rez = vert(8000, 14400)
     // const rez = vert(9102, 16384) 
