@@ -167,7 +167,9 @@ class ProtoCut {
   //MARK: Public Methods
   //METH: setLayout() : null : 
   setLayouts() {
+    const layout = this.maxLayout
     this.filters.forEach(f => {
+      f.filter.elt.removeAttribute("filterUnits")
       f.filter
         .attribute("filterUnits", "userSpaceOnUse")
         .attribute("x", FRAME.anchor.x)
@@ -339,6 +341,7 @@ class Shade {
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
+
     DeBug.log(``)
     DeBug.groupCollapsed(`neuShadeSVGFactory`, vector)
     DeBug.log(`mag`, mag)
