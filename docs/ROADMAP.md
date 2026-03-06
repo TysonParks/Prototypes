@@ -88,7 +88,7 @@ because understanding the geometry is prerequisite to knowing which
 | 10b | Add `intershape` test hash to WRAPPER_TEST_CASES | Agent | 10a | ✅ Done | User added `intershape_1/2/3` + `collinear_basic_2` + `broken_07` hashes manually. |
 | 11 | Design inner mask implementation plan against working branch | Ask | 10a | ✅ Done | Mask pipeline audited (KNOWN-ISSUES § 9.13). Re-enablement plan in § 9.13.7. |
 | 12 | Implement inner mask feature incrementally | Agent + verify | 11 | 🟡 In progress | § 9.13.7 Steps 1-2 done: maskShape return-type fix, degenerate-path guard, createMaskGroup re-enabled at drawElement. Steps 3-5 remain. |
-| 12a | **Fix SVG filter/mask cropping** — cascade, r-out, waves+ordinal | Agent + verify | 12 | 🟡 In progress | Cascade cropping (§ 9.14.1) ✅ fixed — `boundsRect` → `FRAME.boundsRect` for all cascade ShapeGroups (frame + grid). R-profile mask (§ 9.14.2) ✅ fixed — `maskUnits=userSpaceOnUse` with explicit bounds. Waves+ordinal (§ 9.14.3) remains. |
+| 12a | **Fix SVG filter/mask cropping** — cascade, r-out, waves+ordinal | Agent + verify | 12 | 🟡 In progress | Cascade cropping (§ 9.14.1) ✅ fixed. R-profile mask (§ 9.14.2) ✅ fixed. Mar 6 `userSpaceOnUse` shared-filter-region rewrite was diagnosed as a visual regression and reverted from the runtime default (§ 9.14.6). Waves+ordinal (§ 9.14.3) remains, and the current frame artifact should be approached as a fresh layout/cropping isolation problem. |
 | 12b | **Safari rendering** — percentage vs userSpaceOnUse filter regions | Research + Agent | 12a | ❌ Deferred | KNOWN-ISSUES § 9.14.4-5. Only after B-D stabilize the layout system. |
 | 13 | Add structured corner-tracing debug log to `maximizeCuddles` | Agent | 5 | ❌ Not started | Useful during step 12 and all future debugging. |
 
@@ -105,7 +105,7 @@ because understanding the geometry is prerequisite to knowing which
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
 | 17 | Visual edge-case debugging using image + log workflow | Ask | 13 | 🟡 Ongoing | Using WrapperDebugOverlay + hash-specific debugging. See [TESTING](TESTING.md). |
-| 18 | Filter banding diagnosis + staged shader experiments | Ask → Agent | 17 | 🟡 In progress | Primary hash `0x3e8a98...251d34`. Diagnosis is documented in KNOWN-ISSUES § 9.14.7. Next step is staged experiments on dedupe, `keep()`, and shallow `rOut` stack density before broader shader rewrites. |
+| 18 | Frame artifact diagnosis via clean SVG-layout A/Bs | Ask → Agent | 17 | 🟡 In progress | Primary hash `0x3e8a98...251d34`. KNOWN-ISSUES § 9.14.7 now distinguishes a fixed filter-region regression from a still-open vertical/cropping artifact. Next step is `FilterDebugHarness`-driven isolation of filter region, viewport, overflow, and mask behavior before any shader rewrites. |
 
 ### Post-Plan Addition: Unified Wrapper Funnel
 
@@ -141,4 +141,4 @@ because understanding the geometry is prerequisite to knowing which
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-05 — Performance re-optimization phase added*
+*Last updated: 2026-03-06 — SVG filter-layout regression documented; testing harness workflow updated*
