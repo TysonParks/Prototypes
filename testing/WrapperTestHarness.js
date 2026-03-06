@@ -532,11 +532,14 @@ class WrapperTestHarness {
         profile: cut.profile?.type,
         cutIn: cut.profile?.cutIn,
         depth: roundToDec(cut.depth, 4),
+        useExtHighDepth: cut.useExtHighDepth,
+        extHighDepth: roundToDec(cut.extHighDepth, 4),
+        isFrame: cut.shapeGroups?.some?.(grp => grp?.isFrame) || false,
         filterCount: cut.filters?.length || 0,
         filters: new OpArray,
       }
 
-      DeBug.group(`${cut.breed} depth=${roundToDec(cut.depth, 4)} filters=${cutSummary.filterCount}`)
+      DeBug.group(`${cut.breed} depth=${roundToDec(cut.depth, 4)} filters=${cutSummary.filterCount} frame=${cutSummary.isFrame} useExtHighDepth=${cutSummary.useExtHighDepth}`)
 
       cut.filters.forEach((filter, index) => {
         const shades = OpArray.format(filter.shades || [])
