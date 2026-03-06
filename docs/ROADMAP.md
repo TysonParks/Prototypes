@@ -105,6 +105,7 @@ because understanding the geometry is prerequisite to knowing which
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
 | 17 | Visual edge-case debugging using image + log workflow | Ask | 13 | 🟡 Ongoing | Using WrapperDebugOverlay + hash-specific debugging. See [TESTING](TESTING.md). |
+| 18 | Filter banding diagnosis + staged shader experiments | Ask → Agent | 17 | 🟡 In progress | Primary hash `0x3e8a98...251d34`. Diagnosis is documented in KNOWN-ISSUES § 9.14.7. Next step is staged experiments on dedupe, `keep()`, and shallow `rOut` stack density before broader shader rewrites. |
 
 ### Post-Plan Addition: Unified Wrapper Funnel
 
