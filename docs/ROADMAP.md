@@ -17,6 +17,7 @@
 
 1. [Wrapper Audit Checklist](#1-wrapper-audit-checklist)
 2. [Full Refactor Plan](#2-full-refactor-plan)
+   - [Performance Re-Optimization](#post-plan-addition-performance-re-optimization-known-issues--915)
 
 ---
 
@@ -117,7 +118,26 @@ because understanding the geometry is prerequisite to knowing which
 |------|------|------------|--------|-------|
 | Design second Frame wrapping mode (ARCHITECTURE § 12.5) | Ask | 10a, 12 | ⭐ Future | Apply full `maximizeCuddles()` pipeline to backGrid shapes. See ARCHITECTURE § 12.5. |
 
+### Post-Plan Addition: Performance Re-Optimization (KNOWN-ISSUES § 9.15)
+
+> **Context:** The § 9.14.1 three-layer fix broadened all filter
+> regions and ShapeGroup viewports to FRAME bounds for correctness.
+> This phase incrementally tightens them back for performance without
+> breaking correctness. See KNOWN-ISSUES § 9.15 for full details.
+
+| # | Task | Mode | Depends On | Status | Notes |
+|---|------|------|------------|--------|-------|
+| P0 | Establish measurement baselines (load time, FPS, element counts) | Research | 12a | ❌ Not started | § 9.15.5. Must quantify before optimizing. |
+| P1a | Per-profile padding precision | Agent + verify | P0 | ❌ Not started | § 9.15.3 Tier 1a. Vary padding by `hasInsetShade`/`hasOutsetShade`/`hasCastShadow`. |
+| P1b | Per-cut filter region tightening (`userSpaceOnUse` AABB) | Agent + verify | P0 | ❌ Not started | § 9.15.3 Tier 1b. Union of ShapeGroup cellBounds + padding, clamped to FRAME. |
+| P1c | Animation batch optimization | Research + Agent | P0 | ❌ Not started | § 9.15.3 Tier 1c. Evaluate batch splitting for lower per-frame cost. |
+| P2a | Restore tight ShapeGroup viewports (with overflow:visible) | Agent + verify | P1b | ❌ Not started | § 9.15.3 Tier 2a. Highest risk — coordinate system may shift. |
+| P2b | Selective overflow:visible (cascade-only) | Agent + verify | P2a | ❌ Not started | § 9.15.3 Tier 2b-2c. Non-cascade cuts get free GPU clipping. |
+| P3 | Per-ShapeGroup filter regions (requires filter cloning) | Agent + verify | P2a, 12b | ❌ Not started | § 9.15.3 Tier 3. Synergy with Safari fix (§ 9.14.4b). |
+| P4 | Animation-specific optimizations (diff updates, CSS transforms) | Research + Agent | P0 | ❌ Not started | § 9.15.3 Tier 4. Independent of viewport work. |
+| P5 | Load time optimizations (lazy filters, deferred DOM) | Research + Agent | P0 | ❌ Not started | § 9.15.4. Profile setup pipeline first. |
+
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-04*
+*Last updated: 2026-03-05 — Performance re-optimization phase added*
