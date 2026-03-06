@@ -1556,6 +1556,130 @@ work identically for all ShapeGroups regardless of position.
 - **Safari compatibility testing** (§ 9.14.4) — `userSpaceOnUse` may
   resolve Safari filter cropping too
 
+### 9.14.7 SVG Filter Banding / Quantization
+
+**Status:** 🟡 Diagnosed — hypothetical fix sequence documented, shader
+experiments not started
+
+**Primary hash:** `0x3e8a98faacc735c66bc2f535e0d943ee2c65fdddb47a48f54857444fc4251d34`
+
+**Visual symptom:** Large smooth bevels and embossed inner contours show
+visible tonal shelves / stepped rings rather than continuous falloff.
+The currently relevant artifact is on the **Frame's massive `rOut` cut**
+(the outer pill body / frame bevel), not on the smaller non-frame cuts.
+
+**Key conclusion:** This is not primarily a filter-region, viewport, or
+mask-cropping bug. The same banding was visible before and after the
+§ 9.14.1 three-layer SVG fix. Layout changes may have altered
+visibility, but they do not explain the stepped tonal structure.
+
+#### 9.14.7.1 Diagnosis Summary
+
+Current evidence points to **shade-stack quantization** inside
+`Shade.neuShadeSVGFactory()` (neuMark_I.js L322+) as the root cause.
+
+Critical pipeline:
+
+1. Build a fixed discrete offset ladder
+   (`1, mag, mag/2, 2, mag*3/4, 4, mag/4, ...`)
+2. Truncate with `keep()`
+3. Round offsets (`4 decimals` for small values, `2` for larger)
+4. Sort and deduplicate aggressively via
+   `equalsRoundedDec(e, a[i - 1], 0)`
+5. Convert each surviving offset into a separate SVG filter layer with
+   eased luminance curves
+
+This leaves the frame's large `rOut` bevel vulnerable to visible shell
+stepping, especially when the same large-depth stack is spread across a
+very broad smooth surface.
+
+#### 9.14.7.2 Harness Evidence
+
+`runFilterBandingDiagnostics()` was added to
+`testing/WrapperTestHarness.js` to inspect the active filter stacks for
+the current hash.
+
+Observed results for the primary hash:
+
+| Cut | Filters | Finding |
+|-----|---------|---------|
+| `rOut-0.74xCellRadius` | 3 | Smaller non-frame cut; useful for family comparison but not the primary visible artifact |
+| `rOut-0.9133xCellRadius` | 3 | Smaller non-frame cut; same note as above |
+| `rOut-2.74xCellRadius` | 3 | Mid-depth non-frame cut; secondary evidence only |
+| `rOut-18.74xCellRadius` | 3 | **Primary target** — frame-scale `rOut` stack attached to the visible outer bevel |
+
+All 4 active cuts for the hash are `rOut`, which rules out mixed
+profile interaction as the primary source. However, visual debugging
+indicates the **visible banding is on the frame cut**, so the correct
+first target is the deepest frame-scale `rOut` filter, not the smaller
+interior `rOut` variants.
+
+There is also an important frame-specific code path difference:
+frame cuts are created with `isFrame: true`, and therefore
+`useExtHighDepth: !isFrame` becomes `false` in the cutting loop
+(ProtoLayerObjects.js L1515-1521). That means the frame's `rOut` high
+filter does **not** use the reduced `extHighDepth` path used by normal
+cuts. The frame therefore exercises a different and more aggressive
+`r`/`r2` shade configuration than non-frame cuts.
+
+#### 9.14.7.3 Most Likely Culprits
+
+In descending order of likelihood:
+
+1. Sparse or irregular fixed offset ladder in `neuShadeSVGFactory()`
+2. Frame-specific `rOut` / `r2` stack behavior caused by `useExtHighDepth: false`
+3. Over-aggressive dedupe using `equalsRoundedDec(..., 0)`
+4. Eased luminance curves applied to a visibly discrete shell set
+5. Secondary amplification from SVG blend/composite stacking in
+   `ProtoFilter.shade()`
+
+The frame-only `useExtHighDepth` difference must be debugged alongside
+the offset ladder itself. If the artifact is truly isolated to the
+frame, then debugging shallow non-frame stacks first is the wrong
+priority even if they belong to the same cut family.
+
+#### 9.14.7.4 Hypothetical Fix Sequence
+
+Preferred workflow: **diagnose → hypothesize fix → document → debug**.
+The next code changes should therefore be staged experiments, not broad
+shader rewrites.
+
+Recommended order:
+
+**Experiment A — Deduplication sensitivity**
+- Temporarily relax or disable the dedupe step in
+  `neuShadeSVGFactory()` for the banding hash only
+- Goal: verify whether terracing drops when more neighboring shells
+  survive
+
+**Experiment B — Frame-only depth behavior**
+- Compare the frame's `rOut` stack with and without the frame-specific
+  `useExtHighDepth: false` behavior
+- Goal: determine whether the frame's more aggressive `r2` high/shad
+  configuration is the real differentiator
+
+**Experiment C — Frame-stack density / offset redesign**
+- Replace the current mixed ladder (`1, 2, 4, mag fractions`) with a
+  smoother progression for the frame `rOut` stack
+- Goal: reduce irregular shell gaps and contour shelf visibility on the
+  outer frame bevel specifically
+
+**Experiment D — Luminance curve retuning**
+- Only after shell spacing is improved, retune the easing curves if the
+  remaining bands are tonal rather than spatial
+
+#### 9.14.7.5 What NOT To Debug First
+
+Unless new evidence appears, do not start with:
+
+- Filter region / viewport layout (`setLayouts`, `boundsRect`, `overflow`)
+- Mask structure or `<mask>` bounds
+- Cross-SVG `<defs>` / filter reference bugs
+- Wrapper memoization / `maximizeCuddles()` behavior
+
+Those areas matter elsewhere, but they do not match the current visual
+signature or the banding harness results.
+
 ---
 
 ## 9.15 Performance Optimization Strategy
