@@ -3,7 +3,7 @@ let
 
   testingControls = {
     hashNumber: 1453,
-    lastHash: true,
+    lastHash: false,
     blackMode: false,
   },
 
