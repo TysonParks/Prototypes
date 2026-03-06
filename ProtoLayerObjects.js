@@ -1730,9 +1730,8 @@ class ShapeGroup extends ProtoLayer {
   // MARK: ShapeGroup Computed Properties
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
   get boundsRect() {
-    // § 9.14: All cut ShapeGroups use FRAME bounds so their SVG viewport
-    // matches the userSpaceOnUse filter region. Safe now that setLayouts()
-    // uses fixed user-unit coords (maxLayout percentage pipeline bypassed).
+    // § 9.14: Cut ShapeGroups use FRAME bounds to preserve a larger viewport
+    // for filter effects without changing the filter region math itself.
     if (this.isFrame || this.cut) return FRAME.boundsRect
     return this.cellBounds.boundsRect
   }
