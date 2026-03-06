@@ -215,8 +215,8 @@ class ProtoFilter {
         })
       }
     } else {
-      element.parent(newGroup)
       const oldGroup = element.p5Parent
+      element.parent(newGroup)
       if (oldGroup.childElementCount === 0) oldGroup.remove()
     }
   }
