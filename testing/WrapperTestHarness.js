@@ -479,6 +479,134 @@ class WrapperTestHarness {
     DeBug.groupEnd()
   }
 
+  //METH: reportFilterBanding() : [Object] : inspect current cut/filter stacks for quantization and offset gaps
+  reportFilterBanding(cuts = S?.Cuts?.db) {
+    const report = new OpArray
+
+    cuts = OpArray.format(cuts)
+      .map(cut => cut instanceof Array ? cut[1] : cut)
+      .filter(Boolean)
+
+    if (cuts.isEmpty) {
+      DeBug.warn(`WTH: No cuts found for filter banding report`)
+      return report
+    }
+
+    const summarizeGaps = (values) => {
+      if (!values || values.length < 2) {
+        return {
+          count: values?.length || 0,
+          gaps: new OpArray,
+          minGap: 0,
+          maxGap: 0,
+          avgGap: 0,
+          gapRatio: 0,
+        }
+      }
+
+      const gaps = new OpArray
+      for (let i = 1; i < values.length; i++) {
+        gaps.push(roundToDec(values[i] - values[i - 1], 4))
+      }
+
+      const minGap = min(gaps)
+      const maxGap = max(gaps)
+      const avgGap = roundToDec(gaps.sum / gaps.length, 4)
+      return {
+        count: values.length,
+        gaps,
+        minGap,
+        maxGap,
+        avgGap,
+        gapRatio: minGap === 0 ? 0 : roundToDec(maxGap / minGap, 4),
+      }
+    }
+
+    DeBug.group(`WTH: Filter Banding Report`)
+    DeBug.log(`Hash`, tokenData?.hash)
+    DeBug.log(`Cut count`, cuts.length)
+
+    cuts.forEach(cut => {
+      const cutSummary = {
+        breed: cut.breed,
+        profile: cut.profile?.type,
+        cutIn: cut.profile?.cutIn,
+        depth: roundToDec(cut.depth, 4),
+        filterCount: cut.filters?.length || 0,
+        filters: new OpArray,
+      }
+
+      DeBug.group(`${cut.breed} depth=${roundToDec(cut.depth, 4)} filters=${cutSummary.filterCount}`)
+
+      cut.filters.forEach((filter, index) => {
+        const shades = OpArray.format(filter.shades || [])
+        const signedOffsetMags = OpArray.from(filter.offsetElts.map(o => roundToDec(o.mag, 4))).numSorted
+        const absOffsetMags = signedOffsetMags.map(m => roundToDec(abs(m), 4)).numSorted
+        const uniqueAbsOffsetMags = absOffsetMags
+          .filter((e, i, a) => i === 0 || !equalsRoundedDec(e, a[i - 1], 3))
+
+        const blurRadii = shades.map(s => roundToDec(s.blur || 0, 4)).numSorted
+        const uniqueBlurRadii = blurRadii
+          .filter((e, i, a) => i === 0 || !equalsRoundedDec(e, a[i - 1], 3))
+
+        const primitiveCount = filter.filter?.elt?.children?.length || 0
+        const lightenCount = shades.filter(s => s.lighten).length
+        const darkenCount = shades.filter(s => !s.lighten).length
+        const duplicateCollapse = absOffsetMags.length - uniqueAbsOffsetMags.length
+        const gapStats = summarizeGaps(uniqueAbsOffsetMags)
+        const blurGapStats = summarizeGaps(uniqueBlurRadii)
+
+        const summary = {
+          index,
+          id: filter.id,
+          type: filter.type,
+          primitiveCount,
+          shadeCount: shades.length,
+          lightenCount,
+          darkenCount,
+          signedOffsetMags,
+          absOffsetMags,
+          uniqueAbsOffsetMags,
+          duplicateCollapse,
+          gapStats,
+          blurRadii,
+          uniqueBlurRadii,
+          blurGapStats,
+          likelyBanding:
+            uniqueAbsOffsetMags.length <= 5
+            || gapStats.maxGap >= 2
+            || gapStats.gapRatio >= 3
+            || duplicateCollapse >= 2,
+        }
+
+        cutSummary.filters.push(summary)
+
+        DeBug.log(
+          `filter[${index}] ${filter.type} id=${filter.id}`,
+          {
+            primitiveCount,
+            shadeCount: shades.length,
+            lightenCount,
+            darkenCount,
+            signedOffsetMags,
+            uniqueAbsOffsetMags,
+            duplicateCollapse,
+            gapStats,
+            uniqueBlurRadii,
+            blurGapStats,
+            likelyBanding: summary.likelyBanding,
+          }
+        )
+      })
+
+      DeBug.groupEnd()
+      report.push(cutSummary)
+    })
+
+    DeBug.groupEnd()
+    return report
+  }
+
   //MARK: Private Helpers
 
   //METH: #primeCache(seg) : null : force evaluation of all memoized getters to populate cache
@@ -534,6 +662,24 @@ function runWrapperTests(grid = GRID) {
   DeBug.log(`WTH: Harness stored as window.WTH — inspect .results for details`)
 
   return harness
+}
+
+//FUNC: runFilterBandingDiagnostics(hash, rebuild) : [Object] : inspect current cut/filter stack for banding suspects
+function runFilterBandingDiagnostics(hash = tokenData?.hash, rebuild = false) {
+  if (rebuild && hash) {
+    protoBatch.buildFromHash(hash)
+  }
+
+  if (!GRID) {
+    DeBug.error(`WTH: No GRID available for filter banding diagnostics`)
+    return
+  }
+
+  const harness = new WrapperTestHarness(GRID)
+  const report = harness.reportFilterBanding()
+  window.WTHBanding = report
+  DeBug.log(`WTHBanding: stored filter banding report on window.WTHBanding`)
+  return report
 }
 
 //MARK: Test Case Hashes
@@ -627,6 +773,13 @@ const WRAPPER_TEST_CASES = {
     wrapTypes: [],
     issues: ['mask-crop'],
     status: 'fixed',
+  },
+  filter_banding_1: {
+    hash: '0x3e8a98faacc735c66bc2f535e0d943ee2c65fdddb47a48f54857444fc4251d34',
+    description: 'Visible shade banding on large pill body and inner glyph contours. Suspected discrete offset ladder / rounding / dedupe quantization in neuShadeSVGFactory().',
+    wrapTypes: [],
+    issues: ['filter-banding'],
+    status: 'broken',
   },
   cascade_grid_crop_1: {
     hash: '0xe2f57b77fd2aa05a6d292faf2b787a05717986b5b63d4683aae4d14401d97c91',
