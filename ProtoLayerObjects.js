@@ -1729,7 +1729,13 @@ class ShapeGroup extends ProtoLayer {
 
   // MARK: ShapeGroup Computed Properties
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
-  get boundsRect() { return this.isFrame ? FRAME.boundsRect : this.cellBounds.boundsRect }
+  get boundsRect() {
+    // § 9.14: All cut ShapeGroups use FRAME bounds so their SVG viewport
+    // matches the userSpaceOnUse filter region. Safe now that setLayouts()
+    // uses fixed user-unit coords (maxLayout percentage pipeline bypassed).
+    if (this.isFrame || this.cut) return FRAME.boundsRect
+    return this.cellBounds.boundsRect
+  }
   get padding() {
     const
       backGroupPadding = Vertex.mult(this.grid.insetAmount, 2),
@@ -1780,6 +1786,7 @@ class ShapeGroup extends ProtoLayer {
   assignElement() {
     super.assignElement()
     this.svgElt.parent(this.shadeElt)
+    if (this.cut) this.svgElt.attribute('overflow', 'visible')  // allow filter effects beyond viewport; Grid <svg> provides outer clip
   }
   //METH: createSVGGroup()
   createSVGGroup() {
