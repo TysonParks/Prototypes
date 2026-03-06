@@ -113,6 +113,7 @@ the root cause of many wrapping bugs (see ARCHITECTURE § 10.2.5).
 | `reportStaleResults()` | Log all results with stale cache entries |
 | `reportResetCoverage()` | Log which volatile keys are NOT in `#resetMemoProps` |
 | `reportSurvivedKeys()` | Log keys that survived mutations without invalidation |
+| `reportFilterBanding()` | Inspect active cuts/filters for sparse offset stacks, duplicate collapse, and shell gap statistics |
 
 ### 2.4 How to Run
 
@@ -137,7 +138,16 @@ const before = WTH.snapshotSeg(seg)
 seg.setArcToMiddle()
 const after = WTH.snapshotSeg(seg)
 WTH.diffSnapshots(before, after)
+
+// Shader/filter banding diagnostics for the current hash
+runFilterBandingDiagnostics()
 ```
+
+`runFilterBandingDiagnostics()` is intended for shader/filter debugging,
+not wrapper memoization. It inspects the currently active cuts from
+`S.Cuts.db`, summarizes the actual filter stacks created in
+`ProtoFilter`, and flags sparse or irregular offset ladders that are
+likely to produce visible banding. See KNOWN-ISSUES § 9.14.7.
 
 ### 2.5 Test Case Hashes
 
@@ -157,6 +167,7 @@ harness file.
 | `intershape_1` | coincident, adjacent | untested | Intershape placed inside larger shape |
 | `intershape_2` | coincident, adjacent | untested | Intershape placed inside larger shape |
 | `intershape_3` | coincident, adjacent | untested | Intershape placed inside larger shape (most representative) |
+| `filter_banding_1` | — | broken | Visible stepped banding on `rOut` shade stacks; primary shader quantization diagnosis case |
 | `broken_01` – `broken_03` | — | broken | Grouping errors (multiple groups contain same cell) |
 | `broken_04` – `broken_06` | proximal | broken | Outer wrapper converging/intersecting inner wrapper |
 | `broken_07` | adjacent | broken | Outer wrapper converging/barely intersecting inner wrapper |
