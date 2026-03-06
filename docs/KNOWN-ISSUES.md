@@ -1523,43 +1523,48 @@ the accidental coupling between call order and DOM placement.
 
 ---
 
-### 9.14.6 User-Unit Filter Layout (Implemented)
+### 9.14.6 User-Unit Filter Layout Regression (Reverted)
 
-**Status:** ✅ Implemented as part of § 9.14.1 fix
+**Status:** 🟡 Tested, diagnosed, then reverted from the runtime default
 
-**Summary:** All shade filters now use `filterUnits="userSpaceOnUse"`
-with fixed user-unit bounds. The `maxLayout` percentage pipeline is
-bypassed.
+**Summary:** A Mar 6 experiment switched shared shade filters from the
+legacy `%`-based `maxLayout` region to `filterUnits="userSpaceOnUse"`
+with fixed FRAME coordinates. That change was bundled with broader cut
+ShapeGroup viewports and `overflow:visible` on cut SVGs.
 
-**Implemented pipeline:**
-1. `setLayouts()` (neuMark_I L169) sets `filterUnits="userSpaceOnUse"`
-   on each shared `<filter>` element
-2. Filter region = `FRAME.boundsRect` expanded by `ProtoCut.padding`:
-   `x = -pad.x`, `y = -pad.y`, `width = 100 + pad.x*2`,
-   `height = 200 + pad.y*2`
-3. `ProtoCut.maxLayout` and `ShapeGroup.finalSize` are now dead code
-4. Filter sharing preserved — same coordinate space, same filter def
+That bundle did address one family of cropping concerns, but it also
+introduced a visible regression on the primary investigation hash. The
+important finding is that the regression did **not** come from the
+viewport or overflow changes. It came from the **filter region mode**.
 
-**Why filter sharing works:** All cut ShapeGroups now have viewports
-based on `FRAME.boundsRect` (0, 0, 100, 200), so they share the same
-user-unit coordinate system. Since `userSpaceOnUse` filter coordinates
-are interpreted in the referencing element's coordinate system, and
-the viewBox-to-layout mapping is 1:1 (identity), FRAME coordinates
-work identically for all ShapeGroups regardless of position.
+**What the A/B sequence proved:**
+1. A coarse legacy toggle reproduced the earlier vs later visual state.
+2. That toggle was split into three components:
+   - filter region mode
+   - cut `boundsRect`
+   - cut SVG `overflow`
+3. Only the filter region mode reproduced the regression.
+4. `boundsRect` and `overflow` alone did not change the look.
 
-**Still remaining — future optimization opportunity:**
-- **Per-shade-type precise padding:** see § 9.15.3 Tier 1a
-- **Per-cut filter region tightening:** see § 9.15.3 Tier 1b
-- **Dead code cleanup:** `ProtoCut.maxLayout` and `ShapeGroup.finalSize`
-  preserved for reference in § 9.15.1 — remove after re-optimization
-  determines whether they are superseded
-- **Safari compatibility testing** (§ 9.14.4) — `userSpaceOnUse` may
-  resolve Safari filter cropping too
+**Current runtime state:**
+- `ProtoCut.setLayouts()` is back on the legacy `%`-based
+  `maxLayout` filter region.
+- The `userSpaceOnUse` experiment is no longer part of operational code.
+- Any future re-test of that path should happen through the dev-only
+  `testing/FilterDebugHarness.js` runtime patch tool.
+
+**Design lesson:** SVG cropping bugs in this codebase are not a single
+mechanism. At minimum, the following must be isolated independently:
+1. filter region coordinates
+2. ShapeGroup viewport / `boundsRect`
+3. SVG or mask overflow behavior
+
+Bundling those together again will make diagnosis ambiguous.
 
 ### 9.14.7 SVG Filter Banding / Quantization
 
-**Status:** 🟡 Diagnosed — hypothetical fix sequence documented, shader
-experiments not started
+**Status:** 🟡 Reframed — one layout regression fixed, one remaining
+vertical/cropping artifact still open
 
 **Primary hash:** `0x3e8a98faacc735c66bc2f535e0d943ee2c65fdddb47a48f54857444fc4251d34`
 
@@ -1568,30 +1573,34 @@ visible tonal shelves / stepped rings rather than continuous falloff.
 The currently relevant artifact is on the **Frame's massive `rOut` cut**
 (the outer pill body / frame bevel), not on the smaller non-frame cuts.
 
-**Key conclusion:** This is not primarily a filter-region, viewport, or
-mask-cropping bug. The same banding was visible before and after the
-§ 9.14.1 three-layer SVG fix. Layout changes may have altered
-visibility, but they do not explain the stepped tonal structure.
+**Key conclusion:** The investigation now clearly contains **two
+different problems**:
+
+1. A **real filter-region regression** caused by the Mar 6
+  `userSpaceOnUse` layout rewrite. That part is now fixed by restoring
+  the `%`-based `maxLayout` region in runtime code.
+2. A **remaining vertical/cropping-style artifact** that still persists
+  after that fix and is not yet isolated.
+
+So the current issue should no longer be approached as a pure shader
+problem unless the remaining layout and clipping hypotheses are ruled
+out first.
 
 #### 9.14.7.1 Diagnosis Summary
 
-Current evidence points to **shade-stack quantization** inside
-`Shade.neuShadeSVGFactory()` (neuMark_I.js L322+) as the root cause.
+The earlier working hypothesis was **shade-stack quantization** inside
+`Shade.neuShadeSVGFactory()`. That remains plausible as a secondary
+factor, but it is no longer the best primary explanation.
 
-Critical pipeline:
+The stronger March 6 evidence came from image-based A/B testing against
+actual before/after render states. That work showed that one major
+artifact mapped directly to the filter-region layout rewrite in
+`ProtoCut.setLayouts()`, not to shade-ladder math.
 
-1. Build a fixed discrete offset ladder
-   (`1, mag, mag/2, 2, mag*3/4, 4, mag/4, ...`)
-2. Truncate with `keep()`
-3. Round offsets (`4 decimals` for small values, `2` for larger)
-4. Sort and deduplicate aggressively via
-   `equalsRoundedDec(e, a[i - 1], 0)`
-5. Convert each surviving offset into a separate SVG filter layer with
-   eased luminance curves
+The correct current model is:
 
-This leaves the frame's large `rOut` bevel vulnerable to visible shell
-stepping, especially when the same large-depth stack is spread across a
-very broad smooth surface.
+- one artifact was layout-driven and is fixed
+- one artifact remains and still needs fresh isolation
 
 #### 9.14.7.2 Harness Evidence
 
@@ -1614,29 +1623,22 @@ indicates the **visible banding is on the frame cut**, so the correct
 first target is the deepest frame-scale `rOut` filter, not the smaller
 interior `rOut` variants.
 
-There is also an important frame-specific code path difference:
-frame cuts are created with `isFrame: true`, and therefore
-`useExtHighDepth: !isFrame` becomes `false` in the cutting loop
-(ProtoLayerObjects.js L1515-1521). That means the frame's `rOut` high
-filter does **not** use the reduced `extHighDepth` path used by normal
-cuts. The frame therefore exercises a different and more aggressive
-`r`/`r2` shade configuration than non-frame cuts.
+The filter-banding harness is still useful for describing the active
+shade stacks, but it is **not sufficient by itself** to tell shader
+artifacts apart from SVG layout artifacts. That distinction only became
+clear after commit-state comparison and layout-specific A/B toggles.
 
 #### 9.14.7.3 Most Likely Culprits
 
-In descending order of likelihood:
+For the **remaining** artifact, the current suspects are now:
 
-1. Sparse or irregular fixed offset ladder in `neuShadeSVGFactory()`
-2. Frame-specific `rOut` / `r2` stack behavior caused by `useExtHighDepth: false`
-3. Over-aggressive dedupe using `equalsRoundedDec(..., 0)`
-4. Eased luminance curves applied to a visibly discrete shell set
-5. Secondary amplification from SVG blend/composite stacking in
-   `ProtoFilter.shade()`
-
-The frame-only `useExtHighDepth` difference must be debugged alongside
-the offset ladder itself. If the artifact is truly isolated to the
-frame, then debugging shallow non-frame stacks first is the wrong
-priority even if they belong to the same cut family.
+1. another viewport or clipping interaction not covered by the
+  filter-region fix
+2. nested SVG viewport sizing / ShapeGroup coordinate behavior
+3. mask blur or mask clipping behavior separate from the shared shade
+  filter
+4. only after those are ruled out: shade-stack quantization inside
+  `neuShadeSVGFactory()`
 
 #### 9.14.7.4 Hypothetical Fix Sequence
 
@@ -1646,39 +1648,33 @@ shader rewrites.
 
 Recommended order:
 
-**Experiment A — Deduplication sensitivity**
-- Temporarily relax or disable the dedupe step in
-  `neuShadeSVGFactory()` for the banding hash only
-- Goal: verify whether terracing drops when more neighboring shells
-  survive
+**Experiment A — Layout isolation via dev harness**
+- Use `testing/FilterDebugHarness.js` to toggle one layer at a time:
+  filter region mode, cut bounds mode, cut overflow, and frame filter
+  visibility.
+- Goal: determine whether the remaining artifact is still SVG-layout or
+  clipping driven.
 
-**Experiment B — Frame-only depth behavior**
-- Compare the frame's `rOut` stack with and without the frame-specific
-  `useExtHighDepth: false` behavior
-- Goal: determine whether the frame's more aggressive `r2` high/shad
-  configuration is the real differentiator
+**Experiment B — Mask-specific audit**
+- Compare shade-filter behavior against mask-blur behavior explicitly.
+- Goal: determine whether the remaining vertical/cropping shelves come
+  from mask clipping rather than shared shade filters.
 
-**Experiment C — Frame-stack density / offset redesign**
-- Replace the current mixed ladder (`1, 2, 4, mag fractions`) with a
-  smoother progression for the frame `rOut` stack
-- Goal: reduce irregular shell gaps and contour shelf visibility on the
-  outer frame bevel specifically
+**Experiment C — Shader stack audit only if A/B are negative**
+- Revisit dedupe, `keep()`, and frame `rOut` stack density only after
+  layout and mask factors are ruled out.
+- Goal: avoid repeating the earlier mistake of debugging shader math
+  before proving the artifact is actually shader-driven.
 
-**Experiment D — Luminance curve retuning**
-- Only after shell spacing is improved, retune the easing curves if the
-  remaining bands are tonal rather than spatial
+#### 9.14.7.5 Current Practical Approach
 
-#### 9.14.7.5 What NOT To Debug First
-
-Unless new evidence appears, do not start with:
-
-- Filter region / viewport layout (`setLayouts`, `boundsRect`, `overflow`)
-- Mask structure or `<mask>` bounds
-- Cross-SVG `<defs>` / filter reference bugs
-- Wrapper memoization / `maximizeCuddles()` behavior
-
-Those areas matter elsewhere, but they do not match the current visual
-signature or the banding harness results.
+1. Keep operational code clean; use dev-only testing tools for probing.
+2. Use `WrapperTestHarness` for reporting and `FilterDebugHarness` for
+   temporary runtime patches.
+3. Treat SVG cropping as a family of separate mechanisms, not as one
+   monolithic bug category.
+4. Record each successful A/B in terms of which layer changed:
+   filter region, viewport, overflow, mask, or shade stack.
 
 ---
 
