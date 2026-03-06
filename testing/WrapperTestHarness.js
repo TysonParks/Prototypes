@@ -628,9 +628,23 @@ const WRAPPER_TEST_CASES = {
     issues: ['mask-crop'],
     status: 'fixed',
   },
+  cascade_grid_crop_1: {
+    hash: '0xe2f57b77fd2aa05a6d292faf2b787a05717986b5b63d4683aae4d14401d97c91',
+    description: 'Grid-layer cascade filter effects cropped at ShapeGroup viewport — boundsRect expanded to FRAME.boundsRect (§ 9.14.1)',
+    wrapTypes: [],
+    issues: ['cascade-crop'],
+    status: 'fixed',
+  },
 
   // MARK: Known Broken
   // Add hashes that currently produce incorrect output
+  broken_08: {
+    hash: '0x96659ca308edda09ab8a4dd403dde3b5058b54669261d9cd258bec389916aeda',
+    description: 'Duplicate overlapping shapes — two shapes occupy same cells in upper-center area. Possible grouping/island duplication bug. Also hangs WrapperTestHarness testPool.',
+    wrapTypes: [],
+    issues: ['grouping', 'test-hang'],
+    status: 'broken',
+  },
   broken_01: {
     hash: '0x1410e2bed3f8683cbead76732fb0def423f94ee0d9fa3af1471f36e8bb384d53',
     description: 'grouping error, multiple groups contain same cell',
