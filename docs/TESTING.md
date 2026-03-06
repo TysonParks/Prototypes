@@ -16,8 +16,9 @@
 
 1. [Deployment Exclusion](#1-deployment-exclusion)
 2. [WrapperTestHarness](#2-wrappertestharness)
-3. [WrapperDebugOverlay](#3-wrapperdebugoverlay)
-4. [Other Testing Files](#4-other-testing-files)
+3. [FilterDebugHarness](#3-filterdebugharness)
+4. [WrapperDebugOverlay](#4-wrapperdebugoverlay)
+5. [Other Testing Files](#5-other-testing-files)
 
 ---
 
@@ -35,6 +36,15 @@ docs/                 ← all files
 In `index.html`, testing scripts are loaded inside a `<!-- DEV-ONLY -->`
 comment block. The future `build.sh` (ROADMAP Task 16) must strip these
 `<script>` tags from the production build.
+
+Current dev-only scripts:
+
+```text
+testing/WrapperTestHarness.js
+testing/FilterDebugHarness.js
+testing/WrapperDebugOverlay.js
+testing/testMess.js
+```
 
 ---
 
@@ -149,7 +159,84 @@ not wrapper memoization. It inspects the currently active cuts from
 `ProtoFilter`, and flags sparse or irregular offset ladders that are
 likely to produce visible banding. See KNOWN-ISSUES § 9.14.7.
 
-### 2.5 Test Case Hashes
+Important limitation: `reportFilterBanding()` describes the stacks that
+were built, but it does **not** prove that a visible artifact is
+shader-driven. The Mar 6 investigation showed that a major render
+regression was actually caused by filter-region layout. Use
+`FilterDebugHarness` when you need to separate layout/cropping artifacts
+from shader artifacts.
+
+## 3. FilterDebugHarness
+
+**File:** `testing/FilterDebugHarness.js`
+**Loaded in:** `index.html` (dev-only)
+**Console access:** `window.FilterDebugHarness`, `window.FDH`
+
+### 3.1 Purpose
+
+`FilterDebugHarness` exists to keep experimental SVG filter and cropping
+probes out of operational files. It monkeypatches selected runtime
+methods temporarily, rebuilds the current hash, and lets you A/B layout
+hypotheses without turning `gui.js`, `ProtoLayerObjects.js`,
+`ProtoFilter.js`, or `neuMark_I.js` into a permanent debug-control
+surface.
+
+### 3.2 Current Patch Targets
+
+| Target | What it tests |
+|--------|---------------|
+| `ProtoCut.setLayouts()` | `%`-based filter region vs `userSpaceOnUse` filter region |
+| `ShapeGroup.boundsRect` | cut viewport sizing |
+| `ShapeGroup.assignElement()` | cut SVG overflow behavior |
+| `ShapeGroup.createSVGGroup()` + `ProtoFilter.applyFilterToElement()` | temporary frame filter visibility isolation |
+
+### 3.3 How to Run
+
+```javascript
+// Restore the legacy percent-based filter region
+FDH.usePercentFilterRegion()
+
+// Reproduce the userSpaceOnUse experiment
+FDH.useUserSpaceFilterRegion()
+
+// Try alternate cut viewport behavior
+FDH.rebuild({ cutBoundsMode: 'cellBounds' })
+
+// Try explicit cut SVG overflow behavior
+FDH.rebuild({ cutOverflow: 'hidden' })
+
+// Temporarily disable one frame filter layer
+FDH.setFrameFilterVisibility({ combo: false, high: true, shad: true })
+
+// Remove all patches and rebuild cleanly
+FDH.uninstall({ rebuild: true })
+```
+
+### 3.4 Why This Matters
+
+The current SVG cropping work spans multiple independent mechanisms:
+
+1. filter region coordinates
+2. nested SVG viewport sizing
+3. overflow behavior
+4. masks and mask blurs
+
+`FilterDebugHarness` lets those be tested in isolation without polluting
+runtime code.
+
+## 4. WrapperDebugOverlay
+
+`WrapperDebugOverlay` remains the visual geometry tool for wrapper and
+segment relationships. It is useful for corner/wrapper debugging, but it
+is not the primary tool for SVG cropping investigations.
+
+Use it when the question is geometric adjacency or wrapper resolution.
+Use `FilterDebugHarness` when the question is viewport, filter, mask, or
+cropping behavior.
+
+## 5. Other Testing Files
+
+### 5.1 Test Case Hashes
 
 Curated `tokenData.hash` values that exercise specific wrapper
 configurations. Stored in `WRAPPER_TEST_CASES` at the bottom of the
@@ -176,7 +263,7 @@ harness file.
 `testing/WrapperTestHarness.js`. Set `status` to `golden` (known good),
 `broken` (known bad), or `untested` (needs verification).
 
-### 2.6 Batch Tools
+### 5.2 Batch Tools
 
 | Function | Use |
 |----------|-----|
