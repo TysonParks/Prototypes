@@ -30,6 +30,12 @@
 - [9.14 SVG Filter Layout & Mask Cropping Issues](#914-svg-filter-layout--mask-cropping-issues)
   - [9.14.4b Cross-SVG Filter ID Resolution (Safari Risk)](#9144-issue-4-safari-vs-chrome-rendering-percentage-layout)
   - [9.14.6 User-Unit Filter Layout (Implemented)](#9146-user-unit-filter-layout-implemented)
+- [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
+  - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
+  - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
+  - [9.15.3 Incremental Re-Optimization Plan](#9153-incremental-re-optimization-plan)
+  - [9.15.4 Load Time Optimization](#9154-load-time-optimization-separate-from-animation)
+  - [9.15.5 Measurement Baseline](#9155-measurement-baseline-to-do-before-optimizing)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -1542,20 +1548,329 @@ the viewBox-to-layout mapping is 1:1 (identity), FRAME coordinates
 work identically for all ShapeGroups regardless of position.
 
 **Still remaining — future optimization opportunity:**
-- **Per-shade-type precise padding:** `ProtoCut.padding` is currently
-  `depth * 2` for all profiles. Precise values:
-  - `hasInsetShade` (rOut, jIn, iIn): shade inward, `depth * 1` may
-    suffice
-  - `hasOutsetShade` (rIn, jOut, iOut): shade outward, `depth * 2`
-    needed
-  - `hasCastShadow` (iOut, rOut): cast shadow vector magnitude added
-  - Reducing padding shrinks filter region & render overhead
-- **Dead code cleanup:** Remove `ProtoCut.maxLayout` getter and
-  `ShapeGroup.finalSize` getter once the system is stable
+- **Per-shade-type precise padding:** see § 9.15.3 Tier 1a
+- **Per-cut filter region tightening:** see § 9.15.3 Tier 1b
+- **Dead code cleanup:** `ProtoCut.maxLayout` and `ShapeGroup.finalSize`
+  preserved for reference in § 9.15.1 — remove after re-optimization
+  determines whether they are superseded
 - **Safari compatibility testing** (§ 9.14.4) — `userSpaceOnUse` may
   resolve Safari filter cropping too
 
 ---
 
+## 9.15 Performance Optimization Strategy
+
+**Status:** 📋 Planned — correctness-first phase complete, optimization
+phase not yet started
+
+**Context:** The § 9.14.1 three-layer fix achieved 100% visual
+correctness across 100+ test hashes, but sacrificed three performance
+optimizations to get there. This section documents exactly what was
+sacrificed, preserves the original optimization logic, and proposes an
+incremental path back to optimal performance.
+
+**Goals:**
+1. Optimize real-time animation frame rate (currently 12 FPS target)
+2. Optimize initial load time (target < 1-2 seconds)
+3. Both goals are complementary, not competing
+
+### 9.15.1 What Was Sacrificed
+
+Three optimizations were broadened for correctness. Each adds GPU/CPU
+overhead to every frame of animation and to initial render:
+
+#### Sacrifice A — ShapeGroup viewport broadened to FRAME bounds
+
+**Before:** Each ShapeGroup's SVG viewport was sized to its tight
+`cellBounds` — the exact bounding box of its constituent cells. Small
+ShapeGroups had small viewports, meaning the browser only composited
+a small pixel region.
+
+**After:** All cut ShapeGroups use `FRAME.boundsRect` `(0, 0, 100, 200)`
+as their viewport. Every ShapeGroup is now frame-sized regardless of
+how many cells it covers.
+
+**Performance cost:** The browser composites the **full frame area**
+for every ShapeGroup, not just the area the ShapeGroup actually
+occupies. For a grid with many small ShapeGroups, this is a significant
+multiplier on pixel fill.
+
+**Code location:** ProtoLayerObjects `boundsRect` getter (L1732-1738)
+```js
+// CURRENT (broadened for correctness):
+if (this.isFrame || this.cut) return FRAME.boundsRect
+// ORIGINAL (tight, per-ShapeGroup):
+return this.cellBounds.boundsRect
+```
+
+#### Sacrifice B — `maxLayout` percentage pipeline bypassed
+
+**Before:** `ProtoCut.maxLayout` (neuMark_I L149-164) computed tight
+percentage-based filter margins per cut by iterating all ShapeGroups,
+calculating `padding / insetSize * ±100` for each, and taking the max.
+This gave each `<filter>` element the tightest possible percentage
+bounds that still contained all filter effects for all ShapeGroups
+sharing that filter.
+
+**After:** `setLayouts()` sets `filterUnits="userSpaceOnUse"` with
+fixed FRAME bounds `(0, 0, 100, 200)`. The percentage pipeline
+(`maxLayout`, `finalSize`) is entirely dead code.
+
+**Performance cost:** Every filter processes the **full frame area**
+(20,000 user-unit² at 100×200) instead of a tight bounding box around
+the actual filter effect extent. For small ShapeGroups with shallow
+cuts, the old percentage margins might have covered 5-20% of the frame
+area. Now they all process 100%.
+
+**Dead code to preserve — `ProtoCut.maxLayout` (neuMark_I L149-164):**
+```js
+get maxLayout() {
+  let [xMax, yMax, widthMax, heightMax] = [0, 0, 0, 0]
+  this.shapeGroups.forEach(grp => {
+    const
+      [size, padding] = [grp.insetSize, grp.padding],
+      padSize = Vertex.div(padding, size),
+      anchor = Vertex.mult(padSize, -100),
+      newSize = Vertex.mult(padSize, 200).add(vert(100))
+    xMax = min(anchor.x, xMax)
+    yMax = min(anchor.y, yMax)
+    widthMax = max(newSize.x, widthMax)
+    heightMax = max(newSize.y, heightMax)
+  })
+  return { x: xMax, y: yMax, width: widthMax, height: heightMax }
+}
+```
+
+**Dead code to preserve — `ShapeGroup.finalSize` (ProtoLayerObjects L1743-1753):**
+```js
+get finalSize() {
+  const
+    insetLayout = { x: this.insetAnchor.x, y: this.insetAnchor.y,
+                    width: this.insetSize.x, height: this.insetSize.y },
+    maxLayout = this.cut?.maxLayout || 100
+  return {
+    x: insetLayout.x * maxLayout.x / 100,
+    y: insetLayout.y * maxLayout.y / 100,
+    width: insetLayout.width * maxLayout.width / 100,
+    height: insetLayout.height * maxLayout.height / 100,
+  }
+}
+```
+
+#### Sacrifice C — `overflow: visible` on ShapeGroup + Grid SVGs
+
+**Before:** Default `overflow: hidden` on ShapeGroup SVGs and Grid SVGs
+allowed the browser to skip compositing any pixel output extending
+beyond the viewport. This is a free GPU-level clip optimization.
+
+**After:** `overflow: visible` on both layers to allow filter effects
+(shadows, highlights) to bleed beyond the ShapeGroup and Grid viewports.
+The FRAME `<svg>` at `(0, 0, 100, 200)` provides the only hard clip.
+
+**Performance cost:** The browser can no longer skip compositing for
+pixel data outside ShapeGroup/Grid viewport bounds. Combined with
+Sacrifice A (FRAME-sized viewports), this means every ShapeGroup's
+filter output is composited across the full frame.
+
+**Code locations:**
+- `ShapeGroup.assignElement()` — ProtoLayerObjects L1790:
+  `if (this.cut) this.svgElt.attribute('overflow', 'visible')`
+- `Grid.assignElement()` — Grid.js L2327:
+  `this.svgElt.attribute('overflow', 'visible')`
+
+### 9.15.2 Why These Sacrifices Were Necessary
+
+The percentage-based approach (`objectBoundingBox`) coupled ShapeGroup
+viewport size to filter region size. When viewports were tight (per
+cell bounds), the percentage margins needed to be proportionally larger
+to contain deep filter effects. But filter definitions are **shared**
+across all ShapeGroups using the same cut — a single set of percentage
+margins had to work for the widest and the narrowest ShapeGroup
+simultaneously. This coupling made correctness brittle:
+
+- **Tight viewport + tight percentage margins** → filter cropping on
+  larger ShapeGroups
+- **Tight viewport + wide percentage margins** → correct for large
+  groups, but wasteful for small ones
+- **Wide viewport (FRAME) + percentage margins** → regression: FRAME-
+  sized viewport made percentage margins even thinner proportionally
+
+The `userSpaceOnUse` approach **decouples** viewport size from filter
+region calculation. Filter bounds are expressed in absolute user units,
+not relative to the viewport. This means filter sharing works correctly
+regardless of ShapeGroup viewport differences — which is why the broad
+FRAME-sized approach is both correct and compatible with filter sharing.
+
+### 9.15.3 Incremental Re-Optimization Plan
+
+**Principle:** Start from the correct broad state, tighten one layer at
+a time, test with the full hash suite after each change. Never sacrifice
+correctness.
+
+#### Tier 1 — Low-Risk Quick Wins (no viewport changes)
+
+These optimizations don't touch the viewport/filter-region system:
+
+**1a. Per-profile padding precision** (§ 9.14.2 notes this)
+- Current: `ProtoCut.padding = depth * 2` for all profiles
+- Optimized: vary by profile type:
+  - `hasInsetShade` (rOut, jIn, iIn): `depth * 1` (shade extends inward)
+  - `hasOutsetShade` (rIn, jOut, iOut): `depth * 2` (shade extends
+    outward)
+  - `hasCastShadow`: add `castShadowVector` magnitude
+- Impact: shrinks mask region for ~50% of profiles, no effect on filter
+  region (which uses FRAME bounds, not padding)
+
+**1b. Filter region tightened to actual content bounds**
+- Current: filter region = FRAME `(0, 0, 100, 200)` for ALL cuts
+- Optimized: compute per-cut AABB from all ShapeGroup cell bounds,
+  expand by `padding`, clamp to FRAME bounds
+- This is a `userSpaceOnUse` equivalent of what `maxLayout` did with
+  percentages — but in absolute coordinates, so viewport size doesn't
+  affect it
+- Implementation: in `setLayouts()`, compute the union bounding box
+  of `this.shapeGroups.map(g => g.cellBounds.boundsRect)`, expand by
+  `this.padding`, then `clamp(result, FRAME.boundsRect)`
+- Impact: for cuts with shapes in one corner of the frame, filter
+  processes 25-50% of the pixel area instead of 100%
+
+**1c. Animation batch optimization**
+- Current: `batchUpdateFilters()` updates ALL `S.offsetElts` per frame
+- The `AnimationController` already has calibration logic (`optimizeFrameRate`)
+  but the batch size optimization path isn't fully utilized
+- Potential: batch offsetElt updates across multiple animation frames
+  (update half per frame at 2× frame rate for the same visual result
+  at lower per-frame cost)
+
+#### Tier 2 — Viewport Tightening (requires careful testing)
+
+**2a. Restore tight ShapeGroup viewports WITH overflow:visible**
+- Currently both broadened viewports AND overflow:visible are set
+- With `overflow: visible`, the viewport is just a coordinate system
+  origin — the browser doesn't clip at the viewport boundary
+- Test: restore `this.cellBounds.boundsRect` for `boundsRect` while
+  keeping `overflow: visible`
+- **Risk:** The `userSpaceOnUse` filter region uses FRAME coordinates,
+  and the ShapeGroup viewBox defines the local coordinate system. If
+  `viewBox = cellBounds` instead of FRAME, the user-unit coordinate
+  mapping changes and filter coordinates may not match shape coordinates
+- **Mitigation:** This works IF the ShapeGroup's viewBox establishes
+  the same coordinate system as FRAME (i.e. viewBox origin = FRAME
+  origin, not cellBounds origin). Must verify that viewBox `(0, 0,
+  100, 200)` vs viewBox `(cellX, cellY, cellW, cellH)` doesn't
+  remap the filter's `userSpaceOnUse` coordinates
+
+**2b. Selective overflow:visible — only on cascade ShapeGroups**
+- Non-cascade cuts (regular shapes) may not need overflow:visible
+  if their filter effects fit within their viewport
+- Test: `overflow: visible` only when `this.isFrame ||
+  this.islands.some(i => i.cascadeLevel > 0)` or equivalent
+- Impact: non-cascade ShapeGroups get free GPU clipping back
+
+**2c. Grid overflow:visible only when needed**
+- Grid `overflow: visible` was added for grid-layer cascades where
+  outset profiles extend beyond cell grid boundaries
+- Test: `overflow: visible` only on grids that contain cascade cuts
+  or r-in profiles
+
+#### Tier 3 — Filter Region Tightening (highest impact, highest risk)
+
+**3a. Per-ShapeGroup `userSpaceOnUse` filter regions**
+- Instead of sharing one filter region across all ShapeGroups per cut,
+  set `userSpaceOnUse` bounds per ShapeGroup based on its cellBounds +
+  padding
+- **Problem:** This breaks filter sharing — each ShapeGroup would need
+  its own `<filter>` element with different x/y/width/height
+- This is the most impactful optimization (filters process only needed
+  pixels) but requires filter cloning
+- Could be combined with the Safari fix (§ 9.14.4b) which already
+  suggests cloning filters per ShapeGroup
+
+**3b. Hybrid: group ShapeGroups by spatial proximity**
+- Instead of one filter per cut (current) or one per ShapeGroup (3a),
+  group ShapeGroups into spatial clusters and share filters within
+  each cluster
+- Filter region = cluster bounding box + padding
+- Fewer filters than 3a, tighter regions than current
+
+#### Tier 4 — Animation-Specific Optimizations
+
+**4a. Differential offset updates**
+- Current: every frame, ALL `S.offsetElts` get new `dx`/`dy` values
+  via `setAttribute`
+- Optimized: track previous shadow angle, skip updating elements
+  whose `dx`/`dy` change is below a perceptual threshold (sub-pixel)
+- Impact: reduces DOM mutations per frame, especially at slow rotation
+  speeds where frame-to-frame angle change is tiny
+
+**4b. CSS transform animation instead of SVG attribute mutation**
+- Investigate whether the shadow offset could be animated via CSS
+  `transform: translate(dx, dy)` on the filter wrapper `<g>` instead
+  of mutating `feOffset` `dx`/`dy` attributes
+- CSS transforms can be GPU-composited without layout/paint
+
+**4c. `will-change` / `contain` CSS properties**
+- Add `will-change: transform` or `contain: paint` to animated
+  SVG elements to hint the browser to promote them to GPU layers
+- Must verify SVG element support (may only work on certain elements)
+
+**4d. Reduce offsetElt count via filter consolidation**
+- Each ProtoFilter creates one or more `feOffset` elements pushed to
+  `offsetElts` (ProtoFilter L122)
+- If multiple filter primitives share the same magnitude, they could
+  share an offset group updated by a single parent transform
+- Reduces per-frame `setAttribute` calls
+
+### 9.15.4 Load Time Optimization (Separate from Animation)
+
+Initial load involves constructing the full SVG DOM. Key costs:
+
+**4e. Profile the setup pipeline**
+- Measure time from `setup()` entry to `animationController.globalAnimation()`
+- Identify which phase dominates:
+  - Feature generation (`Features.js`)
+  - Grid/cell construction (`Grid.js`)
+  - Island detection + grouping (`ProtoLayerObjects.js`)
+  - Wrapping (`maximizeCuddles` etc.)
+  - SVG element creation (`assignElement`, `createSVGGroup`)
+  - Filter construction (`#createFilters`, `buildFilter`)
+  - `setLayouts()` (currently trivial — just attribute setting)
+  - SVG rendering (browser paint after DOM construction)
+
+**4f. Lazy filter construction**
+- Filters are created for every cut during setup, even if the hash
+  produces shapes with no visible filter effects (e.g. very shallow
+  depth where the filter is sub-pixel)
+- The commented-out guard in `#createFilters()`:
+  `// if (abs(this.depth) < 0.25 / FRAME.pixToUserUnits) { return }`
+  could be re-enabled to skip sub-pixel filters
+- Impact: fewer DOM elements, fewer `offsetElts` to animate
+
+**4g. Deferred SVG construction**
+- Build the SVG DOM in a `DocumentFragment` or off-screen, then
+  append once complete
+- Prevents layout thrashing during construction
+
+### 9.15.5 Measurement Baseline (To Do Before Optimizing)
+
+Before implementing any optimization, establish baselines:
+
+1. **Initial load time:** `performance.now()` at `setup()` entry vs
+   `animationController.globalAnimation()` start
+2. **Per-frame animation cost:** Already measured by
+   `AnimationController.frameTimes[]` during calibration
+3. **offsetElt count:** Already displayed in debug FPS overlay
+   (`DeBugging.js L353-354`)
+4. **ShapeGroup count per hash:** `S.ShapeGroups.db.length`
+5. **Filter count per hash:** `S.Effects.db.length`
+6. **DOM element count:** `document.querySelectorAll('*').length`
+
+The `AnimationController.optimizeFrameRate()` already adapts FPS based
+on measured frame times — this self-calibration means animation
+performance improvements will automatically translate to higher FPS
+without code changes.
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-05 — § 9.14.1 complete fix documented (userSpaceOnUse + boundsRect + overflow:visible)*
+*Last updated: 2026-03-05 — § 9.15 performance optimization strategy added*
