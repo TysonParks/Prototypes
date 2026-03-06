@@ -167,14 +167,13 @@ class ProtoCut {
   //MARK: Public Methods
   //METH: setLayout() : null : 
   setLayouts() {
-    const pad = this.padding                             // vert(depth * 2)
     this.filters.forEach(f => {
       f.filter
         .attribute("filterUnits", "userSpaceOnUse")
-        .attribute("x", FRAME.anchor.x - pad.x)
-        .attribute("y", FRAME.anchor.y - pad.y)
-        .attribute("width", FRAME.size.x + pad.x * 2)
-        .attribute("height", FRAME.size.y + pad.y * 2)
+        .attribute("x", FRAME.anchor.x)
+        .attribute("y", FRAME.anchor.y)
+        .attribute("width", FRAME.size.x)
+        .attribute("height", FRAME.size.y)
     })
   }
   //METH: curve() : type :
