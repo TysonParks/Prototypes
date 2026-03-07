@@ -764,59 +764,6 @@ function gridTests2(features) {
 
   S.Cuts.db.map(c => c[1]).forEach(c => c.setLayouts())
 
-  //DEBUG: § 9.14 — ShapeGroup crop diagnostic
-  {
-    console.group('[§9.14] ShapeGroup Crop Diagnostic')
-
-    // Grid + Frame SVG viewports
-    const gridE = GRID.svgElt?.elt
-    const frameE = FRAME.svgElt?.elt
-    const ga = n => gridE?.getAttribute(n)
-    const fa2 = n => frameE?.getAttribute(n)
-    console.log(`Frame SVG: vB=${fa2('viewBox')} overflow=${fa2('overflow')}`)
-    console.log(`Grid SVG: vB=${ga('viewBox')} overflow=${ga('overflow')}`)
-
-    // Dump actual filter element attributes after setLayouts
-    console.group('Filter elements after setLayouts()')
-    S.Cuts.db.map(c => c[1]).forEach(cut => {
-      cut.filters.forEach((f, i) => {
-        const fElt = f.filter?.elt
-        const fa = n => fElt?.getAttribute(n)
-        // Walk up to find which <svg> contains this filter def
-        let parentSvgId = '?'
-        let el = fElt
-        while (el) {
-          if (el.tagName === 'svg' && el.id) { parentSvgId = el.id; break }
-          el = el.parentElement
-        }
-        console.log(`${cut.breed} filter[${i}] id=${f.id} type=${f.type}`,
-          `\n  filterUnits=${fa('filterUnits')} x=${fa('x')} y=${fa('y')} w=${fa('width')} h=${fa('height')}`,
-          `\n  inDOM=${!!fElt?.parentNode} parentSVG=${parentSvgId}`)
-      })
-    })
-    console.groupEnd()
-
-    // For EACH ShapeGroup (not deduped), check filter application
-    console.group('ShapeGroup filter application')
-    const allSGs = [...GRID.shapeGroups, ...BGRID.shapeGroups].filter(sg => sg.cut)
-    allSGs.forEach(sg => {
-      const svgE = sg.svgElt?.elt
-      const attr = n => svgE?.getAttribute(n)
-      // Find ALL <g> elements with filter= inside this SVG
-      const filterGs = svgE?.querySelectorAll('g[filter]')
-      const filterRefs = Array.from(filterGs || []).map(g => g.getAttribute('filter'))
-      // Check if this SVG contains a <defs> with a <filter>
-      const localFilter = svgE?.querySelector('defs > filter')
-      const localFilterId = localFilter?.id
-      console.log(`${sg.id} type=${sg.type} cut=${sg.cut.breed}`,
-        `cells=${sg.cells.length}`,
-        `\n  svgElt: vB=${attr('viewBox')} x=${attr('x')} y=${attr('y')} w=${attr('width')} h=${attr('height')} overflow=${attr('overflow')}`,
-        `\n  filterRefs=[${filterRefs.join(', ')}] localFilterDef=${localFilterId || 'none'}`)
-    })
-    console.groupEnd()
-    console.groupEnd()
-  }
-
   // DeBug.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
   // FRAME.backGrid.showCellsDebug()
   // FRAME.backGrid.showShapesDebug()
