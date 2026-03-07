@@ -151,6 +151,15 @@ WTH.diffSnapshots(before, after)
 
 // Shader/filter banding diagnostics for the current hash
 runFilterBandingDiagnostics()
+
+// Same hash under common SVG layout variants, exported as one contact sheet
+await batchFilterVariantContactSheet()
+
+// Run both of the above as one SVG-artifact pass
+await runSVGArtifactDiagnostics()
+
+// If the artifact survives all SVG layout variants, isolate frame filters
+await runBottomBarDiagnostics()
 ```
 
 `runFilterBandingDiagnostics()` is intended for shader/filter debugging,
@@ -165,6 +174,36 @@ shader-driven. The Mar 6 investigation showed that a major render
 regression was actually caused by filter-region layout. Use
 `FilterDebugHarness` when you need to separate layout/cropping artifacts
 from shader artifacts.
+
+For visible SVG artifacts such as a bottom bar, cropped shadow slab, or
+unexpected frame strip, prefer `batchFilterVariantContactSheet()` over
+manual toggle-by-toggle inspection. It renders the **same hash** under a
+small matrix of layout variants and saves a single side-by-side PNG so
+the visual delta is explicit.
+
+If the artifact is unchanged across that entire matrix, move to
+`batchFrameFilterIsolationSheet()` / `runBottomBarDiagnostics()`. That
+second pass selectively disables frame `combo`, `high`, and `shad`
+filters to determine whether the visible strip belongs to frame filter
+composition rather than filter-region layout.
+
+If the strip still survives with all frame filters disabled, move to
+`batchFrameMaskIsolationSheet()`. That pass disables the frame mask
+itself, and then disables both the mask and frame filters together. If
+the artifact still survives there, the cause is likely underlying frame
+or backing geometry rather than SVG filter/mask post-processing.
+
+If the artifact is confirmed to live in frame FX, use
+`batchFrameShapeGroupIsolationSheet()`. That pass hides one entry from
+`FRAME.backGroup.shapeGroups` at a time, which is the fastest way to
+locate the exact frame layer responsible for a persistent slab, band, or
+strip.
+
+If one frame `ShapeGroup` is identified as the source, use
+`batchComboOffsetSignSheet()` to split that group's filter stack by
+offset sign and rough magnitude. This helps determine whether the slab
+is being created by one directional half of the combo filter or only by
+the widest outer offsets.
 
 ## 3. FilterDebugHarness
 
@@ -188,6 +227,7 @@ surface.
 | `ProtoCut.setLayouts()` | `%`-based filter region vs `userSpaceOnUse` filter region |
 | `ShapeGroup.boundsRect` | cut viewport sizing |
 | `ShapeGroup.assignElement()` | cut SVG overflow behavior |
+| `Grid.anchor` / `Grid.size` / `Grid.boundsRect` | whether `Magical` grids should be fit inside the `100x200` frame instead of extending beyond it |
 | `ShapeGroup.createSVGGroup()` + `ProtoFilter.applyFilterToElement()` | temporary frame filter visibility isolation |
 
 ### 3.3 How to Run
@@ -205,6 +245,15 @@ FDH.rebuild({ cutBoundsMode: 'cellBounds' })
 // Try explicit cut SVG overflow behavior
 FDH.rebuild({ cutOverflow: 'hidden' })
 
+// Fit Magical grids inside the 100x200 frame for A/B testing
+FDH.useMagicalFitFrameGridBounds()
+
+// Force any grid to full frame height while preserving aspect
+FDH.useFullFrameHeightGridBounds()
+
+// Stretch the built frame shape-group stack itself to full frame height
+FDH.stretchFrameGroupsToFullHeight()
+
 // Temporarily disable one frame filter layer
 FDH.setFrameFilterVisibility({ combo: false, high: true, shad: true })
 
@@ -219,6 +268,71 @@ The current SVG cropping work spans multiple independent mechanisms:
 1. filter region coordinates
 2. nested SVG viewport sizing
 3. overflow behavior
+4. `Magical` grid bounds that currently may extend beyond the frame and then get clipped back to `100x200`
+
+For the current Mar 6 bottom-bar investigation, the newest high-value probe is:
+
+```javascript
+await reportFrameBottomBarSetComparison({
+  debugHarness: { gridBoundsMode: 'magicalFitFrame' }
+})
+```
+
+That rebuilds the full broken/golden pool under a dev-only patch that fits
+`Magical` grids inside the frame before the frame `rOut combo` stack is
+generated. If the broken pool stops clustering around `zeroVerticalSlack`,
+the root cause is geometric overflow-to-clip rather than the combo filter
+offset ladder itself.
+
+Once that condition is confirmed, use these follow-ups:
+
+```javascript
+await compareFrameBottomBarModes()
+```
+
+That runs the primary broken/golden pool twice, once at runtime and once with
+`gridBoundsMode: 'magicalFitFrame'`, then prints a per-hash delta table.
+
+```javascript
+await batchFrameBottomBarRegressionSheet({
+  compareAs: 'primary',
+  debugHarness: { gridBoundsMode: 'magicalFitFrame' },
+  label: 'frame-bottom-bar-regression-sheet-fit-frame'
+})
+```
+
+That exports a visual multi-hash contact sheet under the same dev-only patch,
+so geometry metrics and visible outcome can be checked together.
+
+For the converse stress test, grow the golden pool to full frame height:
+
+```javascript
+await compareFrameBottomBarModes({
+  include: ['golden'],
+  compareAs: 'primary',
+  patchedHarness: { gridBoundsMode: 'forceFullFrameHeight' }
+})
+```
+
+If those hashes start producing the same frame-bottom-bar family under forced
+full-height geometry, the occupancy condition is much closer to causal than
+correlative.
+
+If forcing only the grid container is too weak, use the stronger content-level probe:
+
+```javascript
+await compareFrameBottomBarModes({
+  include: ['golden'],
+  compareAs: 'primary',
+  patchedHarness: { frameGroupStretchMode: 'fillFrameHeightFromBacking' }
+})
+```
+
+That stretches the built frame shape-group stack itself from the backing bbox,
+so the visible frame content is driven to full frame height. This is more
+aggressive and more visually distorted than the grid-bounds probe, but it is a
+better converse test of whether full-height occupancy alone can induce the
+frame-bottom-bar artifact family.
 4. masks and mask blurs
 
 `FilterDebugHarness` lets those be tested in isolation without polluting
@@ -255,6 +369,7 @@ harness file.
 | `intershape_2` | coincident, adjacent | untested | Intershape placed inside larger shape |
 | `intershape_3` | coincident, adjacent | untested | Intershape placed inside larger shape (most representative) |
 | `filter_banding_1` | — | broken | Visible stepped banding on `rOut` shade stacks; primary shader quantization diagnosis case |
+| `bottom_bar_1` | — | broken | Bottom frame bar artifact; use same-hash SVG variant sheet before changing runtime layout code |
 | `broken_01` – `broken_03` | — | broken | Grouping errors (multiple groups contain same cell) |
 | `broken_04` – `broken_06` | proximal | broken | Outer wrapper converging/intersecting inner wrapper |
 | `broken_07` | adjacent | broken | Outer wrapper converging/barely intersecting inner wrapper |
@@ -262,6 +377,30 @@ harness file.
 **Adding new cases:** Edit `WRAPPER_TEST_CASES` in
 `testing/WrapperTestHarness.js`. Set `status` to `golden` (known good),
 `broken` (known bad), or `untested` (needs verification).
+
+For the newer large-depth `rOut` frame bottom-bar bug, use the dedicated
+registry `FRAME_BOTTOM_BAR_HASH_SETS` in `testing/WrapperTestHarness.js`.
+It has three arrays:
+
+```javascript
+FRAME_BOTTOM_BAR_HASH_SETS.broken
+FRAME_BOTTOM_BAR_HASH_SETS.golden
+FRAME_BOTTOM_BAR_HASH_SETS.review
+```
+
+Recommended use:
+1. put hashes with a clear visible slab/bar into `broken`
+2. put hashes with comparable large-depth `rOut` frames but no slab into `golden`
+3. put uncertain examples into `review`
+
+Useful commands:
+
+```javascript
+reportFrameBottomBarHashSets()
+await batchFrameBottomBarRegressionSheet()
+await batchFrameBottomBarRegressionSheet({ include: ['broken', 'golden'] })
+await reportFrameBottomBarSetComparison()
+```
 
 ### 5.2 Batch Tools
 
