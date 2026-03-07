@@ -215,8 +215,8 @@ class ProtoFilter {
         })
       }
     } else {
-      const oldGroup = element.p5Parent
       element.parent(newGroup)
+      const oldGroup = element.p5Parent
       if (oldGroup.childElementCount === 0) oldGroup.remove()
     }
   }
@@ -387,13 +387,16 @@ p5.Element.prototype.blur = function (radius) {
   let defs = parentSVG.querySelector('defs')
   if (!defs) defs = createSVGElt('defs').parent(parentSVG)
 
+  // Scale filter region to 3× stdDeviation so large blurs aren't clipped.
+  // objectBoundingBox %-based: 3σ ≈ 300% of bbox is a safe margin.
+  const margin = max(50, Math.ceil(radius * 3 / 1) * 100)  // at least -50%/200%, scale up for large radii
   const filterID = 'blur-' + Math.floor(Math.random() * 100000)
   const filter = createSVGElt('filter')
     .attribute('id', filterID)
-    .attribute('x', '-50%')
-    .attribute('y', '-50%')
-    .attribute('width', '200%')
-    .attribute('height', '200%')
+    .attribute('x', `-${margin}%`)
+    .attribute('y', `-${margin}%`)
+    .attribute('width', `${100 + margin * 2}%`)
+    .attribute('height', `${100 + margin * 2}%`)
     .parent(defs) // <-- parent to defs
 
   createSVGElt('feGaussianBlur')
