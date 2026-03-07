@@ -169,13 +169,11 @@ class ProtoCut {
   setLayouts() {
     const layout = this.maxLayout
     this.filters.forEach(f => {
-      f.filter.elt.removeAttribute("filterUnits")
       f.filter
-        .attribute("filterUnits", "userSpaceOnUse")
-        .attribute("x", FRAME.anchor.x)
-        .attribute("y", FRAME.anchor.y)
-        .attribute("width", FRAME.size.x)
-        .attribute("height", FRAME.size.y)
+        .attribute("x", `${layout.x}%`)
+        .attribute("y", `${layout.y}%`)
+        .attribute("width", `${layout.width}%`)
+        .attribute("height", `${layout.height}%`)
     })
   }
   //METH: curve() : type :
