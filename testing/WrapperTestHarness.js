@@ -685,6 +685,21 @@ function runFilterBandingDiagnostics(hash = tokenData?.hash, rebuild = false) {
   return report
 }
 
+//FUNC: runSVGArtifactDiagnostics(hash) : Object : run the standard artifact checks for a hash
+async function runSVGArtifactDiagnostics(hash = tokenData?.hash) {
+  if (!hash) {
+    DeBug.error(`WTH: No hash provided for SVG artifact diagnostics`)
+    return
+  }
+
+  const banding = runFilterBandingDiagnostics(hash, true)
+  const variantSheet = await batchFilterVariantContactSheet({ hash })
+  const report = { hash, banding, variantSheet }
+  window.WTHSvgArtifact = report
+  DeBug.log(`WTHSvgArtifact: stored SVG artifact report on window.WTHSvgArtifact`)
+  return report
+}
+
 //MARK: Test Case Hashes
 // Curated hashes that exercise specific wrapper configurations.
 // Add hashes as you identify them. Status can be: 'golden', 'broken', 'untested'
@@ -784,6 +799,13 @@ const WRAPPER_TEST_CASES = {
     issues: ['filter-banding'],
     status: 'broken',
   },
+  bottom_bar_1: {
+    hash: '0x1c0ffe68e83b09c41e06bc44ca9eacc6e0670b96763d26e899c578fbeedfb13e',
+    description: 'Bottom frame bar artifact. Re-test with same-hash SVG variant contact sheet before changing runtime layout code.',
+    wrapTypes: [],
+    issues: ['bottom-bar', 'svg-artifact'],
+    status: 'broken',
+  },
   cascade_grid_crop_1: {
     hash: '0xe2f57b77fd2aa05a6d292faf2b787a05717986b5b63d4683aae4d14401d97c91',
     description: 'Grid-layer cascade filter effects cropped at ShapeGroup viewport — boundsRect expanded to FRAME.boundsRect (§ 9.14.1)',
@@ -854,7 +876,996 @@ const WRAPPER_TEST_CASES = {
   // },
 }
 
+//MARK: Frame Bottom-Bar Regression Sets
+// Curated comparison pools for the large-depth rOut frame slab / bottom-bar bug.
+// Keep these arrays short and high-signal: hashes that clearly DO show the bug,
+// hashes that clearly DO NOT, and optional hashes that still need review.
+
+const FRAME_BOTTOM_BAR_HASH_SETS = {
+  broken: [
+    '0x1c0ffe68e83b09c41e06bc44ca9eacc6e0670b96763d26e899c578fbeedfb13e',
+    '0x213f67b6eac7b1d5a7b1628ab87705e8008070e0c58644dc1c8cbc43385271d6',
+    '0x2a6587247a406c4611238e276c9ce7cc84d33d64867927c910d04d930ff8626a',
+    '0x67b996591a28ff72ca37e57b05defb60d42edeb528b5bb46262760c06c5b5ca8',
+    '0x22a353f93324ee8cea610673a40714199d5795fa8e88f4e6a5a94a0dd2c1508b',
+    {
+      hash: '0x9c352733f0eade48990298caedef1c1b501dd87fc63409806cc58f46922a4522',
+      artifactClass: 'grid-banding',
+      compareAs: 'outlier',
+      note: 'Banding appears inside a grid shape rather than on the frame bottom bar.',
+    },
+    {
+      hash: '0xbbc1d21e7083a4822fc64adb7b3c74197de8eb6b4064760a012f37c9a8f200c7',
+      artifactClass: 'frame-bottom-bar',
+      compareAs: 'primary',
+      note: 'Frame rOut cut is relatively small; useful counterexample against depth-only explanations.',
+    },
+  ],
+  golden: [
+    '0x777ff940106d0431845cc85a7f42d5ebe9b64de048a72c2edaeeed098ed5d0df',
+    '0xc1b36012b6882e8405ecff99e96388891731cbbdbd203f58f05419abf885f4f1',
+    '0x59608df9414a7519f701bd8dda3d5e91c38ff65498b8acef1448cc926e132aad',
+    '0x73d12375c139e4016eaf5978483eb59691fc4f8f44fae9c989db0f2c9df0ef1f',
+    '0xe36e4733e5ee91fdde09118ef5fc995a9467fd71f01e81526b733a5d3c7992ba',
+    {
+      hash: '0x0484b17d0830936e4c24076957a0aefffb44ea4a1b2a970e1a826ddf3d366dda',
+      artifactClass: 'frame-clean',
+      compareAs: 'primary',
+      note: 'Magical golden reference with no frame bottom bar.',
+    },
+  ],
+  review: [
+  ],
+}
+
+function normalizeFrameBottomBarEntry(entry, pool, index) {
+  if (typeof entry === `string`) {
+    return {
+      hash: entry,
+      name: `frame_bar_${pool}_${index}`,
+      status: pool === `review` ? `untested` : pool,
+      issue: `frame-bottom-bar`,
+      pool,
+      artifactClass: pool === `golden` ? `frame-clean` : `frame-bottom-bar`,
+      compareAs: `primary`,
+      note: ``,
+    }
+  }
+
+  return {
+    hash: entry.hash,
+    name: entry.name || `frame_bar_${pool}_${index}`,
+    status: entry.status || (pool === `review` ? `untested` : pool),
+    issue: entry.issue || `frame-bottom-bar`,
+    pool,
+    artifactClass: entry.artifactClass || (pool === `golden` ? `frame-clean` : `frame-bottom-bar`),
+    compareAs: entry.compareAs || `primary`,
+    note: entry.note || ``,
+  }
+}
+
+function getFrameBottomBarHashEntries(include = `all`, { compareAs = `all` } = {}) {
+  const requested = include === `all`
+    ? [`broken`, `golden`, `review`]
+    : OpArray.format(include)
+
+  return requested
+    .filter(key => FRAME_BOTTOM_BAR_HASH_SETS[key])
+    .map(key => FRAME_BOTTOM_BAR_HASH_SETS[key].map((entry, index) => normalizeFrameBottomBarEntry(entry, key, index)))
+    .flat()
+    .filter(entry => compareAs === `all` || entry.compareAs === compareAs)
+}
+
+//FUNC: reportFrameBottomBarHashSets() : Object : summarize broken/golden/review pools for the frame bottom-bar bug
+function reportFrameBottomBarHashSets() {
+  const entries = getFrameBottomBarHashEntries()
+  const summary = {
+    broken: FRAME_BOTTOM_BAR_HASH_SETS.broken.length,
+    golden: FRAME_BOTTOM_BAR_HASH_SETS.golden.length,
+    review: FRAME_BOTTOM_BAR_HASH_SETS.review.length,
+    primary: entries.filter(entry => entry.compareAs === `primary`).length,
+    outliers: entries.filter(entry => entry.compareAs === `outlier`).length,
+    entries,
+  }
+  window.WTHFrameBottomBarSets = summary
+  console.log(summary)
+  return summary
+}
+
+//FUNC: batchFrameBottomBarRegressionSheet({include, cols, cellSize, label}) : Object|null
+// Renders the curated broken/golden/review pools for the frame bottom-bar bug.
+async function batchFrameBottomBarRegressionSheet({
+  include = `all`,
+  compareAs = `all`,
+  debugHarness = null,
+  cols = 4,
+  cellSize = { x: 320, y: 576 },
+  padding = 20,
+  label = `frame-bottom-bar-regression-sheet`,
+} = {}) {
+  const hashes = getFrameBottomBarHashEntries(include, { compareAs })
+  if (hashes.length === 0) {
+    console.warn(`batchFrameBottomBarRegressionSheet: no hashes in requested pools`)
+    return null
+  }
+
+  const count = hashes.length
+  const rows = Math.ceil(count / cols)
+  const effectiveLabelH = 24
+  const totalW = cols * (cellSize.x + padding) + padding
+  const totalH = rows * (cellSize.y + padding + effectiveLabelH) + padding
+
+  const canvas = document.createElement(`canvas`)
+  canvas.width = totalW
+  canvas.height = totalH
+  const ctx = canvas.getContext(`2d`)
+
+  ctx.fillStyle = `#1a1a1a`
+  ctx.fillRect(0, 0, totalW, totalH)
+
+  for (let i = 0; i < count; i++) {
+    const { hash, name, status, compareAs: entryCompareAs } = hashes[i]
+    const col = i % cols
+    const row = Math.floor(i / cols)
+    const x = padding + col * (cellSize.x + padding)
+    const y = padding + row * (cellSize.y + padding + effectiveLabelH)
+
+    if (protoBatch?.teardown) protoBatch.teardown()
+    if (debugHarness) FDH.install(debugHarness)
+    else FDH.uninstall()
+    protoBatch.buildFromHash(hash)
+
+    await new Promise(r => requestAnimationFrame(r))
+    await new Promise(r => setTimeout(r, 100))
+
+    const svgImage = await captureCurrentSVG(cellSize)
+    if (svgImage) {
+      ctx.drawImage(svgImage, x, y + effectiveLabelH, cellSize.x, cellSize.y)
+    } else {
+      ctx.fillStyle = `#333`
+      ctx.fillRect(x, y + effectiveLabelH, cellSize.x, cellSize.y)
+      ctx.fillStyle = `#f66`
+      ctx.font = `14px monospace`
+      ctx.fillText(`RENDER FAILED`, x + 10, y + effectiveLabelH + cellSize.y / 2)
+    }
+
+    ctx.fillStyle = status === `broken` ? `#f66`
+      : status === `golden` ? `#6f6`
+        : `#aaa`
+    ctx.font = `bold 11px monospace`
+    ctx.fillText(`${name}`, x + 4, y + 14)
+    ctx.fillStyle = `#666`
+    ctx.font = `10px monospace`
+    ctx.fillText(`${hash.slice(0, 6)}…${hash.slice(-4)} | ${entryCompareAs}`, x + 4, y + 14 + 12)
+
+    ctx.strokeStyle = status === `broken` ? `#f66`
+      : status === `golden` ? `#6f6`
+        : `#555`
+    ctx.lineWidth = status === `untested` ? 1 : 2
+    ctx.strokeRect(x, y + effectiveLabelH, cellSize.x, cellSize.y)
+  }
+
+  FDH.uninstall()
+  if (protoBatch?.teardown) protoBatch.teardown()
+
+  const link = document.createElement(`a`)
+  const modeLabel = debugHarness ? `-patched` : ``
+  link.download = `${label}${modeLabel}-${new Date().toISOString().slice(0, 10)}.png`
+  link.href = canvas.toDataURL(`image/png`)
+  link.click()
+
+  const report = { include, compareAs, debugHarness, count: hashes.length, hashes, filename: link.download }
+  window.WTHFrameBottomBarRegressionSheet = report
+  return report
+}
+
+function summarizeFrameGroup(group, index) {
+  return {
+    index,
+    type: group.type,
+    breed: group.cut?.breed,
+    filterType: group.filter?.type,
+    id: group.id,
+    shadeCount: group.filter?.shades?.length,
+    offsetMagnitudes: group.filter?.offsetElts?.map(({ mag }) => mag) || [],
+  }
+}
+
+function summarizeSvgBBox(element) {
+  if (!element?.elt) return undefined
+
+  const frameElt = FRAME?.svgElt?.elt || FRAME?.bleed?.elt
+  if (!frameElt?.getScreenCTM) return undefined
+
+  const frameMatrix = frameElt.getScreenCTM()
+  if (!frameMatrix?.inverse) return undefined
+
+  const frameInverse = frameMatrix.inverse()
+
+  const nodes = [
+    ...element.elt.querySelectorAll(`path, rect, circle, ellipse, line, polyline, polygon, use`),
+  ].filter(node => typeof node.getBBox === `function` && typeof node.getScreenCTM === `function`)
+
+  if (!nodes.length) return undefined
+
+  const rects = nodes
+    .map(node => {
+      const bbox = node.getBBox()
+      const matrix = node.getScreenCTM()
+      if (!bbox || !matrix || (!bbox.width && !bbox.height)) return null
+
+      const corners = [
+        new DOMPoint(bbox.x, bbox.y),
+        new DOMPoint(bbox.x + bbox.width, bbox.y),
+        new DOMPoint(bbox.x, bbox.y + bbox.height),
+        new DOMPoint(bbox.x + bbox.width, bbox.y + bbox.height),
+      ]
+        .map(point => point.matrixTransform(matrix))
+        .map(point => point.matrixTransform(frameInverse))
+
+      return corners.reduce((union, point) => ({
+        left: min(union.left, point.x),
+        top: min(union.top, point.y),
+        right: max(union.right, point.x),
+        bottom: max(union.bottom, point.y),
+      }), {
+        left: corners[0].x,
+        top: corners[0].y,
+        right: corners[0].x,
+        bottom: corners[0].y,
+      })
+    })
+    .filter(Boolean)
+
+  if (!rects.length) return undefined
+
+  const rect = rects.reduce((union, next) => ({
+    left: min(union.left, next.left),
+    top: min(union.top, next.top),
+    right: max(union.right, next.right),
+    bottom: max(union.bottom, next.bottom),
+  }), {
+    left: rects[0].left,
+    top: rects[0].top,
+    right: rects[0].right,
+    bottom: rects[0].bottom,
+  })
+
+  const frameWidth = FRAME?.size?.x
+  const frameHeight = FRAME?.size?.y
+  if (!frameWidth || !frameHeight) return undefined
+
+  const bbox = {
+    x: rect.left,
+    y: rect.top,
+    width: rect.right - rect.left,
+    height: rect.bottom - rect.top,
+  }
+  const verticalSlack = max(0, frameHeight - bbox.height)
+  return {
+    x: bbox.x,
+    y: bbox.y,
+    width: bbox.width,
+    height: bbox.height,
+    aspect: bbox.width > 0 ? bbox.height / bbox.width : undefined,
+    widthRatio: frameWidth ? bbox.width / frameWidth : undefined,
+    heightRatio: frameHeight ? bbox.height / frameHeight : undefined,
+    areaRatio: frameWidth && frameHeight
+      ? (bbox.width * bbox.height) / (frameWidth * frameHeight)
+      : undefined,
+    verticalSlack,
+    topBottomSlackEach: verticalSlack !== undefined ? verticalSlack / 2 : undefined,
+  }
+}
+
+function summarizeCurrentFrameForBottomBarHash(entry, pool = `unknown`) {
+  const normalized = typeof entry === `string`
+    ? normalizeFrameBottomBarEntry(entry, pool, 0)
+    : entry
+  const frameGroups = FRAME?.backGroup?.shapeGroups || []
+  const groupSummaries = frameGroups.map((group, index) => summarizeFrameGroup(group, index))
+  const comboGroups = groupSummaries.filter(group => group.filterType === `combo`)
+  const rOutCombo = comboGroups.find(group => group.breed?.startsWith(`rOut`))
+  const backingGroup = FRAME?.backGroup?.shapeGroups?.[0]
+  const rOutComboGroup = FRAME?.backGroup?.shapeGroups?.find(group => group.filter?.type === `combo` && group.cut?.breed?.startsWith(`rOut`))
+  const backingBBox = summarizeSvgBBox(backingGroup?.svgGroupElt)
+  const rOutComboBBox = summarizeSvgBBox(rOutComboGroup?.svgGroupElt)
+
+  return {
+    hash: normalized.hash,
+    pool: normalized.pool || pool,
+    artifactClass: normalized.artifactClass,
+    compareAs: normalized.compareAs,
+    note: normalized.note,
+    gridStyle: GRID?.gridStyle,
+    gridColumns: GRID?.gridSize?.x,
+    gridRows: GRID?.gridSize?.y,
+    gridAspect: GRID?.gridAspect,
+    cellAspect: GRID?.cellAspect,
+    frameGroupCount: groupSummaries.length,
+    comboGroupCount: comboGroups.length,
+    rOutComboBreed: rOutCombo?.breed,
+    rOutComboShadeCount: rOutCombo?.shadeCount,
+    rOutComboMaxAbsOffset: rOutCombo?.offsetMagnitudes?.length
+      ? max(rOutCombo.offsetMagnitudes.map(mag => Math.abs(mag)))
+      : undefined,
+    rOutComboMinAbsOffset: rOutCombo?.offsetMagnitudes?.length
+      ? min(rOutCombo.offsetMagnitudes.map(mag => Math.abs(mag)))
+      : undefined,
+    backingHeightOccupancy: backingBBox?.heightRatio,
+    backingNearFullHeight: backingBBox?.heightRatio ? backingBBox.heightRatio >= 0.99 : undefined,
+    backingTopBottomSlackEach: backingBBox?.topBottomSlackEach,
+    comboHeightOccupancy: rOutComboBBox?.heightRatio,
+    comboNearFullHeight: rOutComboBBox?.heightRatio ? rOutComboBBox.heightRatio >= 0.99 : undefined,
+    comboTopBottomSlackEach: rOutComboBBox?.topBottomSlackEach,
+    zeroVerticalSlack: backingBBox?.topBottomSlackEach === 0 && rOutComboBBox?.topBottomSlackEach === 0,
+    magicalFullHeightCandidate: GRID?.gridStyle === `Magical`
+      && backingBBox?.topBottomSlackEach === 0
+      && rOutComboBBox?.topBottomSlackEach === 0,
+    backingBBox,
+    rOutComboBBox,
+    groups: groupSummaries,
+  }
+}
+
+//FUNC: reportFrameBottomBarSetComparison({include, dedupe}) : [Object]
+// Rebuild each curated bottom-bar hash and summarize its frame ShapeGroups.
+async function reportFrameBottomBarSetComparison({
+  include = [`broken`, `golden`],
+  dedupe = true,
+  debugHarness = null,
+  compareAs = `all`,
+} = {}) {
+  const entries = getFrameBottomBarHashEntries(include, { compareAs })
+  const seen = new Set()
+  const duplicates = new OpArray
+  const summaries = new OpArray
+
+  for (const entry of entries) {
+    if (dedupe && seen.has(entry.hash)) {
+      duplicates.push(entry)
+      continue
+    }
+    seen.add(entry.hash)
+
+    if (protoBatch?.teardown) protoBatch.teardown()
+    if (debugHarness) FDH.install(debugHarness)
+    else FDH.uninstall()
+    protoBatch.buildFromHash(entry.hash)
+
+    await new Promise(r => requestAnimationFrame(r))
+    await new Promise(r => setTimeout(r, 50))
+
+    summaries.push(summarizeCurrentFrameForBottomBarHash(entry, entry.pool))
+  }
+
+  const table = summaries.map(summary => ({
+    pool: summary.pool,
+    hash: `${summary.hash.slice(0, 10)}...${summary.hash.slice(-6)}`,
+    artifactClass: summary.artifactClass,
+    compareAs: summary.compareAs,
+    gridStyle: summary.gridStyle,
+    gridColumns: summary.gridColumns,
+    gridRows: summary.gridRows,
+    gridAspect: summary.gridAspect,
+    cellAspect: summary.cellAspect,
+    frameGroupCount: summary.frameGroupCount,
+    comboGroupCount: summary.comboGroupCount,
+    rOutComboBreed: summary.rOutComboBreed,
+    rOutComboShadeCount: summary.rOutComboShadeCount,
+    rOutComboMinAbsOffset: summary.rOutComboMinAbsOffset,
+    rOutComboMaxAbsOffset: summary.rOutComboMaxAbsOffset,
+    backingHeightOccupancy: summary.backingHeightOccupancy,
+    backingNearFullHeight: summary.backingNearFullHeight,
+    backingTopBottomSlackEach: summary.backingTopBottomSlackEach,
+    comboHeightOccupancy: summary.comboHeightOccupancy,
+    comboNearFullHeight: summary.comboNearFullHeight,
+    comboTopBottomSlackEach: summary.comboTopBottomSlackEach,
+    zeroVerticalSlack: summary.zeroVerticalSlack,
+    magicalFullHeightCandidate: summary.magicalFullHeightCandidate,
+    backingAspect: summary.backingBBox?.aspect,
+    backingWidthRatio: summary.backingBBox?.widthRatio,
+    backingHeightRatio: summary.backingBBox?.heightRatio,
+    comboAspect: summary.rOutComboBBox?.aspect,
+    comboWidthRatio: summary.rOutComboBBox?.widthRatio,
+    comboHeightRatio: summary.rOutComboBBox?.heightRatio,
+  }))
+
+  const aggregates = {
+    broken: {
+      count: summaries.filter(summary => summary.pool === `broken`).length,
+      magical: summaries.filter(summary => summary.pool === `broken` && summary.gridStyle === `Magical`).length,
+      zeroSlack: summaries.filter(summary => summary.pool === `broken` && summary.zeroVerticalSlack).length,
+      candidate: summaries.filter(summary => summary.pool === `broken` && summary.magicalFullHeightCandidate).length,
+    },
+    golden: {
+      count: summaries.filter(summary => summary.pool === `golden`).length,
+      magical: summaries.filter(summary => summary.pool === `golden` && summary.gridStyle === `Magical`).length,
+      zeroSlack: summaries.filter(summary => summary.pool === `golden` && summary.zeroVerticalSlack).length,
+      candidate: summaries.filter(summary => summary.pool === `golden` && summary.magicalFullHeightCandidate).length,
+    },
+    primaryOnly: {
+      broken: summaries.filter(summary => summary.pool === `broken` && summary.compareAs === `primary`).length,
+      brokenCandidate: summaries.filter(summary => summary.pool === `broken` && summary.compareAs === `primary` && summary.magicalFullHeightCandidate).length,
+      golden: summaries.filter(summary => summary.pool === `golden` && summary.compareAs === `primary`).length,
+      goldenCandidate: summaries.filter(summary => summary.pool === `golden` && summary.compareAs === `primary` && summary.magicalFullHeightCandidate).length,
+    },
+    outliers: {
+      broken: summaries.filter(summary => summary.pool === `broken` && summary.compareAs === `outlier`).length,
+      brokenCandidate: summaries.filter(summary => summary.pool === `broken` && summary.compareAs === `outlier` && summary.magicalFullHeightCandidate).length,
+      golden: summaries.filter(summary => summary.pool === `golden` && summary.compareAs === `outlier`).length,
+      goldenCandidate: summaries.filter(summary => summary.pool === `golden` && summary.compareAs === `outlier` && summary.magicalFullHeightCandidate).length,
+    },
+  }
+
+  const report = {
+    include: OpArray.format(include),
+    compareAs,
+    dedupe,
+    debugHarness,
+    duplicates,
+    summaries,
+    table,
+    aggregates,
+  }
+
+  window.WTHFrameBottomBarComparison = report
+  console.table(table)
+  console.log(`Frame bottom-bar aggregates`, aggregates)
+  if (!duplicates.isEmpty) console.warn(`Duplicate hashes skipped:`, duplicates)
+  return report
+}
+
+//FUNC: compareFrameBottomBarModes({include, compareAs, patchedHarness}) : Object
+// Runs the frame-bottom-bar comparison twice and summarizes the per-hash delta.
+async function compareFrameBottomBarModes({
+  include = [`broken`, `golden`],
+  compareAs = `primary`,
+  patchedHarness = { gridBoundsMode: `magicalFitFrame` },
+} = {}) {
+  const runtime = await reportFrameBottomBarSetComparison({ include, compareAs })
+  const patched = await reportFrameBottomBarSetComparison({ include, compareAs, debugHarness: patchedHarness })
+
+  const patchedByHash = new Map(patched.summaries.map(summary => [summary.hash, summary]))
+  const deltaTable = runtime.summaries.map(summary => {
+    const next = patchedByHash.get(summary.hash)
+    return {
+      pool: summary.pool,
+      hash: `${summary.hash.slice(0, 10)}...${summary.hash.slice(-6)}`,
+      artifactClass: summary.artifactClass,
+      compareAs: summary.compareAs,
+      runtimeZeroSlack: summary.zeroVerticalSlack,
+      patchedZeroSlack: next?.zeroVerticalSlack,
+      runtimeCandidate: summary.magicalFullHeightCandidate,
+      patchedCandidate: next?.magicalFullHeightCandidate,
+      runtimeBackingOccupancy: summary.backingHeightOccupancy,
+      patchedBackingOccupancy: next?.backingHeightOccupancy,
+      runtimeComboOccupancy: summary.comboHeightOccupancy,
+      patchedComboOccupancy: next?.comboHeightOccupancy,
+      runtimeComboBreed: summary.rOutComboBreed,
+      patchedComboBreed: next?.rOutComboBreed,
+    }
+  })
+
+  const report = {
+    include: OpArray.format(include),
+    compareAs,
+    patchedHarness,
+    runtime,
+    patched,
+    deltaTable,
+  }
+
+  window.WTHFrameBottomBarModeDelta = report
+  console.table(deltaTable)
+  return report
+}
+
 //MARK: Batch Contact Sheet
+
+function describeVariantPatch(patch = null) {
+  if (!patch) return `runtime`
+
+  const parts = []
+  if (patch.filterRegionMode) parts.push(`region:${patch.filterRegionMode}`)
+  if (patch.cutBoundsMode) parts.push(`bounds:${patch.cutBoundsMode}`)
+  if (patch.cutOverflow) parts.push(`overflow:${patch.cutOverflow}`)
+  if (patch.frameMaskEnabled !== undefined && patch.frameMaskEnabled !== null) {
+    parts.push(`frameMask:${patch.frameMaskEnabled ? `on` : `off`}`)
+  }
+  if (patch.frameFilterVisibility) {
+    const vis = patch.frameFilterVisibility
+    parts.push(`frameFx:c${vis.combo ? 1 : 0}h${vis.high ? 1 : 0}s${vis.shad ? 1 : 0}`)
+  }
+
+  return parts.length ? parts.join(` | `) : `runtime`
+}
+
+function describeVariant(variant) {
+  return variant.details || describeVariantPatch(variant.patch)
+}
+
+//FUNC: batchFilterVariantContactSheet({hash, variants, cols, cellSize, padding, label}) : Object|null
+// Renders the same hash under a small matrix of SVG-layout variants.
+// Use this for visible cropping / bottom-bar / shadow artifacts where a
+// side-by-side A/B sheet is more useful than a console report.
+async function batchFilterVariantContactSheet({
+  hash = tokenData?.hash,
+  variants = null,
+  cols = 2,
+  cellSize = { x: 400, y: 720 },
+  padding = 20,
+  label = `svg-variant-sheet`,
+  showLabels = true,
+  labelHeight = 40,
+} = {}) {
+  if (!hash) {
+    console.warn(`batchFilterVariantContactSheet: no hash provided`)
+    return null
+  }
+
+  if (!window.FDH) {
+    console.warn(`batchFilterVariantContactSheet: FilterDebugHarness is not loaded`)
+    return null
+  }
+
+  const testVariants = variants ?? [
+    { name: `runtime`, patch: null },
+    { name: `userSpace region`, patch: { filterRegionMode: `userSpace` } },
+    { name: `cell bounds`, patch: { cutBoundsMode: `cellBounds` } },
+    { name: `overflow hidden`, patch: { cutOverflow: `hidden` } },
+  ]
+
+  const count = testVariants.length
+  const rows = Math.ceil(count / cols)
+  const effectiveLabelH = showLabels ? labelHeight : 0
+  const totalW = cols * (cellSize.x + padding) + padding
+  const totalH = rows * (cellSize.y + padding + effectiveLabelH) + padding
+
+  console.log(`\n=== SVG VARIANT SHEET: ${hash.slice(0, 10)}…${hash.slice(-6)} (${count} variants) ===\n`)
+
+  const canvas = document.createElement(`canvas`)
+  canvas.width = totalW
+  canvas.height = totalH
+  const ctx = canvas.getContext(`2d`)
+
+  ctx.fillStyle = `#1a1a1a`
+  ctx.fillRect(0, 0, totalW, totalH)
+
+  const captures = []
+
+  for (let i = 0; i < count; i++) {
+    const variant = testVariants[i]
+    const col = i % cols
+    const row = Math.floor(i / cols)
+    const x = padding + col * (cellSize.x + padding)
+    const y = padding + row * (cellSize.y + padding + effectiveLabelH)
+
+    if (protoBatch?.teardown) protoBatch.teardown()
+    FDH.uninstall()
+    if (variant.patch) FDH.install(variant.patch)
+    protoBatch.buildFromHash(hash)
+
+    if (typeof variant.afterBuild === `function`) {
+      variant.afterBuild({ FRAME, GRID, BGRID, protoBatch, variant, index: i })
+    }
+
+    await new Promise(r => requestAnimationFrame(r))
+    await new Promise(r => setTimeout(r, 100))
+
+    const svgImage = await captureCurrentSVG(cellSize)
+    if (svgImage) {
+      ctx.drawImage(svgImage, x, y + effectiveLabelH, cellSize.x, cellSize.y)
+    } else {
+      ctx.fillStyle = `#333`
+      ctx.fillRect(x, y + effectiveLabelH, cellSize.x, cellSize.y)
+      ctx.fillStyle = `#f66`
+      ctx.font = `14px monospace`
+      ctx.fillText(`RENDER FAILED`, x + 10, y + effectiveLabelH + cellSize.y / 2)
+    }
+
+    if (showLabels) {
+      ctx.fillStyle = `#ddd`
+      ctx.font = `bold 14px monospace`
+      ctx.fillText(variant.name, x, y + 15)
+      ctx.fillStyle = `#9aa0a6`
+      ctx.font = `12px monospace`
+      ctx.fillText(describeVariant(variant), x, y + 31)
+    }
+
+    captures.push({
+      name: variant.name,
+      patch: variant.patch,
+      patchLabel: describeVariantPatch(variant.patch),
+      details: variant.details,
+    })
+  }
+
+  FDH.uninstall()
+  if (protoBatch?.teardown) protoBatch.teardown()
+  protoBatch.buildFromHash(hash)
+
+  const link = document.createElement(`a`)
+  const trimmed = `${hash.slice(0, 10)}_${hash.slice(-6)}`
+  link.download = `${label}_${trimmed}.png`
+  link.href = canvas.toDataURL(`image/png`)
+  link.click()
+
+  const report = { hash, variants: captures, filename: link.download }
+  window.WTHVariantSheet = report
+  console.log(`\n=== SVG VARIANT SHEET SAVED: ${link.download} ===\n`)
+  return report
+}
+
+//FUNC: batchFrameFilterIsolationSheet({hash, variants, cols, cellSize, padding, label}) : Object|null
+// Renders the same hash while selectively disabling frame filter layers.
+// Use this when an artifact survives region / viewport variants and may be
+// caused by frame-level combo/high/shad composition.
+async function batchFrameFilterIsolationSheet({
+  hash = tokenData?.hash,
+  variants = null,
+  cols = 3,
+  cellSize = { x: 320, y: 576 },
+  padding = 20,
+  label = `frame-filter-sheet`,
+  showLabels = true,
+  labelHeight = 40,
+} = {}) {
+  const testVariants = variants ?? [
+    { name: `runtime`, patch: null },
+    { name: `frame combo off`, patch: { frameFilterVisibility: { combo: false, high: true, shad: true } } },
+    { name: `frame high off`, patch: { frameFilterVisibility: { combo: true, high: false, shad: true } } },
+    { name: `frame shad off`, patch: { frameFilterVisibility: { combo: true, high: true, shad: false } } },
+    { name: `frame all off`, patch: { frameFilterVisibility: { combo: false, high: false, shad: false } } },
+  ]
+
+  return batchFilterVariantContactSheet({
+    hash,
+    variants: testVariants,
+    cols,
+    cellSize,
+    padding,
+    label,
+    showLabels,
+    labelHeight,
+  })
+}
+
+//FUNC: batchFrameMaskIsolationSheet({hash, variants, cols, cellSize, padding, label}) : Object|null
+// Renders the same hash while disabling the frame mask and related frame FX combinations.
+async function batchFrameMaskIsolationSheet({
+  hash = tokenData?.hash,
+  variants = null,
+  cols = 2,
+  cellSize = { x: 360, y: 648 },
+  padding = 20,
+  label = `frame-mask-sheet`,
+  showLabels = true,
+  labelHeight = 40,
+} = {}) {
+  const testVariants = variants ?? [
+    { name: `runtime`, patch: null },
+    { name: `frame mask off`, patch: { frameMaskEnabled: false } },
+    {
+      name: `mask off + filters off`,
+      patch: {
+        frameMaskEnabled: false,
+        frameFilterVisibility: { combo: false, high: false, shad: false },
+      },
+    },
+  ]
+
+  return batchFilterVariantContactSheet({
+    hash,
+    variants: testVariants,
+    cols,
+    cellSize,
+    padding,
+    label,
+    showLabels,
+    labelHeight,
+  })
+}
+
+function describeFrameShapeGroup(group, index) {
+  const parts = [
+    `#${index}`,
+    group.type?.replace(`ShapeGroup-`, ``) || `unknown`,
+  ]
+  if (group.cut?.breed) parts.push(group.cut.breed)
+  return parts.join(` | `)
+}
+
+//FUNC: batchFrameShapeGroupIsolationSheet({hash, cols, cellSize, padding, label}) : Object|null
+// Builds the hash once, enumerates FRAME.backGroup.shapeGroups, then re-renders
+// while hiding one frame ShapeGroup at a time.
+async function batchFrameShapeGroupIsolationSheet({
+  hash = tokenData?.hash,
+  cols = 3,
+  cellSize = { x: 320, y: 576 },
+  padding = 20,
+  label = `frame-shapegroup-sheet`,
+  showLabels = true,
+  labelHeight = 52,
+} = {}) {
+  if (!hash) {
+    console.warn(`batchFrameShapeGroupIsolationSheet: no hash provided`)
+    return null
+  }
+
+  if (protoBatch?.teardown) protoBatch.teardown()
+  FDH.uninstall()
+  protoBatch.buildFromHash(hash)
+
+  const frameGroups = FRAME?.backGroup?.shapeGroups || []
+  if (!frameGroups.length) {
+    console.warn(`batchFrameShapeGroupIsolationSheet: no FRAME.backGroup.shapeGroups found`)
+    return null
+  }
+
+  const variants = [
+    { name: `runtime`, patch: null, details: `all frame groups visible` },
+    ...frameGroups.map((group, index) => ({
+      name: `hide frame group ${index}`,
+      patch: null,
+      details: describeFrameShapeGroup(group, index),
+      afterBuild() {
+        const target = FRAME?.backGroup?.shapeGroups?.[index]
+        target?.svgElt?.attribute(`display`, `none`)
+      },
+    })),
+  ]
+
+  const report = await batchFilterVariantContactSheet({
+    hash,
+    variants,
+    cols,
+    cellSize,
+    padding,
+    label,
+    showLabels,
+    labelHeight,
+  })
+
+  if (report) report.frameGroups = frameGroups.map((group, index) => ({
+    index,
+    type: group.type,
+    breed: group.cut?.breed,
+    filterType: group.filter?.type,
+    id: group.id,
+  }))
+
+  window.WTHFrameShapeGroups = report
+  return report
+}
+
+//FUNC: reportCurrentFrameShapeGroups() : [Object] : summarize the current FRAME.backGroup.shapeGroups
+function reportCurrentFrameShapeGroups() {
+  const frameGroups = FRAME?.backGroup?.shapeGroups || []
+  const summary = frameGroups.map((group, index) => ({
+    index,
+    type: group.type,
+    breed: group.cut?.breed,
+    filterType: group.filter?.type,
+    id: group.id,
+  }))
+  window.WTHFrameShapeGroupSummary = summary
+  console.table(summary)
+  return summary
+}
+
+//FUNC: batchOnlyFrameShapeGroupSheet({hash, cols, cellSize, padding, label}) : Object|null
+// Renders runtime plus one tile per frame ShapeGroup with only that group visible.
+async function batchOnlyFrameShapeGroupSheet({
+  hash = tokenData?.hash,
+  cols = 3,
+  cellSize = { x: 320, y: 576 },
+  padding = 20,
+  label = `frame-shapegroup-only-sheet`,
+  showLabels = true,
+  labelHeight = 52,
+} = {}) {
+  if (!hash) {
+    console.warn(`batchOnlyFrameShapeGroupSheet: no hash provided`)
+    return null
+  }
+
+  if (protoBatch?.teardown) protoBatch.teardown()
+  FDH.uninstall()
+  protoBatch.buildFromHash(hash)
+
+  const frameGroups = FRAME?.backGroup?.shapeGroups || []
+  if (!frameGroups.length) {
+    console.warn(`batchOnlyFrameShapeGroupSheet: no FRAME.backGroup.shapeGroups found`)
+    return null
+  }
+
+  const variants = [
+    { name: `runtime`, patch: null, details: `all frame groups visible` },
+    ...frameGroups.map((group, index) => ({
+      name: `only frame group ${index}`,
+      patch: null,
+      details: describeFrameShapeGroup(group, index),
+      afterBuild() {
+        const groups = FRAME?.backGroup?.shapeGroups || []
+        groups.forEach((entry, entryIndex) => {
+          entry?.svgElt?.attribute(`display`, entryIndex === index ? `inline` : `none`)
+        })
+      },
+    })),
+  ]
+
+  const report = await batchFilterVariantContactSheet({
+    hash,
+    variants,
+    cols,
+    cellSize,
+    padding,
+    label,
+    showLabels,
+    labelHeight,
+  })
+
+  if (report) report.frameGroups = frameGroups.map((group, index) => ({
+    index,
+    type: group.type,
+    breed: group.cut?.breed,
+    filterType: group.filter?.type,
+    id: group.id,
+  }))
+
+  window.WTHOnlyFrameShapeGroups = report
+  return report
+}
+
+//FUNC: reportFrameShapeGroupDetails(index) : Object|null : summarize one current frame ShapeGroup and its filter stack
+function reportFrameShapeGroupDetails(index = 0) {
+  const group = FRAME?.backGroup?.shapeGroups?.[index]
+  if (!group) {
+    console.warn(`reportFrameShapeGroupDetails: no frame shape group at index ${index}`)
+    return null
+  }
+
+  const filter = group.filter
+  const details = {
+    index,
+    id: group.id,
+    type: group.type,
+    breed: group.cut?.breed,
+    filterType: filter?.type,
+    filterId: filter?.id,
+    shadeCount: filter?.shades?.length,
+    shades: filter?.shades?.map((shade, shadeIndex) => ({
+      shadeIndex,
+      lighten: shade.lighten,
+      invert: shade.invert,
+      mag: shade.mag,
+      blur: shade.blur,
+      inset: shade.inset,
+      color: shade.color,
+    })) || [],
+    offsetMagnitudes: filter?.offsetElts?.map(({ mag }) => mag) || [],
+  }
+
+  window.WTHFrameShapeGroupDetails = details
+  console.log(details)
+  return details
+}
+
+function hideFrameGroupsExcept(index) {
+  const groups = FRAME?.backGroup?.shapeGroups || []
+  groups.forEach((entry, entryIndex) => {
+    entry?.svgElt?.attribute(`display`, entryIndex === index ? `inline` : `none`)
+  })
+}
+
+function applyOffsetFilter(offsetEntries = [], predicate = () => true) {
+  const shadVect = Shade.shadVect()
+  offsetEntries.forEach(({ elt, mag }) => {
+    const keep = predicate(mag)
+    const appliedMag = keep ? mag : 0
+    elt.attribute(`dx`, shadVect.x * appliedMag)
+    elt.attribute(`dy`, shadVect.y * appliedMag)
+  })
+}
+
+//FUNC: batchComboOffsetSignSheet({hash, groupIndex, cols, cellSize, padding, label}) : Object|null
+// Isolates one frame ShapeGroup and splits its offset stack by sign/magnitude.
+async function batchComboOffsetSignSheet({
+  hash = tokenData?.hash,
+  groupIndex = 1,
+  cols = 3,
+  cellSize = { x: 320, y: 576 },
+  padding = 20,
+  label = `combo-offset-sign-sheet`,
+  showLabels = true,
+  labelHeight = 52,
+} = {}) {
+  const variants = [
+    {
+      name: `runtime`,
+      patch: null,
+      details: `all frame groups visible`,
+    },
+    {
+      name: `only combo runtime`,
+      patch: null,
+      details: `group ${groupIndex} only`,
+      afterBuild() {
+        hideFrameGroupsExcept(groupIndex)
+      },
+    },
+    {
+      name: `combo positive only`,
+      patch: null,
+      details: `group ${groupIndex} | mag > 0`,
+      afterBuild() {
+        hideFrameGroupsExcept(groupIndex)
+        const group = FRAME?.backGroup?.shapeGroups?.[groupIndex]
+        applyOffsetFilter(group?.filter?.offsetElts || [], mag => mag > 0)
+      },
+    },
+    {
+      name: `combo negative only`,
+      patch: null,
+      details: `group ${groupIndex} | mag < 0`,
+      afterBuild() {
+        hideFrameGroupsExcept(groupIndex)
+        const group = FRAME?.backGroup?.shapeGroups?.[groupIndex]
+        applyOffsetFilter(group?.filter?.offsetElts || [], mag => mag < 0)
+      },
+    },
+    {
+      name: `combo inner offsets`,
+      patch: null,
+      details: `group ${groupIndex} | |mag| <= 1`,
+      afterBuild() {
+        hideFrameGroupsExcept(groupIndex)
+        const group = FRAME?.backGroup?.shapeGroups?.[groupIndex]
+        applyOffsetFilter(group?.filter?.offsetElts || [], mag => Math.abs(mag) <= 1)
+      },
+    },
+    {
+      name: `combo outer offsets`,
+      patch: null,
+      details: `group ${groupIndex} | |mag| > 1`,
+      afterBuild() {
+        hideFrameGroupsExcept(groupIndex)
+        const group = FRAME?.backGroup?.shapeGroups?.[groupIndex]
+        applyOffsetFilter(group?.filter?.offsetElts || [], mag => Math.abs(mag) > 1)
+      },
+    },
+  ]
+
+  const report = await batchFilterVariantContactSheet({
+    hash,
+    variants,
+    cols,
+    cellSize,
+    padding,
+    label,
+    showLabels,
+    labelHeight,
+  })
+
+  window.WTHComboOffsetSign = report
+  return report
+}
+
+//FUNC: runBottomBarDiagnostics(hash) : Object : focused second-pass diagnostics for persistent bottom-bar artifacts
+async function runBottomBarDiagnostics(hash = tokenData?.hash) {
+  if (!hash) {
+    DeBug.error(`WTH: No hash provided for bottom-bar diagnostics`)
+    return
+  }
+
+  const frameFilterSheet = await batchFrameFilterIsolationSheet({ hash })
+  const frameMaskSheet = await batchFrameMaskIsolationSheet({ hash })
+  const report = { hash, frameFilterSheet, frameMaskSheet }
+  window.WTHBottomBar = report
+  DeBug.log(`WTHBottomBar: stored bottom-bar report on window.WTHBottomBar`)
+  return report
+}
 
 //FUNC: batchContactSheet({hashes, cols, cellSize, padding, label}) : null
 // Renders every hash at small resolution, composites into a single grid image,
@@ -970,9 +1981,14 @@ async function batchContactSheet({
 
 //FUNC: captureCurrentSVG(targetSize) : HTMLImageElement|null
 // Serializes the current SVG DOM, renders to a canvas, returns as an Image.
-async function captureCurrentSVG(targetSize) {
-  // Find the main SVG element
-  const svgElt = document.querySelector(`svg`)
+async function captureCurrentSVG(targetSize, sourceSvgElt = null) {
+  // Prefer the live bleed SVG from the current FRAME build.
+  const svgElt = sourceSvgElt
+    || FRAME?.bleed?.elt
+    || FRAME?.svgElt?.elt
+    || document.querySelector(`#bleed`)
+    || document.querySelector(`svg:last-of-type`)
+    || document.querySelector(`svg`)
   if (!svgElt) {
     console.warn(`captureCurrentSVG: no <svg> element found`)
     return null
@@ -1110,3 +2126,143 @@ async function batchSnapshotExport({
 
   console.log(`\n=== BATCH SNAPSHOT COMPLETE ===\n`)
 }
+
+//FUNC: dumpBackgridClipChain() : void
+// Dumps the full SVG clipping chain for every backgrid ShapeGroup,
+// including ancestor SVG viewports, filter regions, and bounding boxes.
+// Use to diagnose vertical/horizontal line artifacts from filter clipping.
+function dumpBackgridClipChain() {
+  const frame = FRAME
+  if (!frame) { console.error(`dumpBackgridClipChain: no FRAME`); return }
+
+  const bgrid = frame.backGrid
+  if (!bgrid) { console.error(`dumpBackgridClipChain: no backGrid`); return }
+
+  const groups = frame.backGroup?.shapeGroups || []
+  if (!groups.length) { console.warn(`dumpBackgridClipChain: no backGroup shapeGroups`); return }
+
+  // Helper: extract SVG viewport attrs from an element
+  const svgAttrs = (elt) => {
+    if (!elt) return null
+    const node = elt.elt || elt
+    const tag = node.tagName
+    if (tag !== `svg`) return { tag, id: node.id || `(none)` }
+    return {
+      tag,
+      id: node.id || `(none)`,
+      viewBox: node.getAttribute(`viewBox`),
+      x: node.getAttribute(`x`),
+      y: node.getAttribute(`y`),
+      width: node.getAttribute(`width`),
+      height: node.getAttribute(`height`),
+      overflow: node.getAttribute(`overflow`) || `hidden (default)`,
+    }
+  }
+
+  // Helper: extract filter region attrs
+  const filterAttrs = (filter) => {
+    if (!filter?.filter) return null
+    const f = filter.filter.elt || filter.filter
+    return {
+      id: f.id || f.getAttribute?.(`id`),
+      filterUnits: f.getAttribute?.(`filterUnits`) || `objectBoundingBox (default)`,
+      x: f.getAttribute?.(`x`),
+      y: f.getAttribute?.(`y`),
+      width: f.getAttribute?.(`width`),
+      height: f.getAttribute?.(`height`),
+    }
+  }
+
+  // Walk ancestor SVGs
+  const ancestorSVGs = (node) => {
+    const chain = []
+    let current = node.elt || node
+    while (current) {
+      if (current.tagName === `svg`) chain.push(svgAttrs(current))
+      current = current.parentElement
+    }
+    return chain
+  }
+
+  // Compute getBBox in frame coordinates
+  const frameBBox = (node) => {
+    const el = node.elt || node
+    if (!el.getBBox) return null
+    try {
+      const bbox = el.getBBox()
+      return { x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height }
+    } catch { return null }
+  }
+
+  console.group(`%c[BackgridClipChain] ${groups.length} ShapeGroups`, `color: orange; font-weight: bold`)
+
+  // Frame-level chain
+  console.group(`Frame SVG chain`)
+  console.table(ancestorSVGs(frame.svgElt))
+  console.groupEnd()
+
+  // Grid-level
+  console.group(`Grid SVG`)
+  const gridNode = bgrid.frontGrid?.svgElt || bgrid.svgElt
+  if (gridNode) console.log(svgAttrs(gridNode))
+  console.groupEnd()
+
+  // Per-ShapeGroup
+  const table = []
+  groups.forEach((sg, i) => {
+    const sgElt = sg.svgElt
+    const grpElt = sg.svgGroupElt
+    const cut = sg.cut
+
+    // ShapeGroup SVG viewport
+    const sgSvg = svgAttrs(sgElt)
+
+    // svgGroupElt viewBox/layout (set on the <g>)
+    const grpNode = grpElt?.elt || grpElt
+    const grpLayout = grpNode ? {
+      viewBox: grpNode.getAttribute?.(`viewBox`),
+      x: grpNode.getAttribute?.(`x`),
+      y: grpNode.getAttribute?.(`y`),
+      width: grpNode.getAttribute?.(`width`),
+      height: grpNode.getAttribute?.(`height`),
+    } : null
+
+    // Filter regions
+    const filters = cut?.filters?.map(filterAttrs) || []
+
+    // BBox
+    const pathBBox = frameBBox(grpElt)
+
+    // Computed padding
+    const padding = sg.padding
+
+    const row = {
+      index: i,
+      type: sg.type,
+      breed: cut?.breed || `backing`,
+      isFrame: sg.isFrame,
+      sgViewBox: sgSvg?.viewBox,
+      sgOverflow: sgSvg?.overflow,
+      grpViewBox: grpLayout?.viewBox,
+      pathBBox: pathBBox ? `${pathBBox.x.toFixed(1)},${pathBBox.y.toFixed(1)} ${pathBBox.width.toFixed(1)}x${pathBBox.height.toFixed(1)}` : null,
+      pad: padding ? `${padding.x.toFixed(2)},${padding.y.toFixed(2)}` : null,
+    }
+    table.push(row)
+
+    console.group(`[${i}] ${sg.type} — ${cut?.breed || `backing`}`)
+    console.log(`ShapeGroup SVG:`, sgSvg)
+    console.log(`Group layout:`, grpLayout)
+    console.log(`Path getBBox:`, pathBBox)
+    console.log(`Padding:`, padding)
+    console.log(`Ancestor SVG chain:`, ancestorSVGs(sgElt))
+    if (filters.length) console.log(`Filters:`, filters)
+    console.groupEnd()
+  })
+
+  console.table(table)
+  console.groupEnd()
+
+  return { groups: table }
+}
+
+window.dumpBackgridClipChain = dumpBackgridClipChain
