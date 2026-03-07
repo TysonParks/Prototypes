@@ -30,6 +30,7 @@
 - [9.14 SVG Filter Layout & Mask Cropping Issues](#914-svg-filter-layout--mask-cropping-issues)
   - [9.14.4b Cross-SVG Filter ID Resolution (Safari Risk)](#9144-issue-4-safari-vs-chrome-rendering-percentage-layout)
   - [9.14.6 User-Unit Filter Layout (Implemented)](#9146-user-unit-filter-layout-implemented)
+  - [9.14.7 SVG Filter Banding / Quantization (Resolved)](#9147-svg-filter-banding--quantization)
 - [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
   - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
   - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
@@ -1563,8 +1564,7 @@ Bundling those together again will make diagnosis ambiguous.
 
 ### 9.14.7 SVG Filter Banding / Quantization
 
-**Status:** 🟡 Reframed — one layout regression fixed, one remaining
-vertical/cropping artifact still open
+**Status:** ✅ Resolved — mask blur filter region clipping (Mar 7 2026)
 
 **Primary hash:** `0x3e8a98faacc735c66bc2f535e0d943ee2c65fdddb47a48f54857444fc4251d34`
 
@@ -1676,48 +1676,70 @@ Recommended order:
 4. Record each successful A/B in terms of which layer changed:
    filter region, viewport, overflow, mask, or shade stack.
 
-#### 9.14.7.6 Bottom-Bar Fix — Frame ShapeGroup Viewport Restore (Mar 6 2026)
+#### 9.14.7.6 Mask Blur Filter Region Fix (Mar 7 2026)
 
-**Status:** 🟡 Fix applied — `boundsRect` getter + `assignElement()` in ProtoLayerObjects
+**Status:** ✅ Fixed — single change in ProtoFilter.js `.blur()`
 
-**Root cause — full chain:** The § 9.14.1 compositing changes removed
-two clip layers that previously prevented the combo filter's offset
-shadow from reaching the frame backing edge:
+**Symptom:** Subtle vertical lines visible within large R-out frame
+cuts. Appeared as partial cropping of the blur filter that gives the
+frame body its volume/bevel. Only affected hashes where the `rOut`
+frame cut had very large depth (e.g., `rOut-18.74xCellRadius`).
 
-1. `boundsRect` → `FRAME.boundsRect` (expanded ShapeGroup viewport
-   from tight cellBounds to full frame)
-2. `overflow: visible` on cut ShapeGroup SVGs (removed viewport clip)
+**Affected hashes:**
+- `0x7c8713cb6c04c15a7f218736f964eccb227d74a7ea803253edf67055c7699e90`
+- `0x3e8a98faacc735c66bc2f535e0d943ee2c65fdddb47a48f54857444fc4251d34`
 
-Together, these let the rOut combo filter's `feOffset` shadow component
-paint all the way to the backing silhouette edge. The `maskFrame()`
-hard clip at that edge created a visible tonal discontinuity — the
-"bottom bar."
+**Root cause:** The `p5.Element.prototype.blur()` function
+(ProtoFilter.js L385) created its SVG `<filter>` with a fixed region:
+```
+x="-50%"  y="-50%"  width="200%"  height="200%"
+```
+With default `filterUnits="objectBoundingBox"`, these percentages are
+relative to the **path content bounding box**. For the R-combo
+`createMaskGroup()` mask paths:
+- Path BBox = `0,0 → 100×200`
+- Filter x-margin = 50% of 100 = **50 user units** each side
+- Blur `stdDeviation = cut.depth / 4 ≈ 72 user units` (for deep cuts)
+- Gaussian kernel extends ~3σ ≈ **216 user units**
+- 50 << 216 → blur hard-clipped at x≈-50 and x≈150
 
-Pre-regression, the tight `cellBounds` viewport + default
-`overflow:hidden` clipped the combo output at the grid cells' bounding
-box, which was inset from the backing edge by the grid margin. The
-combo shadow dissipated within this margin zone, so the `maskFrame()`
-hard clip at the backing edge was at zero intensity — invisible.
+The y-direction margin (100 units = 50% of 200) was also insufficient
+but less visually obvious due to the frame edge masking geometry.
 
-**Why the mask-group approach failed (attempts 1 & 2):** The R-combo
-`createMaskGroup()` mask constrains the **cut interiors** (black
-blurred shapes on a white rect). The artifact lives in the **outer
-frame body** where the mask is fully permissive (white). Changing the
-mask allow-region or blurring its edge had zero effect on the artifact.
+**Fix:** Scale the blur filter region dynamically based on the actual
+blur radius:
+```js
+const margin = max(50, Math.ceil(radius * 3 / 1) * 100)
+```
+This ensures the filter region extends ≥3σ in all directions, which
+covers >99.7% of the Gaussian distribution. The minimum of 50%
+preserves the original behavior for small blurs.
 
-**Fix — v3 (targeted viewport restore):** Two changes in
-ProtoLayerObjects, scoped to `this.isFrame` ShapeGroups only:
+**Code location:** ProtoFilter.js `p5.Element.prototype.blur()` L385-407
 
-1. `boundsRect` getter (L1732-1739): Frame ShapeGroups return
-   `this.cellBounds.boundsRect` (tight grid-cell bbox). Non-frame cut
-   ShapeGroups still return `FRAME.boundsRect` (preserving § 9.14.1).
-2. `assignElement()` (L1791): `overflow:visible` only applied when
-   `this.cut && !this.isFrame`. Frame ShapeGroups keep the default
-   `overflow:hidden`, clipping filter output at their cellBounds
-   viewport.
+**What was NOT the cause (ruled out during investigation):**
+1. **Shade filter region** (`setLayouts()` %-based vs `userSpaceOnUse`):
+   Switching frame cuts to `userSpaceOnUse` did not fix vertical lines
+   and reintroduced horizontal bar artifacts.
+2. **SVG viewport clipping** (Grid/Frame SVG `overflow:visible`):
+   Grid and Frame SVGs clip at (0,0,100,200), but the ShapeGroup
+   viewports are already enormous (~676×776 for combo groups) — the
+   clip wasn't the bottleneck.
+3. **ShapeGroup `padding` getter** (`backGroupPadding` vs
+   `defaultPadding`): Changing padding had no visual effect because
+   the issue was in the mask blur filter, not the viewport sizing.
+4. **`createMaskGroup()` mask itself**: Disabling `createMaskGroup()`
+   entirely eliminated the lines, confirming the mask pipeline was
+   the source — but the fix is in the blur utility, not the mask
+   construction logic.
 
-**Non-frame ShapeGroups:** Completely unchanged — they retain the
-§ 9.14.1 FRAME viewport + overflow:visible behavior.
+**Diagnostic tool added:** `dumpBackgridClipChain()` in
+`testing/WrapperTestHarness.js` — dumps SVG viewport chain, filter
+regions, padding, and bounding boxes for all backgrid ShapeGroups.
+
+**Previous content of this section (now superseded):** Described a
+failed boundsRect/overflow fix for the earlier bottom-bar regression,
+which was fully reverted to Mar 5 baseline before this fix was applied.
 
 ---
 
@@ -2036,4 +2058,4 @@ without code changes.
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-05 — § 9.15 performance optimization strategy added*
+*Last updated: 2026-03-07 — § 9.14.7.6 mask blur filter region fix*
