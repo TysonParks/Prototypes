@@ -1676,6 +1676,49 @@ Recommended order:
 4. Record each successful A/B in terms of which layer changed:
    filter region, viewport, overflow, mask, or shade stack.
 
+#### 9.14.7.6 Bottom-Bar Fix — Frame ShapeGroup Viewport Restore (Mar 6 2026)
+
+**Status:** 🟡 Fix applied — `boundsRect` getter + `assignElement()` in ProtoLayerObjects
+
+**Root cause — full chain:** The § 9.14.1 compositing changes removed
+two clip layers that previously prevented the combo filter's offset
+shadow from reaching the frame backing edge:
+
+1. `boundsRect` → `FRAME.boundsRect` (expanded ShapeGroup viewport
+   from tight cellBounds to full frame)
+2. `overflow: visible` on cut ShapeGroup SVGs (removed viewport clip)
+
+Together, these let the rOut combo filter's `feOffset` shadow component
+paint all the way to the backing silhouette edge. The `maskFrame()`
+hard clip at that edge created a visible tonal discontinuity — the
+"bottom bar."
+
+Pre-regression, the tight `cellBounds` viewport + default
+`overflow:hidden` clipped the combo output at the grid cells' bounding
+box, which was inset from the backing edge by the grid margin. The
+combo shadow dissipated within this margin zone, so the `maskFrame()`
+hard clip at the backing edge was at zero intensity — invisible.
+
+**Why the mask-group approach failed (attempts 1 & 2):** The R-combo
+`createMaskGroup()` mask constrains the **cut interiors** (black
+blurred shapes on a white rect). The artifact lives in the **outer
+frame body** where the mask is fully permissive (white). Changing the
+mask allow-region or blurring its edge had zero effect on the artifact.
+
+**Fix — v3 (targeted viewport restore):** Two changes in
+ProtoLayerObjects, scoped to `this.isFrame` ShapeGroups only:
+
+1. `boundsRect` getter (L1732-1739): Frame ShapeGroups return
+   `this.cellBounds.boundsRect` (tight grid-cell bbox). Non-frame cut
+   ShapeGroups still return `FRAME.boundsRect` (preserving § 9.14.1).
+2. `assignElement()` (L1791): `overflow:visible` only applied when
+   `this.cut && !this.isFrame`. Frame ShapeGroups keep the default
+   `overflow:hidden`, clipping filter output at their cellBounds
+   viewport.
+
+**Non-frame ShapeGroups:** Completely unchanged — they retain the
+§ 9.14.1 FRAME viewport + overflow:visible behavior.
+
 ---
 
 ## 9.15 Performance Optimization Strategy
