@@ -711,6 +711,27 @@ class ProtoMill {
         }
       })
     DeBug.log(`cuts`, cuts)
+
+    // § 9.14.8 — if outermost cut is rIn and doesn't reach the frame edge,
+    // force it to extend all the way to the edge
+    const lastCut = cuts.findLast(c => c !== undefined)
+    if (lastCut?.profile === `rIn` && lastCut.end < 1) {
+      DeBug.warn(`§ 9.14.8: extending rIn end from ${lastCut.end} to 1`)
+      lastCut.end = 1
+    }
+
+    // // § 9.14.8 — alt: append a thin rOut cap to fill the gap with visible shading
+    // const lastCut = cuts.findLast(c => c !== undefined)
+    // if (lastCut?.profile === `rIn` && lastCut.end < 1) {
+    //   DeBug.warn(`§ 9.14.8: adding rOut cap from ${lastCut.end} to 1`)
+    //   cuts.push({
+    //     profile: `rOut`,
+    //     start: lastCut.end,
+    //     end: 1,
+    //     amount: 1,
+    //   })
+    // }
+
     return cuts
   }
 }
