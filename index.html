@@ -9,9 +9,7 @@
 
   <link rel="stylesheet" type="text/css" href="style.css">
 
-  <script src="libraries/dat.gui.min.js"></script>
   <script src="libraries/p5.min.js"></script>
-  <!-- <script src="libraries/p5.sound.min.js"></script> -->
 </head>
 
 <body>
@@ -38,18 +36,11 @@
   <script src="oklch2rgb.js"></script>
   <script src="neuMark_I.js"></script>
   <script src="squircle.js"></script>
-  <!-- DEV-ONLY: Testing/debug tools — exclude from production builds (see docs/TESTING.md § 1) -->
-  <script src="testing/WrapperTestHarness.js"></script>
-  <script src="testing/FilterDebugHarness.js"></script>
-  <script src="testing/WrapperDebugOverlay.js"></script>
-  <!-- /DEV-ONLY -->
   <script src="ProtoBatch.js"></script>
 
   <script src="sketch.js"></script>
 
-  <!-- DEV-ONLY: Ad-hoc tests — exclude from production builds -->
-  <script src="testing/testMess.js"></script>
-  <!-- /DEV-ONLY -->
+  <button id="regenBtn" onclick="protoBatch.buildFromNewSeed()" aria-label="Generate new artwork"></button>
 </body>
 
 </html>
