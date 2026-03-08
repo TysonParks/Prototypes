@@ -31,6 +31,7 @@
   - [9.14.4b Cross-SVG Filter ID Resolution (Safari Risk)](#9144-issue-4-safari-vs-chrome-rendering-percentage-layout)
   - [9.14.6 User-Unit Filter Layout (Implemented)](#9146-user-unit-filter-layout-implemented)
   - [9.14.7 SVG Filter Banding / Quantization (Resolved)](#9147-svg-filter-banding--quantization)
+  - [9.14.8 R-out→R-in Backgrid Shading White-Out](#9148-r-outr-in-backgrid-shading-white-out)
 - [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
   - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
   - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
@@ -1743,6 +1744,69 @@ which was fully reverted to Mar 5 baseline before this fix was applied.
 
 ---
 
+### 9.14.8 R-out→R-in Backgrid Shading White-Out
+
+**Status:** 🔍 Investigating  
+**Date:** 2026-03-07  
+**Symptom:** When the outermost frame cut is R-out and the next inner cut is R-in, the bottom portion of the frame body loses all shadow/highlight shading, appearing as flat white instead of volumetric R-in molding.
+
+**Broken hash:**  
+`0xd3413c3544b657848b860cca4facf0e29c4ea4dd59bb4f4c6ae2929f98969b3b`
+
+**Golden hash (same R-out→R-in pattern, renders correctly):**  
+`0xc71c7fad1f7da09d2b563a22a98f6277d8a4c855faf3495e7b35d87173ede188`
+
+#### 9.14.8.1 Hypotheses
+
+**Hypothesis 1 — R-out combo mask overlaps R-in combo (Most Likely)**  
+Both combo ShapeGroups share the same `comboElt` parent `<g>`. The R-out
+combo has a mask (white rect + black blurred shapes) that makes it visible
+*everywhere except inside the blurred shape outlines*. If the R-out combo's
+opaque `frameColor` output extends over the R-in region at the bottom,
+it paints flat white over the R-in shading underneath. The ordering in
+`comboElt` is inner→outer (R-in first, R-out on top) because
+`cutIslands()` processes frame cuts in inner→outer order.
+
+**Hypothesis 2 — `maskFrame()` backing shape doesn't cover bottom**  
+`maskFrame()` clones `shapeGroups[0]` (the flat backing) to create a
+Frame-level `<mask>`. If the backing path doesn't fully extend to the
+frame bottom edge, all shading below that boundary is clipped to
+transparent.
+
+**Hypothesis 3 — `isBackGroup` is never set to `true` (latent)**  
+`CellGroup.isBackGroup` is initialized to `false` (L1080) and
+`setType('BackGroup')` is called (L340) but that only changes `_type`,
+not the boolean flag. The `isBackGroup`-conditional code in
+`ShapeGroup.padding` (L1733-1738) is therefore dead code. May affect
+padding/viewport but is not the primary cause.
+
+#### 9.14.8.2 Test Plan
+
+Diagnostic function `dumpBackgridShadeLayers()` added to
+`testing/WrapperTestHarness.js`. Callable from console on the broken
+hash. Reports:
+
+1. **Combo layer child order** — lists all ShapeGroup SVGs inside
+   `comboElt` with their cut breed, mask presence, and z-index
+2. **Mask coverage** — for each masked combo ShapeGroup, reports mask
+   rect bounds and mask path bounding boxes
+3. **Frame mask coverage** — reports `maskFrame()` backing clone bounds
+   vs the Frame SVG bounds
+4. **Toggle tests** — `window.toggleComboChild(index)` to set
+   `display:none` on individual combo children to isolate the overlap
+
+#### 9.14.8.3 Ruled Out
+
+- `createMaskGroup()` suppression by profile type — both commented-out
+  guards (`hasOutsetShade`, `isBackGrid`) are inactive; R-in backgrid
+  ShapeGroups DO get masks normally
+- `maskShape` getter bail-out — the `isFrontGrid` guard ensures backGrid
+  shapes always pass through
+- Missing filter creation — `#createFilters()` always creates 3 filters
+  (combo, high, shad) for both R-in and R-out
+
+---
+
 ## 9.15 Performance Optimization Strategy
 
 **Status:** 📋 Planned — correctness-first phase complete, optimization
@@ -2058,4 +2122,4 @@ without code changes.
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-07 — § 9.14.7.6 mask blur filter region fix*
+*Last updated: 2026-03-07 — § 9.14.8 R-out→R-in backgrid shading investigation*
