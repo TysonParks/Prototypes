@@ -34,8 +34,6 @@ function setup() {
   sizeFrame()
   noCanvas(frameSize.x, frameSize.y)
 
-  functionTestPrint()
-
   // Initialise ProtoBatch and build from the startup hash
   protoBatch = new ProtoBatch()
   protoBatch.buildFromHash(tokenData.hash)
