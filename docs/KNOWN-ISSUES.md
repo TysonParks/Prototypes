@@ -31,7 +31,8 @@
   - [9.14.4b Cross-SVG Filter ID Resolution (Safari Risk)](#9144-issue-4-safari-vs-chrome-rendering-percentage-layout)
   - [9.14.6 User-Unit Filter Layout (Implemented)](#9146-user-unit-filter-layout-implemented)
   - [9.14.7 SVG Filter Banding / Quantization (Resolved)](#9147-svg-filter-banding--quantization)
-  - [9.14.8 R-out→R-in Backgrid Shading White-Out](#9148-r-outr-in-backgrid-shading-white-out)
+  - [9.14.8 R-in Backgrid Edge White-Out (Resolved)](#9148-r-in-backgrid-edge-white-out-resolved)
+  - [9.14.9 R-in Shade Layer Not Centered (Open)](#9149-r-in-shade-layer-not-centered-open)
 - [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
   - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
   - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
@@ -1744,11 +1745,27 @@ which was fully reverted to Mar 5 baseline before this fix was applied.
 
 ---
 
-### 9.14.8 R-out→R-in Backgrid Shading White-Out
+### 9.14.8 R-in Backgrid Edge White-Out (Resolved)
 
-**Status:** 🔍 Investigating  
-**Date:** 2026-03-07  
-**Symptom:** When the outermost frame cut is R-out and the next inner cut is R-in, the bottom portion of the frame body loses all shadow/highlight shading, appearing as flat white instead of volumetric R-in molding.
+**Status:** ✅ Resolved  
+**Date:** 2026-03-07 → 2026-03-08  
+**Symptom:** When the outermost frame cut is R-in, the gap between the
+cut's end and the frame border appears as flat white (background color)
+instead of shaded molding. Originally misdiagnosed as an R-out→R-in mask
+overlap — the actual cause was R-in not reaching the frame edge.
+
+**Root cause:** `insetEnd()` in `mkFrame()` (sketch.js) shrinks the
+outermost R-in cut's `.end` inward when `widthVal >= 2`, leaving an
+unshaded gap between the cut boundary and the frame edge at 1.0.
+
+**Fix applied:** Force outermost R-in to extend to the frame edge:
+```js
+// sketch.js — after cuts array is built
+const lastCut = cuts.findLast(c => c !== undefined)
+if (lastCut?.profile === 'rIn' && lastCut.end < 1) lastCut.end = 1
+```
+An alternative R-out cap approach (appending a thin R-out cut to fill
+the gap) is preserved as commented-out code below the fix.
 
 **Broken hash:**  
 `0xd3413c3544b657848b860cca4facf0e29c4ea4dd59bb4f4c6ae2929f98969b3b`
@@ -1804,6 +1821,62 @@ hash. Reports:
   shapes always pass through
 - Missing filter creation — `#createFilters()` always creates 3 filters
   (combo, high, shad) for both R-in and R-out
+- Hypotheses 1–3 (combo mask overlap, maskFrame coverage, isBackGroup
+  flag) were all ruled out by diagnostics — the broken hash had only
+  1 backGrid cut (R-in), no R-out at all
+
+#### 9.14.8.4 Debug Display Fix
+
+During investigation, `.showShapeGroupsDebug()` was found to have two
+bugs in the terminal segment path rendering (ProtoLayerObjects.js):
+
+1. `cutDepthScale` only returned values for R profiles (`profile?.isR`),
+   returning `undefined` for J profiles → J-in/J-out showed no offset
+   lines. Fixed by extending guard to `profile?.isR || profile?.isJ`.
+2. `terminalSegPaths` drew both lines offset (one outset, one inset)
+   instead of one at the exact shape. Fixed so that one line always
+   traces the exact shape (`simpleInsetSegPaths`) and the other shows
+   the shade depth direction:
+   - R-in / J-out (`hasOutsetShade`): red = exact shape, blue = outset
+   - R-out / J-in (`hasInsetShade`): red = exact shape, blue = inset
+
+#### 9.14.8.5 Diagnostic Tools Added
+
+- `dumpBackgridShadeLayers()` — console table of backGrid cut layers,
+  combo children, mask bounds (WrapperTestHarness.js)
+- `toggleComboChild(index)` — toggle `display:none` on combo children
+- `toggleShadeLayer(index)` — toggle individual shade layers
+
+---
+
+### 9.14.9 R-in Shade Layer Not Centered (Open)
+
+**Status:** 🔍 Open — investigation paused  
+**Date:** 2026-03-08  
+**Symptom:** R-out shade layers are visually centered within their cut
+depth, but R-in shade layers sit ~1/4 to 1/3 from the inside edge
+instead of centered. This is noticeable on wider frame cuts.
+
+**Root cause (identified, not yet fixed):** Two control points position
+the shade asymmetrically for R-in vs R-out:
+
+1. **`cutIslands` insetScale selection** (ProtoLayerObjects.js):
+   ```js
+   if (profile) insetScale = profile.hasInsetShade ? cutStart : cutEnd
+   ```
+   R-out (`hasInsetShade`) uses `cutStart` (outer edge); R-in uses
+   `cutEnd` (inner edge). This pushes R-in shade toward the inside.
+
+2. **`layerStart` in `cutGroups()`** (sketch.js):
+   ```js
+   layerStart: primeCut.hasInsetShade ? this.minInsetScale : 1
+   ```
+   R-out starts at `minInsetScale` (~0.65–0.75); R-in starts at `1`
+   (full radius).
+
+**Potential fix:** Use a midpoint `(cutStart + cutEnd) / 2` or bias
+toward `cutStart` for the R-in case in the `cutIslands` insetScale
+ternary.
 
 ---
 
@@ -2122,4 +2195,4 @@ without code changes.
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-07 — § 9.14.8 R-out→R-in backgrid shading investigation*
+*Last updated: 2026-03-08 — § 9.14.8 resolved (R-in edge white-out), § 9.14.9 opened (R-in shade centering)*
