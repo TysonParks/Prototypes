@@ -2266,3 +2266,188 @@ function dumpBackgridClipChain() {
 }
 
 window.dumpBackgridClipChain = dumpBackgridClipChain
+
+// § 9.14.8 — R-out→R-in Backgrid Shading White-Out Diagnostics
+//FUNC: dumpBackgridShadeLayers() : Object : dump shade layer structure for backgrid combo overlap investigation
+function dumpBackgridShadeLayers() {
+  const grid = BGRID || FRAME?.backGrid
+  if (!grid) { console.error(`No backGrid found`); return }
+
+  const backGroup = FRAME.backGroup
+  if (!backGroup) { console.error(`No backGroup found`); return }
+
+  const sgs = backGroup.shapeGroups
+  const comboElt = grid.comboElt
+  const highElt = grid.highElt
+  const shadElt = grid.shadElt
+
+  console.group(`§ 9.14.8 — Backgrid Shade Layer Dump`)
+
+  // ── 1. Frame cuts summary ──
+  console.group(`Frame Cuts`)
+  backGroup.cuts.forEach((cut, i) => {
+    console.log(`Cut ${i}:`, cut.profile, `start=${cut.layerStart?.toFixed?.(3) ?? cut.layerStart}`, `end=${cut.layerEnd?.toFixed?.(3) ?? cut.layerEnd}`)
+  })
+  console.groupEnd()
+
+  // ── 2. All ShapeGroups with their shade layer and cut info ──
+  const sgTable = []
+  sgs.forEach((sg, i) => {
+    const cut = sg.cut
+    const hasMask = !!sg.svgElt?.elt?.getAttribute?.(`mask`)
+    const maskRef = sg.svgElt?.elt?.getAttribute?.(`mask`) || `none`
+    const filterAttr = sg.svgGroupElt?.elt?.querySelector?.(`[filter]`)?.getAttribute?.(`filter`) || `none`
+    const pathCount = sg.paths?.length || 0
+    const maskCount = sg.masks?.length || 0
+
+    sgTable.push({
+      index: i,
+      type: sg.type,
+      breed: cut?.breed || `backing`,
+      profile: cut?.profile?.description || `-`,
+      hasMask,
+      maskRef,
+      pathCount,
+      maskCount,
+      isFrame: sg.isFrame,
+    })
+  })
+  console.table(sgTable)
+
+  // ── 3. comboElt children in DOM order (z-order) ──
+  console.group(`comboElt DOM Children (z-order, bottom→top)`)
+  const comboChildren = comboElt ? Array.from(comboElt.elt.children) : []
+  const comboTable = []
+  comboChildren.forEach((child, i) => {
+    const id = child.id || child.getAttribute?.(`class`) || `(anon)`
+    const maskAttr = child.getAttribute?.(`mask`) || `none`
+    const display = child.style?.display || getComputedStyle(child).display
+    const bbox = child.getBBox?.() || null
+    const filterEl = child.querySelector?.(`[filter]`)
+    const filterAttr = filterEl?.getAttribute?.(`filter`) || `none`
+
+    // find matching ShapeGroup — search both backGroup and front grid
+    const matchSG = sgs.find(sg => sg.svgElt?.elt === child)
+      || GRID?.shapeGroups?.find?.(sg => sg.svgElt?.elt === child)
+      || S?.ShapeGroups?.db?.map?.(e => e[1])?.find?.(sg => sg.svgElt?.elt === child)
+    const cut = matchSG?.cut
+    const grid = matchSG?.grid === BGRID ? `back` : `front`
+
+    comboTable.push({
+      zIndex: i,
+      id: id.slice(0, 50),
+      grid,
+      breed: cut?.breed || `?`,
+      profile: cut?.profile?.description || `?`,
+      mask: maskAttr !== `none` ? `YES` : `-`,
+      filter: filterAttr !== `none` ? `YES` : `-`,
+      display,
+      bbox: bbox ? `${bbox.x.toFixed(1)},${bbox.y.toFixed(1)} ${bbox.width.toFixed(1)}×${bbox.height.toFixed(1)}` : `n/a`,
+    })
+
+    // dump mask details if present
+    if (maskAttr !== `none`) {
+      const maskId = maskAttr.match(/url\(#(.+?)\)/)?.[1]
+      if (maskId) {
+        const maskEl = document.getElementById(maskId)
+        if (maskEl) {
+          const maskChildren = Array.from(maskEl.querySelectorAll(`*`))
+          console.group(`  Mask "${maskId}" internals (${maskChildren.length} elements)`)
+          maskChildren.forEach(mc => {
+            const tag = mc.tagName
+            const fill = mc.getAttribute?.(`fill`) || ``
+            const mcBBox = mc.getBBox?.() || null
+            console.log(`  ${tag}`, fill ? `fill=${fill}` : ``, mcBBox ? `bbox=${mcBBox.x.toFixed(1)},${mcBBox.y.toFixed(1)} ${mcBBox.width.toFixed(1)}×${mcBBox.height.toFixed(1)}` : ``)
+          })
+          console.groupEnd()
+        }
+      }
+    }
+  })
+  console.table(comboTable)
+  console.groupEnd()
+
+  // ── 4. highElt / shadElt children ──
+  const dumpLayerChildren = (name, elt) => {
+    if (!elt) return
+    const children = Array.from(elt.elt.children)
+    console.group(`${name} DOM Children (${children.length})`)
+    children.forEach((child, i) => {
+      const id = child.id || `(anon)`
+      const bbox = child.getBBox?.() || null
+      console.log(`[${i}] ${id}`, bbox ? `bbox=${bbox.x.toFixed(1)},${bbox.y.toFixed(1)} ${bbox.width.toFixed(1)}×${bbox.height.toFixed(1)}` : ``)
+    })
+    console.groupEnd()
+  }
+  dumpLayerChildren(`highElt`, highElt)
+  dumpLayerChildren(`shadElt`, shadElt)
+
+  // ── 5. Frame mask (maskFrame) coverage ──
+  console.group(`Frame Mask`)
+  const frameMaskAttr = FRAME.svgElt?.elt?.getAttribute?.(`mask`)
+  if (frameMaskAttr) {
+    const frameMaskId = frameMaskAttr.match(/url\(#(.+?)\)/)?.[1]
+    const frameMaskEl = frameMaskId ? document.getElementById(frameMaskId) : null
+    if (frameMaskEl) {
+      const paths = frameMaskEl.querySelectorAll(`path`)
+      console.log(`Frame mask id: ${frameMaskId}, paths: ${paths.length}`)
+      paths.forEach((p, i) => {
+        const bbox = p.getBBox?.()
+        const fill = p.getAttribute(`fill`)
+        console.log(`  path[${i}] fill=${fill} bbox=${bbox?.x.toFixed(1)},${bbox?.y.toFixed(1)} ${bbox?.width.toFixed(1)}×${bbox?.height.toFixed(1)}`)
+      })
+      // compare with Frame bounds
+      const frameBounds = FRAME.boundsRect
+      console.log(`Frame bounds: ${frameBounds.x},${frameBounds.y} ${frameBounds.width}×${frameBounds.height}`)
+    } else {
+      console.log(`Frame mask element not found: ${frameMaskId}`)
+    }
+  } else {
+    console.log(`No frame mask applied`)
+  }
+  console.groupEnd()
+
+  console.groupEnd()
+
+  // ── 6. Store toggles for interactive testing ──
+  window._comboChildren = comboChildren
+  window._shadeSGs = sgs
+
+  return {
+    shapeGroups: sgTable,
+    comboChildren: comboTable,
+    comboChildCount: comboChildren.length,
+  }
+}
+
+//FUNC: toggleComboChild(index) : toggle display:none on a specific combo layer child for isolation testing
+function toggleComboChild(index) {
+  const children = window._comboChildren
+  if (!children || index >= children.length) {
+    console.error(`No combo children stored. Run dumpBackgridShadeLayers() first.`)
+    return
+  }
+  const child = children[index]
+  const current = child.style.display
+  child.style.display = current === `none` ? `` : `none`
+  console.log(`comboElt child [${index}] display: ${current || `visible`} → ${child.style.display || `visible`}`)
+}
+
+//FUNC: toggleShadeLayer(layer) : toggle display:none on an entire shade layer (combo/high/shad)
+function toggleShadeLayer(layer) {
+  const grid = BGRID || FRAME?.backGrid
+  if (!grid) { console.error(`No backGrid found`); return }
+  const elt = layer === `combo` ? grid.comboElt
+    : layer === `high` ? grid.highElt
+      : layer === `shad` ? grid.shadElt
+        : layer === `back` ? grid.backElt
+          : null
+  if (!elt) { console.error(`Unknown layer: ${layer}. Use combo/high/shad/back`); return }
+  const current = elt.elt.style.display
+  elt.elt.style.display = current === `none` ? `` : `none`
+  console.log(`${layer}Elt display: ${current || `visible`} → ${elt.elt.style.display || `visible`}`)
+}
+
+window.dumpBackgridShadeLayers = dumpBackgridShadeLayers
+window.toggleComboChild = toggleComboChild
+window.toggleShadeLayer = toggleShadeLayer
