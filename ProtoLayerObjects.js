@@ -3191,7 +3191,7 @@ class Shape extends ProtoLayer {
 
   get cutDepthScale() {
     const profile = this.cut?.profile
-    if (profile?.isR) {
+    if (profile?.isR || profile?.isJ) {
       return vert(this.cut.depth / this.cellRadius / 2) // convert cut depth to cell scale
     }
   }
@@ -3199,13 +3199,16 @@ class Shape extends ProtoLayer {
   get segPathsCutStart() { return this.terminalSegPaths(true) }
   get segPathsCutEnd() { return this.terminalSegPaths(false) }
 
-  //METH: terminalSegPaths(start) : return simpleSegPaths inset by insetScale + cutDepthScale if hasOutsetShade matches start
+  //METH: terminalSegPaths(start) : one line at exact shape, the other at offset based on shade direction
   terminalSegPaths(start) {
     if (this.simpleSegPaths.isEmpty || !this.cut) return                    // must have simpleSegPaths
     const hasOutsetShade = this.cut?.profile?.hasOutsetShade                // hasOutsetShade
-    return hasOutsetShade === start ?                                       // hasOutsetShade matches start
-      this.scaledSegPaths(Vertex.add(this.insetScale, this.cutDepthScale))  // return inset by insetScale + cutDepthScale
-      : this.simpleInsetSegPaths                                            // otherwise return inset by insetScale
+    if (!this.cutDepthScale) return this.simpleInsetSegPaths               // no depth scale → return plain inset
+    if (hasOutsetShade !== start) return this.simpleInsetSegPaths           // exact shape line
+    const scale = hasOutsetShade                                           // offset line: direction matches shade type
+      ? Vertex.add(this.insetScale, this.cutDepthScale)                    // hasOutsetShade (rIn, jOut) → outset
+      : Vertex.sub(this.insetScale, this.cutDepthScale)                    // hasInsetShade (rOut, jIn) → inset
+    return this.scaledSegPaths(scale)
   }
   //METH: scaledSegPaths(insetScale) : return simpleSegPaths inset by insetScale
   scaledSegPaths(insetScale) {
