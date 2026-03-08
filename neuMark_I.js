@@ -496,7 +496,7 @@ class Shade {
 
         const
           highColSpread = 0.1,                            // spread up from base (0.9) to max highlight luma (1!)
-          //  shadColSpread = 0.25,                       // spread down from base (0.9) to min shadow luma (0.7)
+          // shadColSpread = .25,                       // spread down from base (0.9) to min shadow luma (0.7)
           reflHighMult = .6,                             // 
           reflShadMult = 1,                               //
           reflHighSpread = reflHighMult * shadColSpread,  // spread down from base (0.9) to min shadow luma (0.65)
@@ -534,7 +534,7 @@ class Shade {
                 !isSCurve ?
                   maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
                   : 1 * maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
-              if (offset <= reflLightRange * 1.) {               // add relfective highlight to shadow
+              if (offset <= reflLightRange * 1) {               // add relfective highlight to shadow
                 shadColLuma =
                   !isSCurve ?
                     reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
