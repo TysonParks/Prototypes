@@ -808,10 +808,17 @@ const WRAPPER_TEST_CASES = {
   },
   cascade_grid_crop_1: {
     hash: '0xe2f57b77fd2aa05a6d292faf2b787a05717986b5b63d4683aae4d14401d97c91',
-    description: 'Grid-layer cascade filter effects cropped at ShapeGroup viewport — boundsRect expanded to FRAME.boundsRect (§ 9.14.1)',
+    description: 'Grid-layer cascade filter effects cropped at ShapeGroup viewport — boundsRect expanded to FRAME.boundsRect (§ 9.14.1). Regressed after Mar 5 rollback.',
     wrapTypes: [],
     issues: ['cascade-crop'],
-    status: 'fixed',
+    status: 'broken',
+  },
+  cascade_grid_crop_2: {
+    hash: '0x409bcf3e22eb3b0acda546873026dd67d6020ca35d03e0a18b469af8c1ae0a72',
+    description: 'Cascade cut cropping regression — grid-layer cascade shadows clipped at ShapeGroup viewport (§ 9.14.1 re-regression)',
+    wrapTypes: [],
+    issues: ['cascade-crop'],
+    status: 'broken',
   },
 
   // MARK: Known Broken
@@ -1058,6 +1065,21 @@ async function batchFrameBottomBarRegressionSheet({
   window.WTHFrameBottomBarRegressionSheet = report
   return report
 }
+
+//FUNC: saveFrameBottomBarSheets() : null : convenience runner to save both broken and golden contact sheets
+async function saveFrameBottomBarSheets({ cols = 4, cellSize = { x: 320, y: 576 }, padding = 20 } = {}) {
+  DeBug.group(`Save Frame Bottom-Bar Sheets`)
+  DeBug.log(`Generating BROKEN set`)
+  await batchFrameBottomBarRegressionSheet({ include: 'broken', cols, cellSize, padding, label: `frame-bottom-bar-broken` })
+  await new Promise(r => setTimeout(r, 250))
+  DeBug.log(`Generating GOLDEN set`)
+  await batchFrameBottomBarRegressionSheet({ include: 'golden', cols, cellSize, padding, label: `frame-bottom-bar-golden` })
+  DeBug.log(`Saved both sheets to downloads`)
+  DeBug.groupEnd()
+  return true
+}
+
+window.saveFrameBottomBarSheets = saveFrameBottomBarSheets
 
 function summarizeFrameGroup(group, index) {
   return {
