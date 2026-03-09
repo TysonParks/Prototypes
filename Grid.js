@@ -2324,6 +2324,7 @@ class Grid extends ProtoLayer {
   //METH: assignElement() : null : create and assign SVG elements to the grid
   assignElement() {
     super.assignElement()
+    // this.svgElt.attribute('overflow', 'visible')   // § 9.14.1 — allow cut filter bleed beyond grid viewport
 
     if (this.isFrontGrid) {
       this.backElt = createElementNS(xmlns, 'g').id(`${this.id}-backLayer`)
