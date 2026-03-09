@@ -9,36 +9,40 @@
 
   <link rel="stylesheet" type="text/css" href="style.css">
 
-  <script src="libraries/p5.min.js"></script>
+  <script>
+    window._unsupported = /AppleWebKit/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    if (window._unsupported) {
+      document.documentElement.classList.add('unsupported-browser');
+    } else {
+      document.write('<script src="libraries/p5.min.js"><\/script>');
+    }
+  </script>
 </head>
 
 <body>
-  <script src="gui.js"></script>
-  <!-- ArtBlocks Extensions-->
-  <script src="RandomExtended.js"></script>
-  <script src="Features.js"></script>
-  <!-- ArtBlocks -->
-  <script src="artBlocks/ABFeaturesScript.js"></script>
-  <script src="artBlocks/tokenHash.js"></script>
-  <script src="artBlocks/Random.js"></script>
-
-  <script src="OpArray.js"></script>
-  <script src="color.js"></script>
-  <script src="drawAsSVG.js"></script>
-
-  <script src="ProtoStore.js"></script>
-  <script src="DeBugging.js"></script>
-  <script src="Animation.js"></script>
-  <script src="ProtoUtility.js"></script>
-  <script src="ProtoLayerObjects.js"></script>
-  <script src="Grid.js"></script>
-  <script src="ProtoFilter.js"></script>
-  <script src="oklch2rgb.js"></script>
-  <script src="neuMark_I.js"></script>
-  <script src="squircle.js"></script>
-  <script src="ProtoBatch.js"></script>
-
-  <script src="sketch.js"></script>
+  <div id="unsupported-msg">
+    <p>Prototypes live generator preview is currently supported on desktop browsers only.</p>
+    <p>Please open this page in Chrome, Firefox, or Edge on a desktop computer.</p>
+  </div>
+  <script>
+    if (window._unsupported) {
+      document.getElementById('unsupported-msg').style.display = 'flex';
+    } else {
+      document.getElementById('unsupported-msg').remove();
+      var scripts = [
+        'gui.js', 'RandomExtended.js', 'Features.js',
+        'artBlocks/ABFeaturesScript.js', 'artBlocks/tokenHash.js', 'artBlocks/Random.js',
+        'OpArray.js', 'color.js', 'drawAsSVG.js',
+        'ProtoStore.js', 'DeBugging.js', 'Animation.js',
+        'ProtoUtility.js', 'ProtoLayerObjects.js', 'Grid.js',
+        'ProtoFilter.js', 'oklch2rgb.js', 'neuMark_I.js', 'squircle.js',
+        'ProtoBatch.js', 'sketch.js'
+      ];
+      scripts.forEach(function (s) {
+        document.write('<script src="' + s + '"><\/script>');
+      });
+    }
+  </script>
 
   <button id="regenBtn" onclick="protoBatch.buildFromNewSeed()" aria-label="Generate new artwork"></button>
 </body>
