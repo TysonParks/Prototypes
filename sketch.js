@@ -83,8 +83,9 @@ function setupBackground() {
     .style('margin', 0)
     .style('display', 'flex')
     .style('flex-direction', 'column')
-    .style('justify-content', 'space-evenly')
+    .style('justify-content', 'center')
     .style('alignItems', 'center')
+    .style('box-sizing', 'border-box')
   FRAME = new Frame(BG)
 }
 
@@ -891,13 +892,17 @@ function windowResized() {
   positionRegenBtn()
 }
 
-// FUNC: positionRegenBtn() — center button between frame bottom and window bottom
+// FUNC: positionRegenBtn() — place button in a dedicated zone below the frame
 function positionRegenBtn() {
   const btn = document.getElementById('regenBtn')
-  if (!btn || !FRAME?.bleed?.elt) return
-  const frameBottom = FRAME.bleed.elt.getBoundingClientRect().bottom
-  const mid = (frameBottom + window.innerHeight) / 2
-  btn.style.top = `${mid}px`
+  if (!btn || !FRAME?.bleed?.elt || !BG?.elt) return
+  const rect = FRAME.bleed.elt.getBoundingClientRect()
+  const btnSize = rect.width * 0.06
+  const btnZone = btnSize * 4
+  BG.elt.style.paddingBottom = `${btnZone}px`
+  btn.style.width = `${btnSize}px`
+  btn.style.height = `${btnSize}px`
+  btn.style.top = `${window.innerHeight - btnZone / 2}px`
 }
 
 // FUNC: globalShadowVector()
