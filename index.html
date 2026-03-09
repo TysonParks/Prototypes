@@ -10,7 +10,7 @@
   <link rel="stylesheet" type="text/css" href="style.css">
 
   <script>
-    window._unsupported = /AppleWebKit/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    window._unsupported = !/Chrome/.test(navigator.userAgent);
     if (window._unsupported) {
       document.documentElement.classList.add('unsupported-browser');
     } else {
@@ -21,8 +21,8 @@
 
 <body>
   <div id="unsupported-msg">
-    <p>Prototypes live generator preview is currently supported on desktop browsers only.</p>
-    <p>Please open this page in Chrome, Firefox, or Edge on a desktop computer.</p>
+    <p>Prototypes live generator preview is currently supported on Chrome desktop only.</p>
+    <p>Please open this page in Chrome on a desktop computer.</p>
   </div>
   <script>
     if (window._unsupported) {
