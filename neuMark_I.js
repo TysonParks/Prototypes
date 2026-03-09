@@ -167,13 +167,14 @@ class ProtoCut {
   //MARK: Public Methods
   //METH: setLayout() : null : 
   setLayouts() {
-    const layout = this.maxLayout
+    // § 9.14.1 — use absolute user-space bounds instead of %-based (avoids cascade crop)
     this.filters.forEach(f => {
       f.filter
-        .attribute("x", `${layout.x}%`)
-        .attribute("y", `${layout.y}%`)
-        .attribute("width", `${layout.width}%`)
-        .attribute("height", `${layout.height}%`)
+        .attribute('filterUnits', 'userSpaceOnUse')
+        .attribute('x', FRAME.anchor.x)
+        .attribute('y', FRAME.anchor.y)
+        .attribute('width', FRAME.size.x)
+        .attribute('height', FRAME.size.y)
     })
   }
   //METH: curve() : type :
