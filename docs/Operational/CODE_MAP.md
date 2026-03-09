@@ -90,11 +90,15 @@ Key Architectural Concepts (mapping to code)
 
 
 Focused pointers (where to look first)
-- `ProtoSegment` arc evaluation and mutation: [drawAsSVG.js](drawAsSVG.js) (search for `class ProtoSegment`, `arcOrigin`, `setArcToMiddle`, `#resetMemoProps`).
-- Wrapper pipeline orchestration: [Grid.js](Grid.js) — `maximizeCuddles()` (line ~675) and surrounding helper methods.
-- Direction system (orientation helpers): [ProtoUtility.js](ProtoUtility.js) — `Direction` class.
-- Frame-specific wrapping: [ProtoLayerObjects.js](ProtoLayerObjects.js) — `Frame.setBackGridGroup()` and `inWrapPerimeter` usage.
-- Visual debugging: [testing/WrapperDebugOverlay.js](testing/WrapperDebugOverlay.js).
+- `ProtoSegment` (class start): [drawAsSVG.js — ProtoSegment](drawAsSVG.js#L1555)
+  - `setArcToMiddle()` : [drawAsSVG.js#L1845]
+  - `#addCubicVert()` (mutator) : [drawAsSVG.js#L1949]
+  - `#resetMemoProps()` (cache invalidation) : [drawAsSVG.js#L1959]
+  - `arcOrigin` getter : [drawAsSVG.js#L2058]
+- Wrapper pipeline orchestration: `maximizeCuddles()` — [Grid.js#L677]
+- Direction system (orientation helpers): `Direction` class — [ProtoUtility.js#L1](ProtoUtility.js#L1)
+- Frame-specific wrapping: `Frame.setBackGridGroup()` / `inWrapPerimeter` — [ProtoLayerObjects.js#L250](ProtoLayerObjects.js#L250) (Frame class area)
+- Visual debugging: `WrapperDebugOverlay` — [testing/WrapperDebugOverlay.js#L1]
 
 
 Quick notes / tips
