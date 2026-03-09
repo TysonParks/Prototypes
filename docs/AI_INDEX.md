@@ -35,3 +35,8 @@ Read:
 - GEOMETRY-REFERENCE.md defines terminology
 - KNOWN-ISSUES.md records historical failed attempts; do not repeat them
 - ROADMAP.md is intent, not proof of implementation
+
+## What This Document Is Not
+
+- Not canonical specification — it's a navigational index for AI and humans
+- Not a replacement for the canonical docs listed above
