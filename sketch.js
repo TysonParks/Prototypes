@@ -37,10 +37,7 @@ function setup() {
   // Initialise ProtoBatch and build from the startup hash
   protoBatch = new ProtoBatch()
   protoBatch.buildFromHash(tokenData.hash)
-  // protoBatch.batchAnimationExport()
-
-  //TESTING
-  // createGUI()
+  positionRegenBtn()
 }
 
 // MARK: SETUP FUNCS
@@ -891,6 +888,16 @@ function shadeAnimation() {
 function windowResized() {
   sizeFrame()
   BG.size(windowWidth, windowHeight)
+  positionRegenBtn()
+}
+
+// FUNC: positionRegenBtn() — center button between frame bottom and window bottom
+function positionRegenBtn() {
+  const btn = document.getElementById('regenBtn')
+  if (!btn || !FRAME?.bleed?.elt) return
+  const frameBottom = FRAME.bleed.elt.getBoundingClientRect().bottom
+  const mid = (frameBottom + window.innerHeight) / 2
+  btn.style.top = `${mid}px`
 }
 
 // FUNC: globalShadowVector()
