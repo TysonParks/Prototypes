@@ -231,7 +231,7 @@ surface.
 |--------|---------------|
 | `ProtoCut.setLayouts()` | `%`-based filter region vs `userSpaceOnUse` filter region |
 | `ShapeGroup.boundsRect` | cut viewport sizing |
-| `ShapeGroup.assignElement()` | cut SVG overflow behavior |
+| `ShapeGroup.assignElement()` | cut SVG overflow behavior (dev-only; avoid enabling permanently — performance risk) |
 | `Grid.anchor` / `Grid.size` / `Grid.boundsRect` | whether `Magical` grids should be fit inside the `100x200` frame instead of extending beyond it |
 | `ShapeGroup.createSVGGroup()` + `ProtoFilter.applyFilterToElement()` | temporary frame filter visibility isolation |
 
@@ -304,6 +304,13 @@ await batchFrameBottomBarRegressionSheet({
   debugHarness: { gridBoundsMode: 'magicalFitFrame' },
   label: 'frame-bottom-bar-regression-sheet-fit-frame'
 })
+```
+
+Quickly save both the broken and golden contact sheets (downloads two PNGs):
+
+```javascript
+// Runs the broken set then the golden set and triggers downloads
+await saveFrameBottomBarSheets()
 ```
 
 That exports a visual multi-hash contact sheet under the same dev-only patch,
