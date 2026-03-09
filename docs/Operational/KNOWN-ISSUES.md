@@ -29,6 +29,10 @@ cross-referencing from code comments.
 
 ---
 
+Maintenance note:
+- When editing or auditing a specific issue section, append a short timestamp line to that section header, e.g. `*Last audited: 2026-03-09 — notes or summary*` so readers can see the most recent verification date.
+
+
 ## Table of Contents
 
 - [9.1 Chicken-and-Egg Risks](#91-chicken-and-egg-risks)
