@@ -897,8 +897,8 @@ function positionRegenBtn() {
   const btn = document.getElementById('regenBtn')
   if (!btn || !FRAME?.bleed?.elt || !BG?.elt) return
   const rect = FRAME.bleed.elt.getBoundingClientRect()
-  const btnSize = rect.width * 0.06
-  const btnZone = btnSize * 4
+  const btnSize = rect.width * 0.12
+  const btnZone = btnSize * 1.5
   BG.elt.style.paddingBottom = `${btnZone}px`
   btn.style.width = `${btnSize}px`
   btn.style.height = `${btnSize}px`
