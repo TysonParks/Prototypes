@@ -1729,7 +1729,10 @@ class ShapeGroup extends ProtoLayer {
 
   // MARK: ShapeGroup Computed Properties
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
-  get boundsRect() { return this.isFrame ? FRAME.boundsRect : this.cellBounds.boundsRect }
+  get boundsRect() {
+    if (this.isFrame || this.cut) return FRAME.boundsRect   // § 9.14.1 — broadened for cascade filter coverage
+    return this.cellBounds.boundsRect
+  }
   get padding() {
     const
       backGroupPadding = Vertex.mult(this.grid.insetAmount, 2),
@@ -1779,6 +1782,7 @@ class ShapeGroup extends ProtoLayer {
   //METH: assignElement() override
   assignElement() {
     super.assignElement()
+    if (this.cut) this.svgElt.attribute('overflow', 'visible')   // § 9.14.1 — allow filter bleed beyond viewport
     this.svgElt.parent(this.shadeElt)
   }
   //METH: createSVGGroup()
