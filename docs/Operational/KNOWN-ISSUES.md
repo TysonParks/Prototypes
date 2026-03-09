@@ -1571,10 +1571,17 @@ viewport or overflow changes. It came from the **filter region mode**.
 4. `boundsRect` and `overflow` alone did not change the look.
 
 **Current runtime state:**
-- `ProtoCut.setLayouts()` is back on the legacy `%`-based
-  `maxLayout` filter region.
-- The `userSpaceOnUse` experiment is no longer part of operational code.
-- Any future re-test of that path should happen through the dev-only
+- `ProtoCut.setLayouts()` sets `filterUnits='userSpaceOnUse'` while retaining
+  `%`-based `x`/`y`/`width`/`height` derived from `maxLayout`. Using
+  `userSpaceOnUse` with `%` ensures the percent values are resolved
+  against the ShapeGroup viewport (the element `<svg>` viewBox) rather
+  than the individual shape bounding box — this prevents cascade-crop
+  clipping without introducing the frame-coordinate banding observed
+  when absolute FRAME x/y/width/height were used.
+- Avoid setting absolute FRAME coordinates with `userSpaceOnUse` — that
+  approach maps incorrectly into nested ShapeGroup viewBoxes and caused
+  the earlier top/bottom banding regression.
+- Any future re-test of alternate layouts should be done via the dev-only
   `testing/FilterDebugHarness.js` runtime patch tool.
 
 **Design lesson:** SVG cropping bugs in this codebase are not a single
@@ -1600,8 +1607,10 @@ The currently relevant artifact is on the **Frame's massive `rOut` cut**
 different problems**:
 
 1. A **real filter-region regression** caused by the Mar 6
-  `userSpaceOnUse` layout rewrite. That part is now fixed by restoring
-  the `%`-based `maxLayout` region in runtime code.
+  `userSpaceOnUse` layout rewrite when it used absolute FRAME coordinates.
+  That is now fixed by explicitly setting `filterUnits='userSpaceOnUse'`
+  while keeping `%`-based `maxLayout` assignments so the filter region
+  margins resolve against the ShapeGroup viewport.
 2. A **remaining vertical/cropping-style artifact** that still persists
   after that fix and is not yet isolated.
 
