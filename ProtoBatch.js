@@ -76,6 +76,7 @@ class ProtoBatch {
   buildFromNewSeed() {
     const newHash = random_hash()       // from tokenHash.js
     console.log(`New seed: ${newHash}`)
+    globalControls.shadAngle = 90
     this.teardown()
     this.buildFromHash(newHash)
   }
