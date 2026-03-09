@@ -11,26 +11,25 @@ canvas {
 
 #regenBtn {
   position: fixed;
-  bottom: 3vh;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   width: 44px;
   height: 44px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  filter: blur(4px);
+  filter: blur(8px);
   transition: filter 0.35s ease, transform 0.15s ease;
   z-index: 1000;
   -webkit-tap-highlight-color: transparent;
 }
 
 #regenBtn:hover {
-  filter: blur(1px);
+  filter: blur(2px);
 }
 
 #regenBtn:active {
-  filter: blur(8px);
-  transform: translateX(-50%) scale(0.88);
+  filter: blur(12px);
+  transform: translate(-50%, -50%) scale(0.88);
 }
