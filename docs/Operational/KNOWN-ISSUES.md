@@ -1760,6 +1760,38 @@ preserves the original behavior for small blurs.
 `testing/WrapperTestHarness.js` — dumps SVG viewport chain, filter
 regions, padding, and bounding boxes for all backgrid ShapeGroups.
 
+#### 9.14.7.7 Cascade Crop Fix (Mar 9 2026)
+
+**Status:** ✅ Fixed (selective changes applied)  
+**Date:** 2026-03-09  
+**Summary:** After the group-mask blur fix was applied, the cascade
+cropping regression was resolved by two targeted, low-risk changes:
+
+- (A) Broadening `ShapeGroup.boundsRect` for cuts to return
+  `FRAME.boundsRect` (ensures shape groups contributing deep cascade
+  effects are laid out in the full frame user-space).
+- (C) Switching `ProtoCut.setLayouts()` to use
+  `filterUnits="userSpaceOnUse"` and absolute FRAME bounds instead of
+  percentage-based (`objectBoundingBox`) margins.
+
+**Performance note:** We experimented with setting `overflow: visible`
+on ShapeGroup/Grid SVGs (previously considered as part of a 3-way
+approach). That change was tested but intentionally reverted due to
+measurable performance concerns; it is **not** part of the retained
+fix. The retained fixes (A + C) correct cascade cropping without
+requiring permanent `overflow: visible`.
+
+**Why this works:** Using absolute user-space filter bounds decouples
+filter region calculation from ShapeGroup viewport sizes (the source
+of percentage-based under-coverage). Broadening `boundsRect` for cut
+ShapeGroups ensures padding and mask calculations include the full
+frame area where deep blurs and cascades can extend.
+
+**Implementation:** See `ProtoLayerObjects.js` (`ShapeGroup.boundsRect`
+and caller code) and `ProtoCut.setLayouts()` in `neuMark_I.js` for the
+user-space filter bounds implementation.
+
+
 **Previous content of this section (now superseded):** Described a
 failed boundsRect/overflow fix for the earlier bottom-bar regression,
 which was fully reverted to Mar 5 baseline before this fix was applied.
