@@ -165,16 +165,22 @@ class ProtoCut {
   }
 
   //MARK: Public Methods
-  //METH: setLayout() : null : 
+  //METH: setLayout() : null : restore legacy percent-based filter regions
   setLayouts() {
-    // § 9.14.1 — use absolute user-space bounds instead of %-based (avoids cascade crop)
+    const layout = this.maxLayout
     this.filters.forEach(f => {
+      // remove explicit filterUnits so the filter uses objectBoundingBox (percent) coordinates
+      if (f.filter.elt && f.filter.elt.removeAttribute) f.filter.elt.removeAttribute('filterUnits')
       f.filter
+        .attribute('x', `${layout.x}%`)
+        .attribute('y', `${layout.y}%`)
+        .attribute('width', `${layout.width}%`)
+        .attribute('height', `${layout.height}%`)
         .attribute('filterUnits', 'userSpaceOnUse')
-        .attribute('x', FRAME.anchor.x)
-        .attribute('y', FRAME.anchor.y)
-        .attribute('width', FRAME.size.x)
-        .attribute('height', FRAME.size.y)
+      // .attribute('x', FRAME.anchor.x)
+      // .attribute('y', FRAME.anchor.y)
+      // .attribute('width', FRAME.size.x)
+      // .attribute('height', FRAME.size.y)
     })
   }
   //METH: curve() : type :
