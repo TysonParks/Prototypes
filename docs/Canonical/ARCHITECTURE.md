@@ -10,7 +10,11 @@
 > [ROADMAP](ROADMAP.md) |
 > [TESTING](TESTING.md)
 
----
+## What This Document Is Not
+
+- Not geometric definitions (see GEOMETRY-REFERENCE.md)
+- Not a bug history or replacement for KNOWN-ISSUES.md
+- Not a project roadmap or sequencing guide
 
 ## Table of Contents
 

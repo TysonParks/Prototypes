@@ -1,19 +1,25 @@
 # BoredUI Geometry Reference
 ## Rounded Corner Wrapping System
 
-> **Purpose:** Define the geometric vocabulary, relationships, and resolution 
-> logic for coordinating rounded corners between neighboring shapes on a grid.
->
-> **Audience:** The author (Tyson), collaborating AI, future contributors.
->
-> **Living Document:** This evolves with the code. Each section links to 
-> the implementing properties/methods in `drawAsSVG.js`.
->
-> **Related docs:**
-> [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-> [ARCHITECTURE](ARCHITECTURE.md) |
-> [ROADMAP](ROADMAP.md) |
-> [TESTING](TESTING.md)
+**Purpose:** Define the geometric vocabulary, relationships, and resolution 
+logic for coordinating rounded corners between neighboring shapes on a grid.
+
+**Audience:** The author (Tyson), collaborating AI, future contributors.
+
+**Living Document:** This evolves with the code. Each section links to 
+the implementing properties/methods in `drawAsSVG.js`.
+
+**Related docs:**
+[KNOWN-ISSUES](KNOWN-ISSUES.md) |
+[ARCHITECTURE](ARCHITECTURE.md) |
+[ROADMAP](ROADMAP.md) |
+[TESTING](TESTING.md)
+
+## What This Document Is Not
+
+- Not an architectural design doc (see ARCHITECTURE.md)
+- Not a bug tracker or history (see KNOWN-ISSUES.md)
+- Not a debugging or test guide (see TESTING.md)
 
 ---
 

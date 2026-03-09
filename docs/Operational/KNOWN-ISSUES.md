@@ -11,6 +11,23 @@
 > [TESTING](TESTING.md)
 
 ---
+> **Purpose:** Track active bugs, audit findings, and unresolved edge
+cases in the wrapper system. Organized by issue number for stable
+cross-referencing from code comments.
+
+**Related docs:**
+[GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
+[ARCHITECTURE](ARCHITECTURE.md) |
+[ROADMAP](ROADMAP.md) |
+[TESTING](TESTING.md)
+
+## What This Document Is Not
+
+- Not a design specification — it records observed failures and audits
+- Not guaranteed current truth; entries are historical and may be superseded
+- Contains past failed fixes and experiments for traceability
+
+---
 
 ## Table of Contents
 

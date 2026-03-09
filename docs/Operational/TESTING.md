@@ -4,11 +4,16 @@
 > These files live in `testing/` and must NOT ship to production,
 > minification, or Art Blocks deployment.
 >
-> **Related docs:**
-> [GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
-> [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-> [ARCHITECTURE](ARCHITECTURE.md) |
-> [ROADMAP](ROADMAP.md)
+**Related docs:**
+[GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
+[KNOWN-ISSUES](KNOWN-ISSUES.md) |
+[ARCHITECTURE](ARCHITECTURE.md) |
+[ROADMAP](ROADMAP.md)
+
+## What This Document Is Not
+
+- A production-system behaviour spec — tools are dev-only
+- Not a guarantee of runtime/production behavior
 
 ---
 

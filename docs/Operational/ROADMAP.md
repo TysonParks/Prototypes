@@ -1,15 +1,20 @@
 # BoredUI Project Roadmap
 
 > **Purpose:** Track the broader improvement plan for BoredUI. This
-> section was reconstructed from session notes after being lost between
-> conversations. Items marked ❓ may be incomplete or out of order —
-> update as context is recovered.
->
-> **Related docs:**
-> [GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
-> [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-> [ARCHITECTURE](ARCHITECTURE.md) |
-> [TESTING](TESTING.md)
+section was reconstructed from session notes after being lost between
+conversations. Items marked ❓ may be incomplete or out of order —
+update as context is recovered.
+
+**Related docs:**
+[GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
+[KNOWN-ISSUES](KNOWN-ISSUES.md) |
+[ARCHITECTURE](ARCHITECTURE.md) |
+[TESTING](TESTING.md)
+
+## What This Document Is Not
+
+- Planning intent only — not proof of implementation
+- Not a source of canonical architecture or geometry rules
 
 ---
 
