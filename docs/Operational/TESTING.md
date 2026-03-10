@@ -64,9 +64,6 @@ testing/testMess.js
 Tests the integrity of ProtoSegment's memoization system. The wrapper
 pipeline in `drawAsSVG.js` memoizes 60+ property getters via
 `memoize()` in `ProtoUtility.js`. When `maximizeCuddles()` mutates
-arc geometry, some cached values become stale. The harness detects:
-
-- **Stale caches:** Memoized values that survive a mutation but should
   have been invalidated
 - **Reset coverage gaps:** Volatile keys not listed in `#resetMemoProps`
 - **Unnecessary resets:** Topology-stable keys that are being reset
