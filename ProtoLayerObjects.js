@@ -3244,7 +3244,9 @@ class Shape extends ProtoLayer {
         // Vertex.add(this.insetScale, depthScale)                                     // outsetShade scale is insetScale + depthScale
         : Vertex.sub(this.insetScale, depthScale),                                  // insetShade scale is insetScale - depthScale
       // : this.insetScale,                                                          // insetShade scale is insetScale - depthScale
-      hasOrds = this.island.hasOrdinalConnections && this.island.direction.isAll,   // shapes with ordinal connections will mask badly
+      hasOrds = this.island.hasOrdinalConnections
+        && this.island.direction.isAll
+        && !outsetShade,                                                           // maskShapes only for shapes with ordinal connections and outsetShade (for insetShades, maskShapes create weird overlaps and aren't as necessary since the shade is inset) 
       shapes = hasOrds ?
         this.island.copyAllToCardinal(this.insetScale, this.cut)   // get cardinal islands
           .map(isle => isle.shape)                                                  // map to shapes
