@@ -1181,6 +1181,48 @@ The debug shapes should be correct if `maskShape`/`maskSVG` compute
 correctly. They can be used to verify mask accuracy before re-enabling
 the actual `<mask>` element pipeline.
 
+### 9.13.8 Ordinal + R-in groupMask shading bug (Fixed)
+
+**Status:** ✅ Fixed
+
+**Symptom:** For some hashes with islands that have ordinal connections
+and an R-profile *r-in* cut (outsetShade), group masks were being
+recomputed into Cardinal-only geometry which produced visible shading
+artifacts (thin white/flat strips or collapsed ordinal connector
+bridges). The artifact only appeared when group masks were de-blurred
+or inspected at high fidelity.
+
+**Root cause:** `Shape.maskShape()` previously downgraded "All"
+calculated geometry to Cardinal when islands had ordinal connections.
+That recalculation path produced new temporary island shapes whose
+mask geometry was larger/smaller than the original `All` shape and
+therefore produced incorrect mask polarity/coverage for *outset* (r-in)
+shades. In short: ordinal connectors + `r-in` → forced All→Cardinal
+recalc → incorrect mask → shading artifact.
+
+**Fix applied:** Preserve the `All`-calculated shape for islands with
+ordinal connections when the active cut is an R-profile with an
+outset shade (`cut.profile.hasOutsetShade`). The downgrade to
+Cardinal (and the `copyAllToCardinal()` path) is still used for
+`r-out` (inset) cases where interior masks are required. The change
+was implemented in `Shape.maskShape()` / `maskShape` (file:
+`ProtoLayerObjects.js`) so that `r-in` + ordinal connectors keep their
+original mask geometry.
+
+**Files touched:** `ProtoLayerObjects.js` — `maskShape()` (shape mask
+selection logic). A small follow-up guard ensures copies preserve the
+`cut` metadata when copies are required.
+
+**Regression / test hashes:**
+- 0x9a6855a35b54aac9e8cba8b54e30050c9987098230179e38963df5b36c4610eb
+- 0xba68b4b09a66638ae0fe58b7105dab9ca4d890540cc4b0694d9a59ffc72b870e
+- 0xad7b90463ba0bbb11edb7aa4758425448853bfa1d82a20eb731e6a91616d31ef
+
+**Verification:** Use `showMasks()` (DeBugging) and the `WrapperTestHarness`
+regression pool to confirm that ordinal connector bridges retain
+soft-masked shading and that `r-out` mask recalculation behavior is
+unchanged.
+
 ### 9.13.6 `p5.Element.mask()` Prototype (ProtoFilter.js L408)
 
 A separate helper `p5.Element.prototype.mask(shape, blur, strokeWidth)`
