@@ -88,6 +88,7 @@ class ProtoFilter {
         }
 
         let useBlur = blur > 0
+        // useBlur = false
         blur = blur * 1
 
         if (useBlur) {

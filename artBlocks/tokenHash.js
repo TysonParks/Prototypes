@@ -1479,6 +1479,7 @@ const lastHash = [
   '0xad7b90463ba0bbb11edb7aa4758425448853bfa1d82a20eb731e6a91616d31ef', // Bad Ordinal MASKING: !!!FIXED!!!
   '0x44ae1aab7c02cbad2ff08c0426b58f7f74220eb115a26f3296e738e769959a77', // 1470 METH: // BAD FLUSH WRAP!!! :  //FUNC: 
   '0xe516703e501a1cc136d17d6a6c19579ca4889b1192fe5a185dcb29d415a1ff1f', // POOR RADIANT WRAP!!! :  //FUNC:
+  '0xd20b4956b0e2609e91207953554ae5a375b399bcfce1fcd5a22cc3b72f69766b', // Bad rIn mismatched shadow //FUNC:
 
 ]
 
