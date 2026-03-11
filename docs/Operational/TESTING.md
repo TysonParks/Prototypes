@@ -421,6 +421,54 @@ await reportFrameBottomBarSetComparison()
 These run in the browser and use `ProtoBatch.buildFromHash()` to
 load each hash sequentially.
 
+### 5.3 R-in vs R-out Shade Symmetry Test (2026-03-10)
+
+Console-pasteable harness to verify shade parameters are symmetric
+between r-in and r-out cuts. Uses the `DEBUG_NEUSHADES` instrumentation
+in `neuShadeSVGFactory()`:
+
+```javascript
+(function testShadeSymmetry() {
+  const captures = [];
+  const origLog = console.log;
+  console.log = function(...args) {
+    if (args[0] === 'neuShadeDBG:') captures.push(args[1]);
+    origLog.apply(console, args);
+  };
+  window.DEBUG_NEUSHADES = true;
+  protoBatch.teardown();
+  protoBatch.buildFromHash(tokenData.hash);
+  window.DEBUG_NEUSHADES = false;
+  console.log = origLog;
+  const rows = captures
+    .filter(c => c.curve === 'r' || c.curve === 'r2')
+    .map(c => ({
+      cutIn: c.cutIn ? 'IN' : 'OUT',
+      inset: c.inset,
+      shadeType: c.shadeType,
+      curve: c.curve,
+      stage: c.stage,
+      offset: c.offset?.toFixed?.(4) ?? c.offset,
+      mag: c.mag?.toFixed?.(6) ?? c.mag,
+      blurRadius: c.blurRadius?.toFixed?.(6) ?? c.blurRadius,
+      highBlurRad: c.highBlurRad?.toFixed?.(6) ?? c.highBlurRad,
+    }));
+  console.log('%c R-curve shade captures', 'font-weight:bold; font-size:14px');
+  console.table(rows);
+  return captures;
+})()
+```
+
+**What to look for:** Compare rows with the same `shadeType` + `curve`
+between `cutIn=IN` and `cutIn=OUT`. The `mag`, `blurRadius`, and
+`highBlurRad` values should be identical. The only expected difference
+is the `inset` flag (flipped between IN and OUT).
+
+**Issue 9.14.9 finding:** Factory values were confirmed identical.
+The visual asymmetry was traced to `ProtoFilter.shade()` where inset
+and outset paths used different blend bases (`transparentInput` vs
+`SourceGraphic`). Fix: change `insetResult` init to `SourceGraphic`.
+
 ### 2.7 Baseline Results (Hash #1428)
 
 The harness runs automatically on every `buildFromHash()` call
