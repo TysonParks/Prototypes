@@ -1982,6 +1982,105 @@ the shade asymmetrically for R-in vs R-out:
 toward `cutStart` for the R-in case in the `cutIslands` insetScale
 ternary.
 
+**Diagnosis & Fix Strategy (2026-03-10)**
+
+1) Goal: Confirm whether the perceived vertical displacement of the
+   R-in shade is caused by different blur radii, color/tone generation,
+   or true offset positioning. The earlier offset checks showed
+   identical offsets — this investigation focuses on blur stdDeviation
+   and color/shade luma differences.
+
+2) Instrumentation: Add lightweight debug logging to
+   `Shade.neuShadeSVGFactory()` (neuMark_I.js) to emit, per shader
+   stack creation:
+   - incoming args: `curve`, `cutIn`, raw `mag` (signed), `pixToUserUnits`
+   - computed: `inset` flag, final `mag` (abs), `offsets[]`, `blurRadius`,
+     `highBlurRad`, `shadBlurRad`, `shadowReducer`, and the `dropShade`
+     objects (color + blur) produced.
+
+3) Reproduce cases: Use the `FilterDebugHarness` / `WrapperTestHarness`
+   to build only the `shad` and `combo` filter stacks for a selected
+   hash that contains an R-out→R-in sequence (use the three regression
+   hashes). Export the intermediate blurred layers as SVG/PNG for top
+   and bottom samples and compute a mean-per-pixel difference.
+
+4) Expected outcomes:
+   - If blur radii differ (stdDeviation different) → normalize blur
+     computation to be symmetric for r-in and r-out (base on abs(mag)).
+   - If color luma differs (different `shadColLuma`) → adjust
+     `shadowReducer` or the `shadColLuma` formula to be symmetric.
+   - If neither differ but perceived darkness persists, consider the
+     composite order or feBlend operator differences; ensure blend
+     modes and `feBlend` inputs are equivalent for r-in vs r-out.
+
+5) Fix candidates (conservative order):
+   - Normalize blur radii: compute blur purely from `abs(mag)` and
+     offsets, not from pre-abs sign or `inset` boolean.
+   - Clamp/neutralize `shadowReducer` for `curve === 'r'` so small
+     numeric differences don't produce darker center ticks for r-in.
+   - Ensure `inset` only affects masking polarity, not blur/colour math.
+
+6) Regression: Add pixel-compare tests into `testing/WrapperTestHarness.js`
+   and the new `ordinal_rIn_groupMask` pool. Verify pre/post differences
+   are below a small threshold after the fix.
+
+**Instrumentation Results (2026-03-10)**
+
+Debug logging was added to `neuShadeSVGFactory()` gated by
+`window.DEBUG_NEUSHADES`. A console harness rebuilt the current hash
+and captured all R-curve shade parameters. Key findings:
+
+- **Blur radii and magnitudes are identical** between r-in and r-out
+  for matching `shadeType` + `curve` pairs. The factory produces
+  numerically identical shade stacks regardless of `cutIn`.
+- The **only difference** entering the factory is the `inset` flag,
+  which is derived from `mag` sign (set by `#createShader()` sign
+  math: `mag * cutIn * r * r2`).
+- For combo (curve `'r'`): r-out gets `inset=true`, r-in gets
+  `inset=false`. For shad (curve `'r2'`): reversed.
+
+**Root cause identified (revised):** The asymmetry is in
+`createMaskGroup()` (ProtoLayerObjects.js ~L2085), not in the shade
+filter stack or factory. Disabling `createMaskGroup()` produces
+properly matched top/bottom shading.
+
+The issue is the blur direction on mask shapes:
+- R-out mask: interior closed shape — blur gradient radiates outward
+  from shape edge, matching the outset shade direction.
+- R-in mask: open shape with hole (rectangle minus interior) — the
+  blur is applied to the composite hole shape, producing a gradient
+  that radiates inward from the same edge. This is the wrong direction
+  for an inset shade — it should radiate outward (away from the viewer
+  into the recess).
+
+The fix likely involves restructuring mask creation for r-in: subtract
+the **sharp** (unblurred) shape from the rectangle first, then blur
+the result, so the gradient direction is correct for the inset case.
+
+Additional considerations identified:
+- `createBlurMask()` usage within `createMaskGroup()` may need
+  rethinking for the r-in hole-shape case
+- When r-in is the outermost frame/backgrid cut, the mask may not be
+  needed at all
+- `const divs = [8, 16, 32]` may need scaling to cover deeper cuts
+  where the effect is more prominent
+
+**Ruled out:**
+
+- **`neuShadeSVGFactory()` parameters**: Instrumented and confirmed
+  identical blur radii, magnitudes, color luma, and `shadowReducer`
+  values between r-in and r-out for matching `shadeType` + `curve`.
+- **`ProtoFilter.shade()` blend base asymmetry**: Inset blends from
+  `transparentInput`, outset blends from `SourceGraphic`. Two
+  restructuring attempts (changing `insetResult` init; adding symmetric
+  fringe masks) had no visible effect because the filter stack itself
+  is correct — the visual asymmetry comes from the mask, not the
+  filter. A future optimization could make the outset path match the
+  inset path (both from transparent + fringe mask), but this adds an
+  extra `feComposite` per outset layer and is not worth pursuing
+  unless a performance audit identifies the filter stack as a
+  bottleneck.
+
 ---
 
 ## 9.15 Performance Optimization Strategy
