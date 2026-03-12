@@ -1855,21 +1855,24 @@ class ShapeGroup extends ProtoLayer {
         //------------------------------------------------------------  
         this.masks.forEach(m => {
           m.parent(this.maskGroupElt)
-            .blur(this.cut.depth / 4)
+          // .blur(this.cut.depth / 4)
 
           if (outsetShade) {
             this.maskGroupElt
               // .attribute('stroke', 'white')
               // .attribute('stroke-width', m.outerMaskSize || 1)
-              .attribute('fill', 'white')
-            // .attribute('fill', 'black')
+              // .attribute('fill', 'white')
+              .attribute('fill', 'black')
+              .blur(this.cut.depth / 4)
             // .attribute('overflow', 'visible')
             maskRect
-              .attribute('fill', 'black')
-            // .attribute('fill', 'white')
+              // .attribute('fill', 'black')
+              .attribute('fill', 'white')
           } else {
             this.maskGroupElt
+              // .blur(this.cut.depth / 4)
               .attribute('fill', 'black')
+              .blur(this.cut.depth / 4)
           }
 
           const createBlurMask = (div) => {           // create additional blurred masks for deeper cuts
@@ -3254,8 +3257,9 @@ class Shape extends ProtoLayer {
 
     const paths = shapes.map(shape => {                                             // map shapes to inset paths
       return shape.simpleSegPaths?.map((path, i) => {
-        const inset = outsetShade ? path.insetPath(depthScale.div(2).add(scale))       // outsetShade paths used with stroking
-          : path.insetPath(scale)                                                     // insetShade paths used as-is with fill
+        // const inset = outsetShade ? path.insetPath(depthScale.div(2).add(scale))       // outsetShade paths used with stroking
+        //   : path.insetPath(scale)                                                     // insetShade paths used as-is with fill
+        const inset = path.insetPath(scale)
         return new SegPath(inset, shape)                                               // wrap each inset path as a SegPath
       })
     }).flat()                                                                       // flatten to array of SegPaths
