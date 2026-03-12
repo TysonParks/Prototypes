@@ -88,7 +88,7 @@ class ProtoFilter {
         }
 
         let useBlur = blur > 0
-        // useBlur = false
+        // useBlur = false // TEMP: disable blur for now to focus on offset and blending
         blur = blur * 1
 
         if (useBlur) {
