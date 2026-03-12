@@ -1953,10 +1953,16 @@ bugs in the terminal segment path rendering (ProtoLayerObjects.js):
 
 ---
 
-### 9.14.9 R-in Shade Layer Not Centered (Open)
+### 9.14.9 R-in Shade Layer Not Centered (Fixed)
 
-**Status:** 🔍 Open — investigation paused  
-**Date:** 2026-03-08  
+**Status:** ✅ Fixed — mask/construction fixes applied
+**Date (fixed):** 2026-03-12
+
+**Fix summary (short):** Root cause was mask construction order and
+mask-shape handling in `Shape.maskShape()` and `ShapeGroup.createMaskGroup()`;
+these were corrected so hole-shaped (R-in) masks subtract a sharp
+interior shape before blurring ("subtract sharp → then blur"), and
+the `outsetShade` scale workaround was removed. See details below.
 **Symptom:** R-out shade layers are visually centered within their cut
 depth, but R-in shade layers sit ~1/4 to 1/3 from the inside edge
 instead of centered. This is noticeable on wider frame cuts.
