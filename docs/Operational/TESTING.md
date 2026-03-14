@@ -357,6 +357,23 @@ Use it when the question is geometric adjacency or wrapper resolution.
 Use `FilterDebugHarness` when the question is viewport, filter, mask, or
 cropping behavior.
 
+### 4.1 Adjacent Distance Diagnostic
+
+*Added: 2026-03-13 (§ 9.12.10)*
+
+```javascript
+WrapperDebugOverlay.adjDistances()       // uses current GRID
+WrapperDebugOverlay.adjDistances(BGRID)  // inspect frame grid
+```
+
+Logs a table comparing raw (pixel) vs normalized (cell-unit) start/end
+distances for every adjacent-wrapped segment. Highlights with ⚠️ any
+segments where normalization changes which side is selected. Useful for
+verifying the § 9.12.10 fix on non-square aspect grids.
+
+Columns: `seg`, `wrapper`, `inIsVert`, `rawStart`, `rawEnd`,
+`normStart`, `normEnd`, `rawPick`, `normPick`, `changed`, `adjState`.
+
 ## 5. Other Testing Files
 
 ### 5.1 Test Case Hashes
@@ -371,6 +388,8 @@ harness file.
 | `collinear_basic_1` | collinear | broken | Two same-facing corners with shared collinear segment |
 | `collinear_basic_2` | collinear | golden | Two same-facing corners with shared collinear segment |
 | `adjacent_basic` | adjacent | untested | Nearby same-facing corners |
+| `adjacent_horiz_aspect_1` | adjacent | broken | Converging adj wraps on horizontal cellAspect — aspect-dependent distance bug (§ 9.12.10) |
+| `adjacent_horiz_aspect_2` | adjacent | broken | Converging adj wraps on horizontal cellAspect — dense grid, same class as above |
 | `radiant_stack` | radiant | golden | 3+ diagonally aligned corners sharing arc origin |
 | `interference_01` | radiant, interference | golden | Single-intermediate interference — 3 shapes, 1 band, proves wrapper-layer gate |
 | `interference_02` | radiant, interference | golden | Multi-shape interference — ~4 harmonic bands, wobble visible when disabled |
