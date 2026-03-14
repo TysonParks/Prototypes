@@ -1067,6 +1067,68 @@ be inverted.
 **Risk:** 🟠 Needs console inspection — `wrapState()` values cannot be determined visually.
 Use `WrapperDebugOverlay.seg('celXXX')` at an intershape corner and check `adjWrapState`.
 
+### 9.12.9 Stale `inOutAdjWrappers` / `inOutFlushWrappers` Memo
+
+*Added: 2026-03-13*
+
+**Status:** ✅ Fixed
+
+`inOutAdjWrappers` and `inOutFlushWrappers` were actively memoized but
+**not listed in `#resetMemoProps`**. After any arc mutation (e.g.
+`maximizeCuddles`, `fixBadAdjWraps`), these getters returned stale
+in/out wrapper assignments, which directly feed `wrapState()`,
+`adjWrapIsDiverging`, and `adjWrapIsConverging`.
+
+**Fix:** Added both keys to `#resetMemoProps` (drawAsSVG.js L1959) and
+updated `WrapperTestHarness.resetKeys` to match.
+
+### 9.12.10 Non-Square Cell Aspect Adjacent Wrap Bug
+
+*Added: 2026-03-13*
+
+**Status:** 🟡 Fix applied — needs visual verification with test hashes
+
+**Test hashes:**
+- `adjacent_horiz_aspect_1`: `0xa632c039f8ebdf763e40ecebfb803c36669c5c4714d3f757499a30859e98b784`
+- `adjacent_horiz_aspect_2`: `0x44ae1aab7c02cbad2ff08c0426b58f7f74220eb115a26f3296e738e769959a77`
+
+Both have `cellAspect === "horizontal"` (wide cells) and exhibit
+converging adjacent wrappers that should be equidistant or diverging.
+
+**Root cause:** `minAdjWrapperDistanceObj` (L2526) compares raw x-axis
+and y-axis gaps between wrapper sides:
+
+```
+vertDist = vertInSide.x - vertOutSide.x   // x-gap (large for wide cells)
+horDist  = horInSide.y - horOutSide.y      // y-gap (small for wide cells)
+```
+
+For non-square cells these values are asymmetric — the longer axis gap
+always dominates the `startDist < endDist` / `startDist > endDist`
+comparison, causing the wrong `isStart` selection. This cascades:
+
+1. Wrong `isStart` → `intersectObj(seg, isStart)` projects onto wrong side
+2. Wrong projection → wrong `dist` in `adjWrapperObjsFinal`
+3. Wrong `adjacentWrapper` → `fixBadAdjWraps` detects convergence but
+   re-wraps using the same broken detection
+
+**Additional aspect issues:**
+- `canHaveCorrectSize` compares against `cellRadius = min(w,h)/2` —
+  a single scalar. Wraps along the wider axis compare against a
+  threshold that's too small.
+- `arcCenterMidPointTangent` uses a fixed 90° rotation, not
+  aspect-corrected. The tangent-outWrapper intersection lands at
+  a different relative position on non-square cells.
+
+**Fix applied:** Normalize `vertDist` and `horDist` by their respective
+cell dimensions (`cellSize.x` and `cellSize.y`) before comparison, so
+the start/end selection is axis-agnostic. Raw (unnormalized) distances
+are preserved in the returned objects for downstream geometry.
+
+**Diagnostic:** `WrapperDebugOverlay.adjDistances(grid)` logs raw vs
+normalized distances for every adjacent-wrapped segment to aid
+verification.
+
 ---
 
 ## 9.13 Group Mask Pipeline
