@@ -75,6 +75,7 @@ class WrapperTestHarness {
   // Keys that ARE in #resetMemoProps
   resetKeys = [
     `adjDistanceObjs`,
+    `adjWrapperObjsFinal`,
     `arcCenterTangent`,
     `arcCenterVert`,
     `arcOrigin`,
@@ -84,11 +85,12 @@ class WrapperTestHarness {
     `arcOriginToEnd`,
     `arcOriginToArcCenter`,
     `arcRadius`,
-    `adjWrapperObjsFinal`,
     `flatAmount`,
     `hasNoFlatness`,
     `hasCompleteStartCorner`,
     `hasCompleteEndCorner`,
+    `inOutAdjWrappers`,
+    `inOutFlushWrappers`,
     `inWrappers`,
     `outWrappers`,
     `outWrapsOfThisShapeAndNeighbors`,
@@ -733,6 +735,20 @@ const WRAPPER_TEST_CASES = {
     description: 'Nearby same-facing corners, not collinear or coincident',
     wrapTypes: ['adjacent'],
     status: 'untested',
+  },
+  adjacent_horiz_aspect_1: {
+    hash: '0xa632c039f8ebdf763e40ecebfb803c36669c5c4714d3f757499a30859e98b784',
+    description: 'Converging adjacent wraps on horizontal cellAspect grid. Fewer shapes — clearer repro of aspect-dependent adj distance bug (FIXME L2524).',
+    wrapTypes: ['adjacent'],
+    issues: ['converging-wrap', 'non-square-aspect'],
+    status: 'broken',
+  },
+  adjacent_horiz_aspect_2: {
+    hash: '0x44ae1aab7c02cbad2ff08c0426b58f7f74220eb115a26f3296e738e769959a77',
+    description: 'Converging adjacent wraps on horizontal cellAspect grid. Dense grid — same class of aspect-dependent adj distance bug as adjacent_horiz_aspect_1.',
+    wrapTypes: ['adjacent'],
+    issues: ['converging-wrap', 'non-square-aspect'],
+    status: 'broken',
   },
 
   // MARK: Radiant Wrapper Cases
