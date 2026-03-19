@@ -93,6 +93,37 @@ the root cause of many wrapping bugs (see ARCHITECTURE § 10.2.5).
 | `isCached(seg, key)` | `Bool` | Check if a specific key is cached |
 | `getCachedValue(seg, key)` | `any` | Return the cached value for a key |
 
+### Adjacent Wrappers — Regression Cases
+
+If you are returning to the adjacent-wrapper audit, use the following quick-repro steps.
+
+1. Rebuild the hash in the dev runner (browser console) so `testing/` tools are available.
+2. Run the wrapper harness:
+
+```javascript
+// run the wrapper test harness
+runWrapperTests()
+
+// inspect the harness reports
+WTH.reportStaleResults()
+WTH.reportResetCoverage()
+```
+
+3. Use the debug overlay for deep inspection on a single segment (example ids from the current audit):
+
+```javascript
+// open the debug overlay and inspect the adj pipeline for one segment
+// replace the id string with the target segment id
+WrapperDebugOverlay.adjDebug('shp032-12down-cel054-rightSide-to-cel153-rightSide')
+```
+
+4. Failing hash found during session:
+
+```
+0x3f81c13fd6cfd2c38d603067cb273df497c0654690fb8b1768ef416cf0163346
+```
+
+Notes: Prefer capturing snapshots before/after `fixIssues()` and use `WTH.diffSnapshots(before, after)` to find stale memo keys that survived mutation.
 #### Snapshot & Diff
 
 | Method | Returns | Use |
