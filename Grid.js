@@ -986,7 +986,7 @@ class Grid extends ProtoLayer {
         )
       DeBug.log(`badFlushWraps`, testPool)
 
-      // testPool = testPool.slice(0, 1)                                      //TESTING: reduce processed
+      // testPool = testPool.slice(0, 2)                                      //TESTING: reduce processed
       testPool.forEach(s => {
         //ARROW: checkNeighbors() : null : check neighbors for bad adjWraps
         const checkNeighbors = (neighbors) => {
@@ -1476,31 +1476,31 @@ class Grid extends ProtoLayer {
     //ARROW: fixIssuess() : null : performs all wrapping of corners and fixes issues
     const fixIssues = (mode = nestleMode) => {
       if (mode === 0) {
-        DeBug.warn(`wrapInterferenceCorners`)                                                   //LOGGING:
+        DeBug.warn(`wrapInterferenceCorners`)                            //LOGGING:
         wrapInterferenceCorners()
-        DeBug.warn(`wrapInnerMost`)                                                             //LOGGING:
+        DeBug.warn(`wrapInnerMost`)                                      //LOGGING:
         wrapInnerMost()
       }
 
-      DeBug.warn(`curveMinRadiusCorners`)                                                       //LOGGING:
+      DeBug.warn(`curveMinRadiusCorners`)                                //LOGGING:
       this.curveMinRadiusCorners()
-      DeBug.warn(`completeEnds`)                                                                //LOGGING:
+      DeBug.warn(`completeEnds`)                                         //LOGGING:
       this.completeEnds(defaultPool)
 
-      DeBug.warn(`fixBadAdjWraps`)                                                              //LOGGING:
+      DeBug.warn(`fixBadAdjWraps`)                                       //LOGGING:
       fixBadAdjWraps()
-      DeBug.warn(`fixBadFlushWraps`)                                                            //LOGGING:
+      DeBug.warn(`fixBadFlushWraps`)                                     //LOGGING:
       fixBadFlushWraps()
-      DeBug.warn(`fixLoosies`)                                                                  //LOGGING:
+      DeBug.warn(`fixLoosies`)                                           //LOGGING:
       fixLoosies()
 
-      DeBug.warn(`roundQuads`)                                                                  //LOGGING:
+      DeBug.warn(`roundQuads`)                                           //LOGGING:
       // roundQuads()
     }
 
-    DeBug.error(`FIX Issues`)                                                                   //LOGGING:
+    DeBug.error(`FIX Issues`)                                            //LOGGING:
     fixIssues()
-    DeBug.error(``)                                                                             //LOGGING:
+    DeBug.error(``)                                                      //LOGGING:
   }
 
 
