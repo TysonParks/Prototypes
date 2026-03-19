@@ -539,6 +539,218 @@ class WrapperDebugOverlay {
     return matches.length === 1 ? matches[0] : matches
   }
 
+  // Adjacent distance diagnostic — logs raw vs normalized distances for aspect-ratio debugging (§ 9.12.10)
+  static adjDistances(grid) {
+    grid = grid || WrapperDebugOverlay._grid || GRID
+    const segs = grid.allSimpleSubShapesSegs
+    const adjSegs = segs.filter(s => s.adjacentWrapper)
+
+    if (adjSegs.length === 0) {
+      console.warn(`[WrapperDebugOverlay] No adjacent wrappers found`)
+      return []
+    }
+
+    const cellW = grid.cellSize.x
+    const cellH = grid.cellSize.y
+    const isSquare = Math.abs(cellW - cellH) < 0.01
+
+    console.group(
+      `%c[WrapperDebugOverlay] Adjacent Distances — cellSize: ${cellW.toFixed(2)}×${cellH.toFixed(2)}` +
+      ` (${isSquare ? 'square' : cellW > cellH ? 'wide' : 'tall'})`,
+      'color: lime; font-weight: bold'
+    )
+
+    const rows = adjSegs.map(s => {
+      const w = s.adjacentWrapper
+      const row = WrapperDebugOverlay._adjDistRow(s, w, cellW, cellH)
+
+      if (row.changed) {
+        console.warn(
+          `  ${s.id} → ${w.id}: SELECTION CHANGED ${row.rawPick} → ${row.normPick}`,
+          `| raw: ${row.rawStart.toFixed(3)} / ${row.rawEnd.toFixed(3)}`,
+          `| norm: ${row.normStart.toFixed(3)} / ${row.normEnd.toFixed(3)}`,
+          `| adjState: ${s.adjWrapState}`
+        )
+      }
+
+      return row
+    })
+
+    console.table(rows)
+
+    const changedCount = rows.filter(r => r.changed).length
+    if (changedCount > 0) {
+      console.warn(`${changedCount} segment(s) had selection changed by normalization`)
+    } else {
+      console.log(`No selection changes from normalization (all picks agree)`)
+    }
+
+    console.groupEnd()
+    return rows
+  }
+
+  // Focused diagnostic for a single segment's adjacent pipeline — deep inspection for debugging (§ 9.12.10)
+  static adjDebug(partialId, grid) {
+    grid = grid || WrapperDebugOverlay._grid || GRID
+    const segs = grid.allSimpleSubShapesSegs
+    const matches = segs.filter(s => s.id.includes(partialId))
+
+    if (matches.length === 0) {
+      console.warn(`No segments matching "${partialId}"`)
+      return null
+    }
+    if (matches.length > 1) {
+      console.warn(`Multiple matches for "${partialId}":`, matches.map(s => s.id))
+      console.log(`Using first match: ${matches[0].id}`)
+    }
+
+    const s = matches[0]
+    const cellW = grid.cellSize.x
+    const cellH = grid.cellSize.y
+
+    console.group(`%c[adjDebug] ${s.id}`, 'color: lime; font-weight: bold')
+    console.log(`cellSize: ${cellW.toFixed(2)}×${cellH.toFixed(2)} | cellRadius: ${grid.cellRadius}`)
+    console.log(`isOutsideCorner: ${s.isOutsideCorner} | hasArc: ${s.hasArc} | arcRadius: ${s.arcRadius}`)
+    console.log(`arcOrigin:`, s.arcOrigin?.toString())
+    console.log(`endCorner: ${s.endCorner?.value} | end:`, s.end?.toString())
+
+    // Adjacent wrapper info
+    const adjW = s.adjacentWrapper
+    console.log(`\n--- Adjacent Wrapper ---`)
+    if (!adjW) {
+      console.warn(`No adjacentWrapper assigned`)
+
+      // Show why — inspect the full adj pipeline
+      console.log(`adjDistanceObjs:`, s.adjDistanceObjs)
+      console.log(`adjIntersectObjs:`, s.adjIntersectObjs)
+      console.log(`adjWrapperObjsFinal:`, s.adjWrapperObjsFinal)
+
+      // Show viable wrappers that pass/fail adj filters
+      const viables = s.viableWrappers
+      console.log(`viableWrappers (${viables?.length}):`, viables?.map(v => v.id))
+      if (viables?.length > 0) {
+        const sameFacing = viables.filter(v => s.hasSameFacingCorner(v))
+        const notCoin = sameFacing.filter(v => !s.hasCoincidentCorner(v))
+        const notColl = notCoin.filter(v => !s.hasCollinearCorner(v))
+        console.log(`  sameFacing: ${sameFacing.length} | -coincident: ${notCoin.length} | -collinear: ${notColl.length}`)
+
+        notColl.forEach(v => {
+          const boundsOk = s.shape.neighborShapes.length === 0
+            ? (v.minArcIsWithinThatCornerBounds?.(s) || s.minArcIsWithinThatCornerBounds?.(v))
+            : (s.isOutsideCorner ? v.minArcIsWithinThatMaxArc?.(s) : s.minArcIsWithinThatMaxArc?.(v))
+          const sizeOk = s.isOutsideCorner
+            ? s.maxArcRadius > s.cellRadius
+            : s.cellRadius < v.maxArcRadius
+          console.log(
+            `    ${v.id}: boundsOk=${boundsOk} sizeOk=${sizeOk}`,
+            `| maxArcR: ${v.maxArcRadius?.toFixed(2)} cellR: ${s.cellRadius?.toFixed(2)}`
+          )
+        })
+      }
+    } else {
+      console.log(`adjacentWrapper: ${adjW.id}`)
+      console.log(`adjOutWrapper: ${s.adjOutWrapper?.id} | adjInWrapper: ${s.adjInWrapper?.id}`)
+      console.log(`adjWrapState: ${s.adjWrapState} (0=equi, 1=div, 2=conv)`)
+
+      // in/out assignment
+      const inOuts = s.inOutAdjWrappers
+      console.log(`inOutAdjWrappers: [${inOuts?.[0]?.id}, ${inOuts?.[1]?.id}]`)
+
+      // Distance row
+      const row = WrapperDebugOverlay._adjDistRow(s, adjW, cellW, cellH)
+      console.log(`\n--- Distance Analysis ---`)
+      console.log(`inWrapper: ${row._inWrapper} (isVert: ${row.inIsVert})`)
+      console.log(`outWrapper: ${row._outWrapper}`)
+      console.log(`vertDist (x-gap): ${row._vertDist?.toFixed(3)} | horDist (y-gap): ${row._horDist?.toFixed(3)}`)
+      console.log(`rawStart: ${row.rawStart.toFixed(3)} | rawEnd: ${row.rawEnd.toFixed(3)} → pick: ${row.rawPick}`)
+      console.log(`normStart: ${row.normStart.toFixed(3)} | normEnd: ${row.normEnd.toFixed(3)} → pick: ${row.normPick}`)
+      if (row.changed) console.warn(`⚠️ SELECTION CHANGED by normalization: ${row.rawPick} → ${row.normPick}`)
+
+      // Full adj pipeline objects
+      console.log(`\n--- Full Pipeline ---`)
+      console.log(`adjDistanceObjs:`, s.adjDistanceObjs)
+      console.log(`adjIntersectObjs:`, s.adjIntersectObjs)
+      console.log(`adjWrapperObjsFinal:`, s.adjWrapperObjsFinal)
+
+      // wrapState details
+      if (s.adjWrapState !== undefined) {
+        const [inner, outer] = inOuts
+        if (inner?.hasDiagonalCorner?.(outer)) {
+          const outCorner = outer.end
+          const inDist = inner.arcOrigin?.dist(outCorner)
+          const outDist = outer.arcOrigin?.dist(outCorner)
+          console.log(`\n--- wrapState (radiant) ---`)
+          console.log(`outCorner:`, outCorner?.toString())
+          console.log(`inDist: ${inDist?.toFixed(3)} | outDist: ${outDist?.toFixed(3)}`)
+          console.log(`inDist ${inDist > outDist ? '>' : inDist < outDist ? '<' : '='} outDist → state: ${s.adjWrapState}`)
+        } else {
+          const obj = inner?.adjIntersectObjs?.[0]
+          console.log(`\n--- wrapState (proximal) ---`)
+          console.log(`intersectObj dist: ${obj?.dist?.toFixed(3)} | outer arcRadius: ${outer?.arcRadius?.toFixed(3)}`)
+        }
+      }
+
+      // Neighbor context
+      console.log(`\n--- Neighbors ---`)
+      const neighbors = s.andNeighborsArray || [s]
+      neighbors.forEach(n => {
+        if (n.id === s.id) return
+        console.log(`  ${n.id}: adjWrapper=${n.adjacentWrapper?.id || 'none'} adjState=${n.adjWrapState}`)
+      })
+    }
+
+    console.log(`\nSegment object:`, s)
+    console.groupEnd()
+    return s
+  }
+
+  // Internal: compute distance row for one seg→wrapper pair
+  static _adjDistRow(s, w, cellW, cellH) {
+    const { inWrapper, outWrapper } = s.inOutWrapObjWith(w)
+    const { horInSide, vertInSide, horOutSide, vertOutSide } = s.horVertInOutsSideObjWith(w)
+
+    const vertDist = vertInSide.x - vertOutSide.x
+    const horDist = horInSide.y - horOutSide.y
+    const rawStart = inWrapper.isVertical ? vertDist : horDist
+    const rawEnd = inWrapper.isVertical ? horDist : vertDist
+    const normStart = inWrapper.isVertical
+      ? Math.abs(vertDist / cellW) : Math.abs(horDist / cellH)
+    const normEnd = inWrapper.isVertical
+      ? Math.abs(horDist / cellH) : Math.abs(vertDist / cellW)
+
+    const rawPick = Math.abs(rawStart) === Math.abs(rawEnd) ? 'both'
+      : ((inWrapper.isOutsideCorner !== outWrapper.isOutsideCorner)
+        ? (Math.abs(rawStart) < Math.abs(rawEnd) ? 'start' : 'end')
+        : (Math.abs(rawStart) > Math.abs(rawEnd) ? 'start' : 'end'))
+    const normPick = normStart === normEnd ? 'both'
+      : ((inWrapper.isOutsideCorner !== outWrapper.isOutsideCorner)
+        ? (normStart < normEnd ? 'start' : 'end')
+        : (normStart > normEnd ? 'start' : 'end'))
+
+    const changed = rawPick !== normPick
+
+    return {
+      seg: WrapperDebugOverlay._shortId(s),
+      segId: s.id,
+      wrapper: WrapperDebugOverlay._shortId(w),
+      wrapperId: w.id,
+      inIsVert: inWrapper.isVertical ? 'Y' : 'N',
+      rawStart: +rawStart.toFixed(3),
+      rawEnd: +rawEnd.toFixed(3),
+      normStart: +normStart.toFixed(3),
+      normEnd: +normEnd.toFixed(3),
+      rawPick,
+      normPick,
+      changed: changed ? '⚠️' : '',
+      adjState: s.adjWrapState,
+      // extras for adjDebug
+      _inWrapper: inWrapper.id,
+      _outWrapper: outWrapper.id,
+      _vertDist: vertDist,
+      _horDist: horDist,
+    }
+  }
+
   // Quick wrapper relationship table
   static table(grid) {
     grid = grid || WrapperDebugOverlay._grid || GRID
