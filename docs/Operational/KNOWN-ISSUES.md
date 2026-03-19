@@ -924,6 +924,32 @@ adjWrapperObjsFinal (L2635)
 adjacentWrapper = adjWrappersFinal[0]
 ```
 
+### 9.12.11 Recent adj/adjacent wrap regression (Mar 17, 2026)
+
+**Status:** 🟡 Investigating — requires a focused debug session (multi-hour)
+
+Summary of what was observed:
+- An attempted quick fix that clamped `obj.dist` to `source.arcRadius` in `#wrap()` (proximal branch) was applied then reverted because it broke many valid wraps. Do not reapply this change.
+- The immediate failing case was caused by misclassification upstream: `wrapState()` (proximal branch) treated very large intersection distances as `EQUIDISTANT` (return 0) instead of `DIVERGING` (return 1). Because `fixBadAdjWraps()` filters on diverging/converging states, that case was skipped.
+- A candidate-filtering attempt (checking for intervening same-facing corners) was experimented with in `adjIntersectObjs()` and then moved to `adjacentWrapper()` to reduce collateral filtering. Both placements had trade-offs: early filtering removed valid candidates needed for ordering/coincident handling; late filtering created undefined `adjacentWrapper` in some cases. More nuanced rules are needed.
+- The issue appears in both non-square and square aspect hashes (see failures below), so multiple interacting issues likely exist.
+
+Repro identifiers (use these when reproducing):
+- Target segment (broken-case example): `shp032-12down-cel054-rightSide-to-cel153-rightSide`
+- Interacting segments: `shp025-4down-cel093-rightSide-to-cel120-rightSide`, `shp015-2left-cel122-downSide-to-cel121-downSide` (the latter calls `replaceEndRadiantOutWrapsOrigin()` in Grid.js L1007)
+- Square-aspect failing hash found during testing: `0x3f81c13fd6cfd2c38d603067cb273df497c0654690fb8b1768ef416cf0163346`
+
+Recommended next steps (conservative):
+1. Reproduce the failing hash(s) in the harness and capture `WrapperDebugOverlay.adjDebug()` output for the segments above.
+2. Add a small unit check that asserts `wrapState()` behaves as expected for proximal cases (explicitly test `obj.dist` <, ==, and > `outer.arcRadius`). Use strict rounding rules consistent with existing `roundToDec` usage.
+3. Prefer classification/candidate-selection fixes (wrapState, adjIntersectObjs/adjacentWrapper validations) over changing `#wrap()` behaviour which is shared by flush/adj flows.
+4. If classification fixes cause regressions, instrument `fixBadAdjWraps()` to trace decision branches for problematic segments; avoid sweeping changes without targeted tests.
+5. Schedule a dedicated full-day audit: trace failing hash end-to-end, snapshot memo keys before/after each `fixIssues()` stage, and record failing commits.
+
+Notes for future reference:
+- Keep any experimental edits isolated and clearly labeled; document the commit/hash for each attempt. Re-enable memoization only after `arcVolatileKeys` are correctly listed in `#resetMemoProps`.
+
+
 ### 9.12.2 Key Methods
 
 **`minAdjWrapperDistanceObj(seg)`** (L2523)
