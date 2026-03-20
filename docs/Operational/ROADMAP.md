@@ -145,5 +145,23 @@ because understanding the geometry is prerequisite to knowing which
 
 ---
 
+### Post-Plan Addition: Public Generator Deployment
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Rename `2026MarchSquareSpace` → `PublicGenerator-v0.1` | ✅ Done | Branch renamed locally + remote. Old remote deleted. |
+| Decouple regen button into `PublicGenerator.js` | ✅ Done | Dynamic button creation, `positionRegenBtn()` guarded in shared code. |
+| Update GitHub Pages deploy branch | ⚠️ User action | Settings → Pages → Branch → select `PublicGenerator-v0.1`. |
+| `build.sh` excludes `PublicGenerator.js` from dev builds | ❌ Not started | Depends on Task 16 (PHASE D). |
+
+**Branch model:**
+- `agent-testing` — active dev branch
+- `main` — stable sync point
+- `PublicGenerator-v0.1` — public deployment (GitHub Pages → SquareSpace embed)
+- Merge path: `agent-testing → main → PublicGenerator-v0.1`
+- Public branch diverges in: `index.html` (browser detection, no testing scripts, loads `PublicGenerator.js`), `style.css` (additional `#unsupported-msg` + button styles)
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-06 — SVG filter-layout regression documented; testing harness workflow updated*
+*Last updated: 2026-03-19 — PublicGenerator decoupling complete; branch model documented*
