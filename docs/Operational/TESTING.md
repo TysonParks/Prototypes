@@ -4,11 +4,16 @@
 > These files live in `testing/` and must NOT ship to production,
 > minification, or Art Blocks deployment.
 >
-> **Related docs:**
-> [GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
-> [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-> [ARCHITECTURE](ARCHITECTURE.md) |
-> [ROADMAP](ROADMAP.md)
+**Related docs:**
+[GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
+[KNOWN-ISSUES](KNOWN-ISSUES.md) |
+[ARCHITECTURE](ARCHITECTURE.md) |
+[ROADMAP](ROADMAP.md)
+
+## What This Document Is Not
+
+- A production-system behaviour spec — tools are dev-only
+- Not a guarantee of runtime/production behavior
 
 ---
 
@@ -59,9 +64,6 @@ testing/testMess.js
 Tests the integrity of ProtoSegment's memoization system. The wrapper
 pipeline in `drawAsSVG.js` memoizes 60+ property getters via
 `memoize()` in `ProtoUtility.js`. When `maximizeCuddles()` mutates
-arc geometry, some cached values become stale. The harness detects:
-
-- **Stale caches:** Memoized values that survive a mutation but should
   have been invalidated
 - **Reset coverage gaps:** Volatile keys not listed in `#resetMemoProps`
 - **Unnecessary resets:** Topology-stable keys that are being reset
@@ -91,6 +93,37 @@ the root cause of many wrapping bugs (see ARCHITECTURE § 10.2.5).
 | `isCached(seg, key)` | `Bool` | Check if a specific key is cached |
 | `getCachedValue(seg, key)` | `any` | Return the cached value for a key |
 
+### Adjacent Wrappers — Regression Cases
+
+If you are returning to the adjacent-wrapper audit, use the following quick-repro steps.
+
+1. Rebuild the hash in the dev runner (browser console) so `testing/` tools are available.
+2. Run the wrapper harness:
+
+```javascript
+// run the wrapper test harness
+runWrapperTests()
+
+// inspect the harness reports
+WTH.reportStaleResults()
+WTH.reportResetCoverage()
+```
+
+3. Use the debug overlay for deep inspection on a single segment (example ids from the current audit):
+
+```javascript
+// open the debug overlay and inspect the adj pipeline for one segment
+// replace the id string with the target segment id
+WrapperDebugOverlay.adjDebug('shp032-12down-cel054-rightSide-to-cel153-rightSide')
+```
+
+4. Failing hash found during session:
+
+```
+0x3f81c13fd6cfd2c38d603067cb273df497c0654690fb8b1768ef416cf0163346
+```
+
+Notes: Prefer capturing snapshots before/after `fixIssues()` and use `WTH.diffSnapshots(before, after)` to find stale memo keys that survived mutation.
 #### Snapshot & Diff
 
 | Method | Returns | Use |
@@ -226,7 +259,7 @@ surface.
 |--------|---------------|
 | `ProtoCut.setLayouts()` | `%`-based filter region vs `userSpaceOnUse` filter region |
 | `ShapeGroup.boundsRect` | cut viewport sizing |
-| `ShapeGroup.assignElement()` | cut SVG overflow behavior |
+| `ShapeGroup.assignElement()` | cut SVG overflow behavior (dev-only; avoid enabling permanently — performance risk) |
 | `Grid.anchor` / `Grid.size` / `Grid.boundsRect` | whether `Magical` grids should be fit inside the `100x200` frame instead of extending beyond it |
 | `ShapeGroup.createSVGGroup()` + `ProtoFilter.applyFilterToElement()` | temporary frame filter visibility isolation |
 
@@ -301,6 +334,13 @@ await batchFrameBottomBarRegressionSheet({
 })
 ```
 
+Quickly save both the broken and golden contact sheets (downloads two PNGs):
+
+```javascript
+// Runs the broken set then the golden set and triggers downloads
+await saveFrameBottomBarSheets()
+```
+
 That exports a visual multi-hash contact sheet under the same dev-only patch,
 so geometry metrics and visible outcome can be checked together.
 
@@ -348,6 +388,23 @@ Use it when the question is geometric adjacency or wrapper resolution.
 Use `FilterDebugHarness` when the question is viewport, filter, mask, or
 cropping behavior.
 
+### 4.1 Adjacent Distance Diagnostic
+
+*Added: 2026-03-13 (§ 9.12.10)*
+
+```javascript
+WrapperDebugOverlay.adjDistances()       // uses current GRID
+WrapperDebugOverlay.adjDistances(BGRID)  // inspect frame grid
+```
+
+Logs a table comparing raw (pixel) vs normalized (cell-unit) start/end
+distances for every adjacent-wrapped segment. Highlights with ⚠️ any
+segments where normalization changes which side is selected. Useful for
+verifying the § 9.12.10 fix on non-square aspect grids.
+
+Columns: `seg`, `wrapper`, `inIsVert`, `rawStart`, `rawEnd`,
+`normStart`, `normEnd`, `rawPick`, `normPick`, `changed`, `adjState`.
+
 ## 5. Other Testing Files
 
 ### 5.1 Test Case Hashes
@@ -362,6 +419,8 @@ harness file.
 | `collinear_basic_1` | collinear | broken | Two same-facing corners with shared collinear segment |
 | `collinear_basic_2` | collinear | golden | Two same-facing corners with shared collinear segment |
 | `adjacent_basic` | adjacent | untested | Nearby same-facing corners |
+| `adjacent_horiz_aspect_1` | adjacent | broken | Converging adj wraps on horizontal cellAspect — aspect-dependent distance bug (§ 9.12.10) |
+| `adjacent_horiz_aspect_2` | adjacent | broken | Converging adj wraps on horizontal cellAspect — dense grid, same class as above |
 | `radiant_stack` | radiant | golden | 3+ diagonally aligned corners sharing arc origin |
 | `interference_01` | radiant, interference | golden | Single-intermediate interference — 3 shapes, 1 band, proves wrapper-layer gate |
 | `interference_02` | radiant, interference | golden | Multi-shape interference — ~4 harmonic bands, wobble visible when disabled |
@@ -411,6 +470,54 @@ await reportFrameBottomBarSetComparison()
 
 These run in the browser and use `ProtoBatch.buildFromHash()` to
 load each hash sequentially.
+
+### 5.3 R-in vs R-out Shade Symmetry Test (2026-03-10)
+
+Console-pasteable harness to verify shade parameters are symmetric
+between r-in and r-out cuts. Uses the `DEBUG_NEUSHADES` instrumentation
+in `neuShadeSVGFactory()`:
+
+```javascript
+(function testShadeSymmetry() {
+  const captures = [];
+  const origLog = console.log;
+  console.log = function(...args) {
+    if (args[0] === 'neuShadeDBG:') captures.push(args[1]);
+    origLog.apply(console, args);
+  };
+  window.DEBUG_NEUSHADES = true;
+  protoBatch.teardown();
+  protoBatch.buildFromHash(tokenData.hash);
+  window.DEBUG_NEUSHADES = false;
+  console.log = origLog;
+  const rows = captures
+    .filter(c => c.curve === 'r' || c.curve === 'r2')
+    .map(c => ({
+      cutIn: c.cutIn ? 'IN' : 'OUT',
+      inset: c.inset,
+      shadeType: c.shadeType,
+      curve: c.curve,
+      stage: c.stage,
+      offset: c.offset?.toFixed?.(4) ?? c.offset,
+      mag: c.mag?.toFixed?.(6) ?? c.mag,
+      blurRadius: c.blurRadius?.toFixed?.(6) ?? c.blurRadius,
+      highBlurRad: c.highBlurRad?.toFixed?.(6) ?? c.highBlurRad,
+    }));
+  console.log('%c R-curve shade captures', 'font-weight:bold; font-size:14px');
+  console.table(rows);
+  return captures;
+})()
+```
+
+**What to look for:** Compare rows with the same `shadeType` + `curve`
+between `cutIn=IN` and `cutIn=OUT`. The `mag`, `blurRadius`, and
+`highBlurRad` values should be identical. The only expected difference
+is the `inset` flag (flipped between IN and OUT).
+
+**Issue 9.14.9 finding:** Factory values were confirmed identical.
+The visual asymmetry was traced to `ProtoFilter.shade()` where inset
+and outset paths used different blend bases (`transparentInput` vs
+`SourceGraphic`). Fix: change `insetResult` init to `SourceGraphic`.
 
 ### 2.7 Baseline Results (Hash #1428)
 

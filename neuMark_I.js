@@ -74,7 +74,7 @@ class Profile {
   get cyma() { return new Profile(this.type === `r` ? `j` : `r`, this.cutIn) }
 
   get insetDepth() {
-    if (this.isR) return this.cutIn ? 0.35 : 0.45
+    if (this.isR) return this.cutIn ? .35 : 0.45
     else return 1
   }
   get outsetDepth() {
@@ -165,15 +165,22 @@ class ProtoCut {
   }
 
   //MARK: Public Methods
-  //METH: setLayout() : null : 
+  //METH: setLayout() : null : restore legacy percent-based filter regions
   setLayouts() {
     const layout = this.maxLayout
     this.filters.forEach(f => {
+      // remove explicit filterUnits so the filter uses objectBoundingBox (percent) coordinates
+      if (f.filter.elt && f.filter.elt.removeAttribute) f.filter.elt.removeAttribute('filterUnits')
       f.filter
-        .attribute("x", `${layout.x}%`)
-        .attribute("y", `${layout.y}%`)
-        .attribute("width", `${layout.width}%`)
-        .attribute("height", `${layout.height}%`)
+        .attribute('x', `${layout.x}%`)
+        .attribute('y', `${layout.y}%`)
+        .attribute('width', `${layout.width}%`)
+        .attribute('height', `${layout.height}%`)
+        .attribute('filterUnits', 'userSpaceOnUse')
+      // .attribute('x', FRAME.anchor.x)
+      // .attribute('y', FRAME.anchor.y)
+      // .attribute('width', FRAME.size.x)
+      // .attribute('height', FRAME.size.y)
     })
   }
   //METH: curve() : type :
@@ -340,9 +347,33 @@ class Shade {
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
 
+    // DEBUG: instrument neuShadeSVGFactory inputs & key computed values
+    if (window && window.DEBUG_NEUSHADES) {
+      try {
+        const dbg = {
+          curve, cutIn, shadeType, rawMag: arguments[0]?.mag ?? undefined,
+          signedMag: arguments[0] ? arguments[0].mag : undefined,
+          initialMag: mag,
+          inset,
+          pixToUserUnits
+        }
+        console.groupCollapsed(`neuShadeSVGFactory debug — ${curve} ${shadeType}`)
+        console.log('inputs:', dbg)
+      } catch (e) {
+        console.warn('neuShadeSVGFactory debug failed to log', e)
+      }
+    }
+
     DeBug.log(``)
     DeBug.groupCollapsed(`neuShadeSVGFactory`, vector)
     DeBug.log(`mag`, mag)
+
+    // capture a snapshot of computed intermediate values for DEBUG_NEUSHADES
+    const __dbg_capture = (pathObj) => {
+      if (window && window.DEBUG_NEUSHADES) {
+        try { console.log('neuShadeDBG:', { cutIn, shadeType, inset, ...pathObj }) } catch (e) { /* noop */ }
+      }
+    }
 
     //MARK: "J" and "R" Cuts
 
@@ -418,6 +449,7 @@ class Shade {
       .filter((e, i, a) => i === 0 || !equalsRoundedDec(e, a[i - 1], 0))  // deduplicate within tolerance of 1
 
     DeBug.error('offsets filter-sort', offsets)
+    __dbg_capture({ offsets })
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
@@ -474,6 +506,7 @@ class Shade {
             // DeBug.log(`rotOffset`, rotOffset)
 
             const shades1 = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
+            __dbg_capture({ curve, stage: 'i_r2_layer', offset, mag, blurRadius, highBlurRad: blurRadius, highColLuma, shadColLuma1, shadCol1, shades1 })
             shades.push(shades1)
 
             DeBug.log(`${curve} shades`, shades)
@@ -531,19 +564,22 @@ class Shade {
             //MARK: "r" Cuts
             if (curve === 'r') {
               highColLuma =
-                !isSCurve ?
-                  maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
-                  : 1 * maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                // !isSCurve ?
+                //   maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                //   : 
+                1 * maxHighlight - (highColSpread * easeInCircNormalized(offset) / perceptualDivisor)
               if (offset <= reflLightRange * 1) {               // add relfective highlight to shadow
                 shadColLuma =
-                  !isSCurve ?
-                    reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
-                    : .915 * reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                  // !isSCurve ?
+                  //   reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                  //   : 
+                  .915 * reflHighlight + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
               } else {
                 shadColLuma =
-                  !isSCurve ?
-                    minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
-                    : 1.2 * minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                  // !isSCurve ?
+                  //   minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
+                  //   : 
+                  1.2 * minShadow * reflHighMult * reflShadMult + (shadColSpread * easeInCircNormalized(offset) / perceptualDivisor)
               }
 
               //MARK: "j" Cuts
@@ -580,6 +616,7 @@ class Shade {
             // DeBug.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
 
             let shades = this.neuShadeSVG(shadeType, shadeVector, mag, highBlurRad, shadBlurRad, highCol, shadCol, inset, blur, curve)
+            __dbg_capture({ curve, stage: 'j_r_layer', offset, mag, blurRadius, highBlurRad, highColLuma, shadColLuma, shadowReducer, shadCol, shades })
             DeBug.log(`${curve} ${shadeType} shades`, shades)
             return shades
           })
@@ -633,6 +670,7 @@ class Shade {
     // DeBug.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
     // DeBug.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
     DeBug.groupEnd()
+    if (window && window.DEBUG_NEUSHADES) console.groupEnd()
     return neuShades
   }
 }

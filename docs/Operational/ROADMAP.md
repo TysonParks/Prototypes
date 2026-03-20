@@ -1,15 +1,20 @@
 # BoredUI Project Roadmap
 
 > **Purpose:** Track the broader improvement plan for BoredUI. This
-> section was reconstructed from session notes after being lost between
-> conversations. Items marked ❓ may be incomplete or out of order —
-> update as context is recovered.
->
-> **Related docs:**
-> [GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
-> [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-> [ARCHITECTURE](ARCHITECTURE.md) |
-> [TESTING](TESTING.md)
+section was reconstructed from session notes after being lost between
+conversations. Items marked ❓ may be incomplete or out of order —
+update as context is recovered.
+
+**Related docs:**
+[GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
+[KNOWN-ISSUES](KNOWN-ISSUES.md) |
+[ARCHITECTURE](ARCHITECTURE.md) |
+[TESTING](TESTING.md)
+
+## What This Document Is Not
+
+- Planning intent only — not proof of implementation
+- Not a source of canonical architecture or geometry rules
 
 ---
 
@@ -33,7 +38,7 @@ failures.
 | 0 | Foundation (illustrations, GEOMETRY-REFERENCE, geometric vocab) | ✅ Done | Sessions 1-2 | Hand-drawn sketches analyzed, GEOMETRY-REFERENCE built |
 | 1 | Coincident wrappers | ✅ Done | Session 1 | Shared-corner geometry, `hasCoincidentCorner` |
 | 2 | Collinear wrappers | ✅ Done | Session 2 | Found Bug A (misdiagnosed, KNOWN-ISSUES § 9.6) + Bug B (opposite-facing, KNOWN-ISSUES § 9.7) |
-| 3 | Adjacent wrappers | 🟡 In progress | Session 5 | Code traced, detection+resolution documented (KNOWN-ISSUES § 9.12). Visual testing with `intershape_3` pending. |
+| 3 | Adjacent wrappers | 🟡 In progress | Session 5 | Code traced, detection+resolution documented (KNOWN-ISSUES § 9.12). Non-square aspect distance bug identified+fixed (§ 9.12.10). Stale `inOutAdjWrappers` memo fixed (§ 9.12.9). Visual verification pending. |
 | 4 | Radiant wrappers | ✅ Done | Session 3 | Detection + resolution traced. Priority system confirmed working (KNOWN-ISSUES § 9.8). |
 | 5 | Interference | ✅ Done | Session 4 | 9 issues found (KNOWN-ISSUES § 9.10). Key: `removeDuplicates` loop bug (G), missing `canCurveTo` guard (H). |
 

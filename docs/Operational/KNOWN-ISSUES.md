@@ -11,6 +11,27 @@
 > [TESTING](TESTING.md)
 
 ---
+> **Purpose:** Track active bugs, audit findings, and unresolved edge
+cases in the wrapper system. Organized by issue number for stable
+cross-referencing from code comments.
+
+**Related docs:**
+[GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
+[ARCHITECTURE](ARCHITECTURE.md) |
+[ROADMAP](ROADMAP.md) |
+[TESTING](TESTING.md)
+
+## What This Document Is Not
+
+- Not a design specification — it records observed failures and audits
+- Not guaranteed current truth; entries are historical and may be superseded
+- Contains past failed fixes and experiments for traceability
+
+---
+
+Maintenance note:
+- When editing or auditing a specific issue section, append a short timestamp line to that section header, e.g. `*Last audited: 2026-03-09 — notes or summary*` so readers can see the most recent verification date.
+
 
 ## Table of Contents
 
@@ -903,6 +924,32 @@ adjWrapperObjsFinal (L2635)
 adjacentWrapper = adjWrappersFinal[0]
 ```
 
+### 9.12.11 Recent adj/adjacent wrap regression (Mar 17, 2026)
+
+**Status:** 🟡 Investigating — requires a focused debug session (multi-hour)
+
+Summary of what was observed:
+- An attempted quick fix that clamped `obj.dist` to `source.arcRadius` in `#wrap()` (proximal branch) was applied then reverted because it broke many valid wraps. Do not reapply this change.
+- The immediate failing case was caused by misclassification upstream: `wrapState()` (proximal branch) treated very large intersection distances as `EQUIDISTANT` (return 0) instead of `DIVERGING` (return 1). Because `fixBadAdjWraps()` filters on diverging/converging states, that case was skipped.
+- A candidate-filtering attempt (checking for intervening same-facing corners) was experimented with in `adjIntersectObjs()` and then moved to `adjacentWrapper()` to reduce collateral filtering. Both placements had trade-offs: early filtering removed valid candidates needed for ordering/coincident handling; late filtering created undefined `adjacentWrapper` in some cases. More nuanced rules are needed.
+- The issue appears in both non-square and square aspect hashes (see failures below), so multiple interacting issues likely exist.
+
+Repro identifiers (use these when reproducing):
+- Target segment (broken-case example): `shp032-12down-cel054-rightSide-to-cel153-rightSide`
+- Interacting segments: `shp025-4down-cel093-rightSide-to-cel120-rightSide`, `shp015-2left-cel122-downSide-to-cel121-downSide` (the latter calls `replaceEndRadiantOutWrapsOrigin()` in Grid.js L1007)
+- Square-aspect failing hash found during testing: `0x3f81c13fd6cfd2c38d603067cb273df497c0654690fb8b1768ef416cf0163346`
+
+Recommended next steps (conservative):
+1. Reproduce the failing hash(s) in the harness and capture `WrapperDebugOverlay.adjDebug()` output for the segments above.
+2. Add a small unit check that asserts `wrapState()` behaves as expected for proximal cases (explicitly test `obj.dist` <, ==, and > `outer.arcRadius`). Use strict rounding rules consistent with existing `roundToDec` usage.
+3. Prefer classification/candidate-selection fixes (wrapState, adjIntersectObjs/adjacentWrapper validations) over changing `#wrap()` behaviour which is shared by flush/adj flows.
+4. If classification fixes cause regressions, instrument `fixBadAdjWraps()` to trace decision branches for problematic segments; avoid sweeping changes without targeted tests.
+5. Schedule a dedicated full-day audit: trace failing hash end-to-end, snapshot memo keys before/after each `fixIssues()` stage, and record failing commits.
+
+Notes for future reference:
+- Keep any experimental edits isolated and clearly labeled; document the commit/hash for each attempt. Re-enable memoization only after `arcVolatileKeys` are correctly listed in `#resetMemoProps`.
+
+
 ### 9.12.2 Key Methods
 
 **`minAdjWrapperDistanceObj(seg)`** (L2523)
@@ -1046,6 +1093,68 @@ be inverted.
 **Risk:** 🟠 Needs console inspection — `wrapState()` values cannot be determined visually.
 Use `WrapperDebugOverlay.seg('celXXX')` at an intershape corner and check `adjWrapState`.
 
+### 9.12.9 Stale `inOutAdjWrappers` / `inOutFlushWrappers` Memo
+
+*Added: 2026-03-13*
+
+**Status:** ✅ Fixed
+
+`inOutAdjWrappers` and `inOutFlushWrappers` were actively memoized but
+**not listed in `#resetMemoProps`**. After any arc mutation (e.g.
+`maximizeCuddles`, `fixBadAdjWraps`), these getters returned stale
+in/out wrapper assignments, which directly feed `wrapState()`,
+`adjWrapIsDiverging`, and `adjWrapIsConverging`.
+
+**Fix:** Added both keys to `#resetMemoProps` (drawAsSVG.js L1959) and
+updated `WrapperTestHarness.resetKeys` to match.
+
+### 9.12.10 Non-Square Cell Aspect Adjacent Wrap Bug
+
+*Added: 2026-03-13*
+
+**Status:** 🟡 Fix applied — needs visual verification with test hashes
+
+**Test hashes:**
+- `adjacent_horiz_aspect_1`: `0xa632c039f8ebdf763e40ecebfb803c36669c5c4714d3f757499a30859e98b784`
+- `adjacent_horiz_aspect_2`: `0x44ae1aab7c02cbad2ff08c0426b58f7f74220eb115a26f3296e738e769959a77`
+
+Both have `cellAspect === "horizontal"` (wide cells) and exhibit
+converging adjacent wrappers that should be equidistant or diverging.
+
+**Root cause:** `minAdjWrapperDistanceObj` (L2526) compares raw x-axis
+and y-axis gaps between wrapper sides:
+
+```
+vertDist = vertInSide.x - vertOutSide.x   // x-gap (large for wide cells)
+horDist  = horInSide.y - horOutSide.y      // y-gap (small for wide cells)
+```
+
+For non-square cells these values are asymmetric — the longer axis gap
+always dominates the `startDist < endDist` / `startDist > endDist`
+comparison, causing the wrong `isStart` selection. This cascades:
+
+1. Wrong `isStart` → `intersectObj(seg, isStart)` projects onto wrong side
+2. Wrong projection → wrong `dist` in `adjWrapperObjsFinal`
+3. Wrong `adjacentWrapper` → `fixBadAdjWraps` detects convergence but
+   re-wraps using the same broken detection
+
+**Additional aspect issues:**
+- `canHaveCorrectSize` compares against `cellRadius = min(w,h)/2` —
+  a single scalar. Wraps along the wider axis compare against a
+  threshold that's too small.
+- `arcCenterMidPointTangent` uses a fixed 90° rotation, not
+  aspect-corrected. The tangent-outWrapper intersection lands at
+  a different relative position on non-square cells.
+
+**Fix applied:** Normalize `vertDist` and `horDist` by their respective
+cell dimensions (`cellSize.x` and `cellSize.y`) before comparison, so
+the start/end selection is axis-agnostic. Raw (unnormalized) distances
+are preserved in the returned objects for downstream geometry.
+
+**Diagnostic:** `WrapperDebugOverlay.adjDistances(grid)` logs raw vs
+normalized distances for every adjacent-wrapped segment to aid
+verification.
+
 ---
 
 ## 9.13 Group Mask Pipeline
@@ -1159,6 +1268,48 @@ visible-fill test versions of mask shapes:
 The debug shapes should be correct if `maskShape`/`maskSVG` compute
 correctly. They can be used to verify mask accuracy before re-enabling
 the actual `<mask>` element pipeline.
+
+### 9.13.8 Ordinal + R-in groupMask shading bug (Fixed)
+
+**Status:** ✅ Fixed
+
+**Symptom:** For some hashes with islands that have ordinal connections
+and an R-profile *r-in* cut (outsetShade), group masks were being
+recomputed into Cardinal-only geometry which produced visible shading
+artifacts (thin white/flat strips or collapsed ordinal connector
+bridges). The artifact only appeared when group masks were de-blurred
+or inspected at high fidelity.
+
+**Root cause:** `Shape.maskShape()` previously downgraded "All"
+calculated geometry to Cardinal when islands had ordinal connections.
+That recalculation path produced new temporary island shapes whose
+mask geometry was larger/smaller than the original `All` shape and
+therefore produced incorrect mask polarity/coverage for *outset* (r-in)
+shades. In short: ordinal connectors + `r-in` → forced All→Cardinal
+recalc → incorrect mask → shading artifact.
+
+**Fix applied:** Preserve the `All`-calculated shape for islands with
+ordinal connections when the active cut is an R-profile with an
+outset shade (`cut.profile.hasOutsetShade`). The downgrade to
+Cardinal (and the `copyAllToCardinal()` path) is still used for
+`r-out` (inset) cases where interior masks are required. The change
+was implemented in `Shape.maskShape()` / `maskShape` (file:
+`ProtoLayerObjects.js`) so that `r-in` + ordinal connectors keep their
+original mask geometry.
+
+**Files touched:** `ProtoLayerObjects.js` — `maskShape()` (shape mask
+selection logic). A small follow-up guard ensures copies preserve the
+`cut` metadata when copies are required.
+
+**Regression / test hashes:**
+- 0x9a6855a35b54aac9e8cba8b54e30050c9987098230179e38963df5b36c4610eb
+- 0xba68b4b09a66638ae0fe58b7105dab9ca4d890540cc4b0694d9a59ffc72b870e
+- 0xad7b90463ba0bbb11edb7aa4758425448853bfa1d82a20eb731e6a91616d31ef
+
+**Verification:** Use `showMasks()` (DeBugging) and the `WrapperTestHarness`
+regression pool to confirm that ordinal connector bridges retain
+soft-masked shading and that `r-out` mask recalculation behavior is
+unchanged.
 
 ### 9.13.6 `p5.Element.mask()` Prototype (ProtoFilter.js L408)
 
@@ -1550,10 +1701,17 @@ viewport or overflow changes. It came from the **filter region mode**.
 4. `boundsRect` and `overflow` alone did not change the look.
 
 **Current runtime state:**
-- `ProtoCut.setLayouts()` is back on the legacy `%`-based
-  `maxLayout` filter region.
-- The `userSpaceOnUse` experiment is no longer part of operational code.
-- Any future re-test of that path should happen through the dev-only
+- `ProtoCut.setLayouts()` sets `filterUnits='userSpaceOnUse'` while retaining
+  `%`-based `x`/`y`/`width`/`height` derived from `maxLayout`. Using
+  `userSpaceOnUse` with `%` ensures the percent values are resolved
+  against the ShapeGroup viewport (the element `<svg>` viewBox) rather
+  than the individual shape bounding box — this prevents cascade-crop
+  clipping without introducing the frame-coordinate banding observed
+  when absolute FRAME x/y/width/height were used.
+- Avoid setting absolute FRAME coordinates with `userSpaceOnUse` — that
+  approach maps incorrectly into nested ShapeGroup viewBoxes and caused
+  the earlier top/bottom banding regression.
+- Any future re-test of alternate layouts should be done via the dev-only
   `testing/FilterDebugHarness.js` runtime patch tool.
 
 **Design lesson:** SVG cropping bugs in this codebase are not a single
@@ -1579,8 +1737,10 @@ The currently relevant artifact is on the **Frame's massive `rOut` cut**
 different problems**:
 
 1. A **real filter-region regression** caused by the Mar 6
-  `userSpaceOnUse` layout rewrite. That part is now fixed by restoring
-  the `%`-based `maxLayout` region in runtime code.
+  `userSpaceOnUse` layout rewrite when it used absolute FRAME coordinates.
+  That is now fixed by explicitly setting `filterUnits='userSpaceOnUse'`
+  while keeping `%`-based `maxLayout` assignments so the filter region
+  margins resolve against the ShapeGroup viewport.
 2. A **remaining vertical/cropping-style artifact** that still persists
   after that fix and is not yet isolated.
 
@@ -1739,6 +1899,38 @@ preserves the original behavior for small blurs.
 `testing/WrapperTestHarness.js` — dumps SVG viewport chain, filter
 regions, padding, and bounding boxes for all backgrid ShapeGroups.
 
+#### 9.14.7.7 Cascade Crop Fix (Mar 9 2026)
+
+**Status:** ✅ Fixed (selective changes applied)  
+**Date:** 2026-03-09  
+**Summary:** After the group-mask blur fix was applied, the cascade
+cropping regression was resolved by two targeted, low-risk changes:
+
+- (A) Broadening `ShapeGroup.boundsRect` for cuts to return
+  `FRAME.boundsRect` (ensures shape groups contributing deep cascade
+  effects are laid out in the full frame user-space).
+- (C) Switching `ProtoCut.setLayouts()` to use
+  `filterUnits="userSpaceOnUse"` and absolute FRAME bounds instead of
+  percentage-based (`objectBoundingBox`) margins.
+
+**Performance note:** We experimented with setting `overflow: visible`
+on ShapeGroup/Grid SVGs (previously considered as part of a 3-way
+approach). That change was tested but intentionally reverted due to
+measurable performance concerns; it is **not** part of the retained
+fix. The retained fixes (A + C) correct cascade cropping without
+requiring permanent `overflow: visible`.
+
+**Why this works:** Using absolute user-space filter bounds decouples
+filter region calculation from ShapeGroup viewport sizes (the source
+of percentage-based under-coverage). Broadening `boundsRect` for cut
+ShapeGroups ensures padding and mask calculations include the full
+frame area where deep blurs and cascades can extend.
+
+**Implementation:** See `ProtoLayerObjects.js` (`ShapeGroup.boundsRect`
+and caller code) and `ProtoCut.setLayouts()` in `neuMark_I.js` for the
+user-space filter bounds implementation.
+
+
 **Previous content of this section (now superseded):** Described a
 failed boundsRect/overflow fix for the earlier bottom-bar regression,
 which was fully reverted to Mar 5 baseline before this fix was applied.
@@ -1849,10 +2041,16 @@ bugs in the terminal segment path rendering (ProtoLayerObjects.js):
 
 ---
 
-### 9.14.9 R-in Shade Layer Not Centered (Open)
+### 9.14.9 R-in Shade Layer Not Centered (Fixed)
 
-**Status:** 🔍 Open — investigation paused  
-**Date:** 2026-03-08  
+**Status:** ✅ Fixed — mask/construction fixes applied
+**Date (fixed):** 2026-03-12
+
+**Fix summary (short):** Root cause was mask construction order and
+mask-shape handling in `Shape.maskShape()` and `ShapeGroup.createMaskGroup()`;
+these were corrected so hole-shaped (R-in) masks subtract a sharp
+interior shape before blurring ("subtract sharp → then blur"), and
+the `outsetShade` scale workaround was removed. See details below.
 **Symptom:** R-out shade layers are visually centered within their cut
 depth, but R-in shade layers sit ~1/4 to 1/3 from the inside edge
 instead of centered. This is noticeable on wider frame cuts.
@@ -1877,6 +2075,105 @@ the shade asymmetrically for R-in vs R-out:
 **Potential fix:** Use a midpoint `(cutStart + cutEnd) / 2` or bias
 toward `cutStart` for the R-in case in the `cutIslands` insetScale
 ternary.
+
+**Diagnosis & Fix Strategy (2026-03-10)**
+
+1) Goal: Confirm whether the perceived vertical displacement of the
+   R-in shade is caused by different blur radii, color/tone generation,
+   or true offset positioning. The earlier offset checks showed
+   identical offsets — this investigation focuses on blur stdDeviation
+   and color/shade luma differences.
+
+2) Instrumentation: Add lightweight debug logging to
+   `Shade.neuShadeSVGFactory()` (neuMark_I.js) to emit, per shader
+   stack creation:
+   - incoming args: `curve`, `cutIn`, raw `mag` (signed), `pixToUserUnits`
+   - computed: `inset` flag, final `mag` (abs), `offsets[]`, `blurRadius`,
+     `highBlurRad`, `shadBlurRad`, `shadowReducer`, and the `dropShade`
+     objects (color + blur) produced.
+
+3) Reproduce cases: Use the `FilterDebugHarness` / `WrapperTestHarness`
+   to build only the `shad` and `combo` filter stacks for a selected
+   hash that contains an R-out→R-in sequence (use the three regression
+   hashes). Export the intermediate blurred layers as SVG/PNG for top
+   and bottom samples and compute a mean-per-pixel difference.
+
+4) Expected outcomes:
+   - If blur radii differ (stdDeviation different) → normalize blur
+     computation to be symmetric for r-in and r-out (base on abs(mag)).
+   - If color luma differs (different `shadColLuma`) → adjust
+     `shadowReducer` or the `shadColLuma` formula to be symmetric.
+   - If neither differ but perceived darkness persists, consider the
+     composite order or feBlend operator differences; ensure blend
+     modes and `feBlend` inputs are equivalent for r-in vs r-out.
+
+5) Fix candidates (conservative order):
+   - Normalize blur radii: compute blur purely from `abs(mag)` and
+     offsets, not from pre-abs sign or `inset` boolean.
+   - Clamp/neutralize `shadowReducer` for `curve === 'r'` so small
+     numeric differences don't produce darker center ticks for r-in.
+   - Ensure `inset` only affects masking polarity, not blur/colour math.
+
+6) Regression: Add pixel-compare tests into `testing/WrapperTestHarness.js`
+   and the new `ordinal_rIn_groupMask` pool. Verify pre/post differences
+   are below a small threshold after the fix.
+
+**Instrumentation Results (2026-03-10)**
+
+Debug logging was added to `neuShadeSVGFactory()` gated by
+`window.DEBUG_NEUSHADES`. A console harness rebuilt the current hash
+and captured all R-curve shade parameters. Key findings:
+
+- **Blur radii and magnitudes are identical** between r-in and r-out
+  for matching `shadeType` + `curve` pairs. The factory produces
+  numerically identical shade stacks regardless of `cutIn`.
+- The **only difference** entering the factory is the `inset` flag,
+  which is derived from `mag` sign (set by `#createShader()` sign
+  math: `mag * cutIn * r * r2`).
+- For combo (curve `'r'`): r-out gets `inset=true`, r-in gets
+  `inset=false`. For shad (curve `'r2'`): reversed.
+
+**Root cause identified (revised):** The asymmetry is in
+`createMaskGroup()` (ProtoLayerObjects.js ~L2085), not in the shade
+filter stack or factory. Disabling `createMaskGroup()` produces
+properly matched top/bottom shading.
+
+The issue is the blur direction on mask shapes:
+- R-out mask: interior closed shape — blur gradient radiates outward
+  from shape edge, matching the outset shade direction.
+- R-in mask: open shape with hole (rectangle minus interior) — the
+  blur is applied to the composite hole shape, producing a gradient
+  that radiates inward from the same edge. This is the wrong direction
+  for an inset shade — it should radiate outward (away from the viewer
+  into the recess).
+
+The fix likely involves restructuring mask creation for r-in: subtract
+the **sharp** (unblurred) shape from the rectangle first, then blur
+the result, so the gradient direction is correct for the inset case.
+
+Additional considerations identified:
+- `createBlurMask()` usage within `createMaskGroup()` may need
+  rethinking for the r-in hole-shape case
+- When r-in is the outermost frame/backgrid cut, the mask may not be
+  needed at all
+- `const divs = [8, 16, 32]` may need scaling to cover deeper cuts
+  where the effect is more prominent
+
+**Ruled out:**
+
+- **`neuShadeSVGFactory()` parameters**: Instrumented and confirmed
+  identical blur radii, magnitudes, color luma, and `shadowReducer`
+  values between r-in and r-out for matching `shadeType` + `curve`.
+- **`ProtoFilter.shade()` blend base asymmetry**: Inset blends from
+  `transparentInput`, outset blends from `SourceGraphic`. Two
+  restructuring attempts (changing `insetResult` init; adding symmetric
+  fringe masks) had no visible effect because the filter stack itself
+  is correct — the visual asymmetry comes from the mask, not the
+  filter. A future optimization could make the outset path match the
+  inset path (both from transparent + fringe mask), but this adds an
+  extra `feComposite` per outset layer and is not worth pursuing
+  unless a performance audit identifies the filter stack as a
+  bottleneck.
 
 ---
 

@@ -1729,7 +1729,10 @@ class ShapeGroup extends ProtoLayer {
 
   // MARK: ShapeGroup Computed Properties
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
-  get boundsRect() { return this.isFrame ? FRAME.boundsRect : this.cellBounds.boundsRect }
+  get boundsRect() {
+    if (this.isFrame || this.cut) return FRAME.boundsRect   // § 9.14.1 — broadened for cascade filter coverage
+    return this.cellBounds.boundsRect
+  }
   get padding() {
     const
       backGroupPadding = Vertex.mult(this.grid.insetAmount, 2),
@@ -1779,6 +1782,7 @@ class ShapeGroup extends ProtoLayer {
   //METH: assignElement() override
   assignElement() {
     super.assignElement()
+    if (this.cut) this.svgElt.attribute('overflow', 'visible')   // § 9.14.1 — allow filter bleed beyond viewport
     this.svgElt.parent(this.shadeElt)
   }
   //METH: createSVGGroup()
@@ -1851,21 +1855,24 @@ class ShapeGroup extends ProtoLayer {
         //------------------------------------------------------------  
         this.masks.forEach(m => {
           m.parent(this.maskGroupElt)
-            .blur(this.cut.depth / 4)
+          // .blur(this.cut.depth / 4)
 
           if (outsetShade) {
             this.maskGroupElt
               // .attribute('stroke', 'white')
               // .attribute('stroke-width', m.outerMaskSize || 1)
-              .attribute('fill', 'white')
-            // .attribute('fill', 'black')
+              // .attribute('fill', 'white')
+              .attribute('fill', 'black')
+              .blur(this.cut.depth / 4)
             // .attribute('overflow', 'visible')
             maskRect
-              .attribute('fill', 'black')
-            // .attribute('fill', 'white')
+              // .attribute('fill', 'black')
+              .attribute('fill', 'white')
           } else {
             this.maskGroupElt
+              // .blur(this.cut.depth / 4)
               .attribute('fill', 'black')
+              .blur(this.cut.depth / 4)
           }
 
           const createBlurMask = (div) => {           // create additional blurred masks for deeper cuts
@@ -3240,7 +3247,9 @@ class Shape extends ProtoLayer {
         // Vertex.add(this.insetScale, depthScale)                                     // outsetShade scale is insetScale + depthScale
         : Vertex.sub(this.insetScale, depthScale),                                  // insetShade scale is insetScale - depthScale
       // : this.insetScale,                                                          // insetShade scale is insetScale - depthScale
-      hasOrds = this.island.hasOrdinalConnections && this.island.direction.isAll,   // shapes with ordinal connections will mask badly
+      hasOrds = this.island.hasOrdinalConnections
+        && this.island.direction.isAll
+        && !outsetShade,                                                           // maskShapes only for shapes with ordinal connections and outsetShade (for insetShades, maskShapes create weird overlaps and aren't as necessary since the shade is inset) 
       shapes = hasOrds ?
         this.island.copyAllToCardinal(this.insetScale, this.cut)   // get cardinal islands
           .map(isle => isle.shape)                                                  // map to shapes
@@ -3248,8 +3257,9 @@ class Shape extends ProtoLayer {
 
     const paths = shapes.map(shape => {                                             // map shapes to inset paths
       return shape.simpleSegPaths?.map((path, i) => {
-        const inset = outsetShade ? path.insetPath(depthScale.div(2).add(scale))       // outsetShade paths used with stroking
-          : path.insetPath(scale)                                                     // insetShade paths used as-is with fill
+        // const inset = outsetShade ? path.insetPath(depthScale.div(2).add(scale))       // outsetShade paths used with stroking
+        //   : path.insetPath(scale)                                                     // insetShade paths used as-is with fill
+        const inset = path.insetPath(scale)
         return new SegPath(inset, shape)                                               // wrap each inset path as a SegPath
       })
     }).flat()                                                                       // flatten to array of SegPaths

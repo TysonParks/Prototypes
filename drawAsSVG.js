@@ -1961,6 +1961,7 @@ class ProtoSegment extends Segment {
     segs.forEach(s => {
       resetMemoized(s,
         `adjDistanceObjs`,
+        `adjWrapperObjsFinal`,
         `arcCenterTangent`,
         `arcCenterVert`,
         `arcOrigin`,
@@ -1970,11 +1971,12 @@ class ProtoSegment extends Segment {
         `arcOriginToEnd`,
         `arcOriginToArcCenter`,
         `arcRadius`,
-        `adjWrapperObjsFinal`,
         `flatAmount`,
         `hasNoFlatness`,
         `hasCompleteStartCorner`,
         `hasCompleteEndCorner`,
+        `inOutAdjWrappers`,
+        `inOutFlushWrappers`,
         `inWrappers`,
         `outWrappers`,
         `outWrapsOfThisShapeAndNeighbors`,
@@ -2612,8 +2614,18 @@ class ProtoSegment extends Segment {
       } else return objs                                                  // only single wrapper
     }
 
+    //ARROW: hasCloserSameFacingCorner() : Bool : invalidate candidate if a closer same-facing corner exists between this and it
+    const hasCloserSameFacingCorner = (candidate) => {
+      const thisDistToCandidate = this.end.dist(candidate.end)
+      return candidate.viableInWrappers
+        .some(c => c.id !== this.id
+          && c.end.dist(candidate.end) < thisDistToCandidate)
+    }
+
     const
       adjWraps = this.adjDistanceObjs,
+      // adjWraps = this.adjDistanceObjs
+      //   .filter(obj => !hasCloserSameFacingCorner(obj.seg)),
       wrapsAreCoincident = adjWraps[1]?.seg.hasCoincidentCorner(adjWraps[0].seg)
     let finalWraps
 
@@ -2630,6 +2642,7 @@ class ProtoSegment extends Segment {
 
     return finalWraps
   }
+
   get adjWrapperObjsFinal() {
     // return memoize(() => {
     const intersectWraps = this.adjIntersectObjs
@@ -2642,6 +2655,19 @@ class ProtoSegment extends Segment {
   get adjacentWrapper() {
     // return memoize(() => {
     return this.adjWrappersFinal[0]
+    const candidate = this.adjWrappersFinal[0]
+    if (candidate) {
+      const thisDistToCandidate = this.end.dist(candidate.end)
+      let hasIntervening = candidate.viableInWrappers
+        .exclude(this.adjWrappersFinal, 'id')
+        .exclude(candidate.flushWrapper, 'id')
+      DeBug.log('filtered wrappers', hasIntervening)
+      hasIntervening = hasIntervening
+        .some(c => c.id !== this.id
+          && c.end.dist(candidate.end) < thisDistToCandidate)
+      if (hasIntervening) return undefined
+    }
+    return candidate
     // }, `adjacentWrapper`).call(this)
   }
 
