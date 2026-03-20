@@ -893,6 +893,7 @@ function shadeAnimation() {
 function windowResized() {
   sizeFrame()
   BG.size(windowWidth, windowHeight)
+  if (typeof positionRegenBtn === 'function') positionRegenBtn()
 }
 
 // FUNC: globalShadowVector()

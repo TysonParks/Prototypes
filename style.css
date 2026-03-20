@@ -8,3 +8,22 @@ body {
 canvas {
   display: block;
 }
+
+/* Regen button — only present when PublicGenerator.js is loaded */
+#regenBtn {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#regenBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+#regenBtn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
