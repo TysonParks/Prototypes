@@ -101,8 +101,17 @@ Focused pointers (where to look first)
 - Visual debugging: `WrapperDebugOverlay` — [testing/WrapperDebugOverlay.js#L1]
 
 
+[PublicGenerator.js](PublicGenerator.js)
+- No class — top-level functions only
+  - `DOMContentLoaded` listener: dynamically creates `<button id="regenBtn">` and attaches `protoBatch.buildFromNewSeed()` onclick
+  - `positionRegenBtn()`: sizes and positions the regen button below the frame after each build and on window resize
+  - Called by guarded checks in `ProtoBatch.buildFromHash()` and `sketch.js windowResized()`
+  - **Only loaded on the `PublicGenerator-v0.1` branch** — on dev branches the guards are no-ops
+
+
 Quick notes / tips
 - When tracing bugs, start with `ProtoSegment.#resetMemoProps()` (cache invalidation) and `Grid.maximizeCuddles()` (ordering). These are the two places where evaluation/opinion interaction most commonly manifest.
 - `Frame.setBackGridGroup()` intentionally bypasses `maximizeCuddles()`; frame wrapping logic is simpler but may miss radiant/interference steps.
+- **Branch workflow:** Dev work happens on `agent-testing`. Public deployment branch is `PublicGenerator-v0.1` (GitHub Pages). Merge `agent-testing → PublicGenerator-v0.1` to deploy. The public branch diverges only in `index.html` (no testing scripts, no dat.gui, adds `PublicGenerator.js`, browser detection) and carries its own `#regenBtn` CSS styles.
 
 ---
