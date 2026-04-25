@@ -175,5 +175,225 @@ block the upload.
 
 ---
 
+## Production Token Collection — Spec & Build Plan
+
+> **Status:** Conceptual spec for submission. No contract implementation needed
+> during the 2-week sprint — this section provides a believable technical sketch
+> to accompany the ArtBlocks evaluation submission. Full implementation is a
+> post-approval phase.
+
+### Concept Overview
+
+The **Production** collection is a companion ERC-721 collection released via
+auction after the Prototypes generative collection. Each Production token
+represents a physical sculpture derived from a Prototype output. Production tokens
+and Prototype tokens can be irreversibly *paired* by a collector who holds both —
+signalling that the Prototype has been selected for physical production and
+locking both tokens together permanently.
+
+**Collections:**
+
+| Collection | Role | Release |
+|------------|------|---------|
+| **Prototypes** | Generative on-chain art; the algorithm is the artwork | Primary (ArtBlocks platform) |
+| **Production** | Physical production token; claims a Prototype for fabrication | Secondary auction (post-Prototypes release) |
+
+---
+
+### PostParams Specification — Prototype Token Additions
+
+These PostParams are added to each Prototype token. Both are initialized to their
+null/false state at mint and are **only writable by an authorized address** —
+specifically the Production collection contract. They should be configured with a
+lock mechanism so that once set, they cannot be unset (see Q10).
+
+| Param Name | Type | Initial Value | Who Can Write | Locked After Set? | Notes |
+|------------|------|--------------|---------------|-------------------|-------|
+| `Produced` | Boolean | `false` | Production contract address (authorized via Creator Dashboard) | Yes — should lock permanently on first `true` write | Indicates this Prototype has been paired to a Production token; flows into `window.$features` for marketplace trait indexing |
+| `ProductionTokenId` | String (or Integer) | `undefined` | Production contract address | Yes — should lock permanently once set | The token ID of the paired Production token; drives a visible link in the Prototype's rendered output (optional) |
+
+**Feature integration (Prototype script):**
+
+```js
+const postParams = tokenData.externalAssetDependencies[0]
+const produced    = postParams?.data?.["Produced"] === "true"
+const prodTokenId = postParams?.data?.["ProductionTokenId"] ?? null
+
+window.$features = {
+  // ... existing traits ...
+  Produced: produced,           // Boolean → marketplace trait; rarity shifts as tokens are paired
+  ProductionTokenId: prodTokenId ?? "None",
+}
+```
+
+> **Rarity note:** As Prototypes are paired over time, `Produced: true` tokens
+> form an increasingly distinct sub-set. The unpaired remainder becomes a
+> "production-eligible" category. Consider whether this is a desired rarity
+> dynamic before finalizing trait naming.
+
+---
+
+### PostParams Specification — Production Token
+
+Each Production token has four PostParams and one locked mint-time trait.
+
+**Locked mint-time traits (not PostParams — assigned at mint, immutable):**
+
+| Trait Name | Type | Values | Notes |
+|------------|------|--------|-------|
+| `Size` | Enum (locked) | `"Small"` / `"Medium"` / `"Large"` | Assigned at mint; never changeable; drives physical fabrication tier |
+| `BacksidePattern` | TBD | TBD | Reserved — pattern or contour set for the reverse of the sculpture; may be hash-derived or aleatorically assigned at mint; exact values TBD |
+
+**PostParams (mutable, on-chain):**
+
+| Param Name | Type | Initial Value | Who Can Write | Locked After Set? | Notes |
+|------------|------|--------------|---------------|-------------------|-------|
+| `Paired` | Boolean | `false` | Collector (via Production contract `pair()` function) | Yes — lock on first `true` write | Becomes `true` when collector completes pairing; mirrored on the Prototype side |
+| `PairedPrototypeTokenId` | String | `undefined` | Collector (via Production contract `pair()` function) | Yes — lock once set | Token ID of the paired Prototype; used to cross-link both rendered outputs |
+| `Complete` | Boolean | `false` | Artist only | No — artist may update until final | Set to `true` when physical sculpture is fabricated and shipped |
+| `CompletionURI` | String | `undefined` | Artist only | No — artist may update | URI for image(s) of the completed sculpture; when present, the rendered token image updates to display the completion media |
+
+**Feature integration (Production script):**
+
+```js
+const postParams   = tokenData.externalAssetDependencies[0]
+const paired       = postParams?.data?.["Paired"] === "true"
+const pairedProto  = postParams?.data?.["PairedPrototypeTokenId"] ?? null
+const complete     = postParams?.data?.["Complete"] === "true"
+const completionURI = postParams?.data?.["CompletionURI"] ?? null
+
+window.$features = {
+  Size: SIZE_TRAIT,          // locked mint-time trait (not a PostParam)
+  BacksidePattern: BACKSIDE, // TBD
+  Paired: paired,
+  PairedPrototypeTokenId: pairedProto ?? "None",
+  Complete: complete,
+}
+
+// Rendering: if complete and URI provided, display completion image
+// otherwise display default generative image (see Default Image section below)
+```
+
+---
+
+### Pairing Mechanism — Technical Sketch
+
+The Production contract exposes a `pair(uint256 productionTokenId, uint256 prototypeTokenId)`
+function. This is the only on-chain write path for the four locked PostParams on
+both sides.
+
+**Preconditions checked on-chain before pairing:**
+
+1. `msg.sender` owns `productionTokenId` (or is a valid delegate via delegate.xyz v2)
+2. `msg.sender` owns `prototypeTokenId` (or is a valid delegate)
+3. `postParams["Paired"]` on the Production token is not yet `true`
+4. `postParams["Produced"]` on the Prototype token is not yet `true`
+
+**On successful pair():**
+
+```
+Production token:
+  PostParam["Paired"]                 = "true"   (locked)
+  PostParam["PairedPrototypeTokenId"] = string(prototypeTokenId)  (locked)
+
+Prototype token (cross-collection write, via authorized contract address):
+  PostParam["Produced"]               = "true"   (locked)
+  PostParam["ProductionTokenId"]      = string(productionTokenId) (locked)
+
+Emit: Paired(productionTokenId, prototypeTokenId, msg.sender)
+```
+
+**Authorization model:**
+
+- The Production contract address is set as the authorized writer for the Prototype
+  collection's `Produced` and `ProductionTokenId` PostParams via the ArtBlocks
+  Creator Dashboard (PostParam authorization type: "Address/Smart Contract").
+- Collectors cannot directly write those PostParams on Prototype tokens — only the
+  Production contract can, and only via `pair()`.
+
+> **Open question Q8** (see below): Confirm with ArtBlocks that a non-Prototypes
+> contract can be authorized to write PostParams on a Prototypes ArtBlocks token.
+> This is standard PostParam authorization per the docs but must be validated for
+> cross-collection use before committing to this design.
+
+---
+
+### Pairing Notification Design
+
+When `pair()` is called, the contract emits:
+
+```solidity
+event Paired(
+    uint256 indexed productionTokenId,
+    uint256 indexed prototypeTokenId,
+    address indexed collector
+);
+```
+
+**Notification options (off-chain):**
+
+| Method | Complexity | Notes |
+|--------|-----------|-------|
+| **Alchemy Webhooks** (recommended) | Low | Watch the Production contract address for `Paired` event; POST to a webhook URL (email/Discord/Slack) on match |
+| Moralis Streams | Low | Similar to Alchemy; real-time EVM event monitoring |
+| The Graph subgraph | Medium | Queryable indexed history; useful if you want a dashboard later |
+| Manual polling | None | Not recommended; fragile and easy to miss |
+
+The simplest viable implementation: Alchemy Notify webhook → a small serverless
+function (Vercel/Netlify) → email notification with `productionTokenId`,
+`prototypeTokenId`, and collector address.
+
+---
+
+### Default Image — Production Token
+
+Before pairing and before `CompletionURI` is set, the Production token needs a
+default rendered image. Two options:
+
+| Option | Description | Complexity |
+|--------|-------------|-----------|
+| **Option A — Minimal Prototypes algorithm** (recommended for submission) | A stripped-down version of the Prototypes generative script seeded from the Production token hash; same visual language, reduced feature complexity; acts as a preview/sketch of the "to be produced" work | Medium — requires a second upload script |
+| **Option B — Static placeholder** | A simple static SVG or canvas state (e.g., an outlined grid or "pending production" mark) that is replaced by `CompletionURI` once set | Low — minimal script |
+| **Option C — Direct mirror of paired Prototype** | Once paired, the Production token renders the same output as the paired Prototype (read `PairedPrototypeTokenId` and reproduce) | High — requires augmentation hook to fetch Prototype output |
+
+**Recommendation for submission:** Describe Option A in the submission as
+intent. Implement Option B for the staging upload to keep scope manageable.
+Revisit Option A or C post-approval.
+
+---
+
+### New Open Questions — Production Collection
+
+These questions must be answered before moving into implementation.
+
+| # | Question | Who Answers | Status |
+|---|----------|-------------|--------|
+| Q8 | Can a non-ArtBlocks contract (the Production contract) be authorized to write PostParams on a Prototypes ArtBlocks Engine Flex token? Is this a supported pattern? | ArtBlocks team | ❓ Open |
+| Q9 | Does the Production collection need to be deployed on ArtBlocks, or can it be an independent ERC-721 that interacts with ArtBlocks PostParams via the authorized-address mechanism? | ArtBlocks team | ❓ Open |
+| Q10 | Is there an on-chain mechanism to lock a PostParam at the time of an event (rather than at a predefined lock date)? Or must locking be enforced exclusively in the `pair()` function's logic (i.e., check-before-write)? | ArtBlocks docs / team | ❓ Open |
+| Q11 | Does releasing the Production collection as a post-Prototypes auction require a separate ArtBlocks submission/approval process, or is it covered by the original Prototypes approval? | ArtBlocks team | ❓ Open |
+| Q12 | When `Produced` PostParam changes on a Prototype token, does ArtBlocks automatically refresh the token's on-chain metadata (and therefore trigger marketplace rarity recalculation)? What is the latency? | ArtBlocks docs | ❓ Open |
+| Q13 | For the Production token default image — is a second (separate) script upload on the same project possible, or does a default state require a self-contained conditional in a single script? | ArtBlocks docs | ❓ Open |
+
+---
+
+### Production Collection — Feature Tasks
+
+These tasks are **out of scope for the 2-week Prototypes sprint** but should be
+tracked for the next planning phase. They are listed here for submission
+documentation purposes.
+
+| ID | Task | Priority | Est. Time | Depends On | Status |
+|----|------|----------|-----------|------------|--------|
+| P1 | **Prototype PostParams setup** — configure `Produced` and `ProductionTokenId` PostParams on the Prototypes project via Creator Dashboard; authorize Production contract address as writer | P1 | 0.5 day | Q8, Q9, Production contract deployed | ❌ Post-sprint |
+| P2 | **Production contract — `pair()` function** — implement and test `pair(productionTokenId, prototypeTokenId)` with owner/delegate checks, precondition guards, cross-collection PostParam writes, and `Paired` event emission | P1 | 3–5 days | Q8, Q9, Q10, Solidity dev | ❌ Post-sprint |
+| P3 | **Production script — default state rendering** — implement conditional rendering: default generative state (Option A or B) vs. `CompletionURI` overlay when `Complete = true` | P1 | 1–2 days | Q13 | ❌ Post-sprint |
+| P4 | **Notification pipeline** — Alchemy webhook → serverless function → email/Discord for `Paired` event | P2 | 0.5–1 day | Production contract deployed | ❌ Post-sprint |
+| P5 | **`BacksidePattern` trait design** — define values, decide hash-derived vs aleatoric assignment, implement in mint logic | P2 | TBD | Creative direction decision | ❌ Post-sprint |
+| P6 | **Marketplace rarity audit** — verify that `Produced` and `Paired` PostParam changes flow correctly into ArtBlocks trait indexing; confirm refresh latency and rarity impact | P2 | 0.5 day | Q12, staging deployment | ❌ Post-sprint |
+
+---
+
 *Document created: April 23, 2026*
-*Status: Draft — pending answers to Open Questions*
+*Last updated: April 24, 2026 — Production Token spec added*
+*Status: Draft — some Open Questions pending ArtBlocks team confirmation*
