@@ -1,4 +1,4 @@
-# BoredUI — ArtBlocks Test Bench Sprint Plan
+# Prototypes — ArtBlocks Test Bench Sprint Plan
 
 > **Purpose:** Separate sprint plan scoped exclusively to preparing BoredUI for
 > upload to the ArtBlocks test bench. This document does **not** replace or
@@ -22,13 +22,13 @@ change scope estimates significantly.
 
 | # | Question | Who Answers | Status |
 |---|----------|-------------|--------|
-| Q1 | What is the required format for upload? Single `.js` file? `.html`? Specific bundle format? | ArtBlocks docs / team | ❓ Open |
-| Q2 | Is minification (whitespace/comment removal) required, recommended, or discouraged for evaluation submissions? | ArtBlocks docs / team | ❓ Open |
-| Q3 | Is variable/function name obfuscation (uglification) expected, or should code remain human-readable for evaluation? | ArtBlocks team | ❓ Open |
-| Q4 | Are there file size limits for the test bench upload? | ArtBlocks docs | ❓ Open |
-| Q5 | How does ArtBlocks Post Params work — is it query-string based, hash-segment based, or via their own API? How does it interact with the hash/seed? | ArtBlocks docs | ❓ Open |
-| Q6 | Which p5.js version is supported / bundled by ArtBlocks, or must we include it ourselves? | ArtBlocks docs | ❓ Open |
-| Q7 | Are external CDN links allowed, or must all dependencies be self-contained? | ArtBlocks docs | ❓ Open |
+| Q1 | What is the required format for upload? Single `.js` file? `.html`? Specific bundle format? | ArtBlocks docs / team | Answered (docs): Single JavaScript file only — the generator expects one script file. Do not upload a full HTML page or CDN `<script>` tags; the Generator injects the canvas and the approved dependency library. |
+| Q2 | Is minification (whitespace/comment removal) required, recommended, or discouraged for evaluation submissions? | ArtBlocks docs / team | Answered (docs): Minification is recommended to reduce byte-size and gas cost (remove comments/whitespace). It is not strictly required for functional evaluation, but smaller scripts are preferred. |
+| Q3 | Is variable/function name obfuscation (uglification) expected, or should code remain human-readable for evaluation? | ArtBlocks team | Answered (docs): Uglification/obfuscation is not specified/required. Docs recommend minifying for size but do not mandate renaming symbols; keep code reviewable for evaluation unless you choose to obfuscate post-approval. |
+| Q4 | Are there file size limits for the test bench upload? | ArtBlocks docs | Answered (docs): No hard technical limit published on this page; upload cost scales with bytes (gas formula provided). Recommended target is ~5–20 KB for the script (excluding injected library). |
+| Q5 | How does ArtBlocks Post Params work — is it query-string based, hash-segment based, or via their own API? How does it interact with the hash/seed? | ArtBlocks docs | Partially answered (docs): The page notes that PostParam settings affect determinism (features must be consistent with hash + PostParams) but implementation details are in MCP/Generator docs (see MCP/Generator and "Staging & Testing"). Follow-up: read MCP / Generator spec for exact PostParam format. |
+| Q6 | Which p5.js version is supported / bundled by ArtBlocks, or must we include it ourselves? | ArtBlocks docs | Answered (docs): Art Blocks injects the dependency. Supported p5 versions listed include v1.0.0, v1.9.0, and v1.11.11 — confirm preferred version for your project. |
+| Q7 | Are external CDN links allowed, or must all dependencies be self-contained? | ArtBlocks docs | Answered (docs): Do not include CDN `<script>` tags. Use libraries from the Art Blocks Dependency Registry; the Generator injects the approved library at runtime. |
 
 ---
 
