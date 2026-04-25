@@ -81,7 +81,7 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 
 | ID | Bug | Priority | Est. Time | Depends On | KNOWN-ISSUES Ref | Status |
 |----|-----|----------|-----------|------------|-------------------|--------|
-| B1 | **Safari compatibility** — SVG filter rendering differences (percentage vs user-unit layout, cross-SVG filter ID resolution) | P1 | 2–3 days | — | §9.14.4b | ❌ Not started |
+| B1 | **Safari compatibility** — three sub-issues: (1) 10s–1min render delay (WebKit per-shape masker O(N) cost, Bug #172338); (2) missing/incorrect shapes (same root cause + cross-SVG filter ID resolution, §9.14.4b); (3) animation non-functional (software-path RAF, Bug #19118). Primary workaround: no-op `<filter>` on masked groups. | P1 | 2–3 days | — | §9.14.4b, §9.14.6 | ❌ Not started |
 | B2 | **Remaining wrapping bugs** — adjacent wrapper visual verification still pending; Bug B (opposite-facing collinear) deferred | P2 | 2–3 days | Wrapper audit §1 in ROADMAP | §9.7, §9.12 | 🟡 In progress (audit) |
 | B3 | **Remaining shading bugs** — R-in shade layer not centered; potential mask cropping edge cases | P2 | 1–2 days | — | §9.14.9, §9.13 | ❌ Not started |
 | B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | ❌ Not started |
@@ -89,10 +89,11 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 ### Bug Notes
 
 **B1 — Safari:**
-The primary known risk is SVG filter ID resolution and the percent vs. user-unit
-filter region layout (KNOWN-ISSUES §9.14.4b). The user-unit layout rewrite (§9.14.6)
-should help, but Safari's rendering engine may still diverge. Test against real Safari
-early — don't save this for the end.
+Three sub-issues: (1) 10 sec–1 min render delay, (2) missing/incorrect shapes,
+(3) animation non-functional. All three have known WebKit root causes (see full
+attack plan below). **ArtBlocks validates on headless Chromium (SwiftShell) —
+Safari fixes are for collector experience, not ArtBlocks evaluation.** But Safari
+is a primary collector browser and should not be ignored. Test early, not at the end.
 
 **B2 — Wrapping:**
 Scoped to visual verification of adjacent wrappers and the Bug B opposite-facing
@@ -106,6 +107,247 @@ ordinal mask mismatch briefly before committing time.
 **B4 — Animation:**
 Lower priority for evaluation unless animation is a primary feature being demonstrated.
 Can be deferred to post-upload if needed.
+
+---
+
+### B1 — Safari Compatibility: Full Attack Plan
+
+> **Scope note:** ArtBlocks generates static renders using headless Chromium
+> (SwiftShader), so Safari issues will **not** block ArtBlocks evaluation. Safari
+> matters for collectors viewing the live token page in their browser. Fix B1 for
+> collector experience quality — but do not let it block the upload itself.
+
+#### WebKit Open Source Context
+
+WebKit is fully open source: https://github.com/WebKit/WebKit.
+SVG rendering code lives in `Source/WebCore/rendering/svg/`.
+Bugs and their status are tracked publicly at https://bugs.webkit.org/.
+Source is browsable at https://searchfox.org/wubkat/source/.
+
+Research against the public bug tracker reveals the root causes of all three
+Safari sub-issues.
+
+---
+
+#### Root Cause A — Per-Shape Masking (drives Issues 1 & 2)
+
+**WebKit Bug [#172338](https://bugs.webkit.org/show_bug.cgi?id=172338) — open
+since 2017, still "NEW" as of 2024.**
+
+WebKit's `RenderSVGResourceMasker::applyResource()` applies the mask to each
+individual shape in a group's subtree rather than first compositing the entire
+group into an offscreen buffer and then applying the mask once. This violates
+the SVG 1.1 spec (§14), which requires all painting to be done on an intermediate
+canvas *before* applying clipping, masking, and opacity.
+
+This single bug simultaneously causes two of our three Safari issues:
+
+| Effect | Mechanism |
+|--------|-----------|
+| **Missing/incorrect shapes** | Overlapping shapes in a masked group composite incorrectly — colors, opacity, and fill order are wrong because the mask is applied per-shape rather than to the flattened group |
+| **Performance explosion** | `applyMask()` is a software pixel-by-pixel operation (confirmed in WebKit Bug #19118, first raised in 2008). If a masked group has N shapes, WebKit calls `applyMask()` N times instead of once. For complex renders, this O(N) masking loop explains the 10–60 second delays — the profiler shows normal JS timing because the bottleneck is inside the browser's C++ rendering path, invisible to JS profiling. |
+
+**Fix in WebKit:** The new LBSE (Layer-Based SVG Engine) — WebKit's updated SVG
+architecture that maps SVG elements to compositing layers — fixes this by
+construction. LBSE was "works in LBSE once it is turned on" (Ahmad Saleem, Jan
+2024), but is not yet fully deployed in shipping Safari. We cannot rely on it.
+
+**Our workaround:** Adding a no-op `<filter>` to a masked group forces WebKit to
+composite the group to an offscreen buffer *before* applying the mask — the same
+behavior LBSE provides by default, but triggered via a spec-legal side-effect.
+This is a documented workaround in the Bug #172338 comment thread.
+
+```html
+<defs>
+  <!-- Identity filter — forces Safari to composite group before masking.
+       Does not change output. Safe to include in all browsers. -->
+  <filter id="webkit-group-isolate">
+    <feColorMatrix type="matrix"
+      values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+  </filter>
+</defs>
+
+<!-- BEFORE: Safari applies mask N times (once per child shape) -->
+<g mask="url(#shapeMask)">
+  <path .../>  <!-- mask applied here -->
+  <path .../>  <!-- mask applied again -->
+</g>
+
+<!-- AFTER: Safari composites group first, then applies mask once -->
+<g mask="url(#shapeMask)" filter="url(#webkit-group-isolate)">
+  <path .../>  <!-- rendered into buffer -->
+  <path .../>  <!-- rendered into buffer -->
+</g>           <!-- mask applied once to buffer — correct AND fast -->
+```
+
+---
+
+#### Root Cause B — Cross-SVG Filter ID Resolution (drives Issue 2)
+
+Our own **KNOWN-ISSUES §9.14.4b**: Safari may not resolve `filter="url(#id)"`
+references across multiple `<svg>` elements in the DOM. Chrome resolves
+cross-document SVG IDs; Safari silently ignores the filter if the `<defs>` live
+in a sibling or parent `<svg>`. Shapes that reference a missing filter render
+without the filter (which may mean they render visible but incorrect, or not at
+all if the filter was providing a necessary compositing step).
+
+---
+
+#### Root Cause C — Software-Path Animation (drives Issue 3)
+
+**WebKit Bug [#19118](https://bugs.webkit.org/show_bug.cgi?id=19118) — open
+since 2008.**
+
+SVG animation in WebKit runs through the software rendering path with no GPU
+acceleration. CSS `transform` animations are composited via the GPU and animate
+at full frame rate. SVG attribute updates (which is how p5.js drives animation
+— setting `x`, `y`, fill, etc. on DOM nodes in the draw loop) trigger full
+software repaints. Safari does not promote SVG elements to GPU compositor layers
+unless an explicit compositing hint is present. The combination of p5's RAF-driven
+DOM writes + WebKit's software SVG path = animation that fights the compositor
+on every frame.
+
+---
+
+#### Attack Plan — Issue 1: Render Delay
+
+**Goal:** Reduce first-render time from 10–60 sec to < 3 sec on Safari.
+
+**Step 1 — Instrument to find the bottleneck.** Since Safari's Web Inspector
+cannot profile inside the SVG rendering pipeline, instrument JS timestamps around
+SVG insertion:
+
+```js
+const t0 = performance.now();
+parent.appendChild(mainSVGElement);
+
+// Double rAF: after 2 frames, the browser has painted at least once
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  console.log(`[Safari perf] SVG first-paint: ${(performance.now() - t0).toFixed(0)}ms`);
+}));
+```
+
+If the double-rAF fires quickly but the *visual* result is still slow, the
+bottleneck is Safari compositing subsequent frames (progressive layout recalc).
+If the double-rAF itself is slow, the bottleneck is initial paint.
+
+**Step 2 — Count shapes per masked group.** The O(N) masker multiplier is the
+most likely culprit. In DeBug mode, add a one-time audit:
+
+```js
+document.querySelectorAll('[mask]').forEach(el => {
+  const n = el.querySelectorAll('path,rect,circle,ellipse,polygon,line').length;
+  if (n > 5) console.warn(`Masked group has ${n} shapes — Safari perf risk`);
+});
+```
+
+Any group with >10 shapes under a mask is a strong performance suspect.
+
+**Step 3 — Apply the empty-filter workaround to every masked group.** This is
+the highest-leverage single change. Add `filter="url(#webkit-group-isolate)"` to
+every `<g>` that also has a `mask="..."`. The no-op filter definition goes in
+`<defs>` once; all groups share the reference. Re-test performance immediately.
+
+**Step 4 — Safari Web Inspector → Timelines.** Open Develop → Web Inspector →
+Timelines → Rendering Frames. Look for:
+- Long purple **Layout** bars — SVG layout thrashing (interleaved DOM reads/writes)
+- Long green **Paint** bars — masker pixel pipeline (confirms Root Cause A)
+- Large gaps between JS completion and the first composite frame
+
+---
+
+#### Attack Plan — Issue 2: Missing / Incorrect Shapes
+
+**Goal:** All shapes that render correctly in Chrome render correctly in Safari.
+
+**Step 1 — Apply the empty-filter workaround to all masked groups** (same as
+Issue 1 Step 3). This is the single most likely fix. Test against 3–5 known
+hashes immediately after.
+
+**Step 2 — Confirm all filter defs are co-located.** Ensure that every
+`filter="url(#someId)"` reference resolves within the *same* top-level `<svg>`
+as the shape that uses it (Root Cause B). If filter `<defs>` currently live in a
+parent or sibling SVG element, move them into the same SVG as their consumers.
+
+**Step 3 — Add `color-interpolation-filters="sRGB"` to all filters.** The SVG
+spec defaults filter color math to `linearRGB`, but Safari and Chrome can diverge
+in practice. Adding this attribute explicitly to every `<filter>` element ensures
+consistent color compositing across both browsers:
+
+```html
+<filter id="myBlur" color-interpolation-filters="sRGB">
+  <feGaussianBlur stdDeviation="2"/>
+</filter>
+```
+
+**Step 4 — Binary search if shapes are still missing.** Work methodically:
+1. Disable all SVG filters → do the shapes appear?
+   - Yes → re-enable filters one at a time; the culprit filter is the one
+     that causes disappearance
+   - No → the issue is masking or geometry, not filters
+2. Disable all masks → do the shapes appear?
+   - Yes → the empty-filter workaround may not have been applied to this
+     specific masked group; find which one
+3. Disable feBlend specifically → does the compositing improve?
+   - Yes → the blend mode is being interpreted differently (Safari vs Chrome
+     blend mode bug — document the specific blend mode for investigation)
+
+---
+
+#### Attack Plan — Issue 3: Animation
+
+**Priority: Lower.** Only tackle after Issues 1 & 2 are resolved. Animation is
+not a primary evaluation feature; defer to post-upload if needed.
+
+**Escalation path (lowest → highest complexity):**
+
+| Approach | Complexity | Notes |
+|----------|-----------|-------|
+| `will-change: transform` on animated groups | Very low | Promotes the element to a GPU compositor layer; apply before first frame | 
+| Drive motion via CSS `transform` instead of SVG attribute writes | Low-medium | CSS transforms are GPU-composited; SVG attribute writes are not; requires restructuring the animation driver |
+| Isolate animated elements into a separate `<svg>` / `<canvas>` layer | Medium | Limits the repaint region; static elements are not re-masked each frame |
+| Canvas-based animation fallback | High | Composite static SVG to a canvas once; animate only the canvas layer; routes everything through the GPU-accelerated canvas path |
+
+**Immediate first step:** Add `will-change: transform` to the top-level animated
+SVG element or group. Cost: one line. Test whether Safari's animation smoothness
+improves visibly.
+
+---
+
+#### Decision Tree
+
+```
+Test on Safari
+│
+├─ Performance ≥10s? → Apply empty-filter to ALL masked groups → Re-test
+│  ├─ Still slow? → Count shapes per masked group
+│  │  └─ Groups with >10 shapes → merge paths or restructure groups
+│  └─ OK (<3s) → proceed
+│
+├─ Missing shapes? → Apply empty-filter workaround (if not done above)
+│  ├─ Shapes still missing? → Audit cross-SVG filter ID co-location
+│  │  └─ Still missing? → Add color-interpolation-filters="sRGB" to filters
+│  │     └─ Still missing? → Binary search: disable filters/masks one at a time
+│  └─ All shapes correct → proceed
+│
+└─ Animation broken? (only after above are resolved)
+   ├─ Add will-change: transform to animated elements → Re-test
+   ├─ Switch motion to CSS transform → Re-test
+   └─ If still unacceptable → canvas-based animation fallback (post-sprint)
+```
+
+**Time box:** 2 days for Issues 1+2; 0.5 days for Issue 3 (or defer to post-sprint).
+If the empty-filter workaround solves both performance and shapes in Day 1, use
+Day 2 for animation + edge cases.
+
+---
+
+#### Investigation Notes (not ArtBlocks questions)
+
+| # | Investigation | Status |
+|---|---------------|--------|
+| Q14 | Audit current SVG output: do any `filter="url(#id)"` references cross `<svg>` root boundaries? (KNOWN-ISSUES §9.14.4b — establish exact scope before testing.) | ❓ To verify in code |
+| Q15 | After empty-filter workaround: does Safari Web Inspector Timelines show meaningfully shorter "Paint" bars, confirming the switch away from the per-shape software masker? | ❓ Empirical — test when implementing |
 
 ---
 
@@ -395,5 +637,5 @@ documentation purposes.
 ---
 
 *Document created: April 23, 2026*
-*Last updated: April 24, 2026 — Production Token spec added*
+*Last updated: April 24, 2026 — Production Token spec added; Safari B1 full attack plan added*
 *Status: Draft — some Open Questions pending ArtBlocks team confirmation*
