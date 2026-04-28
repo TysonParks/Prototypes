@@ -165,11 +165,134 @@ class ProtoCut {
   }
 
   //MARK: Public Methods
-  //METH: setLayout() : null : restore legacy percent-based filter regions
+  //METH: setLayouts() : null : configure shared shade-filter regions
+  //
+  // SAFARI / WEBKIT FIX (Apr 28 2026, B1 Issue 2):
+  // Root cause — Previous implementation set filterUnits='userSpaceOnUse'
+  // but emitted x/y/width/height as PERCENT strings. With userSpaceOnUse,
+  // percentages resolve against the consuming SVG viewport (each
+  // ShapeGroup's nested <svg>). For deep-cut ShapeGroups with small
+  // viewports (~13.6×44.3 user units), the resulting filter region was
+  // smaller than the deep-cut blurred + offset shadow extent. Chrome
+  // silently auto-extends; Safari does not — affected groups vanished.
+  //
+  // Region strategy — TWO HARD CONSTRAINTS:
+  //
+  //   1. Region MUST extend PAST FRAME edges (not coincident with them).
+  //      Clamping to exactly FRAME (0,0,100,200) reproduces the §9.14.6 /
+  //      §9.14.7 frame-coordinate banding regression — the rasterizer
+  //      produces visible top/bottom seams when the filter region edge
+  //      coincides with the mask edge. A fixed margin of ~50 user units
+  //      breaks that coincidence and eliminates banding.
+  //
+  //   2. Region MUST stay BOUNDED. Letting padding grow with depth (as
+  //      in v1's `max(50, depth*5)`) produces filter regions large enough
+  //      to trip Safari's filter raster memory ceiling for the deepest
+  //      cuts, causing the same disappear-in-Safari bug we are fixing.
+  //      A fixed 50-unit margin past FRAME is enough for the §9.14.7
+  //      seam fix and small enough that Safari does not abort.
+  //
+  // Resulting region (absolute user units, userSpaceOnUse):
+  //   x = -50, y = -50, width = 200, height = 300
+  //   = FRAME (0,0,100,200) expanded by 50 on every side.
+  // Symmetric on all four sides → covers any light rotation angle.
+  // Anything outside (0,0,100,200) is mask-cropped at final composite,
+  // so the extra 50-unit border costs only a small filter-buffer pad.
+  //
+  // Future precision opportunity (§9.15.3 Tier 1b, ATTEMPTED 2026-04-28
+  // and BLOCKED — see KNOWN-ISSUES § 9.15.6): the union of
+  // `this.shapeGroups[*].boundsRect` collapses to FRAME for every cut
+  // because § 9.14.1 cascade broadening makes ShapeGroup.boundsRect
+  // return FRAME for any cut/cascade group. Tier 1b cannot deliver
+  // savings until that broadening is unwound (post §9.11 rebuild).
+  //
+  // Revert flag: window.SAFARI_FILTER_REGION_USERSPACE_FIX = false (reload).
+  // Tight-region flag: window.SAFARI_FILTER_REGION_TIGHT = true (reload)
+  // enables Tier 1b — per-cut AABB instead of fixed FRAME+50.
+  // ⚠️ The `useTight` branch below is scheduled for tear-out alongside
+  // canvas-image-swap (§ 9.15.6.1). Do not build new logic on it.
   setLayouts() {
+    const useUserSpaceFix = (typeof window !== 'undefined') &&
+      (window.SAFARI_FILTER_REGION_USERSPACE_FIX !== false)
+    const useTight = (typeof window !== 'undefined') &&
+      (window.SAFARI_FILTER_REGION_TIGHT === true)
+
+    if (useUserSpaceFix && useTight) {
+      // ─── Tier 1b: tight per-cut filter region ──────────────────────────
+      // Union AABB of consumer shapeGroups' boundsRect (cellBounds for
+      // normal groups, FRAME for cut/cascade groups per §9.14.1), expanded
+      // by depth-aware padding. Where the AABB touches a FRAME edge, we
+      // extend +50 past that edge to preserve the §9.14.7 banding fix
+      // (filter region edge must NOT coincide with mask edge). Where it
+      // does not touch FRAME, stay tight — this is the perf win.
+      //
+      // Padding rationale (symmetric for any light rotation):
+      //   - feGaussianBlur stdDev ≈ depth/4 → 5σ extent ≈ depth × 1.25
+      //   - feOffset magnitude ≈ depth × shade.mag (worst case ~depth)
+      //   - inset/outset shade adds depth × ~1 in either direction
+      //   - safe: pad = max(20, depth × 3) on all four sides
+      const fb = FRAME.boundsRect
+      const fbR = fb.x + fb.width
+      const fbB = fb.y + fb.height
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      this.shapeGroups.forEach(grp => {
+        const r = grp.boundsRect
+        minX = Math.min(minX, r.x)
+        minY = Math.min(minY, r.y)
+        maxX = Math.max(maxX, r.x + r.width)
+        maxY = Math.max(maxY, r.y + r.height)
+      })
+      // Fallback if no consumers: use FRAME
+      if (!isFinite(minX)) { minX = fb.x; minY = fb.y; maxX = fbR; maxY = fbB }
+      // Depth-aware padding for blur + offset + shade extent.
+      const pad = Math.max(20, Math.abs(this.depth) * 3)
+      minX -= pad; minY -= pad; maxX += pad; maxY += pad
+      // Banding-safety margin: where region touches FRAME edge, extend +50
+      // past it; where it stays inside FRAME, clamp to FRAME (no point
+      // rasterizing beyond the mask).
+      const BANDING_MARGIN = 50
+      const eps = 0.5
+      if (minX <= fb.x + eps) minX = fb.x - BANDING_MARGIN; else minX = Math.max(minX, fb.x)
+      if (minY <= fb.y + eps) minY = fb.y - BANDING_MARGIN; else minY = Math.max(minY, fb.y)
+      if (maxX >= fbR - eps) maxX = fbR + BANDING_MARGIN; else maxX = Math.min(maxX, fbR)
+      if (maxY >= fbB - eps) maxY = fbB + BANDING_MARGIN; else maxY = Math.min(maxY, fbB)
+
+      const x = minX, y = minY, width = maxX - minX, height = maxY - minY
+      this.filters.forEach(f => {
+        f.filter
+          .attribute('filterUnits', 'userSpaceOnUse')
+          .attribute('x', x)
+          .attribute('y', y)
+          .attribute('width', width)
+          .attribute('height', height)
+      })
+      return
+    }
+
+    if (useUserSpaceFix) {
+      // Fixed 50-unit margin past FRAME on every side. See block comment
+      // above for the two hard constraints driving this exact region.
+      const fb = FRAME.boundsRect
+      const margin = 50
+      const x = fb.x - margin
+      const y = fb.y - margin
+      const width = fb.width + margin * 2
+      const height = fb.height + margin * 2
+      this.filters.forEach(f => {
+        f.filter
+          .attribute('filterUnits', 'userSpaceOnUse')
+          .attribute('x', x)
+          .attribute('y', y)
+          .attribute('width', width)
+          .attribute('height', height)
+      })
+      return
+    }
+
+    // LEGACY PATH — % values resolved against ShapeGroup viewport.
+    // Retained for revert / A-B comparison via SAFARI_FILTER_REGION_USERSPACE_FIX = false.
     const layout = this.maxLayout
     this.filters.forEach(f => {
-      // remove explicit filterUnits so the filter uses objectBoundingBox (percent) coordinates
       if (f.filter.elt && f.filter.elt.removeAttribute) f.filter.elt.removeAttribute('filterUnits')
       f.filter
         .attribute('x', `${layout.x}%`)
@@ -177,10 +300,6 @@ class ProtoCut {
         .attribute('width', `${layout.width}%`)
         .attribute('height', `${layout.height}%`)
         .attribute('filterUnits', 'userSpaceOnUse')
-      // .attribute('x', FRAME.anchor.x)
-      // .attribute('y', FRAME.anchor.y)
-      // .attribute('width', FRAME.size.x)
-      // .attribute('height', FRAME.size.y)
     })
   }
   //METH: curve() : type :
