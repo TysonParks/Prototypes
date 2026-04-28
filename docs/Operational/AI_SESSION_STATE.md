@@ -15,48 +15,33 @@ Permanent knowledge belongs in:
 Session snapshot (short, editable)
 
 Current Focus
-- Finish investigations from the recent R-in vs R-out shading artifacts and capture the lessons learned in repo memory and docs; continue wrapper/caching work as a secondary focus.
+- Safari canvas-image-swap implementation (KNOWN-ISSUES § 9.15.6, ROADMAP S1–S5).
+- Immediate next step: S1 tear-out of Apr 28 diagnostic scaffolding per § 9.15.6.1 checklist.
 
 Active Hypotheses
-- Hypothesis A: Opposite-facing collinear pairs are filtered too early by `viableOutWrappers` (`hasSameFacingCorner`) and require a gated path to the classification stage.
-- Hypothesis B: Some memoized arc-volatile getters are not invalidated by `#resetMemoProps()`, causing stale calculations during `maximizeCuddles()` passes.
-- Hypothesis C (recent): Visual shading regressions are frequently caused by mask construction/ordering rather than filter math; masks should be a first suspect when shading artifacts appear.
+- Confirmed (2026-04-28): WebKit pre-LBSE software rasterizer is the cost driver. Total cost ≈ region_area × primitive_count. Reducing either lever requires architectural rework (§ 9.14.1 cascade broadening blocks region tightening).
+- Image-swap path on Safari should bypass the issue entirely, at the cost of losing shadow rotation animation on Safari. Acceptable trade-off.
 
-Current Experiments
-- Audit `viableOutWrappers` call sites to identify where `hasSameFacingCorner` gating prevents downstream handling.
-- Inject conservative cache invalidation (temporary full `resetMemoized` for a segment) to see if it reduces stack traces/non-deterministic failures during `maximizeCuddles()`.
-- (Completed) Instrument `Shade.neuShadeSVGFactory()` with `window.DEBUG_NEUSHADES` and add console harness to compare r-in vs r-out parameters (mag, offsets, blur, luma).
-- (Completed) Rework `Shape.maskShape()` and `ShapeGroup.createMaskGroup()` to subtract sharp interior shapes before blurring for hole-shaped masks; added guard for outermost R-in mask cases.
+Files Touched (Apr 28 — most to be torn out per § 9.15.6.1)
+- `neuMark_I.js` — `ProtoCut.setLayouts()` userSpaceOnUse fix (KEEP). Tier 1b tight branch (REMOVE).
+- `safariCompat.js` — `measurePerf` / `measureAcrossFlags` / `measureTightRegion` / `wrapForIsolation` / two flag inits (REMOVE).
+- `gui.js` — four "B1 EXP" keypress diagnostic blocks (REMOVE).
+- `docs/Operational/KNOWN-ISSUES.md` — § 9.15.6 added with measurements + tear-out plan (KEEP).
+- `docs/Operational/ROADMAP.md` — P1b marked blocked, S1–S5 added (KEEP).
 
-Files Under Modification
-- `drawAsSVG.js` — inspect `ProtoSegment` methods: `#resetMemoProps`, `#setCurveOrigin`, `viable*` getters.
-- `Grid.js` — `maximizeCuddles()` and `inWrapPerimeter()`.
-- `ProtoLayerObjects.js` — `Shape.maskShape()` and `ShapeGroup.createMaskGroup()` (mask-ordering fixes applied).
-- `neuMark_I.js` — added temporary `DEBUG_NEUSHADES` instrumentation for diagnostic logging.
-- `ProtoFilter.js` — transient experiments were run and reverted; no persistent changes remain.
-- `docs/Operational/KNOWN-ISSUES.md` — updated 9.14.9 to Fixed with summary.
-
-Relevant Known Issues
-- KNOWN-ISSUES §9.7 (Bug B) — opposite-facing collinear wrappers (in-progress).
-- KNOWN-ISSUES §9.9 — cache staleness baseline; memoization keys classified as arc-volatile.
-- KNOWN-ISSUES §9.14.9 — R-in Shade Layer Not Centered (fixed: mask-order/creation corrected).
-- ROADMAP §1 — wrapper audit checklist and sessions to complete before funnel refactor.
-
-Recent Discoveries
-- `Frame.setBackGridGroup()` bypasses `maximizeCuddles()` and performs direct `flushWrap`/`adjWrap` calls; useful as a simpler repro path.
-- `WrapperDebugOverlay` quickly visualizes coincident/collinear/adjacent/radiant relationships for any grid (useful for toggling when reproducing failures).
-- Mask ordering is a common root cause for shading anomalies: ensure subtraction of sharp interior shapes occurs before blur for hole-shaped masks (R-in).
-- Instrumentation confirmed `neuShadeSVGFactory()` outputs (mag, offsets, blur, luma) are symmetric for r-in vs r-out; the artifact was due to mask construction.
+Git Hygiene Note
+- User has not committed any work in the last 24h. Recommend: commit current Apr 28 scaffolding + docs to a dedicated branch (e.g. `safari-perf-investigation-apr28`) so the diagnostic code exists in history for future reference, then start the canvas-image-swap work on a fresh branch starting from the S1 tear-out commit. This preserves the experiment record without leaving dead code on main.
 
 Next Investigation Steps
-1. Verify mask fixes across the three regression hashes and add a short regression entry to `docs/Operational/TESTING.md` (optional — will add if requested).
-2. Create small repro case: two same-line opposite-facing corners (unit test or minimal grid) to exercise `viableOutWrappers` and downstream code paths.
-3. Run `maximizeCuddles()` on the repro while temporarily forcing `#resetMemoProps()` to a full invalidation and observe behavior.
-4. If repro shows stack/degenerate geometry, add guarded path to classification (allow opposite-facing through a narrow check that ensures downstream functions can handle them), then re-test.
-5. When stable, move fixes and short summaries to `KNOWN-ISSUES` and add regression harness entries.
+1. Commit Apr 28 scaffolding to a dated branch for archival (optional but recommended).
+2. S1 — execute § 9.15.6.1 tear-out checklist; verify hash 1487 still renders correctly in both Chrome and Safari.
+3. S2 — UA-detect Safari + create image-swap entry point.
+4. S3 — implement SVG → blob → `<img>` rasterization.
+5. S4 — replace live SVG with rasterized `<img>` after first paint on Safari.
+6. S5 — visual diff Safari `<img>` vs Chrome SVG across hash suite.
 
 Short notes
-- Keep this file minimal — edit before ending each session with a 1–2 line status update.
-- Use `WrapperDebugOverlay.toggle(GRID)` and `Frame.setBackGridGroup()` for quick visual regressions.
+- Tier 1b A/B numbers (hash 1487, FOSL): A_baseline=11831ms, B_tight=10564ms (1.12×, within noise). Region area identical at 1,060,000 u² total — § 9.14.1 cascade broadening collapses every cut's union AABB to FRAME.
+- §9.14.7 banding fix (filter region must extend +50 past FRAME edges) is a hard constraint preserved by the kept `SAFARI_FILTER_REGION_USERSPACE_FIX` path.
 
-Session timestamp: 2026-03-13
+Session timestamp: 2026-04-28
