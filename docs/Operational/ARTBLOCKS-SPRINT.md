@@ -81,7 +81,7 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 
 | ID | Bug | Priority | Est. Time | Depends On | KNOWN-ISSUES Ref | Status |
 |----|-----|----------|-----------|------------|-------------------|--------|
-| B1 | **Safari compatibility** — three sub-issues: (1) 10s–1min render delay (WebKit per-shape masker O(N) cost, Bug #172338); (2) missing/incorrect shapes (same root cause + cross-SVG filter ID resolution, §9.14.4b); (3) animation non-functional (software-path RAF, Bug #19118). Primary workaround: no-op `<filter>` on masked groups. | P1 | 2–3 days | — | §9.14.4b, §9.14.6 | ❌ Not started |
+| B1 | **Safari compatibility** — three sub-issues: (1) 10s–1min render delay (WebKit per-shape masker O(N) cost, Bug #172338); (2) missing/incorrect shapes (same root cause + cross-SVG filter ID resolution, §9.14.4b); (3) animation non-functional (software-path RAF, Bug #19118). Primary workaround: no-op `<filter>` on masked groups. | P1 | 2–3 days | — | §9.14.4b, §9.14.6 | 🟡 In progress |
 | B2 | **Remaining wrapping bugs** — adjacent wrapper visual verification still pending; Bug B (opposite-facing collinear) deferred | P2 | 2–3 days | Wrapper audit §1 in ROADMAP | §9.7, §9.12 | 🟡 In progress (audit) |
 | B3 | **Remaining shading bugs** — R-in shade layer not centered; potential mask cropping edge cases | P2 | 1–2 days | — | §9.14.9, §9.13 | ❌ Not started |
 | B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | ❌ Not started |
@@ -346,8 +346,72 @@ Day 2 for animation + edge cases.
 
 | # | Investigation | Status |
 |---|---------------|--------|
-| Q14 | Audit current SVG output: do any `filter="url(#id)"` references cross `<svg>` root boundaries? (KNOWN-ISSUES §9.14.4b — establish exact scope before testing.) | ❓ To verify in code |
-| Q15 | After empty-filter workaround: does Safari Web Inspector Timelines show meaningfully shorter "Paint" bars, confirming the switch away from the per-shape software masker? | ❓ Empirical — test when implementing |
+| Q14 | Audit current SVG output: do any `filter="url(#id)"` references cross `<svg>` root boundaries? (KNOWN-ISSUES §9.14.4b — establish exact scope before testing.) | ✅ Resolved — all 10 masked elements are nested `<svg>` (not `<g>`). Identity isolate filter is now created locally inside each masked `<svg>`'s own `<defs>` with element-scoped ID (e.g. `webkit-group-isolate-shpGrp00`). Confirmed via `auditMaskedGroups()` (all `isolated: true`) and `getElementById` lookups returning the locally-defined filters. **However:** Cross-SVG resolution was not the actual blocker for missing shapes — see Q17. |
+| Q15 | After empty-filter workaround: does Safari Web Inspector Timelines show meaningfully shorter "Paint" bars, confirming the switch away from the per-shape software masker? | ❓ Empirical — deferred until Q17 fix is verified |
+| Q16 | **Layout region calculation completeness** — filter/mask regions currently use blanket `50%` objectBoundingBox padding as a temporary fix to avoid clipping of overflow geometry (e.g. `jIn` cuts). The proper approach is to compute exact bounds from each element's known layout values (anchor, size, padding). This is deferred because of SVG grouping complexity and shared-filter optimizations. **Revisit hypothesis:** incomplete layout region calculation may be a contributing cause of Safari rendering differences (mask `layout()` coordinates via `userSpaceOnUse` in `cutIslands` may not correctly cover all painted shapes in Safari's viewport math). Investigate as part of B1 or B3 work. |
+| Q17 | **Blur filter region collapse inside `<mask>`/`<defs>` (Apr 27 2026)** — missing-shape pattern correlated with cut depth (deeper cuts = larger blur radius = missing more often). Diagnostic added: `SafariCompat.auditBlurFilters()` walks every `filter[id^="blur-"]` and calls `getBBox()` on its consumer. In Safari, ~12 of 23 rows returned `n/a` (getBBox threw silently) — all of them clones inside `<mask>` subtrees. Root cause: WebKit's `getBBox()` is unreliable inside `<mask>`/`<defs>` (related WebKit bugs #28611, #46276, #161817). When bbox = 0, percentage-based `objectBoundingBox` filter region collapses to a point, the Gaussian blur is clipped to nothing, and the masked group reads as either fully opaque or fully transparent depending on the cut profile — producing the depth-correlated missing-shape bug. **Fix deployed:** `p5.Element.prototype.blur` now uses `filterUnits="userSpaceOnUse"` with absolute bounds (radius-scaled, generous floor) instead of `objectBoundingBox` percentages. **Subsequent finding:** n/a is expected in ALL browsers for elements inside `<mask>` — it is spec-compliant DOM behaviour, not a Safari bug. Therefore the blur region was NOT the actual cause of missing shapes — it was a false lead. Blur fix retained (it is still the correct practice for mask-internal elements), but missing shapes have a different root cause: see Q19. | ⚠️ False lead — blur fix is correct practice but did not fix missing shapes |
+| Q18 | **Filter-sharing optimization — not a contributor to Q17** — user recalled an optimization where multiple cell groups share a single filter, with the worry that absolute bounds could only be valid for one consumer. Investigation confirmed: filter sharing exists in `ProtoFilter.applyFilterToElement()` (parents new elements into an existing `<g filter="url(#X)">` via `querySelector`) but it is **only used for `ProtoFilter` instances** (NeumorphicShader/shading filters via `.applyFilter(this.filter)`). The `.blur()` prototype path (used for all cut-related blurs) creates a fresh filter with a unique random ID on every call — no sharing. Therefore the Q17 fix is safe without modifying the sharing system. The sharing system itself remains a risk for future Safari work involving `ProtoFilter` shaders — absolute filter bounds for a shared filter only correctly cover the bbox of the original consumer. | ✅ No action needed for B1 |
+| Q19 | **Filter definition defined INSIDE its own consumer `<g>` (Apr 27 2026) — confirmed root cause of missing shapes.** Console test `filterInOwnSubtree: true` on missing group `shpGrp00`. `ProtoFilter.applyFilterToElement()` placed `this.defs` (containing the `<filter>` element) as a child of the `<g filter="url(#...)">` that consumes it: `<g filter="url(#fx00)"><defs><filter id="fx00">...</filter></defs></g>`. Chrome resolves filter IDs globally (full document scan). Safari (WebKit) is spec-strict: resource references are resolved in the ancestor/sibling scope only, not by scanning descendants of the consumer. A `<g>` referencing a filter defined in its own subtree is therefore silently ignored in Safari — the shading filter is never applied, causing the group to render as invisible (the filter graph produces no output when the definition is unreachable). **Fix deployed:** `applyFilterToElement()` now calls `parentSVG.insertBefore(this.defs.elt, parentSVG.firstChild)` to move the filter defs directly into the containing `<svg>` before creating the consumer `<g>`. Filter definition is always an ancestor of its consumer. **However:** structural fix verified in DOM but missing-shape symptom unchanged — the filter is now reachable per spec, yet Safari still fails to render the same shapes. So this was a real spec-correctness fix but NOT the proximate cause of B1 Issue 2. | ✅ Fix retained (correctness), ❌ not the cause |
+| Q20 | **`SourceAlpha` → `derivedAlpha` (Apr 28 2026) — false lead, reverted.** Hypothesis: WebKit live compositor returns empty `SourceAlpha` for `<g>` filters, collapsing the 71-primitive shadow chain. Test fix: replace all `SourceAlpha` references with `feColorMatrix`-derived alpha from `SourceGraphic`. **Result:** zero visual change. **Disqualifying logic:** if `SourceAlpha` were universally broken for `<g>` in Safari, *every* shaded shape would fail, but only 3 of ~30 fail. The fix is universal and the failure is selective; the hypothesis was incompatible with the symptom from the start. Reverted. | ⛔ Reverted |
+| Q21 | **Critical reframe (Apr 28 2026) — bug is data-dependent, not structural.** All audits to date (`auditMaskedGroups`, `auditBlurFilters`, full DOM dump comparing failing vs working shpGrps) show **byte-identical** structure between failing and working groups. Field values are JS-authored DOM — they are produced by the same code path in Chrome and Safari and will read back identically. The only field that *could* differ between browsers is `getBBox()`, and even that comes back equal (e.g. shpGrp00 fail = `13.6×44.3 @ 53.4,98.3` matches shpGrp03 working = `8.5×29.0 @ 81.5,34.4`, both well-formed). **Implication:** structural audits cannot reveal Safari-specific behaviour. They can only reveal what failing shapes have in common. The failure must be a property of the shapes' *content* (path data, geometry complexity, fill/style values, blur radius magnitude, etc.) interacting with a Safari-specific renderer behaviour. | ✅ Resolved framing |
+| Q22 | **Confirmed root cause + fix (Apr 28 2026): filter region too small in Safari for deep-cut shadows.** Live binary-search via gui.js keypress probes (1/2/3 strip, 4 force-fill, 5 inspect, 6/7/8 throttle, 9 global, q region clamp): `q` (override failing groups' filter region to `userSpaceOnUse, 0,-50,100,300` in absolute user units) made the missing shapes appear in Safari with no Chrome regression. **Mechanism:** `ProtoCut.setLayouts()` was emitting `filterUnits='userSpaceOnUse'` with PERCENT strings derived from `maxLayout`. With userSpaceOnUse, percentages resolve against the consumer's nested-svg viewport (the ShapeGroup's `<svg>`), which for deep-cut groups can be as small as 13.6×44.3 user units. The resulting filter region was smaller than the deep-cut blurred + offset shadow extent. Chrome silently auto-extends filter regions to enclose primitive subregion bounds; Safari does not — so the shadow output was clipped to zero visible pixels for affected groups. **Fix deployed:** `ProtoCut.setLayouts()` now emits absolute user-unit coordinates (`FRAME.boundsRect` ± depth-aware padding `max(50, depth × 5)`) with `userSpaceOnUse`. Behind feature flag `window.SAFARI_FILTER_REGION_USERSPACE_FIX` (default true). Legacy %-userSpace path preserved for revert. **Watch for:** the §9.14.6 frame-coordinate banding regression that motivated the original %-userSpace hybrid. The 'q' probe at the failing hash showed no banding, suggesting architecture has since changed (cut ShapeGroups now use FRAME.boundsRect for boundsRect per §9.14.1) — but other hashes should be retested. | ✅ Fix deployed — pending multi-hash verification |
+
+---
+
+#### Consolidated Findings (B1 Issue 2 — Missing Shapes)
+
+This block exists to prevent re-investigating already-eliminated paths. Update as new evidence lands.
+
+**Confirmed about the failing shapes themselves:**
+- All failing shapes have the **largest cut depths** of any shape in the output. Holds across multiple hashes. The strongest single correlate.
+- Failing shapes appear on **both `combo` and `shad` sub-layers simultaneously** (jIn cuts use these two sub-types, not `high`). Single shape → multiple `<svg>` consumers → all fail in lockstep. Implies failure is upstream of per-layer rendering: it's a property of the shape's geometry/data, not of any one sub-layer's compositing pipeline.
+- DOM structure between failing and working shpGrps is byte-identical (Q21).
+- `<path d="...">` inside the failing groups is well-formed (paths render in PNG export — see below).
+
+**Confirmed about Safari's behaviour:**
+- **PNG export via canvas blob renders correctly** including shading. The one-shot `XMLSerializer` → `<img>` → `canvas.drawImage` → `toBlob` path produces correct output even on the same hashes that fail in live render. Implies the SVG DOM is correct and Safari's image-rasterization path works; only Safari's **incremental live SVG compositor** fails.
+- Live render fails in two ways simultaneously: (1) missing shapes for a small subset, (2) huge first-paint delay (10–60 s).
+
+**Confirmed NOT the cause (do not re-investigate):**
+- Cross-SVG filter ID resolution (Q14) — workaround applied, does not affect symptom.
+- Blur filter region collapse via `objectBoundingBox` inside masks (Q17) — fix retained as correct practice, but not the cause; `n/a` from `getBBox()` inside `<mask>` is spec-compliant in all browsers.
+- Filter sharing (Q18) — sharing only happens for `ProtoFilter` shaders; not a contributor to current failure.
+- Filter defs placed inside their consumer `<g>` (Q19) — fix retained as correct practice, but not the cause.
+- Universal `SourceAlpha` corruption for `<g>` (Q20) — incompatible with the selective failure pattern; reverted.
+
+**Open / not yet eliminated:**
+- Cut-depth–dependent path complexity exceeding a Safari renderer threshold (path point count, Bézier curve complexity, self-intersecting subpaths after offset operations).
+- Mask-content geometry of the failing shapes specifically — `<mask>` for jIn cuts may produce extreme coordinate ranges (audit shows mask-group bboxes like `209.1×309.1 @ -54.5,-54.5`, far outside the canonical 0,0,100,200 region — though working groups also show this).
+- Filter region for the shading filter (`fx00`/`fx09`) — Q21 audit shows failing groups use `-50% -50% 200% 200%` (objectBoundingBox), same as working groups, so unlikely — but worth verifying interaction with cut-depth–driven blur magnitudes.
+- Possible WebKit threshold on intermediate filter result buffer size driven by deep-cut blur radii.
+
+**Possible architectural note for later (not B1):**
+- For jIn cuts, the high-layer ShapeGroup (`ShapeGroup-high`) appears to be created even though its `shadeElt` may have no visible content. If so, this is wasted work — investigate as an optimization after B1 closes.
+
+---
+
+#### Revised Strategy (Apr 28 2026)
+
+Given (a) ~24h budget remaining for B1, (b) PNG-via-canvas works correctly in Safari, and (c) live-render delay (≥10 s) is independently a worse problem than missing shapes, **the pragmatic plan is to bypass Safari's live SVG compositor entirely on the live token page and serve the canvas-rasterised image instead.** This trades animation features (light rotation, future object rotation) for correct + fast rendering on Safari.
+
+**Track 1 — Canvas-fallback path (primary, time-boxed):**
+1. UA-detect Safari/WebKit.
+2. On Safari, run the existing canvas blob export pipeline at first frame (the same path used for the `S` keypress export).
+3. Hide the live SVG; insert the resulting `<img>` (or draw onto a fullscreen `<canvas>`) at the canvas's display size.
+4. Disable any animation that mutates the SVG (light rotation, future rotation).
+5. Verify on the failing hashes that the rendered image matches Chrome.
+6. Verify performance — single canvas rasterisation should land well under the 10–60 s live-render time.
+
+**Track 2 — Continue narrowing the live-render bug (secondary, only if Track 1 lands fast):**
+The remaining productive avenues, in order:
+1. **Compare the actual `<path d>` content** of one failing shape (e.g. shp001) vs one working same-celGrp shape (e.g. shp003): point count, length of `d`, presence of unusual segment types. This is a *content* audit, the only audit type Q21 says is still meaningful.
+2. **Reduce cut depth by one step** for a single failing shape and re-render in Safari — if the shape now appears, confirms the cut-depth → renderer-threshold hypothesis cleanly.
+3. **Strip the shading filter only** (leave mask + paths) on failing groups — if shapes appear, the failure is inside Safari's filter pipeline; if shapes still missing, it's mask or path-level.
+
+**Audits NOT to run (already concluded uninformative):**
+- Any further DOM-attribute audit comparing failing vs working groups across browsers.
+- Any further filter-region or filterUnits sweep (Q17/Q18 closed).
+- Any further `SourceAlpha`/`SourceGraphic` swap (Q20 closed).
 
 ---
 
