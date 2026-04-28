@@ -110,7 +110,7 @@ class ProtoFilter {
 
         //2 feOffset: offset the blurred result
         const feOffset = createSVGElt('feOffset')
-          .attribute('in', useBlur ? 'blurred' : 'SourceAlpha')       // verified attr
+          .attribute('in', useBlur ? 'blurred' : 'SourceAlpha')        // verified attr
           .attribute('dx', dx)                                        // verified attr
           .attribute('dy', dy)                                        // verified attr
           .attribute('result', 'offset-blurred')                      // verified attr
@@ -197,11 +197,20 @@ class ProtoFilter {
 
     let newGroup = parentSVG.querySelector(`g[filter = "${filterUrl}"][id ^= "${this.id}-"]`)
     if (!newGroup) {
+      // SAFARI COMPAT (Apr 2026, B1 Root Cause B):
+      // Move the <defs> containing this filter INTO parentSVG *before* creating
+      // the consuming <g>. Safari (WebKit) requires that referenced resources
+      // (<filter>, <mask>, etc.) are defined in an ancestor/sibling scope —
+      // NOT as a descendant of the element that references them. Chrome resolves
+      // IDs globally and tolerates the wrong placement; Safari is spec-strict.
+      // insertBefore(firstChild) prepends the defs so it always precedes the
+      // consumer <g> in DOM order.
+      parentSVG.insertBefore(this.defs.elt, parentSVG.firstChild)
+
       newGroup = createSVGElt("g")
         .id(`${this.id} -${element.id()}`)
         .attribute("filter", filterUrl)
         .parent(parentSVG)
-        .child(this.defs)
       // .attribute('overflow', 'visible')
       // .attribute(`filterUnits`, `userSpaceOnUse`)
       // .attribute(`primitiveUnits`, `userSpaceOnUse`)
@@ -383,22 +392,52 @@ p5.Element.prototype.attributeNS = function (nameSpaceURI, attr, value) {
 
 //PROTOTYPE: p5.Element.blur(radius) : p5.Element : apply a blur filter to the element
 // NOTE: Created with GPT-4 on Fri Mar 24, 2023
+//
+// SAFARI COMPAT (Apr 2026, B1 attack plan):
+// Default %-based filterUnits='objectBoundingBox' is unreliable in WebKit when
+// the filtered element lives inside <mask>/<defs> — getBBox() can return zero
+// or throw, collapsing the filter region to nothing and producing missing
+// shapes in cut-mask groups (depth-correlated bug, confirmed via audit:
+// rows with stdDev>1 inside masks all returned 'n/a' for bbox in Safari).
+// Switching to filterUnits='userSpaceOnUse' with absolute bounds bypasses the
+// broken bbox math entirely. Bounds are scaled with radius and given a large
+// safety margin so any real-world consumer in this codebase is covered.
+//
+// Revert-flag: window.SAFARI_BLUR_USERSPACE_FIX = false (then reload)
 p5.Element.prototype.blur = function (radius) {
   const parentSVG = this.elt.ownerSVGElement || this.parent()
   let defs = parentSVG.querySelector('defs')
   if (!defs) defs = createSVGElt('defs').parent(parentSVG)
 
-  // Scale filter region to 3× stdDeviation so large blurs aren't clipped.
-  // objectBoundingBox %-based: 3σ ≈ 300% of bbox is a safe margin.
-  const margin = max(50, Math.ceil(radius * 3 / 1) * 100)  // at least -50%/200%, scale up for large radii
   const filterID = 'blur-' + Math.floor(Math.random() * 100000)
-  const filter = createSVGElt('filter')
-    .attribute('id', filterID)
-    .attribute('x', `-${margin}%`)
-    .attribute('y', `-${margin}%`)
-    .attribute('width', `${100 + margin * 2}%`)
-    .attribute('height', `${100 + margin * 2}%`)
-    .parent(defs) // <-- parent to defs
+  const filter = createSVGElt('filter').attribute('id', filterID)
+
+  const useUserSpace = (typeof window !== 'undefined') && (window.SAFARI_BLUR_USERSPACE_FIX !== false)
+
+  if (useUserSpace) {
+    // userSpaceOnUse: absolute coordinates in the parent SVG's user space.
+    // Canonical canvas region is (0,0,100,200); pad by 5× radius (covers any
+    // 3σ Gaussian fall-off plus margin) and clamp to a generous floor so
+    // small blurs still get a usable region. Bounds are deliberately huge —
+    // GPU-side cost scales with painted area, not declared region.
+    const pad = Math.max(50, Math.ceil(radius * 5))
+    filter
+      .attribute('filterUnits', 'userSpaceOnUse')
+      .attribute('x', -pad)
+      .attribute('y', -pad)
+      .attribute('width', 100 + pad * 2)
+      .attribute('height', 200 + pad * 2)
+  } else {
+    // Legacy path — kept for revert/A-B comparison.
+    const margin = max(50, Math.ceil(radius * 3 / 1) * 100)
+    filter
+      .attribute('x', `-${margin}%`)
+      .attribute('y', `-${margin}%`)
+      .attribute('width', `${100 + margin * 2}%`)
+      .attribute('height', `${100 + margin * 2}%`)
+  }
+
+  filter.parent(defs)
 
   createSVGElt('feGaussianBlur')
     .attribute('in', 'SourceGraphic')
