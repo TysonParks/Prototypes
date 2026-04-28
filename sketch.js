@@ -790,9 +790,9 @@ function gridTests2(features) {
   // FRAME.backGrid.showShapesDebug()
   // FRAME.backGrid.showShapeGroupsDebug(false)
   // FRAME.backGrid.showMasksDebug()
-  // GRID.showCellsDebug(false)
+  // GRID.showCellsDebug()
   // GRID.showShapesDebug()
-  // GRID.showShapeGroupsDebug(false)
+  // GRID.showShapeGroupsDebug()
   // GRID.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
   // GRID.showFrameRate(animationController)
   // GRID.showSizeGrid(4)
@@ -866,6 +866,8 @@ function gridTests2(features) {
 
   DeBug.warn(`FRAME.backGroup.padding:`, FRAME.backGroup.padding)
   // DeBug.log(GRID.cellRows.flat().map(cell => cell.center))
+  DeBug.warn('ShapeGroups', GRID.shapeGroups.map(sg => [sg.id, sg.shapes]))
+
 }
 
 // MARK: DRAWING FUNCS
