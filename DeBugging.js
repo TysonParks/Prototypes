@@ -361,7 +361,7 @@ const Debuggable = {
 //MARK: DeBug Class
 //CLASS: replace calls to DeBug methods with these in order to have global control over logging
 class DeBug {
-  static enableLogging = true // Set to false to disable all logging
+  static enableLogging = false // Set to false to disable all logging
 
   static getCallerInfo() {
     const
