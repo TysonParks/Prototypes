@@ -135,13 +135,31 @@ because understanding the geometry is prerequisite to knowing which
 |---|------|------|------------|--------|-------|
 | P0 | Establish measurement baselines (load time, FPS, element counts) | Research | 12a | ❌ Not started | § 9.15.5. Must quantify before optimizing. |
 | P1a | Per-profile padding precision | Agent + verify | P0 | ❌ Not started | § 9.15.3 Tier 1a. Vary padding by `hasInsetShade`/`hasOutsetShade`/`hasCastShadow`. |
-| P1b | Per-cut filter region tightening (`userSpaceOnUse` AABB) | Agent + verify | P0 | ❌ Not started | § 9.15.3 Tier 1b. Union of ShapeGroup cellBounds + padding, clamped to FRAME. |
+| P1b | Per-cut filter region tightening (`userSpaceOnUse` AABB) | Agent + verify | P0 | 🚫 Blocked | § 9.15.3 Tier 1b — *2026-04-28: ATTEMPTED. Tight AABB collapses to FRAME for every cut due to § 9.14.1 cascade broadening. Zero area reduction (1.12× speedup, within noise). See § 9.15.6. Re-attempt only after § 9.11 maskShape rebuild.* |
 | P1c | Animation batch optimization | Research + Agent | P0 | ❌ Not started | § 9.15.3 Tier 1c. Evaluate batch splitting for lower per-frame cost. |
 | P2a | Restore tight ShapeGroup viewports (with overflow:visible) | Agent + verify | P1b | ❌ Not started | § 9.15.3 Tier 2a. Highest risk — coordinate system may shift. |
 | P2b | Selective overflow:visible (cascade-only) | Agent + verify | P2a | ❌ Not started | § 9.15.3 Tier 2b-2c. Non-cascade cuts get free GPU clipping. |
 | P3 | Per-ShapeGroup filter regions (requires filter cloning) | Agent + verify | P2a, 12b | ❌ Not started | § 9.15.3 Tier 3. Synergy with Safari fix (§ 9.14.4b). |
 | P4 | Animation-specific optimizations (diff updates, CSS transforms) | Research + Agent | P0 | ❌ Not started | § 9.15.3 Tier 4. Independent of viewport work. |
 | P5 | Load time optimizations (lazy filters, deferred DOM) | Research + Agent | P0 | ❌ Not started | § 9.15.4. Profile setup pipeline first. |
+
+---
+
+### Post-Plan Addition: Safari Canvas-Image-Swap (KNOWN-ISSUES § 9.15.6)
+
+> **Context (2026-04-28):** SVG filter pipeline confirmed to be ~50–100×
+> slower on Safari than Chrome due to WebKit's pre-LBSE software
+> rasterizer. Tier 1b region-tightening produced no measurable benefit
+> (§ 9.15.6). Decision: render once, rasterize to bitmap, swap in `<img>`
+> on Safari only.
+
+| # | Task | Mode | Depends On | Status | Notes |
+|---|------|------|------------|--------|-------|
+| S1 | Tear out Apr 28 diagnostic scaffolding | Agent + verify | — | 🟡 In progress | § 9.15.6.1 checklist. Removes Tier 1b branch, `wrapForIsolation`, `measurePerf`/`measureAcrossFlags`/`measureTightRegion`, B1 EXP keypress probes. Keep `SAFARI_FILTER_REGION_USERSPACE_FIX` branch. |
+| S2 | UA-detect Safari + add image-swap entry point | Agent | S1 | ❌ Not started | Detect via feature test or UA. Hook into render-complete. |
+| S3 | Implement SVG → blob → `<img>` rasterization | Agent + verify | S2 | ❌ Not started | XMLSerializer + `Blob` + `URL.createObjectURL` + `Image.decode()`. Pixel ratio aware. |
+| S4 | Replace live SVG with rasterized `<img>` after first paint | Agent + verify | S3 | ❌ Not started | Loses shadow rotation on Safari. Acceptable. |
+| S5 | Visual diff Safari `<img>` vs Chrome SVG across hash suite | Research | S4 | ❌ Not started | Confirm color / blur / mask fidelity at target DPR. |
 
 ---
 
