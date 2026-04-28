@@ -12,6 +12,12 @@
   <script src="libraries/dat.gui.min.js"></script>
   <script src="libraries/p5.min.js"></script>
   <!-- <script src="libraries/p5.sound.min.js"></script> -->
+
+  <!-- Safari/WebKit SVG-mask group-isolation workaround.
+       Must load AFTER p5 (patches p5.Element.prototype) and BEFORE any
+       script that applies a mask to an SVG element.
+       See docs/Operational/ARTBLOCKS-SPRINT.md → B1 attack plan. -->
+  <script src="safariCompat.js"></script>
 </head>
 
 <body>
