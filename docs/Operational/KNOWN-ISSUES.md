@@ -60,6 +60,7 @@ Maintenance note:
   - [9.15.3 Incremental Re-Optimization Plan](#9153-incremental-re-optimization-plan)
   - [9.15.4 Load Time Optimization](#9154-load-time-optimization-separate-from-animation)
   - [9.15.5 Measurement Baseline](#9155-measurement-baseline-to-do-before-optimizing)
+  - [9.15.6 Safari Perf Investigation Apr 28 2026 (canvas-image-swap path)](#9156-safari-perf-investigation-apr-28-2026-canvas-image-swap-path)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -2341,6 +2342,11 @@ These optimizations don't touch the viewport/filter-region system:
   region (which uses FRAME bounds, not padding)
 
 **1b. Filter region tightened to actual content bounds**
+- *2026-04-28: ATTEMPTED, BLOCKED. See § 9.15.6 for measurements. The
+  union of `shapeGroups[*].boundsRect` collapses to FRAME for every
+  cut due to § 9.14.1 cascade broadening, so this tier produces zero
+  area reduction. Re-enable only after § 9.11 maskShape rebuild
+  removes the FRAME-broadening for cut groups.*
 - Current: filter region = FRAME `(0, 0, 100, 200)` for ALL cuts
 - Optimized: compute per-cut AABB from all ShapeGroup cell bounds,
   expand by `padding`, clamp to FRAME bounds
@@ -2491,5 +2497,144 @@ without code changes.
 
 ---
 
+### 9.15.6 Safari Perf Investigation Apr 28 2026 (canvas-image-swap path)
+
+*Last audited: 2026-04-28 — Safari rasterization wall confirmed; tight-region path architecturally blocked; canvas-image-swap chosen.*
+
+**Status:** Decision made — abandon further SVG pipeline optimization
+on Safari, ship a UA-detected canvas-image-swap fallback. Most code
+added during the Apr 28 investigation is **diagnostic scaffolding that
+must be removed** once the swap path lands.
+
+**What we measured (hash 1487, FOSL):**
+
+| Config                                | Total | Build | Paint | Region area / filter | Region total |
+|---------------------------------------|------:|------:|------:|---------------------:|-------------:|
+| Baseline `(-50,-50,200,300)` userSpace | 11831ms | 330ms | 11501ms | 55,789 u² | 1,060,000 u² |
+| Tier 1b "tight" union AABB             | 10564ms | 360ms | 10204ms | 55,789 u² | 1,060,000 u² |
+
+Speedup: 1.12× — within noise. Filter-region area was **identical** in
+both configs.
+
+**Why Tier 1b produced zero area reduction:**
+
+`ShapeGroup.boundsRect` (ProtoLayerObjects.js L1732, § 9.14.1 cascade
+broadening) returns `FRAME.boundsRect` for any group where
+`isFrame || cut`. Every ProtoCut's consumer ShapeGroups are cut groups
+by definition, so the union of their `boundsRect` collapses to FRAME
+for every cut. Tier 1b cannot deliver any savings until § 9.14.1
+cascade broadening is unwound (i.e., until the §9.11 maskShape rebuild
+allows tight per-group bounds for cuts).
+
+**Other findings ruled out:**
+
+- Coverage hole hypothesis (`SAFARI_FORCE_ISOLATE_OVER_FILTER`)
+  refuted: 4/4 masks were already isolated at baseline; ratio = 1.0.
+  Forcing isolation over already-filtered elements changed nothing.
+- §9.14.7 banding regression returns immediately if filter region
+  edges coincide with mask edges. The +50 margin past FRAME edges in
+  the Mar 7 / Apr 28 fix is a hard constraint and must be preserved
+  by any future region-tightening pass.
+
+**Conclusion:**
+
+WebKit's pre-LBSE software SVG filter pipeline is the cost driver.
+Total cost ≈ region_area × primitive_count, both of which we cannot
+reduce without architectural rework. The pragmatic path is:
+
+1. Render the SVG once (full quality).
+2. Rasterize to a bitmap (SVG → blob URL → `<img>` or canvas).
+3. Swap the `<img>` in over the live SVG before animation starts.
+4. Keep the SVG on Chromium / non-Safari engines.
+
+This sidesteps the filter rasterizer entirely on Safari. Trade-off:
+shadow rotation animation will be lost on Safari (or implemented as
+CSS hue-rotation / pre-rendered keyframes). Acceptable.
+
+#### 9.15.6.1 Apr 28 2026 Tear-Out Plan
+
+The Apr 28 investigation added diagnostic code in **four** places.
+Most of it is throwaway. The boundaries below are what must be kept,
+removed, or kept-with-flag once canvas-image-swap is shipped.
+
+**KEEP (long-term):**
+
+- `neuMark_I.js` — `ProtoCut.setLayouts()` userSpaceOnUse path with
+  fixed `(-50, -50, 200, 300)` region. This is the §9.14.7 banding
+  fix and the only thing that made deep cuts visible on Safari before
+  any swap happens. Required even with image-swap because the SVG
+  must render correctly once before being rasterized.
+  - Specifically: the `if (useUserSpaceFix)` branch (the one WITHOUT
+    `useTight`).
+  - Flag: `window.SAFARI_FILTER_REGION_USERSPACE_FIX` (default true).
+    Keep flag for emergency revert.
+
+- `safariCompat.js` — the existing group-isolate workaround
+  (`SAFARI_GROUP_ISOLATE_WORKAROUND`) is unrelated to today's work
+  and stays.
+
+**REMOVE (no value retained — tear out alongside image-swap PR):**
+
+1. **`neuMark_I.js`** — Tier 1b tight-region branch in
+   `ProtoCut.setLayouts()`:
+   - The entire `if (useUserSpaceFix && useTight) { … }` block.
+   - The `useTight` const declaration.
+   - The "Tight-region flag" line in the block comment above
+     `setLayouts()`.
+
+2. **`safariCompat.js`** — Apr 28 perf-attack scaffolding:
+   - `SAFARI_FORCE_ISOLATE_OVER_FILTER` flag init (sessionStorage
+     hydration block).
+   - `SAFARI_FILTER_REGION_TIGHT` flag init.
+   - `wrapForIsolation(elt)` function and its call inside
+     `applyGroupIsolateToElement()` (the
+     `if (!window.SAFARI_FORCE_ISOLATE_OVER_FILTER) return` /
+     `wrapForIsolation(elt)` block).
+   - `measurePerf()`, `measureAcrossFlags()`, `measureTightRegion()`
+     functions.
+   - `resolveHashFromIndex()` helper used only by `measurePerf`.
+   - All three from the public `SafariCompat` export object.
+
+3. **`gui.js`** — `keyPressed()` diagnostic probes:
+   - "SAFARI B1 EXPERIMENT 1" block (keys `0`/`1`/`2`/`3`,
+     filter/mask strip).
+   - "SAFARI B1 EXPERIMENT 2" block (keys `4`/`5`, force-fill).
+   - "SAFARI B1 EXPERIMENT 3" block (keys `6`/`7`/`8`,
+     stdDev/offset/chain throttling).
+   - "SAFARI B1 EXPERIMENT 4" block (keys `9`/`q`/`w`, global
+     clamp + region override + overflow strip).
+   - All four blocks are clearly delimited by their `// SAFARI B1
+     EXPERIMENT N` headers and the `(Apr 28 2026, temporary — remove
+     after diagnosis)` marker — grep for `B1 EXP` to find them all.
+
+**KEEP-WITH-FLAG (defer decision until after image-swap ships):**
+
+- None. If image-swap works, the entire Apr 28 layer is dead code.
+
+**Verification after tear-out:**
+
+- Hash 1487 in Chrome must still render identically (visual diff).
+- Hash 1487 in Safari must render correctly (slowly) before image-swap
+  takes over — confirms `SAFARI_FILTER_REGION_USERSPACE_FIX` path is
+  intact.
+- `SafariCompat` public API should drop `measurePerf`,
+  `measureAcrossFlags`, `measureTightRegion` — verify no other code
+  references them.
+- `grep -rn "B1 EXP\|SAFARI_FILTER_REGION_TIGHT\|SAFARI_FORCE_ISOLATE_OVER_FILTER\|wrapForIsolation\|measurePerf\|measureAcrossFlags\|measureTightRegion"`
+  should return zero hits after tear-out (in source files; doc
+  references in this section are fine).
+
+#### 9.15.6.2 Why Tier 1b Was Worth Trying Anyway
+
+Even though it produced zero area reduction, the experiment was
+cheap (~30 min) and it conclusively eliminated "filter region size"
+as a tunable lever on Safari without architectural rework. Without
+this measurement we would have spent more time on Tier 2/3 region
+work that would have hit the same § 9.14.1 wall. The tear-out
+checklist above is the receipt: we run it, we get back to a clean
+baseline, no regret debt.
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-08 — § 9.14.8 resolved (R-in edge white-out), § 9.14.9 opened (R-in shade centering)*
+*Last updated: 2026-04-28 — § 9.15.6 added (Safari perf investigation, canvas-image-swap chosen, Apr 28 tear-out plan)*
