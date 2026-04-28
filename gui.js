@@ -2,8 +2,8 @@ let
   gui,
 
   testingControls = {
-    hashNumber: 1433,
-    lastHash: false,
+    hashNumber: 1487,
+    lastHash: true,
     blackMode: false,
   },
 
@@ -33,6 +33,7 @@ function createGUI() {
 //NOTE: Create with GPT-4 on April 15,2023
 //FUNC: keyPressed() p5js overload for PNG saving
 function keyPressed() {
+  console.log(`[keyPressed] key='${key}' keyCode=${keyCode}`)
   if (key === 's') {
     console.log('s pressed')
     const scale = 1
@@ -119,6 +120,315 @@ function keyPressed() {
   }
   if (key === 'o') {
     // use for shade blurScale animation
+  }
+
+  // ---------------------------------------------------------------------------
+  // SAFARI B1 EXPERIMENT 1 — Filter / Mask strip on failing groups
+  // (Apr 28 2026, temporary — remove after diagnosis)
+  // Press '1' = strip filter from failing shpGrps  (visible+unshaded => filter is culprit)
+  // Press '2' = strip mask   from failing shpGrps  (visible           => mask   is culprit)
+  // Press '3' = strip BOTH                                            (last-resort isolation)
+  // Press '0' = list failing groups currently in DOM (sanity check)
+  // To restore: reload the page (no rebuild — protoBatch.rebuild triggered the export loop).
+  // Edit FAILING_IDS to match the hash under test.
+  // ---------------------------------------------------------------------------
+  if (key === '0' || key === '1' || key === '2' || key === '3') {
+    console.log(`[B1 EXP1] keypress detected: '${key}'`)
+    const FAILING_IDS = ['shpGrp00', 'shpGrp01', 'shpGrp02', 'shpGrp09', 'shpGrp10', 'shpGrp11']
+
+    // Sanity check first — confirm the targeted IDs actually exist in the DOM
+    const existing = FAILING_IDS.map(id => {
+      const svg = document.getElementById(id)
+      if (!svg) return { id, found: false }
+      const filteredGs = svg.querySelectorAll('g[filter]')
+      const maskedEls = svg.querySelectorAll('[mask]')
+      return {
+        id,
+        found: true,
+        tag: svg.tagName,
+        filteredGCount: filteredGs.length,
+        maskedElCount: maskedEls.length,
+        ownFilterAttr: svg.getAttribute('filter'),
+        ownMaskAttr: svg.getAttribute('mask'),
+      }
+    })
+    console.group(`[B1 EXP1] sanity check — failing groups in DOM`)
+    console.table(existing)
+    console.groupEnd()
+    if (key === '0') return  // sanity-check only
+
+    const stripFilter = key === '1' || key === '3'
+    const stripMask = key === '2' || key === '3'
+    const log = []
+    FAILING_IDS.forEach(id => {
+      const svg = document.getElementById(id)
+      if (!svg) { log.push({ id, status: 'NOT FOUND in DOM' }); return }
+
+      if (stripFilter) {
+        // Filter could be on the <svg> itself (rare) or on an inner <g>
+        if (svg.hasAttribute('filter')) {
+          log.push({ id, target: id, removed: 'filter (on svg)', was: svg.getAttribute('filter') })
+          svg.removeAttribute('filter')
+        }
+        svg.querySelectorAll('g[filter]').forEach(g => {
+          log.push({ id, target: g.id || g.tagName, removed: 'filter (on g)', was: g.getAttribute('filter') })
+          g.removeAttribute('filter')
+        })
+      }
+      if (stripMask) {
+        if (svg.hasAttribute('mask')) {
+          log.push({ id, target: id, removed: 'mask (on svg)', was: svg.getAttribute('mask') })
+          svg.removeAttribute('mask')
+        }
+        svg.querySelectorAll('[mask]').forEach(el => {
+          log.push({ id, target: el.id || el.tagName, removed: 'mask (on el)', was: el.getAttribute('mask') })
+          el.removeAttribute('mask')
+        })
+      }
+    })
+    console.group(`[B1 EXP1] strip results (filter=${stripFilter}, mask=${stripMask})`)
+    console.table(log)
+    console.groupEnd()
+    if (log.length === 0) console.warn(`[B1 EXP1] NOTHING was stripped — check FAILING_IDS or selectors`)
+  }
+
+  // ---------------------------------------------------------------------------
+  // SAFARI B1 EXPERIMENT 2 — Force-fill paths in failing groups
+  // Press '4' = also strip filter/mask AND set fill='red' opacity=1 on every
+  //             <path> inside the failing groups. If shapes appear red, the
+  //             geometry paints fine and the bug is in the filter pipeline.
+  //             If still invisible, the bug is at the path-paint level.
+  // Press '5' = report computed style + bounding rect for paths in failing groups
+  //             (no DOM mutation).
+  // ---------------------------------------------------------------------------
+  if (key === '4' || key === '5') {
+    console.log(`[B1 EXP2] keypress detected: '${key}'`)
+    const FAILING_IDS = ['shpGrp00', 'shpGrp01', 'shpGrp02', 'shpGrp09', 'shpGrp10', 'shpGrp11']
+    const log = []
+    FAILING_IDS.forEach(id => {
+      const svg = document.getElementById(id)
+      if (!svg) { log.push({ id, status: 'NOT FOUND' }); return }
+
+      if (key === '4') {
+        // Strip everything that could hide the path
+        if (svg.hasAttribute('filter')) svg.removeAttribute('filter')
+        if (svg.hasAttribute('mask')) svg.removeAttribute('mask')
+        svg.querySelectorAll('[filter]').forEach(e => e.removeAttribute('filter'))
+        svg.querySelectorAll('[mask]').forEach(e => e.removeAttribute('mask'))
+      }
+
+      svg.querySelectorAll('path').forEach(p => {
+        const cs = window.getComputedStyle(p)
+        const rect = p.getBoundingClientRect()
+        const entry = {
+          id,
+          parentId: p.parentNode?.id || p.parentNode?.tagName,
+          d_len: (p.getAttribute('d') || '').length,
+          fill: cs.fill,
+          opacity: cs.opacity,
+          fillOpacity: cs.fillOpacity,
+          visibility: cs.visibility,
+          display: cs.display,
+          rect: `${rect.width.toFixed(1)}x${rect.height.toFixed(1)} @ ${rect.x.toFixed(1)},${rect.y.toFixed(1)}`,
+        }
+        if (key === '4') {
+          // Force visible paint
+          p.setAttribute('fill', 'red')
+          p.setAttribute('fill-opacity', '1')
+          p.setAttribute('opacity', '1')
+          p.style.fill = 'red'
+          p.style.fillOpacity = '1'
+          p.style.opacity = '1'
+          entry.forced = 'fill=red'
+        }
+        log.push(entry)
+      })
+    })
+    console.group(`[B1 EXP2] ${key === '4' ? 'force-fill' : 'inspect'} paths in failing groups`)
+    console.table(log)
+    console.groupEnd()
+    if (log.length === 0) console.warn(`[B1 EXP2] No paths found inside failing groups`)
+  }
+
+  // ---------------------------------------------------------------------------
+  // SAFARI B1 EXPERIMENT 3 — Filter parameter throttling on failing groups
+  // Press '6' = clamp every feGaussianBlur stdDeviation <= 3
+  // Press '7' = trim filter chain — keep only first N shadow layers (default 4)
+  // Press '8' = clamp every feOffset dx/dy <= 2
+  // (cumulative — press to keep adding throttles; reload to reset)
+  // ---------------------------------------------------------------------------
+  if (key === '6' || key === '7' || key === '8') {
+    console.log(`[B1 EXP3] keypress detected: '${key}'`)
+    const FAILING_IDS = ['shpGrp00', 'shpGrp01', 'shpGrp02', 'shpGrp09', 'shpGrp10', 'shpGrp11']
+    const STDDEV_CAP = 3
+    const OFFSET_CAP = 2
+    const KEEP_LAYERS = 4   // for '7' — number of leading shadow primitives to keep
+
+    let touched = 0
+    FAILING_IDS.forEach(id => {
+      const svg = document.getElementById(id)
+      if (!svg) return
+      // Find the shading filter inside this svg's defs (id starts with 'fx')
+      const filters = svg.querySelectorAll('defs > filter[id^="fx"]')
+      filters.forEach(filter => {
+        if (key === '6') {
+          filter.querySelectorAll('feGaussianBlur').forEach(b => {
+            const sd = parseFloat(b.getAttribute('stdDeviation') || '0')
+            if (sd > STDDEV_CAP) {
+              b.setAttribute('stdDeviation', STDDEV_CAP)
+              touched++
+            }
+          })
+        }
+        if (key === '7') {
+          // Keep feFlood transparentInput (first child) plus first KEEP_LAYERS "shade-outset-*" sets.
+          // Simpler heuristic: count feBlend results matching shade-outset-* and remove all primitives
+          // that come AFTER the Nth feBlend.
+          const children = Array.from(filter.children)
+          let blendsKept = 0
+          let cutoffIdx = children.length
+          for (let i = 0; i < children.length; i++) {
+            const c = children[i]
+            if (c.tagName === 'feBlend' && (c.getAttribute('result') || '').startsWith('shade-')) {
+              blendsKept++
+              if (blendsKept >= KEEP_LAYERS) {
+                cutoffIdx = i + 1
+                break
+              }
+            }
+          }
+          if (cutoffIdx < children.length) {
+            // Replace the final-output feComposite with one that simply uses the last kept feBlend
+            const lastKeptBlendResult = children[cutoffIdx - 1].getAttribute('result')
+            for (let i = children.length - 1; i >= cutoffIdx; i--) {
+              filter.removeChild(children[i])
+              touched++
+            }
+            // Append a passthrough feMerge so the filter has a sensible final result
+            const ns = 'http://www.w3.org/2000/svg'
+            const merge = document.createElementNS(ns, 'feMerge')
+            const mergeNode = document.createElementNS(ns, 'feMergeNode')
+            mergeNode.setAttribute('in', lastKeptBlendResult)
+            merge.appendChild(mergeNode)
+            const sgNode = document.createElementNS(ns, 'feMergeNode')
+            sgNode.setAttribute('in', 'SourceGraphic')
+            merge.insertBefore(sgNode, mergeNode)  // SourceGraphic underneath
+            filter.appendChild(merge)
+          }
+        }
+        if (key === '8') {
+          filter.querySelectorAll('feOffset').forEach(o => {
+            const dx = parseFloat(o.getAttribute('dx') || '0')
+            const dy = parseFloat(o.getAttribute('dy') || '0')
+            const cdx = Math.sign(dx) * Math.min(Math.abs(dx), OFFSET_CAP)
+            const cdy = Math.sign(dy) * Math.min(Math.abs(dy), OFFSET_CAP)
+            if (cdx !== dx || cdy !== dy) {
+              o.setAttribute('dx', cdx)
+              o.setAttribute('dy', cdy)
+              touched++
+            }
+          })
+        }
+      })
+    })
+    console.log(`[B1 EXP3] '${key}' — ${touched} primitive(s) modified. Watch for visual change.`)
+
+    // Force Safari to re-evaluate the filter graph by toggling the filter attr
+    // on every consumer that references one of the touched filters.
+    FAILING_IDS.forEach(id => {
+      const svg = document.getElementById(id)
+      if (!svg) return
+      const consumers = []
+      if (svg.hasAttribute('filter')) consumers.push(svg)
+      svg.querySelectorAll('[filter]').forEach(c => consumers.push(c))
+      consumers.forEach(c => {
+        const v = c.getAttribute('filter')
+        c.removeAttribute('filter')
+        // force reflow
+        // eslint-disable-next-line no-unused-expressions
+        c.getBoundingClientRect()
+        c.setAttribute('filter', v)
+      })
+    })
+    console.log(`[B1 EXP3] forced filter re-evaluation on consumers`)
+  }
+
+  // ---------------------------------------------------------------------------
+  // SAFARI B1 EXPERIMENT 4 — Sanity + filter-region hypothesis
+  // Press '9' = apply '6' (clamp stdDev<=3) GLOBALLY to all filters in the
+  //             document. If working shapes visibly lose blur, mutation is
+  //             taking effect; if not, Safari is ignoring our mutations.
+  // Press 'q' = override filter region on failing groups to userSpaceOnUse
+  //             with canvas-tight bounds (0,-50,100,300). If shapes appear,
+  //             the bug is filter-region size in Safari.
+  // Press 'w' = strip overflow="visible" from failing groups.
+  // ---------------------------------------------------------------------------
+  if (key === '9' || key === 'q' || key === 'w') {
+    console.log(`[B1 EXP4] keypress detected: '${key}'`)
+    const FAILING_IDS = ['shpGrp00', 'shpGrp01', 'shpGrp02', 'shpGrp09', 'shpGrp10', 'shpGrp11']
+    let touched = 0
+
+    if (key === '9') {
+      // Global blur clamp — sanity check that DOM mutation reaches Safari renderer.
+      document.querySelectorAll('feGaussianBlur').forEach(b => {
+        const sd = parseFloat(b.getAttribute('stdDeviation') || '0')
+        if (sd > 0.5) {
+          b.setAttribute('stdDeviation', 0.5)
+          touched++
+        }
+      })
+      console.log(`[B1 EXP4] '9' — clamped ${touched} feGaussianBlur GLOBALLY to stdDev=0.5`)
+      // Force re-eval on every filter consumer in the document
+      document.querySelectorAll('[filter]').forEach(c => {
+        const v = c.getAttribute('filter')
+        c.removeAttribute('filter')
+        c.getBoundingClientRect()
+        c.setAttribute('filter', v)
+      })
+    }
+
+    if (key === 'q') {
+      FAILING_IDS.forEach(id => {
+        const svg = document.getElementById(id)
+        if (!svg) return
+        const filters = svg.querySelectorAll('defs > filter[id^="fx"]')
+        filters.forEach(filter => {
+          filter.setAttribute('filterUnits', 'userSpaceOnUse')
+          filter.setAttribute('x', '0')
+          filter.setAttribute('y', '-50')
+          filter.setAttribute('width', '100')
+          filter.setAttribute('height', '300')
+          touched++
+        })
+        // Force re-eval on consumers within this svg
+        const consumers = []
+        if (svg.hasAttribute('filter')) consumers.push(svg)
+        svg.querySelectorAll('[filter]').forEach(c => consumers.push(c))
+        consumers.forEach(c => {
+          const v = c.getAttribute('filter')
+          c.removeAttribute('filter')
+          c.getBoundingClientRect()
+          c.setAttribute('filter', v)
+        })
+      })
+      console.log(`[B1 EXP4] 'q' — clamped filter region to userSpace 0,-50,100,300 on ${touched} filter(s)`)
+    }
+
+    if (key === 'w') {
+      FAILING_IDS.forEach(id => {
+        const svg = document.getElementById(id)
+        if (!svg) return
+        if (svg.getAttribute('overflow') === 'visible') {
+          svg.removeAttribute('overflow')
+          touched++
+        }
+        svg.querySelectorAll('[overflow="visible"]').forEach(e => {
+          e.removeAttribute('overflow')
+          touched++
+        })
+      })
+      console.log(`[B1 EXP4] 'w' — stripped ${touched} overflow="visible" attribute(s)`)
+    }
   }
 }
 
