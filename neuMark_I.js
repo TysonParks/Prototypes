@@ -207,67 +207,9 @@ class ProtoCut {
   // savings until that broadening is unwound (post §9.11 rebuild).
   //
   // Revert flag: window.SAFARI_FILTER_REGION_USERSPACE_FIX = false (reload).
-  // Tight-region flag: window.SAFARI_FILTER_REGION_TIGHT = true (reload)
-  // enables Tier 1b — per-cut AABB instead of fixed FRAME+50.
-  // ⚠️ The `useTight` branch below is scheduled for tear-out alongside
-  // canvas-image-swap (§ 9.15.6.1). Do not build new logic on it.
   setLayouts() {
     const useUserSpaceFix = (typeof window !== 'undefined') &&
       (window.SAFARI_FILTER_REGION_USERSPACE_FIX !== false)
-    const useTight = (typeof window !== 'undefined') &&
-      (window.SAFARI_FILTER_REGION_TIGHT === true)
-
-    if (useUserSpaceFix && useTight) {
-      // ─── Tier 1b: tight per-cut filter region ──────────────────────────
-      // Union AABB of consumer shapeGroups' boundsRect (cellBounds for
-      // normal groups, FRAME for cut/cascade groups per §9.14.1), expanded
-      // by depth-aware padding. Where the AABB touches a FRAME edge, we
-      // extend +50 past that edge to preserve the §9.14.7 banding fix
-      // (filter region edge must NOT coincide with mask edge). Where it
-      // does not touch FRAME, stay tight — this is the perf win.
-      //
-      // Padding rationale (symmetric for any light rotation):
-      //   - feGaussianBlur stdDev ≈ depth/4 → 5σ extent ≈ depth × 1.25
-      //   - feOffset magnitude ≈ depth × shade.mag (worst case ~depth)
-      //   - inset/outset shade adds depth × ~1 in either direction
-      //   - safe: pad = max(20, depth × 3) on all four sides
-      const fb = FRAME.boundsRect
-      const fbR = fb.x + fb.width
-      const fbB = fb.y + fb.height
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-      this.shapeGroups.forEach(grp => {
-        const r = grp.boundsRect
-        minX = Math.min(minX, r.x)
-        minY = Math.min(minY, r.y)
-        maxX = Math.max(maxX, r.x + r.width)
-        maxY = Math.max(maxY, r.y + r.height)
-      })
-      // Fallback if no consumers: use FRAME
-      if (!isFinite(minX)) { minX = fb.x; minY = fb.y; maxX = fbR; maxY = fbB }
-      // Depth-aware padding for blur + offset + shade extent.
-      const pad = Math.max(20, Math.abs(this.depth) * 3)
-      minX -= pad; minY -= pad; maxX += pad; maxY += pad
-      // Banding-safety margin: where region touches FRAME edge, extend +50
-      // past it; where it stays inside FRAME, clamp to FRAME (no point
-      // rasterizing beyond the mask).
-      const BANDING_MARGIN = 50
-      const eps = 0.5
-      if (minX <= fb.x + eps) minX = fb.x - BANDING_MARGIN; else minX = Math.max(minX, fb.x)
-      if (minY <= fb.y + eps) minY = fb.y - BANDING_MARGIN; else minY = Math.max(minY, fb.y)
-      if (maxX >= fbR - eps) maxX = fbR + BANDING_MARGIN; else maxX = Math.min(maxX, fbR)
-      if (maxY >= fbB - eps) maxY = fbB + BANDING_MARGIN; else maxY = Math.min(maxY, fbB)
-
-      const x = minX, y = minY, width = maxX - minX, height = maxY - minY
-      this.filters.forEach(f => {
-        f.filter
-          .attribute('filterUnits', 'userSpaceOnUse')
-          .attribute('x', x)
-          .attribute('y', y)
-          .attribute('width', width)
-          .attribute('height', height)
-      })
-      return
-    }
 
     if (useUserSpaceFix) {
       // Fixed 50-unit margin past FRAME on every side. See block comment
