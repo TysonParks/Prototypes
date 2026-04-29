@@ -47,6 +47,12 @@ class ProtoBatch {
     // Stop any running animation
     globalControls.animated = false
 
+    // Reset lighting to its default angle so each rebuild starts from a
+    // known state. Without this, animation can leave shadAngle wherever
+    // the last frame stopped, and that bleeds into the next build's
+    // first paint. Default matches the initial value in gui.js.
+    globalControls.shadAngle = 90
+
     // Remove the BG div (contains FRAME and all SVG content)
     if (BG && BG.elt && BG.elt.parentNode) {
       BG.elt.parentNode.removeChild(BG.elt)
