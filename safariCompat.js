@@ -45,29 +45,6 @@
     window.SAFARI_GROUP_ISOLATE_WORKAROUND = true
   }
 
-  // FLAG: SAFARI_FORCE_ISOLATE_OVER_FILTER (Apr 28 2026 perf attack)
-  // When true, applyGroupIsolateToElement() wraps masked-AND-already-filtered
-  // elements in an isolation <g> instead of skipping them. Hypothesis: the
-  // existing-filter early-exit was the coverage hole behind Safari's 50–100×
-  // slowdown. Default OFF until measured benefit confirmed (use
-  // SafariCompat.measureAcrossFlags() to compare).
-  if (sessionStorage.getItem('SAFARI_FORCE_ISOLATE_OVER_FILTER') === 'true') {
-    window.SAFARI_FORCE_ISOLATE_OVER_FILTER = true
-  } else if (typeof window.SAFARI_FORCE_ISOLATE_OVER_FILTER === 'undefined') {
-    window.SAFARI_FORCE_ISOLATE_OVER_FILTER = false
-  }
-
-  // FLAG: SAFARI_FILTER_REGION_TIGHT (Apr 28 2026 — Tier 1b)
-  // When true, ProtoCut.setLayouts() emits a tight per-cut filter region
-  // (union AABB of consumer shapeGroups, depth-padded, +50 only where
-  // touching FRAME edge). When false, falls back to the fixed FRAME+50
-  // baseline. Default OFF — toggle on via console + reload to measure.
-  if (sessionStorage.getItem('SAFARI_FILTER_REGION_TIGHT') === 'true') {
-    window.SAFARI_FILTER_REGION_TIGHT = true
-  } else if (typeof window.SAFARI_FILTER_REGION_TIGHT === 'undefined') {
-    window.SAFARI_FILTER_REGION_TIGHT = false
-  }
-
   const FILTER_ID = 'webkit-group-isolate'
   const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -115,19 +92,7 @@
   //     ID is FILTER_ID + '-' + element.id to stay globally unique.
   function applyGroupIsolateToElement(elt) {
     if (!elt || !elt.setAttribute) return
-    // Coverage-hole gate (Apr 28 2026 perf investigation):
-    // The original assumption was that any pre-existing `filter` already
-    // forces WebKit's offscreen-composite-then-mask path. If that turns
-    // out to be wrong (e.g. shade filters with feFlood/feComposite take
-    // a different code path), masked+filtered groups silently retain
-    // O(N) per-shape masking. The flag below lets us A/B that hypothesis.
-    if (elt.hasAttribute && elt.hasAttribute('filter')) {
-      if (!window.SAFARI_FORCE_ISOLATE_OVER_FILTER) return
-      // Force path: wrap the element so isolation sits OUTSIDE the
-      // existing filter+mask pair, guaranteeing offscreen compositing.
-      wrapForIsolation(elt)
-      return
-    }
+    if (elt.hasAttribute && elt.hasAttribute('filter')) return
 
     const tag = elt.tagName ? elt.tagName.toLowerCase() : ''
 
@@ -147,29 +112,6 @@
       }
       elt.setAttribute('filter', `url(#${FILTER_ID})`)
     }
-  }
-
-  //FUNC: wrapForIsolation(elt) : void
-  // Coverage-hole experiment (SAFARI_FORCE_ISOLATE_OVER_FILTER).
-  // When a masked element ALREADY has a filter, we cannot just overwrite
-  // its filter attribute. Instead, wrap the element in a parent <g> that
-  // owns the isolate filter — this places the offscreen composite trigger
-  // OUTSIDE the existing filter+mask, which (hypothesis) is what WebKit
-  // needs to take the group-mask path instead of the per-shape one.
-  // Idempotent: marks the wrapper with `data-isolate-wrap` to avoid double-wrap.
-  function wrapForIsolation(elt) {
-    if (!elt || !elt.parentNode) return
-    if (elt.parentNode.hasAttribute && elt.parentNode.hasAttribute('data-isolate-wrap')) return
-    const scope = elt.ownerSVGElement || elt.closest('svg')
-    if (!scope) return
-    if (!scope.querySelector(`#${FILTER_ID}`)) {
-      createIsolateFilter(scope, FILTER_ID)
-    }
-    const wrap = document.createElementNS(SVG_NS, 'g')
-    wrap.setAttribute('data-isolate-wrap', '1')
-    wrap.setAttribute('filter', `url(#${FILTER_ID})`)
-    elt.parentNode.insertBefore(wrap, elt)
-    wrap.appendChild(elt)
   }
 
   //SECT: monkey-patch p5.Element.prototype.attribute
@@ -321,238 +263,6 @@
     return rows
   }
 
-  //FUNC: measurePerf(opts) : Promise<Report>
-  //
-  // Apr 28 2026 perf attack — A/B Safari render time across hashes and flag
-  // configurations. Times the full buildFromHash() → first paint cycle.
-  //
-  // Usage in browser console:
-  //   await SafariCompat.measurePerf()                      // current hash, default config
-  //   await SafariCompat.measurePerf({ hash: 1474 })        // single hash by index
-  //   await SafariCompat.measurePerf({ hashes: [1473,1474,1462] })
-  //   await SafariCompat.measurePerf({ runs: 3 })           // average of 3 runs per hash
-  //
-  // Each run reports:
-  //   buildMs   — synchronous JS work (buildFromHash returns)
-  //   paintMs   — additional time from buildFromHash return → 2nd rAF
-  //   totalMs   — buildMs + paintMs
-  //   nodeCount — total SVG nodes after build
-  //   maskCount — masked elements (from auditMaskedGroups)
-  //   isolateCount — masked elements actually carrying the isolate filter
-  //   filterCount — total <filter> elements
-  //   feCount   — total fe* primitives across all filters
-  //
-  // Hash resolution:
-  //   - opts.hash is an INTEGER hashNumber index into testingControls.hashes
-  //     (matches dat.gui hashNumber slider). If omitted, current hash is reused.
-  //
-  // Verdict heuristic printed at end:
-  //   - if avg totalMs > 5000ms across runs → "SVG pipeline likely unworkable;
-  //     recommend canvas-image-swap fallback for Safari"
-  //   - else if isolateCount/maskCount < 0.95 → "isolate coverage hole — try
-  //     SAFARI_FORCE_ISOLATE_OVER_FILTER=true and re-measure"
-  //   - else → "isolation appears complete; further wins require load reduction"
-  async function measurePerf(opts) {
-    opts = opts || {}
-    const runs = opts.runs || 1
-    let hashList
-    if (opts.hashes && Array.isArray(opts.hashes)) {
-      hashList = opts.hashes
-    } else if (typeof opts.hash !== 'undefined') {
-      hashList = [opts.hash]
-    } else {
-      hashList = [null] // null = use current hash
-    }
-
-    function snapshotDom() {
-      const root = document.querySelector('#BG') || document.body
-      const allSvg = root.querySelectorAll('svg, g, path, rect, circle, ellipse, polygon, line, defs, filter, mask')
-      const filters = root.querySelectorAll('filter')
-      let feCount = 0
-      filters.forEach(f => { feCount += f.querySelectorAll('feGaussianBlur,feOffset,feFlood,feComposite,feBlend,feColorMatrix,feMerge,feMergeNode').length })
-      const masks = root.querySelectorAll('[mask]')
-      let isolated = 0
-      masks.forEach(m => {
-        const fa = m.getAttribute('filter') || ''
-        if (fa.indexOf(FILTER_ID) !== -1) isolated++
-        // also count children inside data-isolate-wrap
-        if (m.parentElement && m.parentElement.getAttribute && m.parentElement.getAttribute('data-isolate-wrap') === '1') isolated++
-      })
-      return {
-        nodeCount: allSvg.length,
-        filterCount: filters.length,
-        feCount,
-        maskCount: masks.length,
-        isolateCount: isolated,
-      }
-    }
-
-    function nextPaint() {
-      return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-    }
-
-    function resolveHashFromIndex(idx) {
-      // null/undefined → reuse current tokenData.hash
-      if (idx === null || typeof idx === 'undefined') {
-        return (typeof tokenData !== 'undefined' && tokenData) ? tokenData.hash : null
-      }
-      // String that looks like a real hash → pass through
-      if (typeof idx === 'string' && idx.indexOf('0x') === 0) return idx
-      // Otherwise treat as an index into the global `lastHash` array
-      // (artBlocks/tokenHash.js — same lookup that gui.js uses).
-      if (typeof lastHash !== 'undefined' && Array.isArray(lastHash) && typeof idx === 'number') {
-        const h = lastHash[idx]
-        if (!h) {
-          console.warn(`[measurePerf] lastHash[${idx}] is undefined — array length=${lastHash.length}`)
-          return null
-        }
-        return h
-      }
-      return idx
-    }
-
-    const all = []
-    for (const h of hashList) {
-      const targetHash = resolveHashFromIndex(h)
-      const perHash = []
-      for (let i = 0; i < runs; i++) {
-        if (typeof protoBatch === 'undefined') {
-          console.warn('[measurePerf] protoBatch not available — call after setup()')
-          return null
-        }
-        // Teardown any existing build for a clean measurement
-        try { protoBatch.teardown() } catch (e) { /* first run ok */ }
-        const t0 = performance.now()
-        protoBatch.buildFromHash(targetHash)
-        const tBuild = performance.now()
-        await nextPaint()
-        const tPaint = performance.now()
-        const dom = snapshotDom()
-        perHash.push({
-          run: i + 1,
-          buildMs: +(tBuild - t0).toFixed(1),
-          paintMs: +(tPaint - tBuild).toFixed(1),
-          totalMs: +(tPaint - t0).toFixed(1),
-          ...dom,
-        })
-      }
-      const avg = (k) => +(perHash.reduce((s, r) => s + r[k], 0) / perHash.length).toFixed(1)
-      const summary = {
-        hash: targetHash,
-        runs: perHash.length,
-        avgBuildMs: avg('buildMs'),
-        avgPaintMs: avg('paintMs'),
-        avgTotalMs: avg('totalMs'),
-        nodeCount: perHash[0].nodeCount,
-        maskCount: perHash[0].maskCount,
-        isolateCount: perHash[0].isolateCount,
-        filterCount: perHash[0].filterCount,
-        feCount: perHash[0].feCount,
-      }
-      all.push({ ...summary, runs: perHash })
-      console.log(`[measurePerf] hash=${typeof targetHash === 'string' ? targetHash.slice(0, 10) + '…' : targetHash}  build=${summary.avgBuildMs}ms  paint=${summary.avgPaintMs}ms  total=${summary.avgTotalMs}ms  masks=${summary.maskCount}/${summary.isolateCount} isolated  filters=${summary.filterCount} primitives=${summary.feCount}  nodes=${summary.nodeCount}`)
-    }
-    const overallAvg = +(all.reduce((s, r) => s + r.avgTotalMs, 0) / all.length).toFixed(1)
-    const isolateRatio = all.length
-      ? all.reduce((s, r) => s + (r.maskCount ? r.isolateCount / r.maskCount : 1), 0) / all.length
-      : 1
-    let verdict
-    if (overallAvg > 5000) {
-      verdict = `SVG pipeline likely unworkable on Safari (avg ${overallAvg}ms); recommend canvas-image-swap fallback.`
-    } else if (isolateRatio < 0.95) {
-      verdict = `Isolate coverage hole detected (${(isolateRatio * 100).toFixed(0)}% covered). Try: window.SAFARI_FORCE_ISOLATE_OVER_FILTER = true; reload; re-measure.`
-    } else {
-      verdict = `Isolation appears complete (${(isolateRatio * 100).toFixed(0)}%). Further perf wins require load reduction (filter primitives, region size).`
-    }
-    console.log(`[measurePerf] VERDICT: ${verdict}`)
-    return { results: all, overallAvg, isolateRatio, verdict }
-  }
-
-  //FUNC: measureAcrossFlags() : Promise<Report>
-  // Run measurePerf with multiple flag configs to pinpoint the cost driver.
-  // Configurations tested:
-  //   A. baseline             — current flags
-  //   B. isolate OFF          — disables group-isolate workaround entirely
-  //   C. isolate FORCE        — forces isolation even on already-filtered elements
-  // Each config is measured against the same hash to make deltas meaningful.
-  async function measureAcrossFlags(opts) {
-    opts = opts || {}
-    const hashes = opts.hashes || (typeof opts.hash !== 'undefined' ? [opts.hash] : [null])
-    const runs = opts.runs || 1
-    const restore = {
-      iso: window.SAFARI_GROUP_ISOLATE_WORKAROUND,
-      force: window.SAFARI_FORCE_ISOLATE_OVER_FILTER,
-    }
-    const cfgs = [
-      { name: 'A_baseline', iso: true, force: false },
-      { name: 'B_isolateOFF', iso: false, force: false },
-      { name: 'C_forceISOLATE', iso: true, force: true },
-    ]
-    const out = {}
-    for (const cfg of cfgs) {
-      window.SAFARI_GROUP_ISOLATE_WORKAROUND = cfg.iso
-      window.SAFARI_FORCE_ISOLATE_OVER_FILTER = cfg.force
-      console.log(`[measureAcrossFlags] running config ${cfg.name} iso=${cfg.iso} force=${cfg.force}`)
-      out[cfg.name] = await measurePerf({ hashes, runs })
-    }
-    window.SAFARI_GROUP_ISOLATE_WORKAROUND = restore.iso
-    window.SAFARI_FORCE_ISOLATE_OVER_FILTER = restore.force
-    console.log('[measureAcrossFlags] DONE. Restored flags. Compare avgTotalMs across A/B/C:')
-    Object.entries(out).forEach(([k, v]) => console.log(`  ${k}: ${v.overallAvg}ms`))
-    return out
-  }
-
-  //FUNC: measureTightRegion() : Promise<Report>
-  // Apr 28 2026 — Tier 1b A/B: compares fixed FRAME+50 baseline against
-  // the per-cut tight AABB region. Measures total render time AND total
-  // filter-region pixel area (sum across all filters), the two key
-  // numbers for judging whether tight regions help on Safari.
-  //   A. baseline_FRAME50  — current default (SAFARI_FILTER_REGION_TIGHT=false)
-  //   B. tight_AABB        — Tier 1b (SAFARI_FILTER_REGION_TIGHT=true)
-  async function measureTightRegion(opts) {
-    opts = opts || {}
-    const hashes = opts.hashes || (typeof opts.hash !== 'undefined' ? [opts.hash] : [null])
-    const runs = opts.runs || 1
-    const restoreTight = window.SAFARI_FILTER_REGION_TIGHT
-    const cfgs = [
-      { name: 'A_baseline_FRAME50', tight: false },
-      { name: 'B_tight_AABB', tight: true },
-    ]
-    const out = {}
-    for (const cfg of cfgs) {
-      window.SAFARI_FILTER_REGION_TIGHT = cfg.tight
-      console.log(`[measureTightRegion] running config ${cfg.name} tight=${cfg.tight}`)
-      out[cfg.name] = await measurePerf({ hashes, runs })
-      // Sum filter region areas to quantify how much rasterization area we saved.
-      const root = document.querySelector('#BG') || document.body
-      let totalArea = 0, count = 0
-      root.querySelectorAll('filter').forEach(f => {
-        const w = parseFloat(f.getAttribute('width') || '0')
-        const h = parseFloat(f.getAttribute('height') || '0')
-        if (w && h) { totalArea += w * h; count++ }
-      })
-      out[cfg.name].totalRegionAreaUserUnits = totalArea
-      out[cfg.name].avgRegionAreaUserUnits = count ? +(totalArea / count).toFixed(0) : 0
-      console.log(`[measureTightRegion] ${cfg.name} avgRegionArea=${out[cfg.name].avgRegionAreaUserUnits} u² total=${totalArea} u² across ${count} filters`)
-    }
-    window.SAFARI_FILTER_REGION_TIGHT = restoreTight
-    console.log('[measureTightRegion] DONE. Restored flag.')
-    const A = out.A_baseline_FRAME50, B = out.B_tight_AABB
-    if (A && B) {
-      const speedupX = A.overallAvg / B.overallAvg
-      const areaReductionX = A.totalRegionAreaUserUnits / B.totalRegionAreaUserUnits
-      console.log(`[measureTightRegion] A→B: time ${A.overallAvg.toFixed(0)}ms → ${B.overallAvg.toFixed(0)}ms (${speedupX.toFixed(2)}× speedup), area ${A.totalRegionAreaUserUnits.toFixed(0)} → ${B.totalRegionAreaUserUnits.toFixed(0)} u² (${areaReductionX.toFixed(2)}× reduction)`)
-      if (B.overallAvg < 2000) {
-        console.log(`[measureTightRegion] VERDICT: tight region is sufficient (${B.overallAvg.toFixed(0)}ms < 2s). Ship Tier 1b.`)
-      } else if (speedupX > 2) {
-        console.log(`[measureTightRegion] VERDICT: tight region helps but still slow (${B.overallAvg.toFixed(0)}ms). Ship Tier 1b AND prepare canvas-image-swap fallback.`)
-      } else {
-        console.log(`[measureTightRegion] VERDICT: tight region not enough (${speedupX.toFixed(2)}× speedup). Canvas-image-swap is the right path.`)
-      }
-    }
-    return out
-  }
-
   window.SafariCompat = {
     FILTER_ID,
     createIsolateFilter,
@@ -562,9 +272,6 @@
     stripIsolateFilters,
     applyIsolateFiltersNow,
     auditBlurFilters,
-    measurePerf,
-    measureAcrossFlags,
-    measureTightRegion,
     isEnabled: () => window.SAFARI_GROUP_ISOLATE_WORKAROUND,
     disable: () => {
       window.SAFARI_GROUP_ISOLATE_WORKAROUND = false
