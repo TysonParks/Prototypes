@@ -51,6 +51,11 @@
   <!-- /DEV-ONLY -->
   <script src="ProtoBatch.js"></script>
 
+  <!-- Safari/WebKit canvas-image-swap fallback. Must load AFTER ProtoBatch
+       (which it monkey-patches) and BEFORE sketch.js (whose setup() calls
+       buildFromHash). KNOWN-ISSUES § 9.15.6 / ROADMAP S1–S5. -->
+  <script src="safariImageSwap.js"></script>
+
   <script src="sketch.js"></script>
 
   <!-- DEV-ONLY: Ad-hoc tests — exclude from production builds -->
