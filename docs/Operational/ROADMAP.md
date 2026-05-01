@@ -147,19 +147,185 @@ because understanding the geometry is prerequisite to knowing which
 
 ### Post-Plan Addition: Safari Canvas-Image-Swap (KNOWN-ISSUES § 9.15.6)
 
-> **Context (2026-04-28):** SVG filter pipeline confirmed to be ~50–100×
-> slower on Safari than Chrome due to WebKit's pre-LBSE software
+> **Context (2026-04-28 → 2026-04-29):** SVG filter pipeline confirmed to be
+> ~50–100× slower on Safari than Chrome due to WebKit's pre-LBSE software
 > rasterizer. Tier 1b region-tightening produced no measurable benefit
-> (§ 9.15.6). Decision: render once, rasterize to bitmap, swap in `<img>`
-> on Safari only.
+> (§ 9.15.6). Initial decision was to rasterize once and swap in `<img>`,
+> but measurement showed the rasterization cost is fixed regardless of
+> where it happens (10s either way). Final decision: keep the live SVG,
+> disable shadow animation on Safari, and surface a loading overlay +
+> persistent footer notice during the slow first paint. See `safariImageSwap.js`.
 
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
-| S1 | Tear out Apr 28 diagnostic scaffolding | Agent + verify | — | 🟡 In progress | § 9.15.6.1 checklist. Removes Tier 1b branch, `wrapForIsolation`, `measurePerf`/`measureAcrossFlags`/`measureTightRegion`, B1 EXP keypress probes. Keep `SAFARI_FILTER_REGION_USERSPACE_FIX` branch. |
-| S2 | UA-detect Safari + add image-swap entry point | Agent | S1 | ❌ Not started | Detect via feature test or UA. Hook into render-complete. |
-| S3 | Implement SVG → blob → `<img>` rasterization | Agent + verify | S2 | ❌ Not started | XMLSerializer + `Blob` + `URL.createObjectURL` + `Image.decode()`. Pixel ratio aware. |
-| S4 | Replace live SVG with rasterized `<img>` after first paint | Agent + verify | S3 | ❌ Not started | Loses shadow rotation on Safari. Acceptable. |
-| S5 | Visual diff Safari `<img>` vs Chrome SVG across hash suite | Research | S4 | ❌ Not started | Confirm color / blur / mask fidelity at target DPR. |
+| S1 | Tear out Apr 28 diagnostic scaffolding | Agent + verify | — | ✅ Done | § 9.15.6.1 checklist. Removed Tier 1b branch, `wrapForIsolation`, `measurePerf`/`measureAcrossFlags`/`measureTightRegion`, B1 EXP keypress probes. Kept `SAFARI_FILTER_REGION_USERSPACE_FIX` branch. |
+| S2 | UA-detect Safari + add image-swap entry point | Agent | S1 | ✅ Superseded | Initial swap path implemented + tested. Replaced by loading-overlay UX after measurement showed swap saves no time. UA detection retained in `safariImageSwap.js` for the overlay/notice. |
+| S3 | Implement SVG → blob → `<img>` rasterization | Agent + verify | S2 | ✅ Superseded | Implemented + tested. Swap-target raster needed SVG width/height rewrite for retina sharpness. Removed once it became clear there was no perf benefit. |
+| S4 | Replace live SVG with rasterized `<img>` after first paint | Agent + verify | S3 | ✅ Superseded | Implemented + tested. No measurable speedup. Reverted to live-SVG path with overlay during render. |
+| S5 | Loading-overlay + Safari notice UX | Agent | S4 | ✅ Done | `safariImageSwap.js` (filename retained) now exposes `window.SafariCompatUX` — fullscreen spinner overlay shown during every build, animation disabled on Safari, persistent footer notice on Safari. |
+| S6 | Fine-tune blur radii, animation timings, loading copy + icon | Agent + design | S5 | ❌ Not started | Polish pass on overlay visuals + Safari notice text. Tunable blur amount, fade timings, copy. Cross-engine review. |
+| S7 | Fine-tune Chrome rotational light animation | Agent + design | S6 | ❌ Not started | Once Safari UX is finalized, focus on the Chrome-only animation feel: rotation speed, easing, dwell, idle behavior. |
+
+---
+
+### Post-Plan Addition: ProtoBatch Teardown Completeness (KNOWN-ISSUES § 9.16)
+
+> **Context (2026-04-29):** Repeated `n` (new seed) presses occasionally
+> land in a state where some shading layers are missing and inset/outset
+> behavior misfires. Strongly suspected to be incomplete teardown leaving
+> stale references in `S` (ProtoStore), filter `<defs>`, or other module-
+> level caches. Low priority for ArtBlocks deployment (full reload per
+> hash) but mandatory for the public generator (long-lived sessions).
+
+| # | Task | Mode | Depends On | Status | Notes |
+|---|------|------|------------|--------|-------|
+| T1 | Reproduce + characterize the bad state | Research | — | ❌ Not started | Identify hash sequences that trigger it. Capture `S.allLayers`, filter defs count, and Random useage before/after. |
+| T2 | Audit `ProtoBatch.teardown()` against full setup() pipeline | Research | T1 | ❌ Not started | Walk every global / module-level cache touched during build; verify each is cleared or replaced. |
+| T3 | Audit ProtoStore (`S`) lifecycle | Research | T2 | ❌ Not started | Cross-reference what setup() writes vs what teardown() nulls. Anything written during build but never explicitly cleared = candidate. |
+| T4 | Audit filter `<defs>` accumulation | Research | T2 | ❌ Not started | Confirm BG removal cascades all filter defs out of the DOM (it should — they live inside FRAME.bleed.elt). Also check any module-level filter ID registries. |
+| T5 | Implement state-monitor harness | Agent | T1 | ❌ Not started | Dev-only diagnostic that snapshots key counts (layers, filters, listeners, RAF handles) pre/post teardown to surface leaks. |
+| T6 | Fix identified leaks | Agent | T2–T5 | ❌ Not started | Likely additional nulls in teardown(), explicit `S` reset, possibly explicit cache clears. |
+| T7 | Stress test: 100× rebuild loop | Verify | T6 | ❌ Not started | Ensure no progressive degradation, no console errors, no missing layers. |
+
+**Possible-culprit flag:** Until this is resolved, any future bug report
+that surfaces missing shading layers, broken inset/outset, or stale
+filter behavior should treat incomplete teardown as a leading suspect
+— particularly when it appears only after one or more `n` presses and
+never on a fresh page load.
+
+---
+
+### Post-Plan Addition: Reveal Animation Tuning (KNOWN-ISSUES § 9.15.6, § 9.17)
+
+> **Context (2026-04-29):** Now that Safari compatibility is functionally
+> resolved, the next frontier is the *reveal experience* — what the user
+> sees during page load, between `n` rebuilds, and around any
+> animation-related transitions. The goal is a polished cinematic
+> "focus pull" that:
+>
+> 1. Hides the ugliness of slow first paints (Safari) and uneven build
+>    times (heavy hashes on any browser).
+> 2. Looks consistent across platforms in 2026 *and* in 2036.
+> 3. Doesn't over-emphasize execution speed as a feature — collectors
+>    should see polish, not a benchmark.
+> 4. Works equally well on the locked-forever ArtBlocks deployment and
+>    on the live public generator (where users press `n` repeatedly).
+>
+> **Forward-compat constraint (AI_INDEX axiom):** All four elements
+> below must *gracefully no-op* on a future fast platform. A 2-second
+> reveal that runs in 50ms is invisible; a perf-tuned shortcut that
+> assumes 10s of slack is permanent.
+
+#### Reveal Elements
+
+The reveal scene composes four DOM/SVG elements:
+
+| Element | Type | Existence | Notes |
+|---------|------|-----------|-------|
+| **E1. Artwork** (Prototype SVG) | `<svg>` (FRAME.bleed.elt) | Always | The final resolved render. |
+| **E2. Loading spinner** | `<div>` w/ CSS animation | Built per build | Currently in `safariImageSwap.js`. |
+| **E3. "Loading" text** | `<div>` w/ message + secondary | Built per build | Currently in `safariImageSwap.js`. |
+| **E4. Blurred dummy backing** | `<div>` or static SVG of frame backing only | **Proposed** | Renders nearly instantly (no filters), provides "subject is already there, camera is focusing" effect. Replaces black-pop-in with focus-pull. |
+
+#### Modulation Channels
+
+For each element we may modulate, in timed sequence:
+
+| Channel | Implementation | Performance note |
+|---------|----------------|------------------|
+| **Opacity** | CSS `opacity` + `transition` | Cheap on every engine; GPU-composited. ✅ Use freely. |
+| **Blur** | CSS `filter: blur(Npx)` + `transition` | GPU-composited *if the element is a layer* (`transform:translateZ(0)` or `will-change:filter`). ✅ Cheap when promoted. ⚠️ Heavy blur on the live SVG would re-trigger SVG filter rasterization on Safari — apply blur only to non-SVG elements (E2, E3, E4) or to the FRAME container *div* wrapping the SVG, not the SVG itself. |
+
+#### Trigger Contexts
+
+| Context | Sequence | Frequency |
+|---------|----------|-----------|
+| **C1. Initial page load** | Cold DOM → render → first reveal | Once per page session |
+| **C2. Resolve transition** | Build complete → reveal artwork | Once per build |
+| **C3. User reload (`n`)** | Existing artwork → teardown → new build → reveal | Many times per session (public generator); never on ArtBlocks |
+
+#### Design Pillars (Decision Frame)
+
+Two creative-philosophical questions to settle before the timing table
+is finalized:
+
+1. **What should the reveal celebrate?**
+   - (a) *Execution as event* — emphasize loading/computation; collectors feel the work being made.
+   - (b) *Artwork as object* — minimize loading affordances; the work always feels "there", computation is invisible.
+   - (c) *Hybrid* — short, branded reveal that reads as polish on fast platforms and as patience-rewarding on slow ones.
+
+2. **Should the experience drift across platforms / years?**
+   - (a) *Stable per-collector experience* — a guaranteed minimum reveal length (e.g. 2s) means the artwork looks identical on every device every year.
+   - (b) *Adaptive* — reveal length tracks actual render time, so collectors on faster future hardware see a faster reveal.
+
+The recommended starting point is **1c + 2a**: a polished, branded
+reveal with a fixed minimum duration (≈ 2s on the artwork). On fast
+platforms the user waits a moment past the build for polish; on slow
+platforms the polish is masked by genuine work. As platforms change
+over decades, the experience stays consistent. Light-direction
+animation (Chrome only, ongoing rAF) is the *only* element that
+should improve with future hardware.
+
+#### Proposed Timeline (starting baseline, tunable)
+
+All times are intent — actual measured render times vary. The
+*minimum* path runs on fast Chromium (build ≈ 200ms); the *slow*
+path runs on legacy Safari (build ≈ 10s). Both should resolve to the
+same final state.
+
+```
+T = 0ms        page load / `n` pressed / build starts
+                ┌─ E2 spinner + E3 "Loading" text fade in (200ms)
+                ├─ E4 blurred backing already visible (or fade in if C1)
+                └─ E1 artwork SVG hidden (visibility:hidden) or built behind E4
+T = build_end  build completes (200ms on Chromium, 10s+ on Safari)
+                └─ start min-duration timer → max(build_end + 600ms, T + 2000ms)
+T = reveal     E2 spinner fades out (300ms)
+                E3 text fades out (300ms)
+                E4 blurred backing: blur(40px) → blur(0px) over 800ms
+                E4 backing fades out (800ms) crossfading with E1
+                E1 artwork: opacity 0 → 1 (400ms, eased)
+T = reveal+800 reveal complete; (Chrome only) animation may begin
+```
+
+#### Tuning Tasks
+
+| # | Task | Mode | Depends On | Status | Notes |
+|---|------|------|------------|--------|-------|
+| RA1 | Audit current overlay performance on M1 / Sequoia / Chrome | Research | — | ❌ Not started | Current "Loading" text is barely perceptible (good problem); confirm spinner + text *both* render before first paint commits. |
+| RA2 | Build E4: blurred dummy backing (frame plane only, no filters) | Agent | RA1 | ❌ Not started | Renders in <50ms on all engines. Either a static `<div>` styled to match or a minimal `<svg>` of just the frame rect. Apply CSS blur(30–50px). |
+| RA3 | Refactor overlay to compose E2/E3/E4 as siblings of FRAME, with CSS-driven transitions | Agent | RA2 | ❌ Not started | Move all timing logic to CSS classes (`.revealing`, `.revealed`); JS only adds/removes classes. Maximizes future-platform performance. |
+| RA4 | Implement min-duration floor (`max(build_end + Δ, T + 2000ms)`) | Agent | RA3 | ❌ Not started | Tunable constant `REVEAL_MIN_MS`. Same code path on every platform → consistent experience. |
+| RA5 | Add C3 (reload) variant: crossfade old artwork → blurred copy → new artwork | Agent | RA3 | ❌ Not started | On `n` press, snapshot the current FRAME (DOM clone or skip if expensive), apply blur, fade between old/new. Optional: only when build > 500ms to avoid jank on fast rebuilds. |
+| RA6 | Tune blur radii, fade timings, easing curves | Design + Agent | RA5 | ❌ Not started | Iterate on copy ("Loading" vs "Resolving" vs no text), spinner style, blur amount, easing (`cubic-bezier`). |
+| RA7 | Cross-engine review (Chrome / Safari / Firefox / iOS Chrome) | Verify | RA6 | ❌ Not started | Confirm reveal feels identical at 2s on all engines, that no element pops, that Safari's longer build is masked. |
+| RA8 | Forward-compat smoke test: simulate fast-future-platform with build < 50ms | Verify | RA7 | ❌ Not started | Throttle off; confirm min-duration floor still produces a 2s reveal that doesn't feel artificial. |
+| RA9 | Lock baseline for ArtBlocks freeze | Approval | RA8 | ❌ Not started | Once frozen, all reveal logic is immutable. Document final values in KNOWN-ISSUES.md as the reveal contract. |
+
+#### Out of Scope (Tracked Separately)
+
+- **Chrome rotational light animation tuning** — separate roadmap entry; depends on reveal lock first.
+- **Safari notice copy / footer styling** — falls under RA6.
+- **Public generator-specific reveal variations** — public branch can diverge after RA9; ArtBlocks freeze does not.
+
+#### Pre-Release Forward-Compat Polish (Decided 2026-04-29)
+
+Items deferred from initial submission but **must land before public release**.
+Reflect the AI_INDEX immutability axiom — graceful degradation across decades.
+
+| # | Concern | Decision | Action |
+|---|---------|----------|--------|
+| FCP1 | `prefers-reduced-motion` | **Adopt.** Tune the reveal so it still looks polished with reduced motion (cut blur, instant or near-instant opacity transition). | RA6 sub-task. |
+| FCP2 | `prefers-color-scheme: light` | **Probably skip.** Background must always be black so the work looks consistent in collection grids and across galleries. Collector-context consistency outranks UA preferences. May revisit a "light cast-shadow" variant for fun, but not for ArtBlocks. | Document decision in KNOWN-ISSUES § 9.17 (FC4 successor). No code action. |
+| FCP3 | `Save-Data` / data-saver headers | **Skip.** Overkill for a static gen-art piece. | None. |
+| FCP4 | Web Animations API maturation | **Stick with CSS keyframes / transitions.** Most-optimized animation primitive on every engine; least likely to be deprioritized over decades. | Already enforced — RA3 is CSS-only. |
+| FCP5 | `content-visibility: auto` | **Ignore.** Layout has no off-screen content (single FRAME centered in viewport). | None. |
+| FCP6 | Image decoding model evolution | **Ignore.** Was relevant only to the abandoned canvas-image-swap path. | None. |
+
+**General principle (per AI_INDEX axiom).** Define UX in declarative
+CSS as much as possible and let future platforms optimize underneath.
+Imperative JS-driven animation pins a specific timing model to a
+specific runtime cost — bad for decade-long deployments.
 
 ---
 
@@ -182,4 +348,4 @@ because understanding the geometry is prerequisite to knowing which
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-19 — PublicGenerator decoupling complete; branch model documented*
+*Last updated: 2026-04-29 — Reveal Animation Tuning section added (RA1–RA9); ProtoBatch teardown completeness section added (T1–T7); Safari swap path superseded by loading-overlay UX (S1–S7)*
