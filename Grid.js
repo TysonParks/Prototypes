@@ -83,6 +83,55 @@ class Grid extends ProtoLayer {
   get isBackGrid() { return this.type === `BackGrid` }
   get isFrontGrid() { return this.type === `Grid` }
 
+  //GETT: frameShapeMetrics : { width, height, cornerRadii: { tl, tr, br, bl } } in user units
+  // Exposes the visible artwork's outer shape (BackGrid's perimeter)
+  // for downstream consumers that need to mirror that shape outside
+  // the SVG \u2014 e.g. safariImageSwap.js dummy backing morph.
+  // Width/height come from `boundsRect` (`size`). Corner radii are
+  // sourced from the four `allSimpleOutsideCorners` of the BackGrid's
+  // perimeter, classified TL/TR/BR/BL by each segment's `.start`
+  // position relative to the bounds center.
+  // Falls back to default pill metrics (100\u00d7200, all 50uu) when
+  // perimeter shapes haven\u2019t been built yet (cold-load) or when this
+  // grid isn\u2019t a BackGrid \u2014 so callers can read the getter at any
+  // time without null-checks.
+  get frameShapeMetrics() {
+    const defaultMetrics = {
+      width: 100,
+      height: 200,
+      cornerRadii: { tl: 50, tr: 50, br: 50, bl: 50 },
+    }
+    if (!this.isBackGrid) return defaultMetrics
+    const bounds = this.boundsRect
+    if (!bounds) return defaultMetrics
+    const corners = this.allSimpleOutsideCorners
+    if (!corners || corners.length < 4) {
+      return {
+        width: bounds.width,
+        height: bounds.height,
+        cornerRadii: { tl: 50, tr: 50, br: 50, bl: 50 },
+      }
+    }
+    // Shapes flow CLOCKWISE; arcRadius lives at each segment's END
+    // (the corner connecting to the NEXT segment). For a rectangular
+    // BackGrid perimeter the four sides come in this order:
+    //   seg[0] = top    → end corner is top-RIGHT    → tr
+    //   seg[1] = right  → end corner is bottom-RIGHT → br
+    //   seg[2] = bottom → end corner is bottom-LEFT  → bl
+    //   seg[3] = left   → end corner is top-LEFT     → tl
+    const cornerRadii = {
+      tr: corners[0].arcRadius || 0,
+      br: corners[1].arcRadius || 0,
+      bl: corners[2].arcRadius || 0,
+      tl: corners[3].arcRadius || 0,
+    }
+    return {
+      width: bounds.width,
+      height: bounds.height,
+      cornerRadii,
+    }
+  }
+
   get gridCellBounds() {
     return memoize(() => {
       return this.cellBounds()
