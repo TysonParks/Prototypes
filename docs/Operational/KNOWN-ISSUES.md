@@ -61,6 +61,8 @@ Maintenance note:
   - [9.15.4 Load Time Optimization](#9154-load-time-optimization-separate-from-animation)
   - [9.15.5 Measurement Baseline](#9155-measurement-baseline-to-do-before-optimizing)
   - [9.15.6 Safari Perf Investigation Apr 28 2026 (canvas-image-swap path)](#9156-safari-perf-investigation-apr-28-2026-canvas-image-swap-path)
+- [9.16 ProtoBatch Teardown Completeness (Open)](#916-protobatch-teardown-completeness-open)
+- [9.17 Forward-Compat Bets (Anticipated Platform Changes)](#917-forward-compat-bets-anticipated-platform-changes)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -2636,5 +2638,87 @@ baseline, no regret debt.
 
 ---
 
+## 9.16 ProtoBatch Teardown Completeness (Open)
+
+**Status:** Open. Low priority for ArtBlocks (full page reload per
+token), high priority for the public generator (long-lived sessions
+with many `n` keypresses).
+
+**Symptom.** After one or more `n` (new seed) keypresses, the build
+occasionally lands in a degraded state:
+
+- Some shading layers are missing from the render.
+- Inset / outset behavior misfires (cells render flat or with the
+  wrong direction).
+- The state is not visually identifiable from a clean build until you
+  notice the missing layers — there is no thrown error.
+
+The issue is intermittent and does not reproduce on a fresh page
+load of the same hash. Root cause is therefore almost certainly
+**incomplete teardown** leaving stale references in module-level or
+global state that the next build inherits and misuses.
+
+**Suspected leak surfaces.**
+
+1. **`S` (ProtoStore)** — `setupPrefs()` reassigns `S = new Store()`,
+   but anything attached to the previous `S` that is referenced from
+   *another* surviving global will keep a stale store alive. Audit
+   every closure or registry that captures `S` directly.
+2. **Filter `<defs>` accumulation** — BG-div removal in `teardown()`
+   should cascade-remove all filter defs (they live inside
+   `FRAME.bleed.elt`). If any module-level filter ID registry exists
+   independent of the DOM, it will outlive teardown.
+3. **ProtoLayer / ShapeGroup caches** — anything memoized at the
+   class or module level (not the instance level) will outlive
+   teardown. Memoize keys that include build-specific identifiers
+   are particularly risky.
+4. **Random / RuID** — `setupPrefs()` reassigns `R`, `S`, `RuID`, but
+   any captured closure over the previous instance will hold its
+   used-up state, potentially corrupting determinism downstream.
+5. **rAF / event listeners** — `globalControls.animated = false`
+   stops the rAF loop, but any explicit listener attached during
+   build (e.g. `touchEnded(shadeAnimation)` on `bleed.elt` parent)
+   should be cleaned up by BG removal. Verify nothing is attached
+   to surviving globals.
+6. **`globalControls.shadAngle`** — *resolved 2026-04-29*: teardown
+   now resets `shadAngle = 90` so each rebuild starts from a known
+   lighting angle.
+
+**Triage rule.** Until this is fixed, any future bug report that
+surfaces missing shading layers, broken inset/outset, or stale
+filter behavior should treat incomplete teardown as a leading
+suspect — particularly when the bug appears only after one or more
+`n` presses and never on a fresh page load. First diagnostic step:
+reload the page and re-build the same hash. If the bug disappears,
+it's a teardown leak; if it persists, it's a true determinism issue.
+
+**Roadmap.** See ROADMAP.md § "ProtoBatch Teardown Completeness"
+(tasks T1–T7) for the planned audit and fix sequence.
+
+---
+
+## 9.17 Forward-Compat Bets (Anticipated Platform Changes)
+
+Tracking platform changes we expect to land in the lifetime of the
+ArtBlocks deployment. Each entry names the change, what we currently
+do to compensate, and what should happen when the change ships.
+Reviewed periodically — update entries as the landscape shifts.
+
+| # | Anticipated change | Status (2026-04-29) | Our compensation | What should happen when it lands |
+|---|---|---|---|---|
+| FC1 | **WebKit LBSE filters enabled by default** in stable Safari. | LBSE shipping incrementally in WebKit nightlies and Safari Tech Preview, gated behind `Layer-based SVG Engine` flag. Filter subsystem still partial. No published timeline. | Loading overlay during render; shadow animation disabled on Safari/WebKit; persistent footer notice ("View on Chrome desktop for full experience"). | Render times drop close to Chromium-class. Overlay completes fast and barely registers. Animation can be re-enabled — but ArtBlocks code is locked, so this happens only via the platform change itself, not a code update. The Safari notice will read as a relic; that's fine. |
+| FC2 | **iOS browser engine liberalization**. EU DMA opened iOS to Blink/Gecko in March 2024; UK CMA ruled WebKit mandate anticompetitive in late 2024 (rollout pending); Brazil investigating. Outside the EU, iOS browsers are still WebKit-only. | Mixed: a CriOS/FxiOS UA might be WebKit (most regions) or Blink/Gecko (EU). | UA detection treats *any* iOS browser as Safari-class. False-positive (overlay on a true-Blink CriOS) is cheap; false-negative (no overlay on a WebKit CriOS) is expensive. | When iOS is fully liberalized worldwide and CriOS reliably indicates Blink, we'd ideally narrow the detection. ArtBlocks code is locked, so this just means the overlay shows on iOS Chrome forever — minor visual cost, no functional regression. |
+| FC3 | **devicePixelRatio drift on future displays.** New Apple/Samsung devices may report DPR > 3 (e.g. 4× foldables, 6K external displays). | Current detection is DPR-agnostic except where we explicitly compute pixel sizes. | Should continue working; the SVG pipeline is resolution-independent. Revisit any hard-coded pixel-size bounds. None known to be load-bearing. |
+| FC4 | **Color management: Display-P3 / Rec.2020 default in browsers.** Browsers may default to wide-gamut color profiles, slightly shifting how our `oklch()` colors render. | Currently sRGB assumed in `color.js` / `oklch2rgb.js`. | If colors visibly drift, that's a platform-level change and our values were approximate anyway — collectors viewing on a wide-gamut display will see *more accurate* colors than we currently render in sRGB. Not a regression. |
+| FC5 | **CSS / SVG spec evolutions.** New CSS features may render some current workarounds redundant (e.g. `filter` performance hints, native CSS containment of SVG filters). | Hand-tuned filter regions, per § 9.14.6 user-unit layout. | No action — the manual approach is correct in any era. Optimizations the platform adds for free just make us faster. |
+| FC6 | **Headless render farm changes (ArtBlocks).** ArtBlocks may change its render infrastructure (Chromium version, viewport size, screenshot timing). | Token render relies on Chromium-class behavior and a single screenshot at first-paint. | If timing changes, our build is fast on Chromium so should be fine. Avoid any code that delays first-paint past the screenshot moment. |
+
+**General rule.** When in doubt, optimize for *graceful no-op* on
+future platforms, not maximum present-day performance. A loading
+overlay that fades in for 50ms on a fast future browser is invisible;
+a perf-tuned shortcut that breaks on a future browser is permanent.
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-04-28 — § 9.15.6 added (Safari perf investigation, canvas-image-swap chosen, Apr 28 tear-out plan)*
+*Last updated: 2026-04-29 — § 9.16 ProtoBatch teardown completeness; § 9.17 forward-compat bets table added*
