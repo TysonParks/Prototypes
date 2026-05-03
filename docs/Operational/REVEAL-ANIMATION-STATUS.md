@@ -10,6 +10,26 @@
 
 ---
 
+## 0. Chrome Reference Lock
+
+**Status as of 2026-05-03:** the current Chrome reveal/hide choreography
+in `safariImageSwap.js` is the **user-confirmed ideal state**.
+
+From this point forward:
+
+- Safari fixes must not modify Chrome timings, phase structure,
+  keydown flow, dummy choreography, or artwork-opacity behavior unless
+  the user explicitly asks for a Chrome change.
+- Any Safari experiment must stay behind the `isWebKitClass` firewall
+  or use Safari-only helpers/overlays/constants.
+- If Chrome regresses, the immediate recovery target is the
+  `CHROME_REFERENCE_PRESET` snapshot in `safariImageSwap.js`.
+
+Treat Chrome as locked reference execution, and Safari as the only
+active experimentation surface.
+
+---
+
 ## 1. Chrome — Reference Execution (Currently Working as Desired)
 
 ### 1.1 What the user sees
@@ -598,4 +618,46 @@ Chrome flow is **identical** except `#safari-overlay` doesn't exist on Chrome an
 - `@keyframes safari-overlay-fadein` + `animation-delay: 2000ms` for spinner+text — still required because nothing else can fire on a deterministic 2s schedule during the main-thread lock.
 - `_rebuildSafariSpinnerCanvas()` still fires after each build to update the canvas at the new `_uuToPxArt`.
 - All Chrome-path code outside the `if (isWebKitClass)` branches is unchanged.
+
+## 9. Rev 4 Safari Direction — Artwork and Dummy Blur Together
+
+**Supersedes sections 7 and 8 where they claim the visual target is only a blurred dummy on black.** That diagnosis was incorrect. The desired Safari effect requires the live artwork and the dummy to blur/scale at the same time while the dummy's opacity remains independently animated. This is also the behavior that made the earlier working version feel right.
+
+Chrome remains the reference execution and must not be changed while iterating here. All Rev 4 code belongs behind `isWebKitClass` or in Safari-only DOM/CSS such as `#safari-dummy` and `#safari-overlay`.
+
+### 9.1 Target Choreography
+
+Hidden state:
+
+- Dummy: `opacity=1`, `blur=blurUserUnits`, `scale=hiddenScale`, `shape=default pill`, `morph=0`.
+- Artwork: visually hidden/covered, `blur=blurUserUnits`, `scale=hiddenScale`.
+
+Revealed state:
+
+- Dummy: `opacity=0`, `blur=0`, `scale=1`, `shape=current artwork`, `morph=1`.
+- Artwork: `opacity=1`, `blur=0`, `scale=1`.
+
+Reveal transition:
+
+- Dummy: `opacity 1 -> 0`, `blur blurUserUnits -> 0`, `scale hiddenScale -> 1`, `shape new artwork`, `morph 0 -> 1`.
+- Artwork: `opacity=1`, `blur blurUserUnits -> 0`, `scale hiddenScale -> 1`.
+
+Hide transition:
+
+- Dummy: `opacity 0 -> 1`, `blur 0 -> blurUserUnits`, `scale 1 -> hiddenScale`, `shape current artwork -> default pill`, `morph 1 -> 0`.
+- Artwork: `opacity=1` through the transition, `blur 0 -> blurUserUnits`, `scale 1 -> hiddenScale`, then hidden/removed when `ProtoBatch.teardown()` starts the next build.
+
+### 9.2 Implementation Notes
+
+- Safari now uses a separate persistent `#safari-dummy`. It is not `#reveal-dummy`, so Chrome's confirmed behavior is isolated.
+- The current `BG.elt` artwork receives Safari-only inline CSS transitions for `filter` and `transform` during hide/reveal. This satisfies the requirement that artwork and dummy blur/scale simultaneously.
+- `ProtoBatch.teardown()` still removes `BG.elt`; the Safari dummy and loading overlay are parented to `<body>` and survive every rebuild.
+- The Safari `buildFromHash` hook defers `origBuild` by two `requestAnimationFrame` ticks so the hidden dummy and delayed loading overlay can commit before WebKit begins expensive SVG rendering.
+- The loading spinner/text remain CSS-animation driven with a 2s delay so the fade-in can continue while JavaScript is blocked by WebKit.
+
+### 9.3 Guardrails
+
+- Do not change `CHROME_REFERENCE_PRESET` for Safari tuning.
+- Do not route Safari through Chrome's `#reveal-dummy` implementation unless the user explicitly asks to revisit Chrome too.
+- If Safari needs another architectural change, keep it in Safari-only helpers and update this section before implementation.
 
