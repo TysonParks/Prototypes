@@ -110,18 +110,22 @@
   //SECT: Safari-only tunables
   // Safari uses a stripped-down UX: artwork dim + spinner + loading
   // text only. No dummy morphing, no scale, no blur transitions.
-  const safariBuildSettleMs = 300       // wall-clock pause post-build before revealNowSafari
-  const safariPreBuildDelayMs = 100     // wait after hideNowSafari before triggering build
+  const safariBuildSettleMs = 300       // wall-clock after origBuild before reveal
+  // Overlay tunables — initial values; all also exposed as CSS vars (--safari-*)
+  // so they can be adjusted live in DevTools without reload.
+  const safariBlurPx = 20               // backdrop-filter blur radius in px
+  const safariDimBrightness = 0.5       // brightness() in backdrop-filter (0.5 = half)
+  const safariDimFadeMs = 200           // how fast dim+blur appear on keypress (ms)
+  const safariBlurRevealMs = 800        // how long blur+dim clear on reveal (ms)
   const safariOverlayDelayMs = 2000     // delay before spinner + text fade in (ms)
-  const safariOverlayFadeMs = 1000      // fade in/out duration for spinner + text (ms)
-  const safariArtworkDimOpacity = 0.5   // artwork opacity while build is running
+  const safariOverlayFadeMs = 1000      // fade duration for spinner + text (ms)
   const safariSpinnerDiameterUu = 85    // spinner diameter in user units
   const safariSpinnerStrokeUu = 5       // spinner stroke width in user units
   const safariSpinnerStrokeAlpha = 0.2  // rgba white stroke alpha
   const safariSpinnerArcFraction = 0.75 // fraction of circle drawn (0.75 = 270°)
-  const safariSpinnerBlurUu = 5          // blur pre-rendered into canvas (user units)
+  const safariSpinnerBlurUu = 5         // blur pre-rendered into canvas (user units)
   const safariSpinnerRevolutionMs = 30000 // ms per full rotation
-  const dummyColor = '#e6e6e6'       // matches achromic(0.9) ≈ rgb(230,230,230)
+  const dummyColor = '#e6e6e6'          // matches achromic(0.9) ≈ rgb(230,230,230)
 
   // Default frame metrics used cold-load (before any artwork has been
   // built) and as the dummy hidden-state geometry. 100×200uu region,
@@ -146,9 +150,7 @@
 
   //SECT: State
   let _dummy = null
-  let _loadingText = null
-  let _frameElt = null                           // current FRAME.bleed.elt being revealed
-  let _loadingTextTimer = null                   // setTimeout handle for the WebKit fallback text
+  let _frameElt = null                           // BG.elt ref — used by Chrome path only
   let _buildToken = 0                            // bumped on each build; cancels stale timers/transitions
   // 'n'-keypress debounce — true from the moment a build starts until
   // its reveal animation has fully completed. Cleared inside revealNow()
@@ -156,8 +158,11 @@
   // reveal also blocks 'n' presses until it finishes.
   let _rebuildInFlight = true
   let _currentMetrics = defaultFrameMetrics      // last applied frame metrics (used as hide-stage-2 START shape)
-  let _safariOverlayTimer = null                 // setTimeout handle for delayed overlay fade-in
-  let _safariSpinnerWrapper = null               // fixed wrapper div for the pre-rendered spinner canvas
+  // Safari persistent overlay — created once at init(), NEVER destroyed.
+  // Survives every ProtoBatch teardown/rebuild cycle (BG.elt does not).
+  // All Safari animations are driven by toggling .building on _safariOverlay.
+  let _safariOverlay = null                      // #safari-overlay root element
+  let _safariSpinnerWrapper = null               // #safari-spinner-wrapper inside overlay
   let _uuToPxArt = 1                             // uu→px scale for current artwork (updated in updateLayoutVars)
 
   //FUNC: ensureStyles() : void
@@ -223,6 +228,16 @@
           --dummy-safari-hidden-dy: 0px;
           --dummy-safari-hidden-scale-x: 1;
           --dummy-safari-hidden-scale-y: 1;
+
+        /* Safari overlay tunables — initial values set from JS constants above.
+           All adjustable live in DevTools (change on :root) without reload. */
+        --safari-blur-px: ${safariBlurPx}px;
+        --safari-dim-brightness: ${safariDimBrightness};
+        --safari-dim-fade-ms: ${safariDimFadeMs}ms;
+        --safari-blur-reveal-ms: ${safariBlurRevealMs}ms;
+        --safari-overlay-delay-ms: ${safariOverlayDelayMs}ms;
+        --safari-overlay-fade-ms: ${safariOverlayFadeMs}ms;
+        --safari-spinner-rev-ms: ${safariSpinnerRevolutionMs}ms;
       }
 
       /* === DUMMY ===
@@ -276,14 +291,12 @@
         -webkit-filter: blur(0);
       }
 
-      /* === SAFARI-ONLY OVERRIDES ===
-         Safari uses the SAME multi-property animation pipeline as
-         Chrome (opacity, scale, shape morph, bounds) — with ONE
-         exception: blur is disabled. CSS filter: blur() on a layer
-         that contains complex SVG content is pathologically slow on
-         Safari (re-rasterizes per-frame at growing radius). Dropping
-         it lets the remaining compositor-only properties run cleanly
-         even while the main thread is locked on SVG paint. */
+      /* === SAFARI MODE — deprecated (rev 3, 2026-05-01) ===
+         The #reveal-dummy on Safari now uses the same animation pipeline
+         as Chrome (opacity + transform + filter:blur + border-radius +
+         bounds, all single-phase). The .safari-mode class is no longer
+         applied to the dummy; these rules are dead code retained
+         temporarily until any external test harness is updated. */
       #reveal-dummy.safari-mode {
         left:   var(--dummy-art-left);
         top:    var(--dummy-art-top);
@@ -312,15 +325,65 @@
         transform: translateZ(0) translate(0px, 0px) scale(1, 1);
       }
 
-      /* === LOADING TEXT (WebKit-only) ===
-         Opacity transition only — NO CSS delay (delay is JS-controlled
-         via setTimeout so that fade-out is immediate on disarm). */
-      #reveal-loading-text {
+      /* === SAFARI OVERLAY (WebKit-only) ===
+         A single persistent overlay element rooted at <body>. It is NEVER
+         removed — it survives every ProtoBatch teardown/rebuild cycle.
+         Carries ONLY the spinner + loading text. The dim/blur visual is
+         provided by #reveal-dummy (which is also persistent post rev 3).
+
+         All Safari loading UX (spinner, text) is driven by a single
+         class toggle: #safari-overlay.building.
+
+         @keyframes with animation-delay handle spinner+text timing on the
+         compositor's own clock, immune to the ~10s JS main-thread lock.
+         (JS setTimeout callbacks queue up during the lock and burst-fire
+         all at once on unlock — animation-delay does not have this problem.) */
+
+      /* Overlay root: full-screen fixed, just a coordinate container */
+      #safari-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        pointer-events: none;
+      }
+
+      /* === SPINNER ===
+         animation-delay fires on the compositor's animation clock, NOT the
+         JS event queue. The 2s delay counts down correctly during the build
+         lock. JS setTimeout(2000) queued during a 10s lock fires at t=10s
+         (lock releases) + 2s = 12s after keypress. animation-delay fires
+         at exactly t=2s regardless of main-thread activity.
+         transition on the base rule handles fade-OUT when .building removed. */
+      #safari-spinner-wrapper {
+        position: fixed;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 110;
+        will-change: opacity;
+        transition: opacity var(--safari-overlay-fade-ms) linear;
+      }
+      #safari-overlay.building #safari-spinner-wrapper {
+        animation: safari-overlay-fadein var(--safari-overlay-fade-ms) linear
+                   var(--safari-overlay-delay-ms) forwards;
+      }
+      #safari-spinner-canvas {
+        display: block;
+        animation: safari-spinner-spin var(--safari-spinner-rev-ms) linear infinite;
+        animation-play-state: paused;
+      }
+      #safari-overlay.building #safari-spinner-canvas {
+        animation-play-state: running;
+      }
+
+      /* === LOADING TEXT ===
+         Same animation-delay/transition-fade-out pattern as spinner. */
+      #safari-loading-text {
         position: fixed;
         left: 50%;
         top: 50%;
         transform: translate3d(-50%, -50%, 0);
-        z-index: 100;
+        z-index: 110;
         max-width: 80vw;
         text-align: center;
         white-space: pre-line;
@@ -333,40 +396,19 @@
         letter-spacing: 0.01em;
         text-shadow: 0 var(--loading-text-shadow-y) var(--loading-text-shadow-blur) rgba(0, 0, 0, 0.85);
         opacity: 0;
-        transition: opacity ${safariOverlayFadeMs}ms linear;
         pointer-events: none;
         user-select: none;
         will-change: opacity;
+        transition: opacity var(--safari-overlay-fade-ms) linear;
       }
-      #reveal-loading-text.visible {
-        opacity: 1;
+      #safari-overlay.building #safari-loading-text {
+        animation: safari-overlay-fadein var(--safari-overlay-fade-ms) linear
+                   var(--safari-overlay-delay-ms) forwards;
       }
 
-      /* === SAFARI SPINNER (WebKit-only) ===
-         Wrapper is fixed-positioned centered on artwork (JS sets
-         left/top). Canvas holds a pre-rendered blurred arc — blur is
-         baked in at draw time so CSS rotation is compositor-only
-         (no per-frame rasterization). Animation is paused when the
-         wrapper is invisible to avoid accumulating rotation offscreen. */
-      #safari-spinner-wrapper {
-        position: fixed;
-        transform: translate(-50%, -50%);
-        opacity: 0;
-        pointer-events: none;
-        z-index: 50;
-        will-change: opacity;
-        transition: opacity ${safariOverlayFadeMs}ms linear;
-      }
-      #safari-spinner-wrapper.visible {
-        opacity: 1;
-      }
-      #safari-spinner-canvas {
-        display: block;
-        animation: safari-spinner-spin ${safariSpinnerRevolutionMs}ms linear infinite;
-        animation-play-state: paused;
-      }
-      #safari-spinner-wrapper.visible #safari-spinner-canvas {
-        animation-play-state: running;
+      @keyframes safari-overlay-fadein {
+        from { opacity: 0 }
+        to   { opacity: 1 }
       }
       @keyframes safari-spinner-spin {
         from { transform: rotate(0deg); }
@@ -634,20 +676,19 @@
 
   //FUNC: ensureDummy() : void
   // Create + insert the dummy. Idempotent. Standalone fixed element
-  // — not parented to anything else. Sizing is now handled entirely
+  // — not parented to anything else. Sizing is handled entirely
   // by CSS vars (`--dummy-pill-width/height` for hidden state,
   // `--dummy-art-width/height` for revealed). Visible from cold-load
   // against the body backdrop.
+  //
   function ensureDummy() {
-    if (isWebKitClass) return  // Safari uses spinner+text only; no dummy
+    if (isWebKitClass) return  // Safari path remains isolated for now
     if (_dummy && _dummy.parentNode) return
     if (!document.body) return
     ensureStyles()
     if (!_dummy) {
       _dummy = document.createElement('div')
       _dummy.id = 'reveal-dummy'
-      // Safari-only mode: switches to opacity-only animation pipeline.
-      // Class is sticky for the lifetime of the dummy element.
       if (isWebKitClass) _dummy.classList.add('safari-mode')
     }
     document.body.appendChild(_dummy)
@@ -660,20 +701,11 @@
   // style approach (vs class) sidesteps the CSS-spec edge case where
   // a freshly-applied class providing both the transition rule AND
   // the transitioning property has the transition suppressed.
+  //
   function prepArtwork() {
     if (typeof BG === 'undefined' || !BG || !BG.elt) return
     _frameElt = BG.elt
-    if (isWebKitClass) {
-      // Promote BG.elt to its own compositor layer so that opacity
-      // changes written BEFORE the build lock are held and visible
-      // BY the compositor during the ~10s main-thread lock. Without
-      // this, the dim written in keydown requires a paint cycle to
-      // commit — and no paint cycle runs during the lock.
-      const s = _frameElt.style
-      s.willChange = 'opacity'
-      s.transform = s.transform || 'translateZ(0)'
-      return
-    }
+    if (isWebKitClass) return
     const s = _frameElt.style
     s.transition = 'none'
     s.webkitTransition = 'none'
@@ -682,26 +714,44 @@
     void _frameElt.offsetWidth
   }
 
-  //FUNC: ensureLoadingText() : void
-  // WebKit-only. Inserts the loading-text element ONCE at module init,
-  // so its compositor layer is promoted long before any build runs. On
-  // Safari, freshly-inserted elements aren't promoted/painted in time
-  // when origBuild immediately locks the main thread — leading to
-  // late + abrupt text appearance. Pre-promoting at cold-load lets
-  // armLoadingText() merely toggle a class on an already-promoted
-  // layer, so the compositor-driven fade can proceed during the
-  // synchronous SVG rasterization.
-  function ensureLoadingText() {
+  //FUNC: ensureSafariOverlay() : void
+  // WebKit-only. Creates the entire Safari overlay DOM structure ONCE at
+  // init, parented to <body> so it survives every ProtoBatch teardown.
+  // Structure:
+  //   #safari-overlay          root (position:fixed inset:0)
+  //     #safari-dim            backdrop-filter dim+blur over artwork rect
+  //     #safari-spinner-wrapper  spinner canvas (JS-positioned)
+  //       #safari-spinner-canvas  pre-rendered blurred arc
+  //     #safari-loading-text   "Safari may take longer…" text
+  // All animations driven by toggling .building on #safari-overlay.
+  function ensureSafariOverlay() {
     if (!isWebKitClass) return
-    if (_loadingText && _loadingText.parentNode) return
+    if (_safariOverlay && _safariOverlay.parentNode) return
     if (!document.body) return
     ensureStyles()
-    if (!_loadingText) {
-      _loadingText = document.createElement('div')
-      _loadingText.id = 'reveal-loading-text'
-      _loadingText.textContent = loadingTextCopy
-    }
-    document.body.appendChild(_loadingText)
+
+    _safariOverlay = document.createElement('div')
+    _safariOverlay.id = 'safari-overlay'
+
+    // No #safari-dim element — the persistent #reveal-dummy provides
+    // the dim/blur visual (it's an opaque pill on a black body, blurred
+    // via cheap filter:blur on flat color). The overlay only carries
+    // the loading text + spinner.
+
+    _safariSpinnerWrapper = document.createElement('div')
+    _safariSpinnerWrapper.id = 'safari-spinner-wrapper'
+    _safariOverlay.appendChild(_safariSpinnerWrapper)
+
+    const txt = document.createElement('div')
+    txt.id = 'safari-loading-text'
+    txt.textContent = loadingTextCopy
+    _safariOverlay.appendChild(txt)
+
+    document.body.appendChild(_safariOverlay)
+
+    // Build spinner canvas at cold-load scale (1px/uu); rebuilt after
+    // each buildFromHash with the accurate artwork scale.
+    _rebuildSafariSpinnerCanvas()
   }
 
   //FUNC: buildSafariSpinnerCanvas() : HTMLCanvasElement
@@ -741,25 +791,18 @@
     return canvas
   }
 
-  //FUNC: ensureSafariSpinner() : void
-  // Creates wrapper div + builds canvas once. Idempotent; safe to
-  // call on each arm cycle so position updates on first build.
-  function ensureSafariSpinner() {
-    if (!isWebKitClass) return
-    if (!document.body) return
-    ensureStyles()
-    if (!_safariSpinnerWrapper) {
-      _safariSpinnerWrapper = document.createElement('div')
-      _safariSpinnerWrapper.id = 'safari-spinner-wrapper'
-      document.body.appendChild(_safariSpinnerWrapper)
-    }
-    // Rebuild the canvas (size depends on _uuToPxArt which changes per build).
+  //FUNC: _rebuildSafariSpinnerCanvas() : void
+  // Rebuilds the pre-rendered spinner canvas at the current _uuToPxArt
+  // scale. Called at init (scale = 1) and after each buildFromHash
+  // completes (scale = actual artwork px/uu ratio).
+  function _rebuildSafariSpinnerCanvas() {
+    if (!_safariSpinnerWrapper) return
     _safariSpinnerWrapper.innerHTML = ''
     const canvas = buildSafariSpinnerCanvas()
     _safariSpinnerWrapper.appendChild(canvas)
     _safariSpinnerWrapper.style.width = canvas.style.width
     _safariSpinnerWrapper.style.height = canvas.style.height
-    // Position: centered on artwork rect (from CSS vars set by updateLayoutVars).
+    // Position centered on artwork rect (CSS vars updated by updateLayoutVars).
     const cs = getComputedStyle(document.documentElement)
     const artLeft = parseFloat(cs.getPropertyValue('--dummy-art-left')) || 0
     const artTop = parseFloat(cs.getPropertyValue('--dummy-art-top')) || 0
@@ -770,66 +813,32 @@
   }
 
   //FUNC: armLoadingText() : void
-  // WebKit-only. Schedules the overlay (spinner + loading text) to
-  // fade in after safariOverlayDelayMs. Using JS delay rather than
-  // CSS transition-delay means disarmLoadingText() can cancel before
-  // the fade-in fires AND the fade-OUT is immediate (no CSS delay
-  // in the removal direction).
-  function armLoadingText() {
-    if (!isWebKitClass) return
-    ensureLoadingText()
-    ensureSafariSpinner()
-    clearTimeout(_loadingTextTimer)
-    _loadingTextTimer = setTimeout(() => {
-      if (_loadingText) _loadingText.classList.add('visible')
-      if (_safariSpinnerWrapper) _safariSpinnerWrapper.classList.add('visible')
-    }, safariOverlayDelayMs)
-  }
+  // No-op in new arch — overlay timing is CSS-driven via .building class.
+  // Kept for API compatibility (called from legacy code paths during transition).
+  function armLoadingText() { }
 
   //FUNC: disarmLoadingText() : void
-  // Cancels the pending fade-in timer and immediately starts the
-  // fade-out transition on both text and spinner. Element stays in
-  // DOM ready for the next arm cycle.
-  function disarmLoadingText() {
-    clearTimeout(_loadingTextTimer)
-    _loadingTextTimer = null
-    if (_loadingText) _loadingText.classList.remove('visible')
-    if (_safariSpinnerWrapper) _safariSpinnerWrapper.classList.remove('visible')
-  }
+  // No-op for Safari. Still called from the Chrome revealNow() path;
+  // must remain safe to call on both engines.
+  function disarmLoadingText() { }
 
   //FUNC: revealNowSafari() : void
-  // Safari-only reveal: disarm overlay, fade artwork back to full
-  // opacity. Clears the _rebuildInFlight debounce after fade completes.
+  // Safari-specific reveal hook called from revealNow(). Removes .building
+  // from the overlay so spinner+text fade out via their base transition
+  // rules. The dummy reveal animation itself is handled by revealNow()
+  // (unified path with Chrome).
   function revealNowSafari() {
-    disarmLoadingText()
-    if (!_frameElt && typeof BG !== 'undefined' && BG && BG.elt) _frameElt = BG.elt
-    if (_frameElt) {
-      const s = _frameElt.style
-      s.transition = 'opacity ' + safariOverlayFadeMs + 'ms linear'
-      s.webkitTransition = 'opacity ' + safariOverlayFadeMs + 'ms linear'
-      s.opacity = '1'
-    }
-    // Unconditional clear — Safari's 10s build is its own debounce.
-    // The myToken guard is omitted deliberately: if the guard fails
-    // (e.g. token bumped by teardown), _rebuildInFlight stays stuck
-    // true forever and all 'n' presses are silently blocked.
-    _rebuildInFlight = false
-    console.log('[RevealAnim] revealNowSafari: artwork fading in, _rebuildInFlight cleared')
+    if (_safariOverlay) _safariOverlay.classList.remove('building')
+    console.log('[RevealAnim] revealNowSafari: overlay .building removed')
   }
 
   //FUNC: hideNowSafari() : void
-  // Safari-only hide: dim artwork to safariArtworkDimOpacity and arm
-  // the overlay. Build is triggered by the 'n' handler after
-  // safariPreBuildDelayMs so this dim has time to commit.
+  // Safari-specific hide hook called from hideNow(). Adds .building to
+  // the overlay so spinner+text fade in (after 2s animation-delay).
+  // The dummy hide animation itself is handled by hideNow().
   function hideNowSafari() {
-    if (!_frameElt && typeof BG !== 'undefined' && BG && BG.elt) _frameElt = BG.elt
-    if (_frameElt) {
-      const s = _frameElt.style
-      s.transition = 'opacity 300ms linear'
-      s.webkitTransition = 'opacity 300ms linear'
-      s.opacity = String(safariArtworkDimOpacity)
-    }
-    armLoadingText()
+    if (_safariOverlay) _safariOverlay.classList.add('building')
+    console.log('[RevealAnim] hideNowSafari: overlay .building added')
   }
 
   //FUNC: revealNow() : void
@@ -860,9 +869,6 @@
       void getComputedStyle(_dummy).transition
     }
     if (_dummy) _dummy.classList.add('revealed')
-    // DEBUG: log resolved phase vars + dummy.transition value at the
-    // moment of class flip. Should show shape-delay=0, opacity-delay=shapeDur
-    // for a correct reveal.
     if (_dummy) {
       const cs = getComputedStyle(document.documentElement)
       const dcs = getComputedStyle(_dummy)
@@ -874,11 +880,6 @@
         'transition=', dcs.transition,
       )
     }
-    // Artwork opacity flips INSTANTANEOUSLY at the phase boundary
-    // (t = phaseOffset * revealDurationMs) per spec table 2026-04-30
-    // v3 — NOT cross-faded with the dummy. Cross-fading produces a
-    // gray middle frame because both layers are partially-opaque
-    // simultaneously.
     const myToken = _buildToken
     const flipAt = phaseOffset * revealDurationMs
     setTimeout(() => {
@@ -889,10 +890,6 @@
       s.webkitTransition = 'none'
       s.opacity = '1'
     }, flipAt)
-    // Hold the 'n'-keypress debounce until the reveal animation has
-    // fully completed — pressing 'n' mid-reveal otherwise produces
-    // wonky overlapping transitions. The flag was set true on hideNow
-    // (or n-press); we clear it revealDurationMs after revealNow fires.
     setTimeout(() => {
       if (myToken === _buildToken) _rebuildInFlight = false
     }, revealDurationMs)
@@ -920,11 +917,6 @@
       void getComputedStyle(_dummy).transition
     }
     if (_dummy) _dummy.classList.remove('revealed')
-    // Artwork opacity flips INSTANTANEOUSLY at the phase boundary
-    // (t = (1−phaseOffset) * hideDurationMs) per spec table 2026-04-30
-    // v3 — NOT cross-faded with the dummy. Cross-fading produces a
-    // gray middle frame because both layers are partially-opaque
-    // simultaneously.
     const myToken = _buildToken
     const flipAt = (1 - phaseOffset) * hideDurationMs
     setTimeout(() => {
@@ -938,13 +930,11 @@
   }
 
   //FUNC: resetForRebuild() : void
-  // Bumps the build token + cancels any pending loading text. No DOM
-  // class manipulation — the hide animation already left the dummy in
-  // the correct base state and the next prepArtwork() / revealNow()
-  // sets up the new artwork element fresh.
+  // Bumps the build token. Called from the patched teardown() hook.
+  // The .building class stays on throughout teardown+build; only
+  // revealNowSafari() removes it after the build settles.
   function resetForRebuild() {
     _buildToken++
-    disarmLoadingText()
     _frameElt = null
   }
 
@@ -958,25 +948,9 @@
     ProtoBatch.prototype.buildFromHash = function (hash) {
       _buildToken++
       ensureDummy()
-      updateLayoutVars(defaultFrameMetrics)
-
-      if (isWebKitClass) {
-        // Snap artwork dim immediately BEFORE origBuild locks the main
-        // thread. No transition so the snap commits in this same task;
-        // the compositor holds this opacity through the ~10s lock.
-        if (!_frameElt && typeof BG !== 'undefined' && BG && BG.elt) _frameElt = BG.elt
-        if (_frameElt) {
-          const s = _frameElt.style
-          s.transition = 'none'
-          s.webkitTransition = 'none'
-          s.opacity = String(safariArtworkDimOpacity)
-          void _frameElt.offsetWidth // force reflow so snap commits
-        }
-        // Arm overlay with safariOverlayDelayMs delay. Called here so
-        // the compositor can promote the overlay layer before origBuild.
-        armLoadingText()
-        console.log('[RevealAnim] buildFromHash (Safari): dimmed + overlay armed')
-      }
+      // Chrome only: reset dummy to pill geometry before build.
+      // Safari keeps its own path isolated for now.
+      if (!isWebKitClass) updateLayoutVars(defaultFrameMetrics)
 
       const result = origBuild.apply(this, arguments)
 
@@ -993,12 +967,14 @@
       // dummy's revealed-state geometry matches the new artwork.
       updateLayoutVars(getCurrentFrameMetrics())
 
+      // Safari: rebuild spinner canvas at accurate artwork scale now that
+      // _uuToPxArt has been updated by updateLayoutVars above.
+      if (isWebKitClass) _rebuildSafariSpinnerCanvas()
+
       // Yield to compositor before triggering reveal. Chrome uses
-      // 3× rAF (post-build paint commits within ~50ms). Safari can't
-      // rely on rAF here — rAF callbacks stall arbitrarily during
-      // post-rasterization compositing on a freshly-built complex
-      // SVG. Use a wall-clock setTimeout instead so reveal fires at
-      // a predictable time even if the compositor is still busy.
+      // 3× rAF (post-build paint commits within ~50ms). Safari needs
+      // a wall-clock settle (rAF can stall during post-rasterization
+      // compositing on a freshly-built complex SVG).
       const myToken = _buildToken
       if (isWebKitClass) {
         setTimeout(() => {
@@ -1052,33 +1028,8 @@
             e.preventDefault()
             e.stopImmediatePropagation()
 
-            if (isWebKitClass) {
-              // Safari: fade the artwork to dim opacity, then defer the
-              // build by 250ms. Two rAFs (~33ms) only cover one vsync and
-              // fire BEFORE paint — if BG.elt isn't yet on a promoted
-              // compositor layer, the dim is invisible until after the lock.
-              // 250ms wall-clock gives the browser several full paint cycles
-              // to commit and composite the opacity change before origBuild
-              // locks the main thread. The 200ms transition means the user
-              // sees a visible fade to dim; by t=250ms it has completed.
-              if (!_frameElt && typeof BG !== 'undefined' && BG && BG.elt) _frameElt = BG.elt
-              if (_frameElt) {
-                const s = _frameElt.style
-                s.willChange = 'opacity'
-                s.transition = 'opacity 200ms linear'
-                s.webkitTransition = 'opacity 200ms linear'
-                s.opacity = String(safariArtworkDimOpacity)
-                void _frameElt.offsetWidth
-              }
-              armLoadingText()
-              console.log('[RevealAnim] keydown (Safari): artwork fading to dim, build in 250ms')
-              setTimeout(() => {
-                protoBatch.buildFromNewSeed()
-              }, 250)
-              return
-            }
+            if (isWebKitClass) return
 
-            // Chrome: pre-trigger the hide animation before build starts.
             hideNow()
             setTimeout(() => {
               if (typeof protoBatch !== 'undefined' && protoBatch) {
@@ -1097,12 +1048,8 @@
   function init() {
     ensureStyles()
     ensureDummy()
-    ensureLoadingText()
-    if (isWebKitClass) ensureSafariSpinner()
+    if (isWebKitClass) ensureSafariOverlay()
     updateLayoutVars(defaultFrameMetrics)
-    if (isWebKitClass) {
-      requestAnimationFrame(armLoadingText)
-    }
     window.addEventListener('resize', () => {
       updateLayoutVars(_currentMetrics)
     })
@@ -1134,7 +1081,10 @@
       get hiddenScale() { return hiddenScale },
       get safariOverlayDelayMs() { return safariOverlayDelayMs },
       get safariOverlayFadeMs() { return safariOverlayFadeMs },
-      get safariArtworkDimOpacity() { return safariArtworkDimOpacity },
+      get safariBlurPx() { return safariBlurPx },
+      get safariDimBrightness() { return safariDimBrightness },
+      get safariDimFadeMs() { return safariDimFadeMs },
+      get safariBlurRevealMs() { return safariBlurRevealMs },
       get safariSpinnerDiameterUu() { return safariSpinnerDiameterUu },
       get safariSpinnerStrokeUu() { return safariSpinnerStrokeUu },
       get safariSpinnerStrokeAlpha() { return safariSpinnerStrokeAlpha },
