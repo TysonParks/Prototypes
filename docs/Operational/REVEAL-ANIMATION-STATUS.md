@@ -1,11 +1,12 @@
 # Reveal Animation Status Report
-*Last updated: 2026-05-01*
+*Last updated: 2026-05-01 (rev 2 — adds §5 Smoking Gun + §6 Proposed Fresh Architecture)*
 
 > **Purpose:** Handoff document for future AI sessions working on
 > `safariImageSwap.js`. Covers the Chrome animation pipeline (working,
 > reference), the Safari animation pipeline (broken, in active repair),
-> the isolation boundary between them, and a forensic account of what
-> worked in an earlier session and why.
+> the isolation boundary between them, a forensic account of what
+> worked in an earlier session, and a fresh architectural plan that
+> sidesteps the WebKit main-thread-lock problem entirely.
 
 ---
 
@@ -209,3 +210,392 @@ The catastrophic mistake that broke it: at some point the dummy was **removed fr
 5. **Log `_rebuildInFlight` state on every keydown** — if it is ever `true` at the start of a keydown that shouldn't be debounced, the entire flow is blocked. Add `console.log('[RevealAnim] keydown: _rebuildInFlight =', _rebuildInFlight)` before the check.
 
 6. **Do not use `void offsetWidth` as a paint-flush** — it flushes layout, not paint. The only reliable way to guarantee a paint on Safari before a sync block is a real wall-clock delay (250ms+ `setTimeout`) observed to be working in practice.
+
+---
+
+## 5. The Smoking Gun (rev 2 — discovered 2026-05-01)
+
+### 5.1 BG.elt is destroyed and replaced on every build
+
+This is the single most important fact in this document, and it invalidates every approach that has been tried this session:
+
+```js
+// ProtoBatch.js teardown()
+if (BG && BG.elt && BG.elt.parentNode) {
+  BG.elt.parentNode.removeChild(BG.elt)   // ← removed from DOM
+}
+BG = null                                   // ← reference dropped
+```
+
+`teardown()` runs **inside** `protoBatch.buildFromNewSeed()`, **before** `buildFromHash()`. So the actual sequence on 'n' press is:
+
+```
+keydown
+  → write opacity 0.5 to BG.elt          ← element X
+  → setTimeout(250)
+    → buildFromNewSeed()
+        → teardown()
+            → BG.elt.parentNode.removeChild(BG.elt)   ← element X destroyed
+            → BG = null
+        → buildFromHash()
+            → setupBackground() creates a NEW BG div  ← element Y
+            → origBuild() builds new SVG inside element Y
+            → prepArtwork() promotes element Y to compositor layer
+            → setTimeout(safariBuildSettleMs)
+                → revealNowSafari() fades element Y to opacity 1
+```
+
+The element we dimmed in keydown (X) is **never composited to screen**. By the time the user could see it, it has been removed from the DOM. The element that does eventually appear on screen (Y) was created inside the locked thread — its layer wasn't promoted until *after* the build, and even the dim written in `buildFromHash` is on a `BG.elt` that is replaced moments later by `setupBackground()`.
+
+Every attempt this session to dim `BG.elt` was doomed by this fact. There is no timing or compositor trick that will rescue an element that gets `removeChild`-ed.
+
+### 5.2 What this proves about the working "yesterday" architecture
+
+The earlier working state could not have been animating `BG.elt`. It must have been animating an element that **outlived the teardown/rebuild cycle**. The only candidates that survive teardown are:
+
+- The `<body>` itself
+- A persistent overlay `<div>` inserted at module init and never removed
+- The `#reveal-dummy` element (which does survive — `ensureDummy()` is idempotent and the dummy is appended to body, not BG)
+
+The most likely "yesterday" architecture was the `#reveal-dummy` covering the artwork during builds. Its CSS transitions ran on the GPU compositor layer. When the build lock began, the transitions were already in progress on a stable, pre-promoted layer — the compositor continued them frame-by-frame using only the GPU, no main thread involvement.
+
+The catastrophic regression: `ensureDummy()` was changed to `if (isWebKitClass) return` at the top, killing the dummy for Safari entirely. From that point forward, all Safari animation effort has been chasing a moving target (`BG.elt`) that is destroyed on every build.
+
+---
+
+## 6. Proposed Fresh Architecture for Safari
+
+### 6.1 Design principles
+
+1. **Never animate any element that lives inside `BG`.** Everything `BG` contains is destroyed and rebuilt on every press of 'n'. Animations on those elements cannot survive a rebuild.
+2. **All Safari animation lives on persistent overlay elements** inserted at module init, parented directly to `<body>`, never removed.
+3. **Use CSS keyframe `@keyframes` animations with `animation-delay`, not `setTimeout` chains.** Once a CSS animation is started on the main thread, its compositable properties (opacity, transform) tick on the GPU compositor independently — they keep running even while the main thread is locked rasterizing the SVG. `setTimeout` callbacks queue up during the lock and fire all at once when it releases (which is why the user sees timing collapse).
+4. **The dim is achieved by a black-fill overlay layered above the artwork**, not by changing the artwork's own opacity. Opacity-fading a complex SVG layer is expensive on Safari; cross-fading a solid `<div>` is essentially free.
+5. **One CSS class on a single root overlay element** drives the entire sequence (dim, spinner appear, text appear, spinner spin). The keydown handler does only two things: add the class, and call `buildFromNewSeed`. No JS timing logic at all.
+
+### 6.2 DOM structure
+
+Inserted once at `init()`, never removed:
+
+```html
+<body>
+  <!-- BG is created/destroyed by p5/ProtoBatch — irrelevant to overlay -->
+  <div id="BG"> ...artwork SVG... </div>
+
+  <!-- All Safari overlay UX lives here, persistent for page lifetime -->
+  <div id="safari-overlay" class="">
+    <div id="safari-dim"></div>          <!-- black fill, opacity-animated -->
+    <div id="safari-spinner-wrapper">
+      <canvas id="safari-spinner-canvas"></canvas>
+    </div>
+    <div id="safari-loading-text">...</div>
+  </div>
+</body>
+```
+
+The overlay sits at `z-index: 100`, `pointer-events: none`, `position: fixed; inset: 0`.
+
+### 6.3 CSS-driven sequence
+
+A single class on `#safari-overlay` drives everything:
+
+```css
+:root {
+  --safari-dim-opacity: 0.5;     /* tunable */
+  --safari-dim-fade-ms: 200ms;   /* tunable */
+  --safari-overlay-delay: 2000ms;/* delay before spinner+text appear */
+  --safari-overlay-fade-ms: 1000ms;
+  --safari-spinner-rev-ms: 30000ms;
+}
+
+#safari-overlay {
+  position: fixed; inset: 0; z-index: 100; pointer-events: none;
+}
+
+/* DIM: full-screen black, opacity-animated.
+   Always on the compositor (will-change: opacity), animates
+   independently of main thread. */
+#safari-dim {
+  position: absolute; inset: 0;
+  background: black;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity var(--safari-dim-fade-ms) linear;
+}
+#safari-overlay.building #safari-dim {
+  opacity: var(--safari-dim-opacity);
+}
+
+/* SPINNER + TEXT: appear after a delay, using keyframe animation
+   (NOT transition-delay, which is less reliable during main-thread
+   lock). animation-fill-mode: forwards holds the end state. */
+#safari-spinner-wrapper, #safari-loading-text {
+  position: absolute;
+  /* ...positioning... */
+  opacity: 0;
+  will-change: opacity;
+}
+#safari-overlay.building #safari-spinner-wrapper,
+#safari-overlay.building #safari-loading-text {
+  animation: safari-overlay-fade-in var(--safari-overlay-fade-ms)
+             linear var(--safari-overlay-delay) forwards;
+}
+@keyframes safari-overlay-fade-in {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+/* SPINNER ROTATION: pre-rendered blurred arc on a canvas, rotated
+   via CSS keyframe animation. Pure compositor work. */
+#safari-spinner-canvas {
+  animation: safari-spinner-spin var(--safari-spinner-rev-ms)
+             linear infinite;
+  animation-play-state: paused;
+}
+#safari-overlay.building #safari-spinner-canvas {
+  animation-play-state: running;
+}
+@keyframes safari-spinner-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+```
+
+### 6.4 JavaScript — the entire Safari path
+
+```js
+function revealHideSafari_show() {
+  // Trigger ALL animations via a single class change.
+  // Compositor takes over from this moment.
+  overlay.classList.add('building')
+}
+
+function revealHideSafari_hide() {
+  // Reverse: dim fades out, spinner+text fade-out (they revert when
+  // animation rule no longer applies because forwards stops applying).
+  overlay.classList.remove('building')
+}
+
+// Keydown handler — Safari path
+if (isWebKitClass) {
+  if (_rebuildInFlight) return
+  _rebuildInFlight = true
+  revealHideSafari_show()
+
+  // Yield ONE frame so the compositor receives the class change and
+  // promotes/composites the dim layer before the lock starts.
+  // requestAnimationFrame is enough here — we're not waiting for
+  // paint of a complex element, just commit of a solid black div
+  // whose opacity transition has already been queued on the compositor.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      protoBatch.buildFromNewSeed()
+    })
+  })
+}
+
+// Reveal hook — fires at end of buildFromHash hook on Safari
+if (isWebKitClass) {
+  // Wait long enough for the compositor to settle after the lock
+  // releases, then reverse.
+  setTimeout(() => {
+    revealHideSafari_hide()
+    _rebuildInFlight = false
+  }, safariBuildSettleMs)
+}
+```
+
+### 6.5 Why this works on Safari (the technical justification)
+
+1. **No element inside `BG` is touched.** Teardown's `removeChild(BG.elt)` is irrelevant to the overlay.
+2. **The overlay is always on a promoted compositor layer.** `will-change: opacity` and `position: fixed` ensure WebKit creates a dedicated compositing layer on first paint. That layer is created at module init, long before any 'n' press.
+3. **CSS keyframe animations tick on the compositor.** Once started, `@keyframes`-driven `opacity` and `transform` animations run on a separate thread from the JS main thread. WebKit bug history confirms this: animations of compositor-friendly properties (`opacity`, `transform`, `filter` on simple layers) survive main-thread blocking (see WebKit Bug 222842, Bug 187945, and Apple's "Optimizing CSS Animations" docs).
+4. **`animation-delay` is honored on the compositor.** Unlike `setTimeout` (which queues callbacks on the main thread, where they pile up during the lock and fire in a burst when it releases), `animation-delay` is part of the compositor's own animation timeline. It uses the high-precision compositor clock, not the main thread's event loop. The 2-second wait before spinner appears will fire at exactly 2 seconds even mid-build.
+5. **Solid-fill div opacity is the cheapest possible animation.** Animating a complex SVG's opacity requires Safari to re-rasterize the SVG content into a separate buffer for compositing — this can take seconds for our artwork. Animating a `<div>` with a flat color background is a single compositor operation: just multiply by the alpha. Cost is O(1) regardless of what's beneath.
+
+### 6.6 Migration plan (concrete steps for the implementing model)
+
+**Phase 1 — Strip and replace the Safari path**
+
+1. In `safariImageSwap.js`, leave the entire Chrome path untouched (anything outside `if (isWebKitClass)` blocks).
+2. Remove `revealNowSafari`, `hideNowSafari`, the Safari branch in `buildFromHash` hook, the Safari branch in the keydown handler, and the spinner-positioning code in `ensureSafariSpinner`.
+3. Remove `ensureDummy`'s `if (isWebKitClass) return` guard — but ALSO keep the dummy from being inserted on Safari for now (the new architecture doesn't use it). Actually: leave `ensureDummy` as-is (Safari-skipping). The new overlay is a separate element.
+4. Build a new `ensureSafariOverlay()` that creates `#safari-overlay`, `#safari-dim`, `#safari-spinner-wrapper`, `#safari-loading-text` once at init. Idempotent.
+5. Replace the Safari keydown branch with the simple `add class + 2× rAF + buildFromNewSeed` flow shown in §6.4.
+6. Replace the Safari `buildFromHash` hook with a no-op for the dim (the dim is already on screen via the overlay; nothing to do here).
+7. After `origBuild` returns, schedule `setTimeout(safariBuildSettleMs, removeClass+clearDebounce)`. This is the only `setTimeout` in the Safari path, and it fires AFTER the lock has released, so it's reliable.
+
+**Phase 2 — Tunable verification**
+
+Expose all timing as CSS custom properties on `:root` so they can be adjusted live in DevTools without reload:
+- `--safari-dim-opacity`
+- `--safari-dim-fade-ms`
+- `--safari-overlay-delay`
+- `--safari-overlay-fade-ms`
+- `--safari-spinner-rev-ms`
+
+Mirror them as JS-side constants for first-paint values and update via `document.documentElement.style.setProperty` if exposed through a tunables API.
+
+**Phase 3 — Spinner positioning**
+
+The spinner needs to be positioned over the artwork, not the viewport. Read the artwork rect from the existing `--dummy-art-*` CSS vars (already maintained by `updateLayoutVars`). Position spinner wrapper with `left: calc(var(--dummy-art-left) + var(--dummy-art-width)/2)` etc. — fully CSS-driven, updates automatically when `updateLayoutVars` writes new vars.
+
+### 6.7 Things to deliberately NOT do
+
+- ❌ Do not touch `BG.elt` opacity for the dim. Use the overlay.
+- ❌ Do not call `prepArtwork()` for Safari (the Chrome version snaps `BG.elt` to opacity 0; not needed when overlay handles concealment via fully-opaque dim... but if `safariArtworkDimOpacity = 0.5` we DO want the artwork visible at half brightness, so just leave artwork alone).
+- ❌ Do not use `setTimeout` for any Safari sequence timing during the build lock window. Only `setTimeout(safariBuildSettleMs)` after `origBuild` returns is allowed (post-lock).
+- ❌ Do not use `transition-delay` for the 2-second overlay delay. Use `animation-delay` on a `@keyframes` rule. Transitions can be interrupted/coalesced; animations cannot.
+- ❌ Do not animate `filter: blur()` on anything that contains SVG content. Pre-rasterize blur into a canvas (already done for the spinner; keep that approach).
+- ❌ Do not modify `ensureDummy()` to insert the dummy for Safari. Keep the Safari overlay completely separate from the Chrome dummy. They serve different purposes; mixing them invites regressions.
+
+### 6.8 Estimated implementation surface
+
+- ~150 lines removed (Safari hideNow/revealNow, keydown Safari branch, buildFromHash Safari block, prepArtwork Safari branch).
+- ~120 lines added (new `ensureSafariOverlay`, new CSS block, simplified keydown, simplified post-build hook).
+- Net: file gets shorter, complexity drops significantly.
+- Chrome path: untouched.
+
+
+---
+
+## 7. Why the §6 Implementation Failed in Practice (rev 3 — 2026-05-01)
+
+### 7.1 What the user observed after §6 was implemented
+
+1. **Cold-load:** Sometimes white background, sometimes 90+ second hang that never completes. Body is supposed to be black (it is, per `style.css`) but Safari occasionally paints a white frame before any content renders.
+2. **First 'n' press:** A dim+blur appears — but it is **clipped to the artwork rect / artwork shape** instead of bleeding across the full viewport (compare attached images: image 1 = correct Chrome behavior, image 2 = broken Safari clip).
+3. **Subsequent 'n' presses:** Sometimes 30+ seconds of total non-response, then a delayed dim, then the new artwork pops in **without any reveal transition**.
+4. **No reliable way to tell which keypress triggered which event.**
+
+### 7.2 Root causes of the §6 failure
+
+#### Bug 1 — `#safari-dim` is rect-clipped to the artwork shape
+
+The §6 CSS sized `#safari-dim` to `--dummy-art-*` vars and applied `border-radius: var(--dummy-art-radius-*)`. `backdrop-filter` is then **clipped by the element's own border-box** — so blur+dim appear only over the artwork. On Chrome the equivalent visual is achieved by the **dummy element itself** (a solid `#e6e6e6` pill at `hiddenScale = 0.5` blurred via `filter: blur(30uu)`), painted on the body's black background. The blur of a solid pill into surrounding black is what produces the soft full-viewport glow seen in image 1 — NOT a backdrop-filter.
+
+The fix is not "make the dim full-screen." The fix is **use the dummy**, the same way Chrome does.
+
+#### Bug 2 — `backdrop-filter` was the wrong tool for this visual
+
+`backdrop-filter` blurs whatever is **behind** the element. With a fully-opaque artwork behind it, you get a blurred copy of the artwork tinted dark. But the desired visual (image 1) is **a blurred rendition of the dummy itself** against black — a different image entirely. We were producing the wrong picture by design.
+
+#### Bug 3 — `_rebuildInFlight` can stay stuck `true` indefinitely
+
+The flag is cleared inside `revealNowSafari()`, which is called via `setTimeout(safariBuildSettleMs, …)` after `origBuild` returns. If anything along the way silently fails (timer rescheduled by the engine, `_buildToken` mismatch from a concurrent rebuild, an exception in `revealNowSafari`), the flag stays `true` forever and **all subsequent 'n' presses are silently swallowed** (the keydown handler returns early on the debounce check). This explains the "second 'n' press does nothing" symptom.
+
+There is currently **no watchdog** to forcibly clear the debounce after a sane upper bound. We need one.
+
+#### Bug 4 — No visible cold-load state
+
+`ensureDummy()` early-returns for `isWebKitClass`, so Safari has **no element on screen** during the first build. The body is black (good), but if cold-load takes 90+ seconds the user has zero feedback. There is also a brief race where Safari can paint one white frame before the body's background-color rule applies — easily fixable by inlining the rule on `<html>` itself or by inserting a black overlay div via the script that loads earliest.
+
+#### Bug 5 — "No reveal transition" is a mismatched assumption, not a bug
+
+§6 prescribed: keypress adds `.building` (dim+blur in 200ms), build runs, post-build removes `.building` (dim+blur fade out over 800ms). But **there is no morph from "dim pill rect" to "new artwork."** The user expects a Chrome-style morph: a blurred pill scales up + sharpens + reshapes into the new artwork's outline. That morph requires a **dummy element** that animates `transform`, `filter: blur()`, `border-radius`, and `left/top/width/height` from pill geometry to artwork geometry. None of that exists in the §6 architecture.
+
+#### Bug 6 — Two-phase choreography conflicts with the user's new spec
+
+The §1 Chrome reference uses a two-phase split (`phaseOffset = 0.5`) — shape morph in phase 1, opacity flip at phase boundary, opacity fade in phase 2. The user's new spec table (2026-05-01) is **single-phase**: all properties animate together with delay 0 over the full duration. Artwork opacity is still an instantaneous flip (at start of reveal, end of hide) — but every other property runs concurrently for the entire duration. This needs to be implemented as a CSS variable change, not a structural rework.
+
+### 7.3 The Smoking-Gun assumption that was wrong
+
+§5 stated: "`filter: blur()` cannot be animated on anything Safari composites because it re-rasterizes per frame." This is **only true for SVG content**. For a flat-color `<div>` (which is what `#reveal-dummy` is — a single `background-color`), `filter: blur()` is cheap on Safari because there's nothing to re-rasterize: the layer's bitmap is a constant color, and the blur of a constant-color rect is a known closed-form gradient that the GPU can compute analytically. The Chrome reference proves this works because it *is* using `filter: blur()` on the dummy — Safari can do the same.
+
+The mistake was reading "filter: blur is slow on Safari" as universally true and routing around it. It is only slow when the content beneath is non-trivial.
+
+### 7.4 The corrected architecture (§8 below supersedes §6)
+
+The user's spec is now: **one unified dummy-driven approach**, single-phase transitions, with two Safari-specific adaptations:
+1. The **persistent overlay** (loading text + spinner) is kept from §6 — these MUST use compositor-clock `animation-delay` to fire correctly during the main-thread lock.
+2. The **dummy** is the visual surface. It is created and inserted at module init (Safari and Chrome alike), never destroyed. It carries opacity + transform(scale) + filter(blur) + border-radius + bounds. Single-phase, all delays = 0, all durations = `transitionDurationMs` (default 2000ms for perceptibility).
+
+The `#safari-dim` element is removed entirely. The dummy itself, opaque at hidden state, is the dim — it covers the artwork rect (and more, because at `hiddenScale = 0.5` it's smaller but blurred so the soft edge bleeds out).
+
+---
+
+## 8. Final Architecture (rev 3 — implementing now)
+
+### 8.1 Single-phase transition table (user spec 2026-05-01)
+
+| Property | Hidden | Revealed | Reveal transition | Hide transition |
+|----------|--------|----------|-------------------|-----------------|
+| dummy opacity | 1 | 0 | 1 → 0 | 0 → 1 |
+| dummy blur | blurUserUnits | 0 | blurUU → 0 | 0 → blurUU |
+| dummy scale | hiddenScale | 1 | hiddenScale → 1 | 1 → hiddenScale |
+| dummy shape | default pill | current artwork | new artwork (start = pill, end = new shape) | current artwork (start = current shape, end = pill) |
+| artwork opacity | 0 | 1 | 1 (no change — instantaneous flip at t=0) | 1 (no change — instantaneous flip at t=full) |
+| artwork blur | blurUU | 0 | (table value) — visually irrelevant; dummy occludes | (table value) — visually irrelevant |
+| artwork scale | hiddenScale | 1 | (table value) — visually irrelevant | (table value) — visually irrelevant |
+
+**Key insight:** the artwork-row blur/scale entries in the table describe the conceptual hidden/revealed states. They are not actually applied to the SVG — applying CSS `filter: blur()` to SVG content is pathologically expensive on WebKit. The visual hidden state is instead achieved by the dummy fully covering the artwork. So in implementation:
+- Artwork only animates **opacity** (instantaneous flip at the appropriate boundary).
+- All visible morphing happens on the dummy.
+
+This is identical to the Chrome reference except all phase-delay variables are zero and all durations equal `transitionDurationMs`.
+
+### 8.2 Single-phase JS
+
+Replace `setDirectionTiming(totalMs, isReveal)` with simpler logic: write `--phase-shape-duration = transitionDurationMs`, `--phase-opacity-duration = transitionDurationMs`, both delays = `0ms`, in BOTH directions. Artwork opacity flip schedule:
+- Reveal: flip at t=0 (synchronously, before adding `.revealed`).
+- Hide: flip at t=`transitionDurationMs` (after dummy has finished fading in).
+
+### 8.3 DOM structure (final)
+
+```html
+<body style="background:#000">
+  <div id="BG"> ... (created/destroyed by ProtoBatch) ... </div>
+
+  <!-- Persistent. Created at module init. NEVER destroyed. -->
+  <div id="reveal-dummy"></div>
+
+  <!-- Persistent. Created at module init. WebKit-only. -->
+  <div id="safari-overlay">
+    <div id="safari-spinner-wrapper">
+      <canvas id="safari-spinner-canvas"></canvas>
+    </div>
+    <div id="safari-loading-text">…</div>
+  </div>
+</body>
+```
+
+`#safari-dim` is gone — the dummy provides the visual hide.
+
+### 8.4 Cold-load flow
+
+1. Script load → `ensureStyles()` writes `:root` vars including default-pill bounds (computed from `computeFrameSize()` mirror of `sizeFrame()`).
+2. `ensureDummy()` inserts `#reveal-dummy` parented to `<body>`. Dummy uses default CSS values: opaque `#e6e6e6` pill at `hiddenScale=0.5` with `filter: blur(blurUU)` — the hidden state.
+3. `ensureSafariOverlay()` inserts the spinner+text wrapper (Safari only).
+4. p5 `setup()` → `protoBatch.buildFromNewSeed()` → `buildFromHash()`. The hooked version runs `origBuild` (10s lock on Safari). During this lock, the dummy is ALREADY visible (was painted before the lock). The `.building` class on `#safari-overlay` is added to start the 2s spinner-fade-in animation-delay.
+5. Build completes → `prepArtwork()` (snaps artwork to opacity 0 — invisible behind dummy) → `updateLayoutVars(...)` writes new `--dummy-art-*` vars.
+6. Yield + call `revealNow()`: snap artwork opacity to 1, add `.revealed` to dummy, `.building` removed from overlay. Single-phase 2s transition runs on compositor.
+
+### 8.5 Keydown 'n' flow (Safari)
+
+1. Debounce check (`_rebuildInFlight`); reject if true.
+2. Set `_rebuildInFlight = true`.
+3. **Schedule a watchdog** `setTimeout(60000, () => _rebuildInFlight = false)` so we never get stuck forever.
+4. `hideNow()`: snap artwork to opacity 0 (instant), remove `.revealed` from dummy → CSS transition runs on compositor (dummy fades from 0→1 opacity, scales 1→0.5, blur 0→blurUU, shape morphs to pill — all 2000ms). Add `.building` to overlay.
+5. Yield 2× rAF so the compositor has the new keyframe values committed.
+6. `setTimeout(transitionDurationMs, () => protoBatch.buildFromNewSeed())` — the build starts AFTER the dummy has reached the hidden state (and therefore fully covers the artwork). Even if the build lock starts mid-transition, the compositor continues the dummy animation independently.
+7. The hooked `buildFromHash` post-build path schedules `revealNow()` (after `safariBuildSettleMs`).
+8. `revealNow()` clears `_rebuildInFlight` after `transitionDurationMs`.
+
+Chrome flow is **identical** except `#safari-overlay` doesn't exist on Chrome and the watchdog is unnecessary (build is ~50ms).
+
+### 8.6 Why this fixes every observed bug
+
+- ✅ **Masked-blur clip**: `#safari-dim` is gone; the dummy provides the dim, painted against black body, blurred via cheap `filter: blur()` on flat color.
+- ✅ **Cold-load white flash**: dummy is appended to body at script-load (synchronous, before p5 setup). User sees a black background with a small blurred pill the instant any pixels are painted.
+- ✅ **Cold-load 90s hang**: still 90s, but the user sees the dummy + spinner + text the whole time. Nothing visually "hangs."
+- ✅ **Stuck `_rebuildInFlight`**: 60s watchdog force-clears it.
+- ✅ **No reveal transition**: now the dummy itself does the morph from pill → artwork shape, single-phase 2000ms.
+- ✅ **2000ms perceptible transitions**: `transitionDurationMs = 2000` default.
+
+### 8.7 What stays the same
+
+- `ensureSafariOverlay()` and the spinner canvas pre-render are kept verbatim (only difference: no `#safari-dim` child).
+- `@keyframes safari-overlay-fadein` + `animation-delay: 2000ms` for spinner+text — still required because nothing else can fire on a deterministic 2s schedule during the main-thread lock.
+- `_rebuildSafariSpinnerCanvas()` still fires after each build to update the canvas at the new `_uuToPxArt`.
+- All Chrome-path code outside the `if (isWebKitClass)` branches is unchanged.
+
