@@ -16,12 +16,11 @@
 //                      Carries ALL animated properties: width/height,
 //                      per-corner border-radius, scale, blur. Default
 //                      hidden state is the 100×200uu pill.
-//   E1 Artwork (BG.elt) — ONLY animates opacity. No scale, no blur.
-//                         This separation gives identical Chrome/
-//                         Safari behavior since Safari's pathological
-//                         CSS-blur-on-complex-SVG path is avoided.
+//   E1 Artwork (BG.elt) — Chrome reference path only animates opacity.
+//                         Safari Rev 4 is isolated: it also animates
+//                         artwork blur/scale in sync with #safari-dummy.
 //
-// Two-stage choreography (per user spec table 2026-04-30 v4):
+// Chrome reference choreography (per user spec table 2026-04-30 v4):
 //
 //   Hidden state:    dummy { opacity 1, blur blurUU, scale hiddenScale, shape pill }
 //                    artwork { opacity 0 }
@@ -46,6 +45,8 @@
 // CSS-only transitions (per AI_INDEX immutability axiom + RA3): JS
 // adds/removes class names + writes CSS variables; CSS owns the
 // timing. Sequence is achieved entirely through transition-delay.
+// Safari Rev 4 uses a separate single-phase #safari-dummy path plus
+// Safari-only inline artwork blur/scale transitions.
 //
 // Engine detection (KNOWN-ISSUES § 9.17 FC2): UA-detects Safari + any
 // iOS browser as "WebKit-class" since pre-EU-DMA iOS forces all
@@ -89,11 +90,24 @@
   const isWebKitClass = isDesktopSafari || isIOS
   const isSafari = isWebKitClass // back-compat alias
 
+  //SECT: Chrome reference lock
+  // Last user-confirmed ideal Chrome reveal/hide state (2026-05-03).
+  // Safari work must NOT mutate these values or repurpose them as a
+  // shared tuning surface. If Chrome regresses, restore from this
+  // object first and only then resume Safari experimentation.
+  const CHROME_REFERENCE_PRESET = Object.freeze({
+    blurUserUnits: 30,
+    revealDurationMs: 2000,
+    hideDurationMs: 2000,
+    phaseOffset: 0.5,
+    hiddenScale: 0.5,
+  })
+
   //SECT: Tunable constants (RA6 will iterate on these)
   // All initial values per user spec 2026-04-29 / 2026-04-30.
-  const blurUserUnits = 30           // dummy hidden-state blur in uu
-  const revealDurationMs = 2000      // forward TOTAL duration
-  const hideDurationMs = 2000        // reverse TOTAL duration
+  const blurUserUnits = CHROME_REFERENCE_PRESET.blurUserUnits // dummy hidden-state blur in uu
+  const revealDurationMs = CHROME_REFERENCE_PRESET.revealDurationMs // forward TOTAL duration
+  const hideDurationMs = CHROME_REFERENCE_PRESET.hideDurationMs // reverse TOTAL duration
   // phaseOffset ∈ [0, 1]: fraction of total duration spent on the
   // blur/scale/shape phase. Opacity phase gets (1 − phaseOffset).
   //   REVEAL: phase 1 = blur/scale/shape (duration phaseOffset*t),
@@ -104,19 +118,21 @@
   //   reveal: phaseOffset*revealDurationMs
   //   hide:   (1−phaseOffset)*hideDurationMs
   // 0.5 → even split. Higher → more blur/scale time, less opacity time.
-  const phaseOffset = 0.5
-  const hiddenScale = 0.5            // dummy hidden-state scale (focus-pull / DOF feel)
+  const phaseOffset = CHROME_REFERENCE_PRESET.phaseOffset
+  const hiddenScale = CHROME_REFERENCE_PRESET.hiddenScale // dummy hidden-state scale (focus-pull / DOF feel)
 
   //SECT: Safari-only tunables
-  // Safari uses a stripped-down UX: artwork dim + spinner + loading
-  // text only. No dummy morphing, no scale, no blur transitions.
+  // Safari uses its own isolated choreography. Do not route these
+  // through CHROME_REFERENCE_PRESET; Chrome is locked as reference.
   const safariBuildSettleMs = 300       // wall-clock after origBuild before reveal
+  const safariTransitionMs = 2000       // single-phase hide/reveal duration (ms)
+  const safariWatchdogMs = 60000        // force-clear debounce if WebKit stalls
   // Overlay tunables — initial values; all also exposed as CSS vars (--safari-*)
   // so they can be adjusted live in DevTools without reload.
-  const safariBlurPx = 20               // backdrop-filter blur radius in px
-  const safariDimBrightness = 0.5       // brightness() in backdrop-filter (0.5 = half)
-  const safariDimFadeMs = 200           // how fast dim+blur appear on keypress (ms)
-  const safariBlurRevealMs = 800        // how long blur+dim clear on reveal (ms)
+  const safariBlurPx = 20               // legacy/API var; Rev 4 blur is --reveal-blur
+  const safariDimBrightness = 0.5       // legacy/API var; no backdrop dim layer in Rev 4
+  const safariDimFadeMs = 200           // legacy/API var retained for DevTools compatibility
+  const safariBlurRevealMs = 800        // legacy/API var retained for DevTools compatibility
   const safariOverlayDelayMs = 2000     // delay before spinner + text fade in (ms)
   const safariOverlayFadeMs = 1000      // fade duration for spinner + text (ms)
   const safariSpinnerDiameterUu = 85    // spinner diameter in user units
@@ -150,7 +166,7 @@
 
   //SECT: State
   let _dummy = null
-  let _frameElt = null                           // BG.elt ref — used by Chrome path only
+  let _frameElt = null                           // current BG.elt ref
   let _buildToken = 0                            // bumped on each build; cancels stale timers/transitions
   // 'n'-keypress debounce — true from the moment a build starts until
   // its reveal animation has fully completed. Cleared inside revealNow()
@@ -162,7 +178,9 @@
   // Survives every ProtoBatch teardown/rebuild cycle (BG.elt does not).
   // All Safari animations are driven by toggling .building on _safariOverlay.
   let _safariOverlay = null                      // #safari-overlay root element
+  let _safariDummy = null                        // #safari-dummy visual cover/morph layer
   let _safariSpinnerWrapper = null               // #safari-spinner-wrapper inside overlay
+  let _safariWatchdogTimer = null                // safety clear for _rebuildInFlight
   let _uuToPxArt = 1                             // uu→px scale for current artwork (updated in updateLayoutVars)
 
   //FUNC: ensureStyles() : void
@@ -235,6 +253,7 @@
         --safari-dim-brightness: ${safariDimBrightness};
         --safari-dim-fade-ms: ${safariDimFadeMs}ms;
         --safari-blur-reveal-ms: ${safariBlurRevealMs}ms;
+        --safari-transition-ms: ${safariTransitionMs}ms;
         --safari-overlay-delay-ms: ${safariOverlayDelayMs}ms;
         --safari-overlay-fade-ms: ${safariOverlayFadeMs}ms;
         --safari-spinner-rev-ms: ${safariSpinnerRevolutionMs}ms;
@@ -291,45 +310,60 @@
         -webkit-filter: blur(0);
       }
 
-      /* === SAFARI MODE — deprecated (rev 3, 2026-05-01) ===
-         The #reveal-dummy on Safari now uses the same animation pipeline
-         as Chrome (opacity + transform + filter:blur + border-radius +
-         bounds, all single-phase). The .safari-mode class is no longer
-         applied to the dummy; these rules are dead code retained
-         temporarily until any external test harness is updated. */
-      #reveal-dummy.safari-mode {
-        left:   var(--dummy-art-left);
-        top:    var(--dummy-art-top);
-        width:  var(--dummy-art-width);
-        height: var(--dummy-art-height);
-        transform: translateZ(0) translate(
-          var(--dummy-safari-hidden-dx),
-          var(--dummy-safari-hidden-dy)
-        ) scale(
-          var(--dummy-safari-hidden-scale-x),
-          var(--dummy-safari-hidden-scale-y)
-        );
-        filter: none !important;
-        -webkit-filter: none !important;
+      /* === SAFARI DUMMY (WebKit-only, independent of Chrome) ===
+         This is intentionally NOT #reveal-dummy. Chrome owns that path.
+         Safari gets a separate persistent layer so experiments cannot
+         alter the reference Chrome choreography.
+
+         Hidden/default state: blurred, scaled-down default pill at opacity 1.
+         Revealed state: measured artwork shape at opacity 0, blur 0, scale 1.
+         Every property animates in one phase over --safari-transition-ms. */
+      #safari-dummy {
+        position: fixed;
+        left:   var(--dummy-pill-left);
+        top:    var(--dummy-pill-top);
+        width:  var(--dummy-pill-width);
+        height: var(--dummy-pill-height);
+        background: ${dummyColor};
+        border-radius: var(--dummy-pill-radius);
+        opacity: 1;
+        transform-origin: center center;
+        transform: translateZ(0) scale(var(--hidden-scale));
+        filter: blur(var(--reveal-blur));
+        -webkit-filter: blur(var(--reveal-blur));
         transition:
-          opacity        var(--phase-opacity-duration) linear var(--phase-opacity-delay),
-          transform      var(--phase-shape-duration)   linear var(--phase-shape-delay),
-          border-radius  var(--phase-shape-duration)   linear var(--phase-shape-delay);
-        will-change: transform, border-radius, opacity;
+          opacity        var(--safari-transition-ms) linear,
+          transform      var(--safari-transition-ms) linear,
+          filter         var(--safari-transition-ms) linear,
+          -webkit-filter var(--safari-transition-ms) linear,
+          border-radius  var(--safari-transition-ms) linear,
+          left           var(--safari-transition-ms) linear,
+          top            var(--safari-transition-ms) linear,
+          width          var(--safari-transition-ms) linear,
+          height         var(--safari-transition-ms) linear;
+        will-change: transform, border-radius, opacity, filter, left, top, width, height;
+        z-index: 80;
+        pointer-events: none;
       }
-      #reveal-dummy.safari-mode.revealed {
+      #safari-dummy.revealed {
         left:   var(--dummy-art-left);
         top:    var(--dummy-art-top);
         width:  var(--dummy-art-width);
         height: var(--dummy-art-height);
-        transform: translateZ(0) translate(0px, 0px) scale(1, 1);
+        border-radius:
+          var(--dummy-art-radius-tl) var(--dummy-art-radius-tr)
+          var(--dummy-art-radius-br) var(--dummy-art-radius-bl);
+        transform: translateZ(0) scale(1);
+        opacity: 0;
+        filter: blur(0);
+        -webkit-filter: blur(0);
       }
 
       /* === SAFARI OVERLAY (WebKit-only) ===
          A single persistent overlay element rooted at <body>. It is NEVER
          removed — it survives every ProtoBatch teardown/rebuild cycle.
-         Carries ONLY the spinner + loading text. The dim/blur visual is
-         provided by #reveal-dummy (which is also persistent post rev 3).
+         Carries ONLY the spinner + loading text. The hide/reveal visual is
+         handled by #safari-dummy plus Safari-only artwork blur/scale.
 
          All Safari loading UX (spinner, text) is driven by a single
          class toggle: #safari-overlay.building.
@@ -689,9 +723,72 @@
     if (!_dummy) {
       _dummy = document.createElement('div')
       _dummy.id = 'reveal-dummy'
-      if (isWebKitClass) _dummy.classList.add('safari-mode')
     }
     document.body.appendChild(_dummy)
+  }
+
+  //FUNC: ensureSafariDummy() : void
+  // Safari-only dummy layer. Separate from #reveal-dummy so Chrome's
+  // reference implementation remains untouched. This element persists
+  // across every ProtoBatch teardown/rebuild cycle.
+  function ensureSafariDummy() {
+    if (!isWebKitClass) return
+    if (_safariDummy && _safariDummy.parentNode) return
+    if (!document.body) return
+    ensureStyles()
+    if (!_safariDummy) {
+      _safariDummy = document.createElement('div')
+      _safariDummy.id = 'safari-dummy'
+    }
+    document.body.appendChild(_safariDummy)
+  }
+
+  function getSafariArtworkBlurPx() {
+    const cs = getComputedStyle(document.documentElement)
+    const cssBlur = parseFloat(cs.getPropertyValue('--reveal-blur'))
+    if (Number.isFinite(cssBlur) && cssBlur > 0) return cssBlur
+    return blurUserUnits * (_uuToPxArt || 1)
+  }
+
+  function setSafariArtworkState(revealed, withTransition) {
+    if (!isWebKitClass) return
+    if (typeof BG === 'undefined' || !BG || !BG.elt) return
+    _frameElt = BG.elt
+    const s = _frameElt.style
+    const duration = withTransition ? safariTransitionMs + 'ms' : '0ms'
+    s.transformOrigin = 'center center'
+    s.willChange = 'transform, filter, opacity'
+    s.transition = withTransition
+      ? 'transform ' + duration + ' linear, filter ' + duration + ' linear, -webkit-filter ' + duration + ' linear'
+      : 'none'
+    s.webkitTransition = s.transition
+    if (revealed) {
+      s.opacity = '1'
+      s.transform = 'translateZ(0) scale(1)'
+      s.filter = 'blur(0px)'
+      s.webkitFilter = 'blur(0px)'
+    } else {
+      s.opacity = '1'
+      s.transform = 'translateZ(0) scale(' + hiddenScale + ')'
+      const blurPx = getSafariArtworkBlurPx()
+      s.filter = 'blur(' + blurPx + 'px)'
+      s.webkitFilter = 'blur(' + blurPx + 'px)'
+    }
+  }
+
+  function startSafariWatchdog() {
+    clearTimeout(_safariWatchdogTimer)
+    _safariWatchdogTimer = setTimeout(() => {
+      if (_rebuildInFlight) {
+        console.warn('[RevealAnim] Safari watchdog: clearing stuck _rebuildInFlight')
+        _rebuildInFlight = false
+      }
+    }, safariWatchdogMs)
+  }
+
+  function stopSafariWatchdog() {
+    clearTimeout(_safariWatchdogTimer)
+    _safariWatchdogTimer = null
   }
 
   //FUNC: prepArtwork() : void
@@ -717,9 +814,9 @@
   //FUNC: ensureSafariOverlay() : void
   // WebKit-only. Creates the entire Safari overlay DOM structure ONCE at
   // init, parented to <body> so it survives every ProtoBatch teardown.
-  // Structure:
+  // Persistent Safari layers:
+  //   #safari-dummy            separate persistent dummy morph layer
   //   #safari-overlay          root (position:fixed inset:0)
-  //     #safari-dim            backdrop-filter dim+blur over artwork rect
   //     #safari-spinner-wrapper  spinner canvas (JS-positioned)
   //       #safari-spinner-canvas  pre-rendered blurred arc
   //     #safari-loading-text   "Safari may take longer…" text
@@ -733,10 +830,9 @@
     _safariOverlay = document.createElement('div')
     _safariOverlay.id = 'safari-overlay'
 
-    // No #safari-dim element — the persistent #reveal-dummy provides
-    // the dim/blur visual (it's an opaque pill on a black body, blurred
-    // via cheap filter:blur on flat color). The overlay only carries
-    // the loading text + spinner.
+    // No backdrop-filter dim layer. Safari's dummy and artwork blur/scale
+    // are driven separately so both can animate together. The overlay only
+    // carries the loading text + spinner.
 
     _safariSpinnerWrapper = document.createElement('div')
     _safariSpinnerWrapper.id = 'safari-spinner-wrapper'
@@ -823,22 +919,52 @@
   function disarmLoadingText() { }
 
   //FUNC: revealNowSafari() : void
-  // Safari-specific reveal hook called from revealNow(). Removes .building
-  // from the overlay so spinner+text fade out via their base transition
-  // rules. The dummy reveal animation itself is handled by revealNow()
-  // (unified path with Chrome).
+  // Safari-only reveal choreography (single phase): dummy opacity/blur/
+  // scale/shape animate hidden→revealed while the newly-built artwork
+  // simultaneously animates blur/scale hidden→revealed underneath it.
   function revealNowSafari() {
+    ensureSafariDummy()
+    _currentMetrics = getCurrentFrameMetrics()
+    updateLayoutVars(_currentMetrics)
+
+    // New artwork starts visible but blurred/scaled. Dummy opacity 1
+    // covers it, so there is no flash before the transition starts.
+    setSafariArtworkState(false, false)
+    if (_frameElt) {
+      void _frameElt.offsetWidth
+      void getComputedStyle(_frameElt).transform
+    }
+    if (_safariDummy) {
+      void _safariDummy.offsetWidth
+      void getComputedStyle(_safariDummy).transition
+      _safariDummy.classList.add('revealed')
+    }
+    setSafariArtworkState(true, true)
     if (_safariOverlay) _safariOverlay.classList.remove('building')
-    console.log('[RevealAnim] revealNowSafari: overlay .building removed')
+    setTimeout(() => {
+      _rebuildInFlight = false
+      stopSafariWatchdog()
+    }, safariTransitionMs)
+    console.log('[RevealAnim] revealNowSafari: Safari dummy + artwork reveal started')
   }
 
   //FUNC: hideNowSafari() : void
-  // Safari-specific hide hook called from hideNow(). Adds .building to
-  // the overlay so spinner+text fade in (after 2s animation-delay).
-  // The dummy hide animation itself is handled by hideNow().
+  // Safari-only hide choreography (single phase): dummy opacity/blur/
+  // scale/shape animate revealed→hidden while artwork simultaneously
+  // animates blur/scale revealed→hidden. Artwork opacity stays 1 during
+  // the transition and is then hidden right before the build starts.
   function hideNowSafari() {
+    ensureSafariDummy()
+    _currentMetrics = getCurrentFrameMetrics()
+    updateLayoutVars(_currentMetrics)
+    if (_safariDummy) {
+      void _safariDummy.offsetWidth
+      void getComputedStyle(_safariDummy).transition
+      _safariDummy.classList.remove('revealed')
+    }
+    setSafariArtworkState(false, true)
     if (_safariOverlay) _safariOverlay.classList.add('building')
-    console.log('[RevealAnim] hideNowSafari: overlay .building added')
+    console.log('[RevealAnim] hideNowSafari: Safari dummy + artwork hide started')
   }
 
   //FUNC: revealNow() : void
@@ -952,43 +1078,69 @@
       // Safari keeps its own path isolated for now.
       if (!isWebKitClass) updateLayoutVars(defaultFrameMetrics)
 
-      const result = origBuild.apply(this, arguments)
+      const runBuild = () => {
+        const result = origBuild.apply(this, arguments)
 
-      // Stop animation on Safari — bitmap-quality matters more than
-      // motion when each frame costs 10s.
-      if (isWebKitClass && typeof globalControls !== 'undefined' && globalControls) {
-        globalControls.animated = false
+        // Stop animation on Safari — bitmap-quality matters more than
+        // motion when each frame costs 10s.
+        if (isWebKitClass && typeof globalControls !== 'undefined' && globalControls) {
+          globalControls.animated = false
+        }
+
+        // Prep artwork synchronously so the live SVG never reaches the
+        // screen sharp/visible on Chrome. Safari prepares its artwork
+        // inside revealNowSafari() because it animates blur/scale too.
+        prepArtwork()
+        // Re-sync layout vars from the freshly-built BackGrid so the
+        // dummy's revealed-state geometry matches the new artwork.
+        updateLayoutVars(getCurrentFrameMetrics())
+
+        // Safari: rebuild spinner canvas at accurate artwork scale now that
+        // _uuToPxArt has been updated by updateLayoutVars above.
+        if (isWebKitClass) _rebuildSafariSpinnerCanvas()
+
+        // Yield to compositor before triggering reveal. Chrome uses
+        // 3× rAF (post-build paint commits within ~50ms). Safari needs
+        // a wall-clock settle (rAF can stall during post-rasterization
+        // compositing on a freshly-built complex SVG).
+        const myToken = _buildToken
+        if (isWebKitClass) {
+          setTimeout(() => {
+            if (myToken !== _buildToken) return
+            revealNowSafari()
+          }, safariBuildSettleMs)
+        } else {
+          requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (myToken !== _buildToken) return
+            revealNow()
+          })))
+        }
+
+        return result
       }
 
-      // Prep artwork synchronously so the live SVG never reaches the
-      // screen sharp/visible.
-      prepArtwork()
-      // Re-sync layout vars from the freshly-built BackGrid so the
-      // dummy's revealed-state geometry matches the new artwork.
-      updateLayoutVars(getCurrentFrameMetrics())
-
-      // Safari: rebuild spinner canvas at accurate artwork scale now that
-      // _uuToPxArt has been updated by updateLayoutVars above.
-      if (isWebKitClass) _rebuildSafariSpinnerCanvas()
-
-      // Yield to compositor before triggering reveal. Chrome uses
-      // 3× rAF (post-build paint commits within ~50ms). Safari needs
-      // a wall-clock settle (rAF can stall during post-rasterization
-      // compositing on a freshly-built complex SVG).
-      const myToken = _buildToken
       if (isWebKitClass) {
-        setTimeout(() => {
-          if (myToken !== _buildToken) return
-          revealNow()
-        }, safariBuildSettleMs)
-      } else {
-        requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
-          if (myToken !== _buildToken) return
-          revealNow()
-        })))
+        ensureSafariDummy()
+        ensureSafariOverlay()
+        updateLayoutVars(defaultFrameMetrics)
+        if (_safariOverlay) _safariOverlay.classList.add('building')
+        // Let Safari paint the hidden dummy and start the overlay's
+        // compositor-clock animation-delay before origBuild locks the
+        // main thread with SVG rendering.
+        let didRun = false
+        const scheduledToken = _buildToken
+        const startBuild = () => {
+          if (didRun) return
+          if (scheduledToken !== _buildToken) return
+          didRun = true
+          runBuild()
+        }
+        requestAnimationFrame(() => requestAnimationFrame(startBuild))
+        setTimeout(startBuild, 80)
+        return undefined
       }
 
-      return result
+      return runBuild()
     }
 
     ProtoBatch.prototype.teardown = function () {
@@ -1028,7 +1180,19 @@
             e.preventDefault()
             e.stopImmediatePropagation()
 
-            if (isWebKitClass) return
+            if (isWebKitClass) {
+              startSafariWatchdog()
+              hideNowSafari()
+              setTimeout(() => {
+                if (typeof BG !== 'undefined' && BG && BG.elt) {
+                  BG.elt.style.opacity = '0'
+                }
+                if (typeof protoBatch !== 'undefined' && protoBatch) {
+                  protoBatch.buildFromNewSeed()
+                }
+              }, safariTransitionMs)
+              return
+            }
 
             hideNow()
             setTimeout(() => {
@@ -1048,7 +1212,11 @@
   function init() {
     ensureStyles()
     ensureDummy()
-    if (isWebKitClass) ensureSafariOverlay()
+    if (isWebKitClass) {
+      ensureSafariDummy()
+      ensureSafariOverlay()
+      if (_safariOverlay) _safariOverlay.classList.add('building')
+    }
     updateLayoutVars(defaultFrameMetrics)
     window.addEventListener('resize', () => {
       updateLayoutVars(_currentMetrics)
@@ -1070,6 +1238,7 @@
   window.SafariCompatUX = {
     isSafari,
     isWebKitClass,
+    chromeReferencePreset: CHROME_REFERENCE_PRESET,
     revealNow,
     hideNow,
     resetForRebuild,
@@ -1079,6 +1248,7 @@
       get hideDurationMs() { return hideDurationMs },
       get phaseOffset() { return phaseOffset },
       get hiddenScale() { return hiddenScale },
+      get safariTransitionMs() { return safariTransitionMs },
       get safariOverlayDelayMs() { return safariOverlayDelayMs },
       get safariOverlayFadeMs() { return safariOverlayFadeMs },
       get safariBlurPx() { return safariBlurPx },
