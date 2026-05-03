@@ -70,6 +70,9 @@ Read:
 - GEOMETRY-REFERENCE.md defines terminology
 - KNOWN-ISSUES.md records historical failed attempts; do not repeat them
 - ROADMAP.md is intent, not proof of implementation
+- `safariImageSwap.js` Chrome reveal/hide behavior is reference-locked
+  as of 2026-05-03; Safari work must not alter Chrome behavior unless
+  the user explicitly requests a Chrome change
 
 ## What This Document Is Not
 
