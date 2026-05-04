@@ -17,8 +17,8 @@
 //                      per-corner border-radius, scale, blur. Default
 //                      hidden state is the 100×200uu pill.
 //   E1 Artwork (BG.elt) — Chrome reference path only animates opacity.
-//                         Safari Rev 4 is isolated: it also animates
-//                         artwork blur/scale in sync with #safari-dummy.
+//                         Safari also keeps BG.elt opacity-only so WebKit
+//                         never rasterizes the complex SVG at hidden scale.
 //
 // Chrome reference choreography (per user spec table 2026-04-30 v4):
 //
@@ -126,7 +126,6 @@
   // Safari uses its own isolated choreography. Do not route these
   // through CHROME_REFERENCE_PRESET; Chrome is locked as reference.
   const safariTransitionMs = 1000       // single-phase hide/reveal duration (ms)
-  const safariArtworkHiddenScale = 0.3  // artwork-only hidden scale; dummy still uses hiddenScale
   // Overlay tunables — initial values; all also exposed as CSS vars (--safari-*)
   // so they can be adjusted live in DevTools without reload.
   const safariBlurPx = 20               // legacy/API var; Rev 4 blur is --reveal-blur
@@ -247,7 +246,6 @@
         --safari-dim-fade-ms: ${safariDimFadeMs}ms;
         --safari-blur-reveal-ms: ${safariBlurRevealMs}ms;
         --safari-transition-ms: ${safariTransitionMs}ms;
-        --safari-artwork-hidden-scale: ${safariArtworkHiddenScale};
         --safari-overlay-fade-ms: ${safariOverlayFadeMs}ms;
         --safari-dummy-pulse-ms: ${safariDummyPulseMs}ms;
         --safari-dummy-pulse-scale-min: ${(hiddenScale - safariDummyPulseAmount) / hiddenScale};
@@ -388,7 +386,7 @@
          A single persistent overlay element rooted at <body>. It is NEVER
          removed — it survives every ProtoBatch teardown/rebuild cycle.
          Carries ONLY the loading text. The hide/reveal visual is handled by
-         #safari-dummy plus Safari-only artwork blur/scale.
+         #safari-dummy plus Safari-only artwork opacity.
 
          Safari loading text is driven by a single class toggle:
          #safari-overlay.building.
@@ -756,25 +754,6 @@
     document.body.appendChild(_safariDummy)
   }
 
-  function getSafariArtworkBlurPx() {
-    const cs = getComputedStyle(document.documentElement)
-    const cssBlur = parseFloat(cs.getPropertyValue('--reveal-blur'))
-    if (Number.isFinite(cssBlur) && cssBlur > 0) return cssBlur
-    return blurUserUnits * (_uuToPxArt || 1)
-  }
-
-  function getSafariArtworkHiddenScale() {
-    const cssScale = parseFloat(getComputedStyle(document.documentElement)
-      .getPropertyValue('--safari-artwork-hidden-scale'))
-    return Number.isFinite(cssScale) ? cssScale : safariArtworkHiddenScale
-  }
-
-  function setSafariArtworkHiddenScale(value) {
-    const next = Number(value)
-    if (!Number.isFinite(next)) return
-    document.documentElement.style.setProperty('--safari-artwork-hidden-scale', `${next}`)
-  }
-
   function updateSafariDummyPulseVars() {
     const base = Number(hiddenScale) > 0 ? Number(hiddenScale) : 1
     const amount = Math.max(0, Math.min(safariDummyPulseAmount, base - 0.01))
@@ -804,27 +783,19 @@
     _frameElt = BG.elt
     const s = _frameElt.style
     const duration = withTransition ? safariTransitionMs + 'ms' : '0ms'
-    const blurPx = getSafariArtworkBlurPx()
-    const hasBlur = blurPx > 0
     s.transformOrigin = 'center center'
     s.willChange = 'auto'
     s.transition = withTransition
-      ? hasBlur
-        ? 'transform ' + duration + ' linear, filter ' + duration + ' linear, -webkit-filter ' + duration + ' linear'
-        : 'transform ' + duration + ' linear'
+      ? 'opacity ' + duration + ' linear'
       : 'none'
     s.webkitTransition = s.transition
+    s.transform = 'none'
+    s.filter = 'none'
+    s.webkitFilter = 'none'
     if (revealed) {
       s.opacity = '1'
-      s.transform = 'scale(1)'
-      s.filter = hasBlur ? 'blur(0px)' : 'none'
-      s.webkitFilter = s.filter
     } else {
-      s.opacity = '1'
-      const artHiddenScale = getSafariArtworkHiddenScale()
-      s.transform = 'scale(' + artHiddenScale + ')'
-      s.filter = hasBlur ? 'blur(' + blurPx + 'px)' : 'none'
-      s.webkitFilter = s.filter
+      s.opacity = String(safariArtworkPrepaintOpacity)
     }
   }
 
@@ -902,8 +873,8 @@
     _safariOverlay = document.createElement('div')
     _safariOverlay.id = 'safari-overlay'
 
-    // No backdrop-filter dim layer and no canvas spinner. Safari's dummy and
-    // artwork blur/scale are driven separately; the overlay only carries text.
+    // No backdrop-filter dim layer and no canvas spinner. Safari's dummy
+    // carries the visual motion; the overlay only carries text.
 
     const txt = document.createElement('div')
     txt.id = 'safari-loading-text'
@@ -932,8 +903,8 @@
     updateLayoutVars(_currentMetrics)
 
     // The SVG has already had a normal-size near-transparent prepaint.
-    // Now snap it to the hidden reveal state while keeping it effectively
-    // invisible; the artwork becomes opaque only when the dummy reveal starts.
+    // Keep the finished SVG at natural size; the dummy carries the visible
+    // scale/blur/morph motion so Safari never rasterizes BG at hidden scale.
     setSafariArtworkState(false, false)
     if (_frameElt) _frameElt.style.opacity = String(safariArtworkPrepaintOpacity)
     if (_safariDummy) {
@@ -947,7 +918,6 @@
     }
     if (_frameElt) {
       void _frameElt.offsetWidth
-      void getComputedStyle(_frameElt).transform
       void getComputedStyle(_frameElt).opacity
     }
     const myToken = _buildToken
@@ -1236,8 +1206,6 @@
       get phaseOffset() { return phaseOffset },
       get hiddenScale() { return hiddenScale },
       get safariTransitionMs() { return safariTransitionMs },
-      get safariArtworkHiddenScale() { return getSafariArtworkHiddenScale() },
-      set safariArtworkHiddenScale(value) { setSafariArtworkHiddenScale(value) },
       get safariDummyPulseAmount() { return safariDummyPulseAmount },
       set safariDummyPulseAmount(value) { setSafariDummyPulseAmount(value) },
       get safariDummyPulseMs() { return safariDummyPulseMs },
