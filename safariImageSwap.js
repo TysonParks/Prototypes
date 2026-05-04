@@ -125,7 +125,7 @@
   //SECT: Safari-only tunables
   // Safari uses its own isolated choreography. Do not route these
   // through CHROME_REFERENCE_PRESET; Chrome is locked as reference.
-  const safariTransitionMs = 2000       // single-phase hide/reveal duration (ms)
+  const safariTransitionMs = 1000       // single-phase hide/reveal duration (ms)
   const safariArtworkHiddenScale = 0.3  // artwork-only hidden scale; dummy still uses hiddenScale
   // Overlay tunables — initial values; all also exposed as CSS vars (--safari-*)
   // so they can be adjusted live in DevTools without reload.
@@ -134,6 +134,7 @@
   const safariDimFadeMs = 200           // legacy/API var retained for DevTools compatibility
   const safariBlurRevealMs = 800        // legacy/API var retained for DevTools compatibility
   const safariOverlayFadeMs = 1000      // fade duration for loading text (ms)
+  const safariArtworkPrepaintOpacity = 0.001 // force normal-size paint before scale reveal
   let safariDummyPulseAmount = 0.05     // absolute scale +/- around hiddenScale while loading
   let safariDummyPulseMs = 2000         // hidden dummy scale pulse duration (ms)
   const dummyColor = '#e6e6e6'          // matches achromic(0.9) ≈ rgb(230,230,230)
@@ -156,8 +157,8 @@
   // Two sentences, blank line between them — rendered via
   // `white-space: pre-line` so we can use \n\n in textContent.
   const loadingTextCopy =
-    'Safari may take significantly longer \n and render slightly differently.\n\n' +
-    'Chrome is the reference execution.'
+    'Safari and iOS browsers may\n take significantly longer\n and render slightly differently.\n\n' +
+    'Chrome desktop is the reference execution environment for Prototypes.'
 
   //SECT: State
   let _dummy = null
@@ -806,7 +807,7 @@
     const blurPx = getSafariArtworkBlurPx()
     const hasBlur = blurPx > 0
     s.transformOrigin = 'center center'
-    s.willChange = 'transform, filter, opacity'
+    s.willChange = 'auto'
     s.transition = withTransition
       ? hasBlur
         ? 'transform ' + duration + ' linear, filter ' + duration + ' linear, -webkit-filter ' + duration + ' linear'
@@ -815,16 +816,46 @@
     s.webkitTransition = s.transition
     if (revealed) {
       s.opacity = '1'
-      s.transform = 'translateZ(0) scale(1)'
+      s.transform = 'scale(1)'
       s.filter = hasBlur ? 'blur(0px)' : 'none'
       s.webkitFilter = s.filter
     } else {
       s.opacity = '1'
       const artHiddenScale = getSafariArtworkHiddenScale()
-      s.transform = 'translateZ(0) scale(' + artHiddenScale + ')'
+      s.transform = 'scale(' + artHiddenScale + ')'
       s.filter = hasBlur ? 'blur(' + blurPx + 'px)' : 'none'
       s.webkitFilter = s.filter
     }
+  }
+
+  function prepSafariArtworkPrepaint() {
+    if (!isWebKitClass) return
+    if (typeof BG === 'undefined' || !BG || !BG.elt) return
+    _frameElt = BG.elt
+    const s = _frameElt.style
+    s.transition = 'none'
+    s.webkitTransition = 'none'
+    s.transformOrigin = 'center center'
+    s.transform = 'none'
+    s.filter = 'none'
+    s.webkitFilter = 'none'
+    s.willChange = 'auto'
+    s.opacity = String(safariArtworkPrepaintOpacity)
+  }
+
+  function cleanupSafariArtworkRasterState(token) {
+    setTimeout(() => {
+      if (token !== _buildToken) return
+      if (!_frameElt) return
+      const s = _frameElt.style
+      s.transition = 'none'
+      s.webkitTransition = 'none'
+      s.transform = 'none'
+      s.filter = 'none'
+      s.webkitFilter = 'none'
+      s.willChange = 'auto'
+      s.opacity = '1'
+    }, safariTransitionMs + 80)
   }
 
   function startSafariLoadingDelay() {
@@ -900,9 +931,11 @@
     _currentMetrics = getCurrentFrameMetrics()
     updateLayoutVars(_currentMetrics)
 
-    // New artwork starts visible but blurred/scaled. Dummy opacity 1
-    // covers it, so there is no flash before the transition starts.
+    // The SVG has already had a normal-size near-transparent prepaint.
+    // Now snap it to the hidden reveal state while keeping it effectively
+    // invisible; the artwork becomes opaque only when the dummy reveal starts.
     setSafariArtworkState(false, false)
+    if (_frameElt) _frameElt.style.opacity = String(safariArtworkPrepaintOpacity)
     if (_safariDummy) {
       _safariDummy.classList.remove('revealed')
       _safariDummy.classList.remove('safari-hidden-pulse')
@@ -915,6 +948,7 @@
     if (_frameElt) {
       void _frameElt.offsetWidth
       void getComputedStyle(_frameElt).transform
+      void getComputedStyle(_frameElt).opacity
     }
     const myToken = _buildToken
     requestAnimationFrame(() => {
@@ -926,6 +960,7 @@
         _safariDummy.classList.add('revealed')
       }
       setSafariArtworkState(true, true)
+      cleanupSafariArtworkRasterState(myToken)
       if (_safariOverlay) _safariOverlay.classList.remove('building')
       setTimeout(() => {
         if (myToken === _buildToken) _rebuildInFlight = false
@@ -1063,12 +1098,12 @@
 
         if (isWebKitClass) {
           if (_safariDummy) _safariDummy.classList.remove('revealed')
-          setSafariArtworkState(false, false)
+          prepSafariArtworkPrepaint()
         }
 
-        // Yield to compositor before triggering reveal. Safari uses rAFs so
-        // the freshly-built artwork can commit in its hidden state before
-        // the dummy/artwork reveal transition starts.
+        // Yield to compositor before triggering reveal. Safari first commits
+        // the freshly-built artwork at normal size and near-zero opacity;
+        // revealNowSafari() then snaps it to hidden scale and animates back.
         const myToken = _buildToken
         if (isWebKitClass) {
           requestAnimationFrame(() => requestAnimationFrame(() => {
