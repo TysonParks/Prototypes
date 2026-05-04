@@ -197,6 +197,13 @@ never on a fresh page load.
 
 ### Post-Plan Addition: Reveal Animation Tuning (KNOWN-ISSUES § 9.15.6, § 9.17)
 
+> **Status update (2026-05-03):** The Safari Art Blocks reveal/transition
+> implementation is complete for the current scope. The canonical final
+> architecture and guardrails now live in
+> `docs/Operational/REVEAL-ANIMATION-STATUS.md`. The planning table below is
+> historical. Any remaining RA work applies only if the public generator or a
+> future non-Art-Blocks branch explicitly reopens reveal experimentation.
+
 > **Context (2026-04-29):** Now that Safari compatibility is functionally
 > resolved, the next frontier is the *reveal experience* — what the user
 > sees during page load, between `n` rebuilds, and around any
@@ -292,15 +299,15 @@ T = reveal+800 reveal complete; (Chrome only) animation may begin
 
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
-| RA1 | Audit current overlay performance on M1 / Sequoia / Chrome | Research | — | ❌ Not started | Current "Loading" text is barely perceptible (good problem); confirm spinner + text *both* render before first paint commits. |
-| RA2 | Build E4: blurred dummy backing (frame plane only, no filters) | Agent | RA1 | ❌ Not started | Renders in <50ms on all engines. Either a static `<div>` styled to match or a minimal `<svg>` of just the frame rect. Apply CSS blur(30–50px). |
-| RA3 | Refactor overlay to compose E2/E3/E4 as siblings of FRAME, with CSS-driven transitions | Agent | RA2 | ❌ Not started | Move all timing logic to CSS classes (`.revealing`, `.revealed`); JS only adds/removes classes. Maximizes future-platform performance. |
-| RA4 | Implement min-duration floor (`max(build_end + Δ, T + 2000ms)`) | Agent | RA3 | ❌ Not started | Tunable constant `REVEAL_MIN_MS`. Same code path on every platform → consistent experience. |
-| RA5 | Add C3 (reload) variant: crossfade old artwork → blurred copy → new artwork | Agent | RA3 | ❌ Not started | On `n` press, snapshot the current FRAME (DOM clone or skip if expensive), apply blur, fade between old/new. Optional: only when build > 500ms to avoid jank on fast rebuilds. |
-| RA6 | Tune blur radii, fade timings, easing curves | Design + Agent | RA5 | ❌ Not started | Iterate on copy ("Loading" vs "Resolving" vs no text), spinner style, blur amount, easing (`cubic-bezier`). |
-| RA7 | Cross-engine review (Chrome / Safari / Firefox / iOS Chrome) | Verify | RA6 | ❌ Not started | Confirm reveal feels identical at 2s on all engines, that no element pops, that Safari's longer build is masked. |
-| RA8 | Forward-compat smoke test: simulate fast-future-platform with build < 50ms | Verify | RA7 | ❌ Not started | Throttle off; confirm min-duration floor still produces a 2s reveal that doesn't feel artificial. |
-| RA9 | Lock baseline for ArtBlocks freeze | Approval | RA8 | ❌ Not started | Once frozen, all reveal logic is immutable. Document final values in KNOWN-ISSUES.md as the reveal contract. |
+| RA1 | Audit current overlay performance on M1 / Sequoia / Chrome | Research | — | ✅ Superseded | Final Safari implementation uses immediate loading text plus persistent dummy layers; canonical behavior is documented in `REVEAL-ANIMATION-STATUS.md`. |
+| RA2 | Build E4: blurred dummy backing (frame plane only, no filters) | Agent | RA1 | ✅ Superseded | Achieved in spirit via `#safari-dummy` and `#safari-dummy-core`; final implementation is body-level DOM, not the originally proposed spinner/backing mix. |
+| RA3 | Refactor overlay to compose E2/E3/E4 as siblings of FRAME, with CSS-driven transitions | Agent | RA2 | ✅ Superseded | Final Safari implementation uses persistent body-level siblings and CSS-driven transitions in `safariImageSwap.js`. |
+| RA4 | Implement min-duration floor (`max(build_end + Δ, T + 2000ms)`) | Agent | RA3 | ✅ Deferred by scope | Not needed for the locked Art Blocks Safari path; current implementation keys off real build completion plus fixed reveal timing. |
+| RA5 | Add C3 (reload) variant: crossfade old artwork → blurred copy → new artwork | Agent | RA3 | ✅ Deferred by scope | Safari dynamic `n` behavior is intentionally disabled for Art Blocks. |
+| RA6 | Tune blur radii, fade timings, easing curves | Design + Agent | RA5 | ✅ Complete for current scope | Safari loading text, pulse, reveal timing, and raster-quality constraints were tuned and user-approved. |
+| RA7 | Cross-engine review (Chrome / Safari / Firefox / iOS Chrome) | Verify | RA6 | ✅ Partial / sufficient | Chrome and Safari branches were smoke-tested repeatedly; Safari real-device/user validation approved the final behavior. |
+| RA8 | Forward-compat smoke test: simulate fast-future-platform with build < 50ms | Verify | RA7 | ✅ Deferred by scope | Not required for the current Art Blocks freeze. |
+| RA9 | Lock baseline for ArtBlocks freeze | Approval | RA8 | ✅ Done | Safari reveal implementation is complete and documented; treat it as locked unless the user explicitly reopens it. |
 
 #### Out of Scope (Tracked Separately)
 
@@ -348,4 +355,4 @@ specific runtime cost — bad for decade-long deployments.
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-04-29 — Reveal Animation Tuning section added (RA1–RA9); ProtoBatch teardown completeness section added (T1–T7); Safari swap path superseded by loading-overlay UX (S1–S7)*
+*Last updated: 2026-05-03 — Safari reveal implementation marked complete for current scope; see REVEAL-ANIMATION-STATUS.md for canonical final architecture.*
