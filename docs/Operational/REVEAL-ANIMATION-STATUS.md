@@ -1,5 +1,5 @@
 # Reveal Animation Status Report
-*Last updated: 2026-05-03 (rev 6 - Safari transition locked)*
+*Last updated: 2026-05-03 (rev 7 - Safari transition complete)*
 
 > Handoff document for future work on `safariImageSwap.js`. The current
 > priority is no longer a fully dynamic Safari generator. For Art Blocks,
@@ -31,13 +31,31 @@ Safari is now scoped to:
 4. The `n` key is ignored completely on Safari.
 5. The `s` key remains available for capture/debug output through `gui.js`.
 
-The Safari transition, loading text, and hidden-state pulse are user-approved
-and should be treated as locked. Future Safari work should only preserve or
-repair that behavior unless the user explicitly reopens transition tuning.
+The Safari transition, loading text, hidden-state pulse, and final raster
+quality are user-approved and should be treated as complete for the Art Blocks
+submission scope. Future Safari work should only preserve or repair that
+behavior unless the user explicitly reopens transition tuning.
 
 The dynamic Safari generator loop is paused. That includes Safari `n`
 keypress hide transitions, post-hide rebuild timing, watchdog/debounce
 recovery, and new-hash launch behavior.
+
+### Completion Summary
+
+The final Safari implementation solved four requirements simultaneously:
+
+- reliable visible loading text before WebKit's synchronous SVG lock,
+- a consistent hidden-state dummy reveal with continuous pulse motion,
+- no hard-edged hidden-scale rectangle flash during handoff, and
+- no intermittent low-resolution final artwork raster.
+
+The key architectural decisions that made this stable were:
+
+- keep all visible motion on persistent body-level helper layers,
+- let `#safari-dummy` own the scale/blur/morph reveal,
+- keep `BG.elt` natural-size and opacity-only during Safari reveal,
+- prepaint `BG.elt` at normal size with near-zero opacity before reveal, and
+- clear any temporary inline reveal styles after the reveal completes.
 
 ---
 
@@ -81,13 +99,13 @@ Cold-load sequence:
 6. The artwork is first put into a normal-size near-transparent prepaint state
   (`opacity: 0.001`, no transform, no filter). This gives WebKit a chance to
   raster/paint the finished SVG at full size before any scale reveal starts.
-7. After two `requestAnimationFrame` ticks, `revealNowSafari()` snaps the
-  artwork to its hidden Safari reveal state while keeping it near-transparent,
-  removes the hidden pulse, flushes the hidden dummy/core/artwork state, waits
-  one more frame, then flips `#safari-dummy.revealed`, makes the artwork
-  opaque, transitions the artwork to revealed, and removes `.building` from the
-  overlay. The artwork scale uses a plain 2D `scale()`; do not force
-  `translateZ(0)` or `will-change` on `BG.elt` for this step.
+7. After two `requestAnimationFrame` ticks, `revealNowSafari()` keeps the
+  artwork at natural size and near-transparent opacity, removes the hidden
+  pulse, flushes the dummy/core/artwork state, waits one more frame, then
+  flips `#safari-dummy.revealed`, fades the artwork to opaque, and removes
+  `.building` from the overlay. The complex `BG.elt` artwork must not be
+  scaled, blurred, `translateZ(0)`-promoted, or `will-change`-promoted here;
+  the simple dummy layer carries the visible scale/blur/morph motion.
 8. After the reveal transition completes, Safari clears the temporary
   `BG.elt` transition, transform, filter, and `will-change` styles. This lets
   WebKit drop the low-resolution composited raster it used during the scale
@@ -150,7 +168,10 @@ The later Safari Rev 4 direction used a separate `#safari-dummy` plus
 Safari-only artwork transform/filter so the artwork could tuck behind the
 dummy. This improved the visual idea, but the reverse hide/rebuild path still
 had timing issues and protrusion/snap artifacts. For initial load only, the
-same reveal pieces are useful without the reverse dynamic path.
+same dummy reveal pieces are useful without the reverse dynamic path. The
+current Safari path no longer transforms or filters `BG.elt`; the artwork is
+normal-size and opacity-only to avoid intermittent low-resolution WebKit
+rasters.
 
 ### Zero Blur Needs A Real No-Filter Path
 
@@ -174,12 +195,12 @@ trigger Safari compositor/filter behavior. The implementation now toggles a
 - Do not leave `BG.elt` promoted with `transform`, `filter`, or `will-change`
   after the Safari reveal completes; WebKit can keep displaying the scaled
   transition raster, making the finished artwork look pixelated.
-- Do not force-promote `BG.elt` with `translateZ(0)` or `will-change` during
-  the Safari reveal. Keep compositor hints on the simple dummy layer instead;
-  the complex SVG should be allowed to repaint at its natural resolution.
-- Before the Safari scale reveal, let `BG.elt` prepaint at normal size with
-  near-zero opacity. Fully transparent `opacity: 0` may be optimized away and
-  fail to build a full-size backing raster.
+- Do not scale, blur, or force-promote `BG.elt` during the Safari reveal.
+  Keep compositor hints on the simple dummy layer instead; the complex SVG
+  should stay at natural size and fade in at natural resolution.
+- Before the Safari dummy scale reveal, let `BG.elt` prepaint at normal size
+  with near-zero opacity. Fully transparent `opacity: 0` may be optimized away
+  and fail to build a full-size backing raster.
 - If dynamic Safari hide/reveal returns later, investigate a true shared
   persistent Safari stage or clipping strategy so artwork cannot protrude
   behind the dummy before disappearing.
@@ -189,8 +210,6 @@ trigger Safari compositor/filter behavior. The implementation now toggles a
 ## 5. Current Tunables Worth Testing In Safari
 
 - `safariTransitionMs`: cold-load reveal duration.
-- `safariArtworkHiddenScale`: artwork scale during the hidden side of the
-  Safari reveal.
 - `safariOverlayFadeMs`: loading text fade duration.
 - `safariDummyPulseAmount`: absolute scale delta around `hiddenScale` for the
   hidden dummy core pulse; defaults to `0.05`.
