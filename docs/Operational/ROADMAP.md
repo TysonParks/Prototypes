@@ -354,11 +354,12 @@ specific runtime cost — bad for decade-long deployments.
 
 ---
 
-### Chrome Single-Phase Migration (Planned)
+### Chrome Single-Phase Migration (Variant Implemented)
 
-- **Intent:** Reimplement a single-phase reveal transition for Chrome to bring its behavior closer to the Safari single-phase pattern while preserving the existing Chrome reference behavior.
-- **Approach:** Keep both the existing 2-phase Chrome variant and the new single-phase variant in the codebase behind a feature flag or tunable so the team can validate the new path safely. Flip the default only after the single-phase variant is fully tested across sample hashes and real-device browsers.
-- **Priority:** Medium — planned after the current ArtBlocks freeze; documented here as a future migration.
+- **Status:** Implemented in `safariImageSwap.js` as a switchable Chrome variant.
+- **Current default:** `single-phase`, which transitions dummy scale, blur, opacity, bounds, and corner morph simultaneously while artwork scale and blur transition at the same time. Artwork opacity stays at 1 behind the dummy to avoid a gray crossfade midpoint. The hidden Chrome dummy now uses an inner-core pulse to echo the Safari hidden-state motion, with separate dummy/artwork hidden scales and a short configurable pulse hold before rebuild.
+- **Preserved reference:** The prior `two-phase` Chrome choreography remains available through `window.SafariCompatUX.setChromeTransitionVariant('two-phase')` for comparison, rollback, and tuning.
+- **Next validation:** Exercise several `n` key rebuilds across representative hashes in Chrome before deciding whether to remove the 2-phase path later.
 
 ### Optional Error/Delay Overlay (Product Stewardship)
 
@@ -367,4 +368,4 @@ specific runtime cost — bad for decade-long deployments.
 - **Action:** Prototype behind a simple `window` tunable or feature flag so the artifact does not affect the locked ArtBlocks behavior by default.
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-05-03 — Safari reveal implementation marked complete for current scope; see REVEAL-ANIMATION-STATUS.md for canonical final architecture.*
+*Last updated: 2026-05-05 — Chrome single-phase reveal variant added; see REVEAL-ANIMATION-STATUS.md for switch details.*
