@@ -100,6 +100,16 @@ Scoped to visual verification of adjacent wrappers and the Bug B opposite-facing
 collinear case. The full Unified Wrapper Funnel (ARCHITECTURE §11) is **out of scope**
 for this sprint — that is a post-audit, post-sprint task.
 
+**Current sprint decision (2026-05-05):** shelve remaining rare wrap bugs for
+the submission sprint unless a high-confidence, low-risk targeted fix appears.
+Known examples suggest a very low incidence rate, estimated around 0.1% and
+likely below reviewer discovery during normal ArtBlocks print/test runs. A
+deterministic post-build detection/retry system remains a possible safety net,
+but it is not worth introducing new generation-path complexity before the
+submission package is otherwise complete. Submission notes can acknowledge that
+rare visual defects may remain in a tiny fraction of outputs without describing
+the exact artifact pattern.
+
 **B3 — Shading:**
 R-in shade layer centering (§9.14.9) is the most concrete open item. Audit wave +
 ordinal mask mismatch briefly before committing time.
@@ -107,6 +117,17 @@ ordinal mask mismatch briefly before committing time.
 **B4 — Animation:**
 Lower priority for evaluation unless animation is a primary feature being demonstrated.
 Can be deferred to post-upload if needed.
+
+**Rotation feature plan (initial implementation):** Chrome-only keyboard-driven
+90-degree rotation. Safari/WebKit ignores rotation keys for now. Use right
+rotation via `r` / `ArrowRight` and left rotation via `l` / `ArrowLeft`.
+Rotation should operate on the finished SVG as a viewport transform, not by
+regenerating geometry. During the animated rotation, update SVG filter offsets
+each frame so the apparent light direction remains fixed in screen space
+(usually the default 90-degree downward light). When a rotation changes the
+artwork's fitted size, sequence the transform to stay cleanly inside the black
+viewport: shrink first then rotate when the target size is smaller; rotate then
+grow when the target size is larger.
 
 ---
 
