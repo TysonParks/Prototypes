@@ -6,6 +6,8 @@
 > token artworks load once from an immutable hash, so Safari work is now
 > scoped to the first page load only.
 
+**Release status:** Both Safari and Chrome reveal/hide flows are finalized and approved for inclusion in the ArtBlocks submission. Treat these behaviors as locked for the ArtBlocks release; reopen only with explicit approval.
+
 ---
 
 ## 0. Current Priority
@@ -14,11 +16,13 @@
 
 Chrome now has two reveal variants in `safariImageSwap.js`:
 
-- `single-phase` (current default): dummy scale, blur, opacity, bounds, and
-  corner morph all transition together while artwork scale and blur transition
-  at the same time. Artwork opacity stays at 1 behind the dummy to avoid a
-  gray crossfade midpoint. The dummy owns the shape morph; the artwork
-  stays rectangular/SVG-native and only transforms/blurs. While hidden,
+- `single-phase` (current default): dummy scale, opacity, bounds, and corner
+  morph all transition together while artwork scale transitions at the same
+  time. A shared `#chrome-reveal-blur-layer` wraps artwork + dummy and applies
+  one composite blur, avoiding stacked per-layer blur. Artwork opacity stays at
+  1 behind the dummy to avoid a gray crossfade midpoint. The dummy owns the
+  shape morph; the artwork stays rectangular/SVG-native and only transforms.
+  While hidden,
   `#reveal-dummy-core` runs a Safari-style scale pulse so the Chrome hidden
   state has the same living hold as Safari without disturbing the outer dummy
   scale. The core has explicit hidden and revealed radii so the visible fill
@@ -223,6 +227,8 @@ trigger Safari compositor/filter behavior. The implementation now toggles a
 ## 5. Current Variables Worth Testing In Safari
 
 - `safariTransitionMs`: cold-load reveal duration.
+- `safariBlurUserUnits`: Safari hidden-state dummy blur in frame user units;
+  independent from Chrome `blurUserUnits`.
 - `safariOverlayFadeMs`: loading text fade duration.
 - `safariDummyPulseAmount`: absolute scale delta around `hiddenScale` for the
   hidden dummy core pulse; defaults to `0.05`.
@@ -250,9 +256,9 @@ build so the hidden pulse can paint on initial page load as well as after `n`.
 
 ## 6. Chrome Variant Switch and Error Overlay
 
-- **Chrome single-phase migration (implemented as variant):** Chrome now defaults to a single-phase transition that more closely matches the Safari reveal: dummy scale, blur, opacity, bounds, and corner morph transition simultaneously, and artwork scale and blur transition at the same time while artwork opacity stays at 1. While hidden, the Chrome dummy uses `#reveal-dummy-core` for a Safari-style scale pulse; the pulse is removed before reveal so the outer dummy owns the morph cleanly. The artwork hidden scale is separate from the dummy hidden scale so it can be tuned smaller and avoid corner-radius flashes behind the dummy. The previous 2-phase Chrome reference remains in the codebase and can be restored for the current session with `window.SafariCompatUX.setChromeTransitionVariant('two-phase')`.
+- **Chrome single-phase migration (implemented as variant):** Chrome now defaults to a single-phase transition that more closely matches the Safari reveal: dummy scale, opacity, bounds, and corner morph transition simultaneously, artwork scale transitions at the same time, and shared blur is applied once on `#chrome-reveal-blur-layer`. Artwork opacity stays at 1. While hidden, the Chrome dummy uses `#reveal-dummy-core` for a Safari-style scale pulse; the pulse is removed before reveal so the outer dummy owns the morph cleanly. The artwork hidden scale is separate from the dummy hidden scale so it can be tuned smaller and avoid corner-radius flashes behind the dummy. The previous 2-phase Chrome reference remains in the codebase and can be restored for the current session with `window.SafariCompatUX.setChromeTransitionVariant('two-phase')`.
 
-- **Chrome dynamic generation:** Unlike Safari, Chrome still supports the full `n` key generation loop. The single-phase variant includes both reveal and hide directions: reveal morphs the dummy from pill to artwork while scaling/blurring the artwork behind it; hide morphs the dummy from artwork back to pill while scaling/blurring the artwork before `buildFromNewSeed()` runs. Artwork opacity stays at 1 in both directions.
+- **Chrome dynamic generation:** Unlike Safari, Chrome still supports the full `n` key generation loop. The single-phase variant includes both reveal and hide directions: reveal morphs the dummy from pill to artwork while scaling the artwork behind it and reducing the shared wrapper blur; hide morphs the dummy from artwork back to pill while scaling the artwork and increasing the shared wrapper blur before `buildFromNewSeed()` runs. Artwork opacity stays at 1 in both directions.
 
 - **Optional error/delay text overlay:** As a defensive UX improvement, consider adding a small text-overlay pop-up that launches when build/reveal time exceeds a threshold or when an unexpected error occurs. A prototype (DOM + CSS + simple timeout/watchdog) can be implemented in ~30–60 minutes and should be guarded behind a config flag so it does not change the locked ArtBlocks reveal behavior by default.
 
