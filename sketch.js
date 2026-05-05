@@ -27,6 +27,15 @@ let
   animationController,       // Animation Controller
   protoBatch                 // Batch Renderer
 
+const artworkRotationState = {
+  angle: 0,
+  scale: 1,
+  screenLightAngle: null,
+  animating: false,
+  controlsInstalled: false,
+  hooksInstalled: false,
+}
+
 
 // MARK: setup
 // FUNC: setup()
@@ -37,6 +46,8 @@ function setup() {
   functionTestPrint()
 
   // Initialise ProtoBatch and build from the startup hash
+  installArtworkRotationHooks()
+  installArtworkRotationControls()
   protoBatch = new ProtoBatch()
   protoBatch.buildFromHash(tokenData.hash)
   // protoBatch.batchAnimationExport()
@@ -895,10 +906,162 @@ function shadeAnimation() {
 function windowResized() {
   sizeFrame()
   BG.size(windowWidth, windowHeight)
+  syncArtworkRotationToViewport()
   if (typeof positionRegenBtn === 'function') positionRegenBtn()
 }
 
 // FUNC: globalShadowVector()
 function globalShadowVector() {
   return Shade.shadVect(globalControls.shadAngle, globalControls.shadMag)
+}
+
+// MARK: Artwork Rotation
+// Chrome-only interactive viewport rotation. Safari/WebKit ignores these keys.
+function installArtworkRotationHooks() {
+  if (artworkRotationState.hooksInstalled || typeof ProtoBatch === 'undefined') return
+  artworkRotationState.hooksInstalled = true
+  const originalBuildFromHash = ProtoBatch.prototype.buildFromHash
+  ProtoBatch.prototype.buildFromHash = function (hash) {
+    const result = originalBuildFromHash.call(this, hash)
+    scheduleArtworkRotationSync()
+    return result
+  }
+}
+
+function scheduleArtworkRotationSync() {
+  syncArtworkRotationToViewport()
+  requestAnimationFrame(syncArtworkRotationToViewport)
+  setTimeout(syncArtworkRotationToViewport, 0)
+  setTimeout(syncArtworkRotationToViewport, 900)
+}
+
+function installArtworkRotationControls() {
+  if (artworkRotationState.controlsInstalled) return
+  artworkRotationState.controlsInstalled = true
+  document.addEventListener('keydown', handleArtworkRotationKey)
+}
+
+function handleArtworkRotationKey(event) {
+  const tag = event.target?.tagName?.toLowerCase()
+  if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+  const key = event.key
+  const lowerKey = typeof key === 'string' ? key.toLowerCase() : key
+  const direction = (key === 'ArrowRight' || lowerKey === 'r') ? 1
+    : (key === 'ArrowLeft' || lowerKey === 'l') ? -1
+      : 0
+  if (!direction || isWebKitRotationClass()) return
+  event.preventDefault()
+  rotateArtworkBy(direction)
+}
+
+function isWebKitRotationClass() {
+  const ua = navigator.userAgent
+  const isIOS = /iPhone|iPad|iPod/i.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const isDesktopSafari = /Safari/i.test(ua)
+    && !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|Android/i.test(ua)
+  return isDesktopSafari || isIOS
+}
+
+async function rotateArtworkBy(direction) {
+  if (artworkRotationState.animating || !FRAME?.bleed?.elt) return
+  if (globalControls?.animated) stopAnimationLoop()
+  if (artworkRotationState.screenLightAngle === null) {
+    artworkRotationState.screenLightAngle = normalizeDegree(globalControls?.shadAngle ?? 90)
+  }
+
+  const startAngle = artworkRotationState.angle
+  const targetAngle = startAngle + direction * 90
+  const startScale = artworkRotationState.scale
+  const targetScale = artworkRotationScaleFor(targetAngle)
+  const shrinkFirst = targetScale < startScale
+
+  artworkRotationState.animating = true
+  try {
+    if (shrinkFirst) {
+      await animateArtworkRotationPhase(startAngle, startAngle, startScale, targetScale, 260)
+      await animateArtworkRotationPhase(startAngle, targetAngle, targetScale, targetScale, 520)
+    } else {
+      await animateArtworkRotationPhase(startAngle, targetAngle, startScale, startScale, 520)
+      await animateArtworkRotationPhase(targetAngle, targetAngle, startScale, targetScale, 260)
+    }
+    artworkRotationState.angle = targetAngle
+    artworkRotationState.scale = targetScale
+    applyArtworkRotationTransform(targetAngle, targetScale)
+    updateArtworkRotationLight(targetAngle)
+  } finally {
+    artworkRotationState.animating = false
+  }
+}
+
+function syncArtworkRotationToViewport() {
+  if (!FRAME?.bleed?.elt) return
+  const targetScale = artworkRotationScaleFor(artworkRotationState.angle)
+  artworkRotationState.scale = targetScale
+  applyArtworkRotationTransform(artworkRotationState.angle, targetScale)
+  if (artworkRotationState.screenLightAngle !== null) {
+    updateArtworkRotationLight(artworkRotationState.angle)
+  }
+}
+
+function animateArtworkRotationPhase(fromAngle, toAngle, fromScale, toScale, durationMs) {
+  return new Promise(resolve => {
+    const startMs = performance.now()
+    const step = now => {
+      const rawT = durationMs <= 0 ? 1 : Math.min(1, (now - startMs) / durationMs)
+      const t = easeInOutCubic(rawT)
+      const angle = lerp(fromAngle, toAngle, t)
+      const scale = lerp(fromScale, toScale, t)
+      applyArtworkRotationTransform(angle, scale)
+      updateArtworkRotationLight(angle)
+      if (rawT < 1) requestAnimationFrame(step)
+      else resolve()
+    }
+    requestAnimationFrame(step)
+  })
+}
+
+function applyArtworkRotationTransform(angle, scale) {
+  const elt = FRAME?.bleed?.elt
+  if (!elt) return
+  elt.style.transformOrigin = 'center center'
+  elt.style.transformBox = 'fill-box'
+  elt.style.willChange = artworkRotationState.animating ? 'transform' : 'auto'
+  elt.style.transform = `rotate(${angle}deg) scale(${scale})`
+}
+
+function updateArtworkRotationLight(visualAngle) {
+  if (!globalControls || !S?.offsetElts || typeof Shade === 'undefined') return
+  const screenAngle = artworkRotationState.screenLightAngle ?? normalizeDegree(globalControls.shadAngle ?? 90)
+  const compensatedAngle = normalizeDegree(screenAngle - visualAngle)
+  globalControls.shadAngle = compensatedAngle
+  const shadVect = Shade.shadVect(compensatedAngle)
+  S.offsetElts.forEach(({ elt, mag }) => {
+    elt.attribute('dx', shadVect.x * mag)
+    elt.attribute('dy', shadVect.y * mag)
+  })
+}
+
+function artworkRotationScaleFor(angle) {
+  const size = artworkRotationBaseSize()
+  if (!size) return artworkRotationState.scale || 1
+  const isSideways = normalizeDegree(angle) % 180 !== 0
+  if (!isSideways) return 1
+  const visualWidth = size.y
+  const visualHeight = size.x
+  const fitScale = Math.min(windowWidth / visualWidth, windowHeight / visualHeight)
+  return Number.isFinite(fitScale) && fitScale > 0 ? fitScale : 1
+}
+
+function artworkRotationBaseSize() {
+  const elt = FRAME?.bleed?.elt
+  if (!elt) return
+  const width = parseFloat(elt.getAttribute('width')) || frameSize?.x
+  const height = parseFloat(elt.getAttribute('height')) || frameSize?.y
+  if (!width || !height) return
+  return { x: width, y: height }
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 }
