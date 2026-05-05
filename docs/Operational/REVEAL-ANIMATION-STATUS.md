@@ -217,3 +217,10 @@ trigger Safari compositor/filter behavior. The implementation now toggles a
 
 Chrome still reads from `CHROME_REFERENCE_PRESET`; do not use Safari tunables
 as a shared timing surface.
+
+## 6. Future Chrome Migration and Error Overlay
+
+- **Chrome single-phase migration (planned):** The team intends to reimplement the Chrome reveal as a single-phase transition to more closely match the Safari approach. The migration should preserve both the current 2-phase Chrome variant and the new single-phase variant in the codebase (feature-flagged or behind a tunable) until the single-phase behavior is fully validated and approved.
+
+- **Optional error/delay text overlay:** As a defensive UX improvement, consider adding a small text-overlay pop-up that launches when build/reveal time exceeds a threshold or when an unexpected error occurs. A prototype (DOM + CSS + simple timeout/watchdog) can be implemented in ~30–60 minutes and should be guarded behind a config flag so it does not change the locked ArtBlocks reveal behavior by default.
+
