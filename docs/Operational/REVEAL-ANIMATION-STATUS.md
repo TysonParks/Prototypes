@@ -1,5 +1,5 @@
 # Reveal Animation Status Report
-*Last updated: 2026-05-03 (rev 7 - Safari transition complete)*
+*Last updated: 2026-05-05 (rev 8 - Chrome single-phase variant added)*
 
 > Handoff document for future work on `safariImageSwap.js`. The current
 > priority is no longer a fully dynamic Safari generator. For Art Blocks,
@@ -12,14 +12,27 @@
 
 ### Chrome
 
-Chrome is the reference execution and is already good enough for the
-submission target. Do not modify Chrome reveal/hide timings, phase
-structure, dummy behavior, keydown behavior, or artwork opacity behavior
-unless the user explicitly asks for Chrome work.
+Chrome now has two reveal variants in `safariImageSwap.js`:
 
-The recovery snapshot is `CHROME_REFERENCE_PRESET` in `safariImageSwap.js`.
-Safari work must stay behind the `isWebKitClass` boundary or in Safari-only
-helpers.
+- `single-phase` (current default): dummy scale, blur, opacity, bounds, and
+  corner morph all transition together while artwork scale and blur transition
+  at the same time. Artwork opacity stays at 1 behind the dummy to avoid a
+  gray crossfade midpoint. The dummy owns the shape morph; the artwork
+  stays rectangular/SVG-native and only transforms/blurs. While hidden,
+  `#reveal-dummy-core` runs a Safari-style scale pulse so the Chrome hidden
+  state has the same living hold as Safari without disturbing the outer dummy
+  scale. The core has explicit hidden and revealed radii so the visible fill
+  follows the dummy's pill-to-artwork morph. Chrome keeps separate hidden
+  scales for the dummy and artwork so the artwork can tuck behind the dummy and
+  avoid corner-radius flashes.
+- `two-phase`: the previous Chrome reference choreography, preserved behind
+  the switch for comparison and rollback.
+
+The recovery snapshot is `CHROME_REFERENCE_PRESET` in `safariImageSwap.js`,
+and the active variant is controlled by
+`window.SafariCompatUX.setChromeTransitionVariant('single-phase')` or
+`window.SafariCompatUX.setChromeTransitionVariant('two-phase')`. Safari work
+must stay behind the `isWebKitClass` boundary or in Safari-only helpers.
 
 ### Safari
 
@@ -207,7 +220,7 @@ trigger Safari compositor/filter behavior. The implementation now toggles a
 
 ---
 
-## 5. Current Tunables Worth Testing In Safari
+## 5. Current Variables Worth Testing In Safari
 
 - `safariTransitionMs`: cold-load reveal duration.
 - `safariOverlayFadeMs`: loading text fade duration.
@@ -215,12 +228,31 @@ trigger Safari compositor/filter behavior. The implementation now toggles a
   hidden dummy core pulse; defaults to `0.05`.
 - `safariDummyPulseMs`: hidden dummy core pulse duration; defaults to `2000` ms.
 
-Chrome still reads from `CHROME_REFERENCE_PRESET`; do not use Safari tunables
+Chrome still reads from `CHROME_REFERENCE_PRESET`; do not use Safari variables
 as a shared timing surface.
 
-## 6. Future Chrome Migration and Error Overlay
+Chrome single-phase variables live near the other Chrome values at the top of
+`safariImageSwap.js`:
 
-- **Chrome single-phase migration (planned):** The team intends to reimplement the Chrome reveal as a single-phase transition to more closely match the Safari approach. The migration should preserve both the current 2-phase Chrome variant and the new single-phase variant in the codebase (feature-flagged or behind a tunable) until the single-phase behavior is fully validated and approved.
+- `hiddenScale`: current dummy hidden scale, sourced from the preserved Chrome
+  preset and used by both Chrome variants.
+- `chromeArtworkHiddenScale`: artwork hidden scale; defaults smaller than the
+  dummy so freshly loaded artwork does not peek around the dummy corners.
+- `chromeDummyPulseAmount`: absolute scale delta around the dummy hidden scale
+  used by `#reveal-dummy-core` while Chrome is hidden.
+- `chromeDummyPulseMs`: duration of one hidden pulse loop; defaults to `4000` ms.
+- `chromeHiddenPulseHoldMs`: visible hold after hide completes and before the
+  next Chrome rebuild starts; this gives the pulse a committed frame before
+  synchronous generation work begins.
+
+Chrome single-phase also yields two animation frames before each synchronous
+build so the hidden pulse can paint on initial page load as well as after `n`.
+
+## 6. Chrome Variant Switch and Error Overlay
+
+- **Chrome single-phase migration (implemented as variant):** Chrome now defaults to a single-phase transition that more closely matches the Safari reveal: dummy scale, blur, opacity, bounds, and corner morph transition simultaneously, and artwork scale and blur transition at the same time while artwork opacity stays at 1. While hidden, the Chrome dummy uses `#reveal-dummy-core` for a Safari-style scale pulse; the pulse is removed before reveal so the outer dummy owns the morph cleanly. The artwork hidden scale is separate from the dummy hidden scale so it can be tuned smaller and avoid corner-radius flashes behind the dummy. The previous 2-phase Chrome reference remains in the codebase and can be restored for the current session with `window.SafariCompatUX.setChromeTransitionVariant('two-phase')`.
+
+- **Chrome dynamic generation:** Unlike Safari, Chrome still supports the full `n` key generation loop. The single-phase variant includes both reveal and hide directions: reveal morphs the dummy from pill to artwork while scaling/blurring the artwork behind it; hide morphs the dummy from artwork back to pill while scaling/blurring the artwork before `buildFromNewSeed()` runs. Artwork opacity stays at 1 in both directions.
 
 - **Optional error/delay text overlay:** As a defensive UX improvement, consider adding a small text-overlay pop-up that launches when build/reveal time exceeds a threshold or when an unexpected error occurs. A prototype (DOM + CSS + simple timeout/watchdog) can be implemented in ~30–60 minutes and should be guarded behind a config flag so it does not change the locked ArtBlocks reveal behavior by default.
 
