@@ -17,7 +17,8 @@ Session snapshot (short, editable)
 
 Current Focus
 - Safari reveal/transition implementation is complete for the Art Blocks
-	submission scope.
+- Safari and Chrome reveal/transition implementations are complete and
+	approved for the Art Blocks submission scope.
 - The authoritative handoff is now `docs/Operational/REVEAL-ANIMATION-STATUS.md`.
 - Next sessions should move on to non-Safari-transition work unless the user
 	explicitly reopens Safari reveal tuning.
