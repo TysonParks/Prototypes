@@ -16,9 +16,10 @@
 //                      Carries ALL animated properties: width/height,
 //                      per-corner border-radius, scale, blur. Default
 //                      hidden state is the 100×200uu pill.
-//   E1 Artwork (BG.elt) — Chrome reference path only animates opacity.
-//                         Safari also keeps BG.elt opacity-only so WebKit
-//                         never rasterizes the complex SVG at hidden scale.
+//   E1 Artwork (BG.elt) — Chrome two-phase reference path animates opacity.
+//                         Chrome single-phase also animates artwork scale/blur.
+//                         Safari keeps BG.elt opacity-only so WebKit never
+//                         rasterizes the complex SVG at hidden scale.
 //
 // Chrome reference choreography (per user spec table 2026-04-30 v4):
 //
@@ -56,6 +57,8 @@
 // Public API (window.SafariCompatUX):
 //   .isSafari            true if UA-detected WebKit-class
 //   .isWebKitClass       alias of isSafari
+//   .chromeTransitionVariant current Chrome reveal variant
+//   .setChromeTransitionVariant('two-phase' | 'single-phase')
 //   .revealNow()         force-trigger reveal (debug)
 //   .hideNow()           force-trigger hide (debug; Chrome only)
 //   .resetForRebuild()   re-prep the dummy + artwork (called automatically)
@@ -98,14 +101,20 @@
   // object first and only then resume Safari experimentation.
   const CHROME_REFERENCE_PRESET = Object.freeze({
     blurUserUnits: 30,
-    revealDurationMs: 2000,
-    hideDurationMs: 2000,
+    revealDurationMs: 3000,
+    hideDurationMs: 3000,
     phaseOffset: 0.5,
     hiddenScale: 0.5,
   })
 
-  //SECT: Tunable constants (RA6 will iterate on these)
-  // All initial values per user spec 2026-04-29 / 2026-04-30.
+  const CHROME_TRANSITION_VARIANTS = Object.freeze({
+    TWO_PHASE: 'two-phase',
+    SINGLE_PHASE: 'single-phase',
+  })
+  const DEFAULT_CHROME_TRANSITION_VARIANT = CHROME_TRANSITION_VARIANTS.SINGLE_PHASE
+  let chromeTransitionVariant = DEFAULT_CHROME_TRANSITION_VARIANT
+
+  //SECT: Chrome shared variables
   const blurUserUnits = CHROME_REFERENCE_PRESET.blurUserUnits // dummy hidden-state blur in uu
   const revealDurationMs = CHROME_REFERENCE_PRESET.revealDurationMs // forward TOTAL duration
   const hideDurationMs = CHROME_REFERENCE_PRESET.hideDurationMs // reverse TOTAL duration
@@ -120,13 +129,29 @@
   //   hide:   (1−phaseOffset)*hideDurationMs
   // 0.5 → even split. Higher → more blur/scale time, less opacity time.
   const phaseOffset = CHROME_REFERENCE_PRESET.phaseOffset
+
+  //SECT: Chrome two-phase reference variables
   const hiddenScale = CHROME_REFERENCE_PRESET.hiddenScale // dummy hidden-state scale (focus-pull / DOF feel)
 
-  //SECT: Safari-only tunables
+  //SECT: Chrome single-phase variant variables
+  let chromeArtworkHiddenScale = 0.4  // smaller than dummy so artwork stays behind rounded dummy corners
+  let chromeDummyPulseAmount = 0.05    // absolute scale +/- around hiddenScale while Chrome is hidden
+  let chromeDummyPulseMs = 4000        // full hidden dummy pulse loop duration (ms)
+  let chromeHiddenPulseHoldMs = 50     // visible pulse hold before Chrome starts a new build
+  // CSS timing functions for Chrome dummy opacity only.
+  // Examples: 'ease-out', 'ease-in', 'cubic-bezier(0.33, 1, 0.68, 1)'.
+  let chromeDummyOpacityRevealEasing = 'linear(0,.2,.4,.5,1)'
+  let chromeDummyOpacityHideEasing = 'linear(0,.5,.6,.8,1)'
+  // CSS timing functions for Chrome artwork scale only.
+  // Examples: 'ease-out', 'ease-in', 'cubic-bezier(0.33, 1, 0.68, 1)'.
+  let chromeArtworkScaleRevealEasing = 'linear(0,.4,.6,.8,1)'
+  let chromeArtworkScaleHideEasing = 'linear(0,.2,.4,.6,1)'
+
+  //SECT: Safari-only variables
   // Safari uses its own isolated choreography. Do not route these
   // through CHROME_REFERENCE_PRESET; Chrome is locked as reference.
   const safariTransitionMs = 1000       // single-phase hide/reveal duration (ms)
-  // Overlay tunables — initial values; all also exposed as CSS vars (--safari-*)
+  // Overlay values — initial values; all also exposed as CSS vars (--safari-*)
   // so they can be adjusted live in DevTools without reload.
   const safariBlurPx = 20               // legacy/API var; Rev 4 blur is --reveal-blur
   const safariDimBrightness = 0.5       // legacy/API var; no backdrop dim layer in Rev 4
@@ -176,11 +201,10 @@
   let _uuToPxArt = 1                             // uu→px scale for current artwork (updated in updateLayoutVars)
 
   //FUNC: ensureStyles() : void
-  // Inject CSS once. The dummy carries ALL animated properties:
+  // Inject CSS once. The dummy carries ALL visible dummy properties:
   // width/height (uu → px via JS-set CSS vars), per-corner
-  // border-radius, transform (scale), filter (blur). Artwork only
-  // animates opacity (driven inline so we can set per-direction
-  // delays without class churn).
+  // border-radius, transform (scale), filter (blur). Chrome single-phase
+  // artwork state is driven inline so it can scale/blur/fade with the dummy.
   //
   // Sequence is achieved with transition-delay alone:
   //   --dummy-delay = 0ms (reveal: dummy morphs first) or halfDur
@@ -216,9 +240,9 @@
         --dummy-pill-top:    0px;
         --dummy-pill-width:  100px;
         --dummy-pill-height: 200px;
-        /* Hidden-state radius — large value so corners fully round
-           into a pill regardless of width/height. */
-        --dummy-pill-radius: 9999px;
+          /* Hidden-state radius. JS sets this to half the pill width so
+            border-radius interpolation stays visible throughout morphs. */
+          --dummy-pill-radius: 50px;
 
         /* MEASURED ARTWORK bounds — pixel-perfect overlay of the
            rendered FRAME.backGroup.shapeGroups[0] outer-mask path. JS
@@ -239,7 +263,7 @@
           --dummy-safari-hidden-scale-x: 1;
           --dummy-safari-hidden-scale-y: 1;
 
-        /* Safari overlay tunables — initial values set from JS constants above.
+        /* Safari overlay values — initial values set from JS constants above.
            All adjustable live in DevTools (change on :root) without reload. */
         --safari-blur-px: ${safariBlurPx}px;
         --safari-dim-brightness: ${safariDimBrightness};
@@ -250,6 +274,11 @@
         --safari-dummy-pulse-ms: ${safariDummyPulseMs}ms;
         --safari-dummy-pulse-scale-min: ${(hiddenScale - safariDummyPulseAmount) / hiddenScale};
         --safari-dummy-pulse-scale-max: ${(hiddenScale + safariDummyPulseAmount) / hiddenScale};
+        --chrome-dummy-pulse-ms: ${chromeDummyPulseMs}ms;
+        --chrome-dummy-pulse-scale-min: ${(hiddenScale - chromeDummyPulseAmount) / hiddenScale};
+        --chrome-dummy-pulse-scale-max: ${(hiddenScale + chromeDummyPulseAmount) / hiddenScale};
+        --chrome-pulse-handoff-ms: ${revealDurationMs}ms;
+        --chrome-dummy-opacity-easing: linear;
       }
 
       /* === DUMMY ===
@@ -268,7 +297,7 @@
         top:    var(--dummy-pill-top);
         width:  var(--dummy-pill-width);
         height: var(--dummy-pill-height);
-        background: ${dummyColor};
+        background: transparent;
         border-radius: var(--dummy-pill-radius);
         opacity: 1;
         transform-origin: center center;
@@ -276,7 +305,7 @@
         filter: blur(var(--reveal-blur));
         -webkit-filter: blur(var(--reveal-blur));
         transition:
-          opacity        var(--phase-opacity-duration) linear var(--phase-opacity-delay),
+          opacity        var(--phase-opacity-duration) var(--chrome-dummy-opacity-easing) var(--phase-opacity-delay),
           transform      var(--phase-shape-duration)   linear var(--phase-shape-delay),
           filter         var(--phase-shape-duration)   linear var(--phase-shape-delay),
           -webkit-filter var(--phase-shape-duration)   linear var(--phase-shape-delay),
@@ -288,6 +317,22 @@
         will-change: transform, border-radius, opacity, filter, left, top, width, height;
         z-index: 10;
         pointer-events: none;
+      }
+      #reveal-dummy-core {
+        position: absolute;
+        inset: 0;
+        background: ${dummyColor};
+        border-radius: var(--dummy-pill-radius);
+        transform-origin: center center;
+        transform: translateZ(0) scale(1);
+        transition:
+          transform var(--chrome-pulse-handoff-ms) linear,
+          border-radius var(--phase-shape-duration) linear var(--phase-shape-delay);
+        will-change: transform;
+        pointer-events: none;
+      }
+      #reveal-dummy.chrome-hidden-pulse:not(.revealed) #reveal-dummy-core {
+        animation: chrome-dummy-scale-pulse var(--chrome-dummy-pulse-ms) linear infinite;
       }
       #reveal-dummy.revealed {
         left:   var(--dummy-art-left);
@@ -301,6 +346,19 @@
         opacity: 0;
         filter: blur(0);
         -webkit-filter: blur(0);
+      }
+      #reveal-dummy.revealed #reveal-dummy-core {
+        animation: none;
+        border-radius:
+          var(--dummy-art-radius-tl) var(--dummy-art-radius-tr)
+          var(--dummy-art-radius-br) var(--dummy-art-radius-bl);
+        transform: translateZ(0) scale(1);
+      }
+      @keyframes chrome-dummy-scale-pulse {
+        0%   { transform: translateZ(0) scale(1); }
+        25%  { transform: translateZ(0) scale(var(--chrome-dummy-pulse-scale-max)); }
+        75%  { transform: translateZ(0) scale(var(--chrome-dummy-pulse-scale-min)); }
+        100% { transform: translateZ(0) scale(1); }
       }
 
       /* === SAFARI DUMMY (WebKit-only, independent of Chrome) ===
@@ -630,6 +688,7 @@
     root.setProperty('--dummy-pill-top', `${pillTop}px`)
     root.setProperty('--dummy-pill-width', `${pillW}px`)
     root.setProperty('--dummy-pill-height', `${pillH}px`)
+    root.setProperty('--dummy-pill-radius', `${pillW / 2}px`)
 
     root.setProperty('--dummy-art-left', `${artLeft}px`)
     root.setProperty('--dummy-art-top', `${artTop}px`)
@@ -668,6 +727,32 @@
       `${loadingTextShadowBlurUserUnits * uuToPxPill}px`)
   }
 
+  function setChromeTransitionVariant(value) {
+    const next = String(value || '').toLowerCase()
+    const allowed = Object.values(CHROME_TRANSITION_VARIANTS)
+    if (!allowed.includes(next)) {
+      console.warn('[RevealAnim] unknown Chrome transition variant:', value,
+        'expected one of:', allowed.join(', '))
+      return chromeTransitionVariant
+    }
+    chromeTransitionVariant = next
+    if (document && document.documentElement) {
+      document.documentElement.setAttribute('data-chrome-reveal-variant', next)
+    }
+    if (next === CHROME_TRANSITION_VARIANTS.SINGLE_PHASE) {
+      updateChromeDummyPulseVars()
+      if (_dummy && !_dummy.classList.contains('revealed')) startChromeHiddenPulse()
+    } else {
+      stopChromeHiddenPulse()
+    }
+    console.log('[RevealAnim] Chrome transition variant =', next)
+    return chromeTransitionVariant
+  }
+
+  function isChromeSinglePhase() {
+    return !isWebKitClass && chromeTransitionVariant === CHROME_TRANSITION_VARIANTS.SINGLE_PHASE
+  }
+
   //FUNC: setDirectionTiming(totalMs, isReveal) : void
   // Set per-phase duration + delay vars per CORRECTED spec table
   // 2026-04-30 v3 + phaseOffset:
@@ -675,12 +760,23 @@
   //   opacityDur = (1−phaseOffset) * totalMs   (dummy opacity)
   //   REVEAL: shape phase first (delay 0),       opacity phase after (delay shapeDur)
   //   HIDE:   opacity phase first (delay 0),     shape phase after   (delay opacityDur)
-  // Artwork opacity is an instantaneous flip scheduled by JS at the
-  // phase boundary — NOT animated through CSS transitions.
+  // Chrome two-phase artwork opacity is an instantaneous flip scheduled by
+  // JS at the phase boundary — NOT animated through CSS transitions.
   function setDirectionTiming(totalMs, isReveal) {
+    const root = document.documentElement.style
+    root.setProperty('--chrome-dummy-opacity-easing',
+      isReveal ? chromeDummyOpacityRevealEasing : chromeDummyOpacityHideEasing)
+
+    if (isChromeSinglePhase()) {
+      root.setProperty('--phase-shape-duration', `${totalMs}ms`)
+      root.setProperty('--phase-opacity-duration', `${totalMs}ms`)
+      root.setProperty('--phase-shape-delay', `0ms`)
+      root.setProperty('--phase-opacity-delay', `0ms`)
+      return
+    }
+
     const shapeDur = phaseOffset * totalMs
     const opacityDur = (1 - phaseOffset) * totalMs
-    const root = document.documentElement.style
     root.setProperty('--phase-shape-duration', `${shapeDur}ms`)
     root.setProperty('--phase-opacity-duration', `${opacityDur}ms`)
     if (isReveal) {
@@ -690,6 +786,91 @@
       root.setProperty('--phase-opacity-delay', `0ms`)
       root.setProperty('--phase-shape-delay', `${opacityDur}ms`)
     }
+  }
+
+  function getChromeArtworkHiddenFilter() {
+    return 'blur(var(--reveal-blur))'
+  }
+
+  function getChromeArtworkTransition(totalMs, revealed) {
+    const scaleEasing = revealed
+      ? chromeArtworkScaleRevealEasing
+      : chromeArtworkScaleHideEasing
+    return `transform ${totalMs}ms ${scaleEasing}, filter ${totalMs}ms linear, -webkit-filter ${totalMs}ms linear`
+  }
+
+  function setChromeArtworkState(revealed, totalMs, withTransition) {
+    if (!_frameElt) return
+    const s = _frameElt.style
+    s.transformOrigin = 'center center'
+    s.willChange = 'transform, filter'
+    s.transition = withTransition
+      ? getChromeArtworkTransition(totalMs, revealed)
+      : 'none'
+    s.webkitTransition = s.transition
+    s.opacity = '1'
+    if (revealed) {
+      s.transform = 'translateZ(0) scale(1)'
+      s.filter = 'blur(0)'
+      s.webkitFilter = 'blur(0)'
+    } else {
+      s.transform = `translateZ(0) scale(${chromeArtworkHiddenScale})`
+      s.filter = getChromeArtworkHiddenFilter()
+      s.webkitFilter = getChromeArtworkHiddenFilter()
+    }
+  }
+
+  function updateChromeDummyPulseVars() {
+    const base = Number(hiddenScale) > 0 ? Number(hiddenScale) : 1
+    const amount = Math.max(0, Math.min(chromeDummyPulseAmount, base - 0.01))
+    const root = document.documentElement.style
+    root.setProperty('--chrome-dummy-pulse-ms', `${chromeDummyPulseMs}ms`)
+    root.setProperty('--chrome-dummy-pulse-scale-min', `${(base - amount) / base}`)
+    root.setProperty('--chrome-dummy-pulse-scale-max', `${(base + amount) / base}`)
+    root.setProperty('--chrome-pulse-handoff-ms', `${revealDurationMs}ms`)
+  }
+
+  function startChromeHiddenPulse() {
+    if (isWebKitClass || !isChromeSinglePhase()) return
+    updateChromeDummyPulseVars()
+    if (_dummy) {
+      const core = _dummy.querySelector('#reveal-dummy-core')
+      if (core) {
+        core.style.transition = ''
+        core.style.transform = 'translateZ(0) scale(1)'
+        core.style.animation = ''
+      }
+      _dummy.classList.add('chrome-hidden-pulse')
+    }
+  }
+
+  function stopChromeHiddenPulse() {
+    if (_dummy) {
+      _dummy.classList.remove('chrome-hidden-pulse')
+      const core = _dummy.querySelector('#reveal-dummy-core')
+      if (core) {
+        core.style.animation = 'none'
+        void core.offsetWidth
+        core.style.animation = ''
+      }
+    }
+  }
+
+  function handoffChromePulseToReveal() {
+    if (!_dummy) return
+    const core = _dummy.querySelector('#reveal-dummy-core')
+    if (!core) return
+    const currentTransform = getComputedStyle(core).transform
+    core.style.transition = 'none'
+    core.style.transform = currentTransform && currentTransform !== 'none'
+      ? currentTransform
+      : 'translateZ(0) scale(1)'
+    _dummy.classList.remove('chrome-hidden-pulse')
+    core.style.animation = 'none'
+    void core.offsetWidth
+    core.style.animation = ''
+    core.style.transition = `transform ${revealDurationMs}ms linear, border-radius var(--phase-shape-duration) linear var(--phase-shape-delay)`
+    core.style.transform = 'translateZ(0) scale(1)'
   }
 
   //FUNC: getCurrentFrameMetrics() : { width, height, cornerRadii }
@@ -712,14 +893,26 @@
   //
   function ensureDummy() {
     if (isWebKitClass) return  // Safari path remains isolated for now
-    if (_dummy && _dummy.parentNode) return
+    if (_dummy && _dummy.parentNode) {
+      ensureDummyCore()
+      return
+    }
     if (!document.body) return
     ensureStyles()
     if (!_dummy) {
       _dummy = document.createElement('div')
       _dummy.id = 'reveal-dummy'
     }
+    ensureDummyCore()
     document.body.appendChild(_dummy)
+  }
+
+  function ensureDummyCore() {
+    if (!_dummy) return
+    if (_dummy.querySelector('#reveal-dummy-core')) return
+    const core = document.createElement('div')
+    core.id = 'reveal-dummy-core'
+    _dummy.appendChild(core)
   }
 
   //FUNC: ensureSafariDummy() : void
@@ -761,20 +954,6 @@
     root.setProperty('--safari-dummy-pulse-ms', `${safariDummyPulseMs}ms`)
     root.setProperty('--safari-dummy-pulse-scale-min', `${(base - amount) / base}`)
     root.setProperty('--safari-dummy-pulse-scale-max', `${(base + amount) / base}`)
-  }
-
-  function setSafariDummyPulseAmount(value) {
-    const next = Number(value)
-    if (!Number.isFinite(next) || next < 0) return
-    safariDummyPulseAmount = next
-    updateSafariDummyPulseVars()
-  }
-
-  function setSafariDummyPulseMs(value) {
-    const next = Number(value)
-    if (!Number.isFinite(next) || next <= 0) return
-    safariDummyPulseMs = next
-    updateSafariDummyPulseVars()
   }
 
   function setSafariArtworkState(revealed, withTransition) {
@@ -837,21 +1016,28 @@
   }
 
   //FUNC: prepArtwork() : void
-  // Snap BG.elt to opacity 0 with NO transition, then arm an opacity
-  // transition for the upcoming revealNow flip. ARTWORK ONLY ANIMATES
-  // OPACITY — no scale, no blur (those live on the dummy). Inline-
-  // style approach (vs class) sidesteps the CSS-spec edge case where
-  // a freshly-applied class providing both the transition rule AND
-  // the transitioning property has the transition suppressed.
+  // Snap BG.elt to the Chrome hidden state with no transition before
+  // revealNow() flips it visible. In Chrome single-phase, artwork joins
+  // the dummy's scale/blur reveal but stays opacity 1 behind the dummy.
+  // The preserved two-phase path
+  // keeps the old opacity-only artwork behavior.
   //
   function prepArtwork() {
     if (typeof BG === 'undefined' || !BG || !BG.elt) return
     _frameElt = BG.elt
     if (isWebKitClass) return
     const s = _frameElt.style
+    if (isChromeSinglePhase()) {
+      setChromeArtworkState(false, revealDurationMs, false)
+      void _frameElt.offsetWidth
+      return
+    }
     s.transition = 'none'
     s.webkitTransition = 'none'
     s.willChange = 'opacity'
+    s.transform = 'none'
+    s.filter = 'none'
+    s.webkitFilter = 'none'
     s.opacity = '0'
     void _frameElt.offsetWidth
   }
@@ -940,13 +1126,11 @@
   }
 
   //FUNC: revealNow() : void
-  // Forward direction (2-stage):
-  //   stage 1 (0→halfDur):     dummy morphs pill→newArtShape, scale
-  //                            0.5→1, blur blurUU→0
-  //   stage 2 (halfDur→full):  artwork opacity 0→1
-  // Sequence enforced by transition-delay alone (--dummy-delay = 0,
-  // artwork inline transition delay = halfDur). Cancels any pending
-  // loading text.
+  // Forward direction. Chrome has two switchable variants:
+  //   single-phase: dummy morph/scale/blur/opacity and artwork scale/blur
+  //                 transition together; artwork opacity stays 1.
+  //   two-phase:    preserved reference path using CSS transition-delay
+  //                 plus the original artwork opacity flip.
   //
   // Reads the *new* frame metrics from BGRID and writes them into
   // CSS vars before flipping the .revealed class — so the morph
@@ -955,7 +1139,7 @@
     if (isWebKitClass) return revealNowSafari()
     disarmLoadingText()
     _currentMetrics = getCurrentFrameMetrics()
-    updateLayoutVars(_currentMetrics)
+    if (!isChromeSinglePhase()) updateLayoutVars(_currentMetrics)
     setDirectionTiming(revealDurationMs, true)
     // Force a style recalc on the dummy BEFORE flipping .revealed so
     // Safari has the up-to-date --phase-* transition durations cached
@@ -963,9 +1147,35 @@
     // the class flip with stale (or zero) transition durations and
     // snaps directly to the .revealed end-state.
     if (_dummy) {
+      handoffChromePulseToReveal()
       void _dummy.offsetWidth
       void getComputedStyle(_dummy).transition
+      const core = _dummy.querySelector('#reveal-dummy-core')
+      if (core) {
+        void core.offsetWidth
+        void getComputedStyle(core).transform
+      }
     }
+
+    if (isChromeSinglePhase()) {
+      if (_frameElt) {
+        const s = _frameElt.style
+        s.willChange = 'transform, filter'
+        s.transition = getChromeArtworkTransition(revealDurationMs, true)
+        s.webkitTransition = s.transition
+        void _frameElt.offsetWidth
+        void getComputedStyle(_frameElt).transform
+        void getComputedStyle(_frameElt).filter
+      }
+      if (_dummy) _dummy.classList.add('revealed')
+      setChromeArtworkState(true, revealDurationMs, true)
+      const myToken = _buildToken
+      setTimeout(() => {
+        if (myToken === _buildToken) _rebuildInFlight = false
+      }, revealDurationMs)
+      return
+    }
+
     if (_dummy) _dummy.classList.add('revealed')
     if (_dummy) {
       const cs = getComputedStyle(document.documentElement)
@@ -994,10 +1204,9 @@
   }
 
   //FUNC: hideNow() : void
-  // Reverse direction (2-stage):
-  //   stage 1 (0→halfDur):     artwork opacity 1→0
-  //   stage 2 (halfDur→full):  dummy morphs currentArtShape→pill,
-  //                            scale 1→0.5, blur 0→blurUU
+  // Reverse direction. The single-phase Chrome variant keeps artwork opacity
+  // at 1 while the dummy fades/morphs back to the hidden pill; the two-phase
+  // variant preserves the previous staged hide choreography.
   // Chrome-only dynamic generator path. Safari ignores 'n' for the
   // ArtBlocks submission build and never enters this reverse phase.
   //
@@ -1006,6 +1215,7 @@
   // was just displayed (not the next one).
   function hideNow() {
     if (isWebKitClass) return
+    if (typeof BG !== 'undefined' && BG && BG.elt) _frameElt = BG.elt
     _currentMetrics = getCurrentFrameMetrics()
     updateLayoutVars(_currentMetrics)
     setDirectionTiming(hideDurationMs, false)
@@ -1013,8 +1223,27 @@
       void _dummy.offsetWidth
       void getComputedStyle(_dummy).transition
     }
-    if (_dummy) _dummy.classList.remove('revealed')
     const myToken = _buildToken
+
+    if (isChromeSinglePhase()) {
+      if (_frameElt) {
+        const s = _frameElt.style
+        s.willChange = 'transform, filter'
+        s.transition = getChromeArtworkTransition(hideDurationMs, false)
+        s.webkitTransition = s.transition
+        void _frameElt.offsetWidth
+        void getComputedStyle(_frameElt).transform
+        void getComputedStyle(_frameElt).filter
+      }
+      if (_dummy) _dummy.classList.remove('revealed')
+      setChromeArtworkState(false, hideDurationMs, true)
+      setTimeout(() => {
+        if (myToken === _buildToken) startChromeHiddenPulse()
+      }, hideDurationMs)
+      return
+    }
+
+    if (_dummy) _dummy.classList.remove('revealed')
     const flipAt = (1 - phaseOffset) * hideDurationMs
     setTimeout(() => {
       if (myToken !== _buildToken) return
@@ -1047,7 +1276,10 @@
       ensureDummy()
       // Chrome only: reset dummy to pill geometry before build.
       // Safari keeps its own path isolated for now.
-      if (!isWebKitClass) updateLayoutVars(defaultFrameMetrics)
+      if (!isWebKitClass) {
+        updateLayoutVars(defaultFrameMetrics)
+        startChromeHiddenPulse()
+      }
 
       const runBuild = () => {
         const result = origBuild.apply(this, arguments)
@@ -1058,13 +1290,15 @@
           globalControls.animated = false
         }
 
+        // Re-sync layout vars from the freshly-built BackGrid so the
+        // dummy's revealed-state geometry matches the new artwork. This must
+        // happen before Chrome single-phase hides BG.elt with transform scale,
+        // otherwise DOM rect measurements read the deliberately scaled state.
+        updateLayoutVars(getCurrentFrameMetrics())
         // Prep artwork synchronously so the live SVG never reaches the
         // screen sharp/visible on Chrome. Safari prepares its artwork
         // inside revealNowSafari() for the cold-load reveal.
         prepArtwork()
-        // Re-sync layout vars from the freshly-built BackGrid so the
-        // dummy's revealed-state geometry matches the new artwork.
-        updateLayoutVars(getCurrentFrameMetrics())
 
         if (isWebKitClass) {
           if (_safariDummy) _safariDummy.classList.remove('revealed')
@@ -1097,6 +1331,16 @@
         startSafariLoadingDelay()
         // Let Safari paint the hidden dummy and visible overlay before
         // origBuild locks the main thread with SVG rendering.
+        const scheduledToken = _buildToken
+        const startBuild = () => {
+          if (scheduledToken !== _buildToken) return
+          runBuild()
+        }
+        requestAnimationFrame(() => requestAnimationFrame(startBuild))
+        return undefined
+      }
+
+      if (isChromeSinglePhase()) {
         const scheduledToken = _buildToken
         const startBuild = () => {
           if (scheduledToken !== _buildToken) return
@@ -1156,7 +1400,7 @@
               if (typeof protoBatch !== 'undefined' && protoBatch) {
                 protoBatch.buildFromNewSeed()
               }
-            }, hideDurationMs)
+            }, hideDurationMs + (isChromeSinglePhase() ? chromeHiddenPulseHoldMs : 0))
           }
         }
       }, true)
@@ -1169,7 +1413,9 @@
   function init() {
     ensureStyles()
     ensureDummy()
+    if (!isWebKitClass) setChromeTransitionVariant(chromeTransitionVariant)
     updateLayoutVars(defaultFrameMetrics)
+    if (!isWebKitClass) startChromeHiddenPulse()
     if (isWebKitClass) {
       ensureSafariDummy()
       ensureSafariOverlay()
@@ -1196,28 +1442,11 @@
     isSafari,
     isWebKitClass,
     chromeReferencePreset: CHROME_REFERENCE_PRESET,
+    chromeTransitionVariants: CHROME_TRANSITION_VARIANTS,
+    get chromeTransitionVariant() { return chromeTransitionVariant },
+    setChromeTransitionVariant,
     revealNow,
     hideNow,
     resetForRebuild,
-    // Expose tunables for live RA6 iteration from the console.
-    tunables: {
-      get revealDurationMs() { return revealDurationMs },
-      get hideDurationMs() { return hideDurationMs },
-      get phaseOffset() { return phaseOffset },
-      get hiddenScale() { return hiddenScale },
-      get safariTransitionMs() { return safariTransitionMs },
-      get safariDummyPulseAmount() { return safariDummyPulseAmount },
-      set safariDummyPulseAmount(value) { setSafariDummyPulseAmount(value) },
-      get safariDummyPulseMs() { return safariDummyPulseMs },
-      set safariDummyPulseMs(value) { setSafariDummyPulseMs(value) },
-      get safariOverlayFadeMs() { return safariOverlayFadeMs },
-      get safariBlurPx() { return safariBlurPx },
-      get safariDimBrightness() { return safariDimBrightness },
-      get safariDimFadeMs() { return safariDimFadeMs },
-      get safariBlurRevealMs() { return safariBlurRevealMs },
-      get loadingTextSizeUserUnits() { return loadingTextSizeUserUnits },
-      get loadingTextShadowOffsetUserUnits() { return loadingTextShadowOffsetUserUnits },
-      get loadingTextShadowBlurUserUnits() { return loadingTextShadowBlurUserUnits },
-    },
   }
 })()
