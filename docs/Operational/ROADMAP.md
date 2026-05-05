@@ -357,9 +357,11 @@ specific runtime cost — bad for decade-long deployments.
 ### Chrome Single-Phase Migration (Variant Implemented)
 
 - **Status:** Implemented in `safariImageSwap.js` as a switchable Chrome variant.
-- **Current default:** `single-phase`, which transitions dummy scale, blur, opacity, bounds, and corner morph simultaneously while artwork scale and blur transition at the same time. Artwork opacity stays at 1 behind the dummy to avoid a gray crossfade midpoint. The hidden Chrome dummy now uses an inner-core pulse to echo the Safari hidden-state motion, with separate dummy/artwork hidden scales and a short configurable pulse hold before rebuild.
+- **Current default:** `single-phase`, which transitions dummy scale, opacity, bounds, and corner morph simultaneously while artwork scale transitions at the same time. Blur is applied once on a shared Chrome wrapper around artwork + dummy to avoid stacked per-layer blur. Artwork opacity stays at 1 behind the dummy to avoid a gray crossfade midpoint. The hidden Chrome dummy now uses an inner-core pulse to echo the Safari hidden-state motion, with separate dummy/artwork hidden scales and a short configurable pulse hold before rebuild.
 - **Preserved reference:** The prior `two-phase` Chrome choreography remains available through `window.SafariCompatUX.setChromeTransitionVariant('two-phase')` for comparison, rollback, and tuning.
 - **Next validation:** Exercise several `n` key rebuilds across representative hashes in Chrome before deciding whether to remove the 2-phase path later.
+
+- **Release:** Approved for ArtBlocks submission — the `single-phase` Chrome variant is the ArtBlocks default and the previous `two-phase` path is preserved only for rollback and comparison.
 
 ### Optional Error/Delay Overlay (Product Stewardship)
 
