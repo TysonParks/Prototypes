@@ -834,7 +834,7 @@ function gridTests2(features) {
   // DeBug.log(`  ######################   `)
   // DeBug.error(`GRID`, GRID.shapeGroups)
   // DeBug.error(`backGrid`, BGRID.shapeGroups)
-  DeBug.log('hash', tokenData.hash)
+  console.log('hash', tokenData.hash)
   DeBug.log(`Features`, features)
   DeBug.warn(`InsideCuts`, features.insideCuts)
   DeBug.warn(`Linear Cuts`, features.linearCuts)
