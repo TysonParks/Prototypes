@@ -71,8 +71,8 @@ Read:
 - KNOWN-ISSUES.md records historical failed attempts; do not repeat them
 - ROADMAP.md is intent, not proof of implementation
 - `safariImageSwap.js` Chrome reveal/hide behavior is reference-locked
-  as of 2026-05-03; Safari work must not alter Chrome behavior unless
-  the user explicitly requests a Chrome change
+ - `safariImageSwap.js` Chrome and Safari reveal/hide behaviors are reference-locked and approved for ArtBlocks submission
+   as of 2026-05-05; Safari work must not alter Chrome behavior unless explicitly requested.
 
 ## What This Document Is Not
 
