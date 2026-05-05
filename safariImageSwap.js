@@ -17,7 +17,8 @@
 //                      per-corner border-radius, scale, blur. Default
 //                      hidden state is the 100×200uu pill.
 //   E1 Artwork (BG.elt) — Chrome two-phase reference path animates opacity.
-//                         Chrome single-phase also animates artwork scale/blur.
+//                         Chrome single-phase animates artwork scale and uses
+//                         one shared wrapper blur for artwork + dummy.
 //                         Safari keeps BG.elt opacity-only so WebKit never
 //                         rasterizes the complex SVG at hidden scale.
 //
@@ -100,9 +101,9 @@
   // shared tuning surface. If Chrome regresses, restore from this
   // object first and only then resume Safari experimentation.
   const CHROME_REFERENCE_PRESET = Object.freeze({
-    blurUserUnits: 30,
-    revealDurationMs: 3000,
-    hideDurationMs: 3000,
+    blurUserUnits: 20,
+    revealDurationMs: 1000,
+    hideDurationMs: 1000,
     phaseOffset: 0.5,
     hiddenScale: 0.5,
   })
@@ -151,6 +152,7 @@
   // Safari uses its own isolated choreography. Do not route these
   // through CHROME_REFERENCE_PRESET; Chrome is locked as reference.
   const safariTransitionMs = 1000       // single-phase hide/reveal duration (ms)
+  const safariBlurUserUnits = 30        // Safari hidden-state dummy blur in uu
   // Overlay values — initial values; all also exposed as CSS vars (--safari-*)
   // so they can be adjusted live in DevTools without reload.
   const safariBlurPx = 20               // legacy/API var; Rev 4 blur is --reveal-blur
@@ -186,6 +188,7 @@
 
   //SECT: State
   let _dummy = null
+  let _chromeBlurLayer = null                     // Chrome single-phase shared blur wrapper
   let _frameElt = null                           // current BG.elt ref
   let _buildToken = 0                            // bumped on each build; cancels stale timers/transitions
   // Chrome 'n'-keypress debounce — true from the moment a build starts until
@@ -204,7 +207,8 @@
   // Inject CSS once. The dummy carries ALL visible dummy properties:
   // width/height (uu → px via JS-set CSS vars), per-corner
   // border-radius, transform (scale), filter (blur). Chrome single-phase
-  // artwork state is driven inline so it can scale/blur/fade with the dummy.
+  // artwork state is driven inline so it can scale with the dummy; shared
+  // Chrome single-phase blur lives on #chrome-reveal-blur-layer.
   //
   // Sequence is achieved with transition-delay alone:
   //   --dummy-delay = 0ms (reveal: dummy morphs first) or halfDur
@@ -281,6 +285,28 @@
         --chrome-dummy-opacity-easing: linear;
       }
 
+      /* Chrome single-phase shared blur layer. This wrapper blurs the
+         already-composited artwork + dummy once, avoiding stacked blur from
+         two separately filtered layers. */
+      #chrome-reveal-blur-layer {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        overflow: visible;
+        pointer-events: none;
+        filter: none;
+        -webkit-filter: none;
+        transition:
+          filter         var(--phase-shape-duration) linear var(--phase-shape-delay),
+          -webkit-filter var(--phase-shape-duration) linear var(--phase-shape-delay);
+        will-change: filter;
+      }
+      #chrome-reveal-blur-layer.chrome-blur-hidden {
+        filter: blur(var(--reveal-blur));
+        -webkit-filter: blur(var(--reveal-blur));
+      }
+
       /* === DUMMY ===
          Default (hidden) state: centered pill at frameSize-based
          bounds. The .revealed class swaps in the measured artwork
@@ -346,6 +372,11 @@
         opacity: 0;
         filter: blur(0);
         -webkit-filter: blur(0);
+      }
+      :root[data-chrome-reveal-variant="single-phase"] #reveal-dummy,
+      :root[data-chrome-reveal-variant="single-phase"] #reveal-dummy.revealed {
+        filter: none;
+        -webkit-filter: none;
       }
       #reveal-dummy.revealed #reveal-dummy-core {
         animation: none;
@@ -714,7 +745,8 @@
     // Blur is sized off the PILL (hidden-state) geometry — that's the
     // state the blur is applied in. Using artwork uuToPx would scale
     // the blur by the artwork's relative size, which isn't what we want.
-    const revealBlurPx = Math.max(0, blurUserUnits * uuToPxPill)
+    const activeBlurUserUnits = isWebKitClass ? safariBlurUserUnits : blurUserUnits
+    const revealBlurPx = Math.max(0, activeBlurUserUnits * uuToPxPill)
     root.setProperty('--reveal-blur', `${revealBlurPx}px`)
     document.documentElement.classList.toggle('reveal-no-blur', revealBlurPx <= 0)
 
@@ -796,6 +828,7 @@
     const scaleEasing = revealed
       ? chromeArtworkScaleRevealEasing
       : chromeArtworkScaleHideEasing
+    if (isChromeSinglePhase()) return `transform ${totalMs}ms ${scaleEasing}`
     return `transform ${totalMs}ms ${scaleEasing}, filter ${totalMs}ms linear, -webkit-filter ${totalMs}ms linear`
   }
 
@@ -811,13 +844,47 @@
     s.opacity = '1'
     if (revealed) {
       s.transform = 'translateZ(0) scale(1)'
-      s.filter = 'blur(0)'
-      s.webkitFilter = 'blur(0)'
+      s.filter = isChromeSinglePhase() ? 'none' : 'blur(0)'
+      s.webkitFilter = isChromeSinglePhase() ? 'none' : 'blur(0)'
     } else {
       s.transform = `translateZ(0) scale(${chromeArtworkHiddenScale})`
-      s.filter = getChromeArtworkHiddenFilter()
-      s.webkitFilter = getChromeArtworkHiddenFilter()
+      s.filter = isChromeSinglePhase() ? 'none' : getChromeArtworkHiddenFilter()
+      s.webkitFilter = isChromeSinglePhase() ? 'none' : getChromeArtworkHiddenFilter()
     }
+  }
+
+  function ensureChromeBlurLayer() {
+    if (isWebKitClass || !document.body) return null
+    if (_chromeBlurLayer && _chromeBlurLayer.parentNode) return _chromeBlurLayer
+    ensureStyles()
+    if (!_chromeBlurLayer) {
+      _chromeBlurLayer = document.createElement('div')
+      _chromeBlurLayer.id = 'chrome-reveal-blur-layer'
+    }
+    document.body.appendChild(_chromeBlurLayer)
+    return _chromeBlurLayer
+  }
+
+  function parentChromeRevealLayers() {
+    if (!isChromeSinglePhase()) return
+    const layer = ensureChromeBlurLayer()
+    if (!layer) return
+    if (typeof BG !== 'undefined' && BG && BG.elt && BG.elt.parentNode !== layer) {
+      if (_dummy && _dummy.parentNode === layer) layer.insertBefore(BG.elt, _dummy)
+      else layer.appendChild(BG.elt)
+    }
+    if (_dummy && _dummy.parentNode !== layer) layer.appendChild(_dummy)
+  }
+
+  function setChromeSharedBlurState(revealed, withTransition) {
+    if (!isChromeSinglePhase()) return
+    const layer = ensureChromeBlurLayer()
+    if (!layer) return
+    parentChromeRevealLayers()
+    layer.style.transition = withTransition ? '' : 'none'
+    if (revealed) layer.classList.remove('chrome-blur-hidden')
+    else layer.classList.add('chrome-blur-hidden')
+    if (!withTransition) void layer.offsetWidth
   }
 
   function updateChromeDummyPulseVars() {
@@ -895,6 +962,7 @@
     if (isWebKitClass) return  // Safari path remains isolated for now
     if (_dummy && _dummy.parentNode) {
       ensureDummyCore()
+      parentChromeRevealLayers()
       return
     }
     if (!document.body) return
@@ -904,7 +972,8 @@
       _dummy.id = 'reveal-dummy'
     }
     ensureDummyCore()
-    document.body.appendChild(_dummy)
+    const parent = isChromeSinglePhase() ? ensureChromeBlurLayer() : document.body
+    parent.appendChild(_dummy)
   }
 
   function ensureDummyCore() {
@@ -1018,7 +1087,8 @@
   //FUNC: prepArtwork() : void
   // Snap BG.elt to the Chrome hidden state with no transition before
   // revealNow() flips it visible. In Chrome single-phase, artwork joins
-  // the dummy's scale/blur reveal but stays opacity 1 behind the dummy.
+  // the dummy's scale reveal but stays opacity 1 behind the dummy. Chrome
+  // single-phase blur is applied once on #chrome-reveal-blur-layer.
   // The preserved two-phase path
   // keeps the old opacity-only artwork behavior.
   //
@@ -1028,6 +1098,8 @@
     if (isWebKitClass) return
     const s = _frameElt.style
     if (isChromeSinglePhase()) {
+      parentChromeRevealLayers()
+      setChromeSharedBlurState(false, false)
       setChromeArtworkState(false, revealDurationMs, false)
       void _frameElt.offsetWidth
       return
@@ -1127,8 +1199,8 @@
 
   //FUNC: revealNow() : void
   // Forward direction. Chrome has two switchable variants:
-  //   single-phase: dummy morph/scale/blur/opacity and artwork scale/blur
-  //                 transition together; artwork opacity stays 1.
+  //   single-phase: dummy morph/scale/opacity, artwork scale, and shared
+  //                 wrapper blur transition together; artwork opacity stays 1.
   //   two-phase:    preserved reference path using CSS transition-delay
   //                 plus the original artwork opacity flip.
   //
@@ -1158,6 +1230,7 @@
     }
 
     if (isChromeSinglePhase()) {
+      setChromeSharedBlurState(true, true)
       if (_frameElt) {
         const s = _frameElt.style
         s.willChange = 'transform, filter'
@@ -1226,6 +1299,7 @@
     const myToken = _buildToken
 
     if (isChromeSinglePhase()) {
+      setChromeSharedBlurState(false, true)
       if (_frameElt) {
         const s = _frameElt.style
         s.willChange = 'transform, filter'
@@ -1278,6 +1352,7 @@
       // Safari keeps its own path isolated for now.
       if (!isWebKitClass) {
         updateLayoutVars(defaultFrameMetrics)
+        setChromeSharedBlurState(false, false)
         startChromeHiddenPulse()
       }
 
@@ -1415,7 +1490,10 @@
     ensureDummy()
     if (!isWebKitClass) setChromeTransitionVariant(chromeTransitionVariant)
     updateLayoutVars(defaultFrameMetrics)
-    if (!isWebKitClass) startChromeHiddenPulse()
+    if (!isWebKitClass) {
+      setChromeSharedBlurState(false, false)
+      startChromeHiddenPulse()
+    }
     if (isWebKitClass) {
       ensureSafariDummy()
       ensureSafariOverlay()
