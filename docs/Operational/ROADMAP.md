@@ -354,5 +354,17 @@ specific runtime cost — bad for decade-long deployments.
 
 ---
 
+### Chrome Single-Phase Migration (Planned)
+
+- **Intent:** Reimplement a single-phase reveal transition for Chrome to bring its behavior closer to the Safari single-phase pattern while preserving the existing Chrome reference behavior.
+- **Approach:** Keep both the existing 2-phase Chrome variant and the new single-phase variant in the codebase behind a feature flag or tunable so the team can validate the new path safely. Flip the default only after the single-phase variant is fully tested across sample hashes and real-device browsers.
+- **Priority:** Medium — planned after the current ArtBlocks freeze; documented here as a future migration.
+
+### Optional Error/Delay Overlay (Product Stewardship)
+
+- **Idea:** Add a small text-overlay pop-up that appears when a build or reveal exceeds a configurable threshold or when an error is detected. This defensive UX helps inform collectors about unexpected delays or failures in a friendly, consistent way.
+- **Estimate:** ~30–60 minutes to implement a prototype (DOM + CSS + simple timeout/watchdog); follow-up work can expand messaging, i18n, and styling.
+- **Action:** Prototype behind a simple `window` tunable or feature flag so the artifact does not affect the locked ArtBlocks behavior by default.
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
 *Last updated: 2026-05-03 — Safari reveal implementation marked complete for current scope; see REVEAL-ANIMATION-STATUS.md for canonical final architecture.*
