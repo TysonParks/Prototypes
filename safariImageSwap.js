@@ -112,8 +112,13 @@
     TWO_PHASE: 'two-phase',
     SINGLE_PHASE: 'single-phase',
   })
+  const ROTATION_RELOAD_MODES = Object.freeze({
+    PRE_ROTATE_DUMMY: 'pre-rotate-dummy',
+    HORIZONTAL_MORPH_RESET: 'horizontal-morph-reset',
+  })
   const DEFAULT_CHROME_TRANSITION_VARIANT = CHROME_TRANSITION_VARIANTS.SINGLE_PHASE
   let chromeTransitionVariant = DEFAULT_CHROME_TRANSITION_VARIANT
+  let rotationReloadMode = ROTATION_RELOAD_MODES.PRE_ROTATE_DUMMY
 
   //SECT: Chrome shared variables
   const blurUserUnits = CHROME_REFERENCE_PRESET.blurUserUnits // dummy hidden-state blur in uu
@@ -195,6 +200,7 @@
   // its reveal animation has fully completed. Safari ignores 'n' entirely;
   // it only uses this during cold-load reveal bookkeeping.
   let _rebuildInFlight = true
+  let _reloadRotationSnapshot = null
   let _currentMetrics = defaultFrameMetrics      // last applied frame metrics (used as hide-stage-2 START shape)
   // Safari persistent overlay — created once at init(), NEVER destroyed.
   // Survives every ProtoBatch teardown/rebuild cycle (BG.elt does not).
@@ -259,6 +265,7 @@
         --dummy-art-radius-tr: 50px;
         --dummy-art-radius-br: 50px;
         --dummy-art-radius-bl: 50px;
+        --dummy-rotation: 0deg;
 
           /* Safari compositor-only geometry path: keep layout pinned to
             the artwork rect and tween the hidden pill via transform. */
@@ -302,6 +309,10 @@
           -webkit-filter var(--phase-shape-duration) linear var(--phase-shape-delay);
         will-change: filter;
       }
+      #chrome-reveal-blur-layer #BG,
+      #chrome-reveal-blur-layer #bleed {
+        pointer-events: auto;
+      }
       #chrome-reveal-blur-layer.chrome-blur-hidden {
         filter: blur(var(--reveal-blur));
         -webkit-filter: blur(var(--reveal-blur));
@@ -327,7 +338,7 @@
         border-radius: var(--dummy-pill-radius);
         opacity: 1;
         transform-origin: center center;
-        transform: translateZ(0) scale(var(--hidden-scale));
+        transform: translateZ(0) rotate(var(--dummy-rotation)) scale(var(--hidden-scale));
         filter: blur(var(--reveal-blur));
         -webkit-filter: blur(var(--reveal-blur));
         transition:
@@ -368,7 +379,7 @@
         border-radius:
           var(--dummy-art-radius-tl) var(--dummy-art-radius-tr)
           var(--dummy-art-radius-br) var(--dummy-art-radius-bl);
-        transform: translateZ(0) scale(1);
+        transform: translateZ(0) rotate(var(--dummy-rotation)) scale(1);
         opacity: 0;
         filter: blur(0);
         -webkit-filter: blur(0);
@@ -629,6 +640,101 @@
     }
   }
 
+  function rotationReloadSnapshot() {
+    if (_reloadRotationSnapshot) return _reloadRotationSnapshot
+    if (typeof artworkRotationSnapshot !== 'function') {
+      return { angle: 0, rawAngle: 0, scale: 1, isSideways: false }
+    }
+    return artworkRotationSnapshot()
+  }
+
+  function latchReloadRotationSnapshot() {
+    _reloadRotationSnapshot = typeof artworkRotationSnapshot === 'function'
+      ? artworkRotationSnapshot()
+      : null
+  }
+
+  function clearReloadRotationSnapshot() {
+    _reloadRotationSnapshot = null
+  }
+
+  function isPreRotatedReloadActive() {
+    const snap = rotationReloadSnapshot()
+    return !isWebKitClass
+      && rotationReloadMode === ROTATION_RELOAD_MODES.PRE_ROTATE_DUMMY
+      && snap.isSideways
+  }
+
+  function setRotationReloadMode(value) {
+    const next = String(value || '').toLowerCase()
+    const allowed = Object.values(ROTATION_RELOAD_MODES)
+    if (!allowed.includes(next)) {
+      console.warn('[RevealAnim] unknown rotation reload mode:', value,
+        'expected one of:', allowed.join(', '))
+      return rotationReloadMode
+    }
+    rotationReloadMode = next
+    updateLayoutVars(_currentMetrics)
+    console.log('[RevealAnim] rotation reload mode =', next)
+    return rotationReloadMode
+  }
+
+  function rotatedRectBaseFromVisual(left, top, width, height) {
+    const cx = left + width / 2
+    const cy = top + height / 2
+    return {
+      left: cx - height / 2,
+      top: cy - width / 2,
+      width: height,
+      height: width,
+    }
+  }
+
+  function rotateCornerRadii(radii, angle) {
+    const deg = ((Math.round(angle / 90) * 90) % 360 + 360) % 360
+    if (deg === 90) {
+      return { tl: radii.bl, tr: radii.tl, br: radii.tr, bl: radii.br }
+    }
+    if (deg === 180) {
+      return { tl: radii.br, tr: radii.bl, br: radii.tl, bl: radii.tr }
+    }
+    if (deg === 270) {
+      return { tl: radii.tr, tr: radii.br, br: radii.bl, bl: radii.tl }
+    }
+    return radii
+  }
+
+  function shouldResetRotationAfterHorizontalReload() {
+    const snap = rotationReloadSnapshot()
+    return !isWebKitClass
+      && rotationReloadMode === ROTATION_RELOAD_MODES.HORIZONTAL_MORPH_RESET
+      && snap.isSideways
+  }
+
+  function prepRotationForReloadBuild() {
+    if (!shouldResetRotationAfterHorizontalReload()) return
+    if (typeof resetArtworkRotationToDefault === 'function') resetArtworkRotationToDefault()
+    updateLayoutVars(defaultFrameMetrics)
+  }
+
+  function syncArtworkRotationBeforeRevealLayout() {
+    if (!isPreRotatedReloadActive()) return
+    if (typeof syncArtworkRotationToViewport === 'function') syncArtworkRotationToViewport()
+  }
+
+  function updateLayoutVarsWithoutDummyTransition(metrics = _currentMetrics) {
+    if (!_dummy) return updateLayoutVars(metrics)
+    const oldTransition = _dummy.style.transition
+    const oldWebkitTransition = _dummy.style.webkitTransition
+    _dummy.style.transition = 'none'
+    _dummy.style.webkitTransition = 'none'
+    updateLayoutVars(metrics)
+    void _dummy.offsetWidth
+    void getComputedStyle(_dummy).transform
+    _dummy.style.transition = oldTransition
+    _dummy.style.webkitTransition = oldWebkitTransition
+  }
+
   //FUNC: updateLayoutVars(metrics) : void
   // Source of truth: the rendered DOM of the OUTER mask path inside
   // FRAME.backGroup.shapeGroups[0].svgGroupElt.elt. We position the
@@ -643,6 +749,13 @@
   // consulted in fallback mode (for default proportions).
   function updateLayoutVars(metrics = _currentMetrics) {
     const root = document.documentElement.style
+    const rotationSnap = rotationReloadSnapshot()
+    const usePreRotatedDummy = !isWebKitClass
+      && rotationReloadMode === ROTATION_RELOAD_MODES.PRE_ROTATE_DUMMY
+      && rotationSnap.isSideways
+    const useHorizontalMorphReset = !isWebKitClass
+      && rotationReloadMode === ROTATION_RELOAD_MODES.HORIZONTAL_MORPH_RESET
+      && rotationSnap.isSideways
 
     // ---- ARTWORK bounds + radii (measured DOM, when available) ----
     let artLeft, artTop, artW, artH
@@ -680,11 +793,21 @@
     // pill regardless of which artwork preceded it.
     const fs = (typeof frameSize !== 'undefined' && frameSize)
       ? frameSize : computeFrameSize()
-    const pillW = Math.min(fs.x * (9 / 11), window.innerWidth * 0.9)
-    const pillH = pillW * (defaultFrameMetrics.height / defaultFrameMetrics.width)
+    let pillW = Math.min(fs.x * (9 / 11), window.innerWidth * 0.9)
+    let pillH = pillW * (defaultFrameMetrics.height / defaultFrameMetrics.width)
+    const uuToPxPill = pillW / defaultFrameMetrics.width
+    if (usePreRotatedDummy) {
+      const visualW = Math.min(fs.y * (rotationSnap.scale || 1), window.innerWidth * 0.98)
+      pillH = visualW
+      pillW = visualW * (defaultFrameMetrics.width / defaultFrameMetrics.height)
+    }
+    if (useHorizontalMorphReset) {
+      const baseW = pillW
+      pillW = pillH
+      pillH = baseW
+    }
     const pillLeft = (window.innerWidth - pillW) / 2
     const pillTop = (window.innerHeight - pillH) / 2
-    const uuToPxPill = pillW / defaultFrameMetrics.width
     const pillCx = pillLeft + pillW / 2
     const pillCy = pillTop + pillH / 2
 
@@ -714,12 +837,23 @@
       }
     }
 
+    if (usePreRotatedDummy && artW != null) {
+      const baseRect = rotatedRectBaseFromVisual(artLeft, artTop, artW, artH)
+      artLeft = baseRect.left
+      artTop = baseRect.top
+      artW = baseRect.width
+      artH = baseRect.height
+    } else if (useHorizontalMorphReset && artRadiiPx) {
+      artRadiiPx = rotateCornerRadii(artRadiiPx, rotationSnap.angle)
+    }
+
     // ---- Write CSS vars ----
+    root.setProperty('--dummy-rotation', `${usePreRotatedDummy ? rotationSnap.angle : 0}deg`)
     root.setProperty('--dummy-pill-left', `${pillLeft}px`)
     root.setProperty('--dummy-pill-top', `${pillTop}px`)
     root.setProperty('--dummy-pill-width', `${pillW}px`)
     root.setProperty('--dummy-pill-height', `${pillH}px`)
-    root.setProperty('--dummy-pill-radius', `${pillW / 2}px`)
+    root.setProperty('--dummy-pill-radius', `${Math.min(pillW, pillH) / 2}px`)
 
     root.setProperty('--dummy-art-left', `${artLeft}px`)
     root.setProperty('--dummy-art-top', `${artTop}px`)
@@ -1244,7 +1378,10 @@
       setChromeArtworkState(true, revealDurationMs, true)
       const myToken = _buildToken
       setTimeout(() => {
-        if (myToken === _buildToken) _rebuildInFlight = false
+        if (myToken === _buildToken) {
+          _rebuildInFlight = false
+          clearReloadRotationSnapshot()
+        }
       }, revealDurationMs)
       return
     }
@@ -1272,7 +1409,10 @@
       s.opacity = '1'
     }, flipAt)
     setTimeout(() => {
-      if (myToken === _buildToken) _rebuildInFlight = false
+      if (myToken === _buildToken) {
+        _rebuildInFlight = false
+        clearReloadRotationSnapshot()
+      }
     }, revealDurationMs)
   }
 
@@ -1288,9 +1428,11 @@
   // was just displayed (not the next one).
   function hideNow() {
     if (isWebKitClass) return
+    latchReloadRotationSnapshot()
     if (typeof BG !== 'undefined' && BG && BG.elt) _frameElt = BG.elt
     _currentMetrics = getCurrentFrameMetrics()
-    updateLayoutVars(_currentMetrics)
+    if (isPreRotatedReloadActive()) updateLayoutVarsWithoutDummyTransition(_currentMetrics)
+    else updateLayoutVars(_currentMetrics)
     setDirectionTiming(hideDurationMs, false)
     if (_dummy) {
       void _dummy.offsetWidth
@@ -1369,6 +1511,7 @@
         // dummy's revealed-state geometry matches the new artwork. This must
         // happen before Chrome single-phase hides BG.elt with transform scale,
         // otherwise DOM rect measurements read the deliberately scaled state.
+        syncArtworkRotationBeforeRevealLayout()
         updateLayoutVars(getCurrentFrameMetrics())
         // Prep artwork synchronously so the live SVG never reaches the
         // screen sharp/visible on Chrome. Safari prepares its artwork
@@ -1473,6 +1616,7 @@
             hideNow()
             setTimeout(() => {
               if (typeof protoBatch !== 'undefined' && protoBatch) {
+                prepRotationForReloadBuild()
                 protoBatch.buildFromNewSeed()
               }
             }, hideDurationMs + (isChromeSinglePhase() ? chromeHiddenPulseHoldMs : 0))
@@ -1521,8 +1665,11 @@
     isWebKitClass,
     chromeReferencePreset: CHROME_REFERENCE_PRESET,
     chromeTransitionVariants: CHROME_TRANSITION_VARIANTS,
+    rotationReloadModes: ROTATION_RELOAD_MODES,
     get chromeTransitionVariant() { return chromeTransitionVariant },
+    get rotationReloadMode() { return rotationReloadMode },
     setChromeTransitionVariant,
+    setRotationReloadMode,
     revealNow,
     hideNow,
     resetForRebuild,
