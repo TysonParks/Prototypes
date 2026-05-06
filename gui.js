@@ -31,6 +31,86 @@ function createGUI() {
 
 // MARK: Keyboard UI
 //NOTE: Create with GPT-4 on April 15,2023
+function getArtworkExportRotationInfo() {
+  const snap = typeof artworkRotationSnapshot === 'function'
+    ? artworkRotationSnapshot()
+    : { angle: 0 }
+  const angle = normalizeExportRotationAngle(snap.angle)
+  const position = angle / 90
+  const aspect = position % 2 === 0 ? 'V' : 'H'
+  return {
+    angle,
+    position,
+    aspect,
+    code: `r${position}${aspect}`,
+    isHorizontal: aspect === 'H',
+  }
+}
+
+function normalizeExportRotationAngle(angle) {
+  const n = Number(angle)
+  if (!Number.isFinite(n)) return 0
+  return ((Math.round(n / 90) * 90) % 360 + 360) % 360
+}
+
+function getArtworkExportResolution(baseRez, rotationInfo, scale = 1) {
+  const width = rotationInfo.isHorizontal ? baseRez.y : baseRez.x
+  const height = rotationInfo.isHorizontal ? baseRez.x : baseRez.y
+  return {
+    width,
+    height,
+    rezString: `${width * scale}x${height * scale}`,
+  }
+}
+
+function createRotationAwareSVGMarkup(svgElement, rotationInfo, width, height) {
+  const clone = svgElement.cloneNode(true)
+  clone.style.removeProperty('transform')
+  clone.style.removeProperty('transform-origin')
+  clone.style.removeProperty('transform-box')
+  clone.style.removeProperty('will-change')
+  clone.style.removeProperty('position')
+  clone.style.removeProperty('left')
+  clone.style.removeProperty('top')
+  clone.style.removeProperty('max-width')
+  clone.style.removeProperty('max-height')
+  clone.setAttribute('width', `${width}`)
+  clone.setAttribute('height', `${height}`)
+
+  const viewBox = parseSVGViewBox(clone.getAttribute('viewBox'))
+  if (!viewBox) return Export.createSVGMarkup(clone)
+
+  const angle = rotationInfo.angle
+  if (angle === 0) return Export.createSVGMarkup(clone)
+
+  const cx = viewBox.x + viewBox.width / 2
+  const cy = viewBox.y + viewBox.height / 2
+  const rotatedViewBox = rotationInfo.isHorizontal
+    ? {
+      x: cx - viewBox.height / 2,
+      y: cy - viewBox.width / 2,
+      width: viewBox.height,
+      height: viewBox.width,
+    }
+    : viewBox
+  const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+  wrapper.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`)
+  while (clone.firstChild) wrapper.appendChild(clone.firstChild)
+  clone.appendChild(wrapper)
+  clone.setAttribute('viewBox', formatSVGViewBox(rotatedViewBox))
+  return Export.createSVGMarkup(clone)
+}
+
+function parseSVGViewBox(raw) {
+  const vals = String(raw || '').trim().split(/[\s,]+/).map(Number)
+  if (vals.length !== 4 || vals.some(v => !Number.isFinite(v))) return null
+  return { x: vals[0], y: vals[1], width: vals[2], height: vals[3] }
+}
+
+function formatSVGViewBox({ x, y, width, height }) {
+  return `${x} ${y} ${width} ${height}`
+}
+
 //FUNC: keyPressed() p5js overload for PNG saving
 function keyPressed() {
   console.log(`[keyPressed] key='${key}' keyCode=${keyCode}`)
@@ -49,15 +129,19 @@ function keyPressed() {
     // const rez = vert(8000, 14400)
     // const rez = vert(9102, 16384) 
     // const rez = vert(10000, 18000) // MAX RESOLUTION
-    const scaledRez = rez.mult(scale)
-    const rezString = `${scaledRez.x}x${scaledRez.y}`
+    const rotationInfo = getArtworkExportRotationInfo()
+    const exportRez = getArtworkExportResolution(rez, rotationInfo, scale)
     const date = getCurrentDateString()
-    const time = getCurrentTime()
     const hash = tokenData.hash
-    // const trimmedHash = `${hash.slice(0, 4)}\u2026${hash.slice(-4)}`
-    const name = `Prototypes-${hash}-${date}-${rezString}.png`
+    const name = `Prototypes-${date}-${rotationInfo.code}-${hash}-${exportRez.rezString}.png`
+    const svgMarkup = createRotationAwareSVGMarkup(
+      FRAME.bleed.elt,
+      rotationInfo,
+      exportRez.width,
+      exportRez.height,
+    )
 
-    Export.exportPNG(FRAME.svgMarkup, name, rez.x, rez.y, scale)
+    Export.exportPNG(svgMarkup, name, exportRez.width, exportRez.height, scale)
   }
   if (key === 'v') {
     // Export video frames — full 360° light rotation
