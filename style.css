@@ -5,6 +5,21 @@ body {
   background-color: black;
 }
 
+html:fullscreen,
+html:-webkit-full-screen,
+html:-moz-full-screen,
+body.artwork-fullscreen-active {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: black;
+}
+
+body.artwork-fullscreen-active .dg,
+body.artwork-fullscreen-active #regenBtn {
+  display: none !important;
+}
+
 canvas {
   display: block;
 }
