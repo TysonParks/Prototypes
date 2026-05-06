@@ -486,7 +486,9 @@ by the rotation code before the hash:
 Fullscreen presentation mode is available from the keyboard. Press `f` to enter
 or exit browser fullscreen, and press `Escape` to exit. Fullscreen mode syncs the
 same frame sizing, rotation viewport, backing scale, and reveal layout used by
-normal window resizes, while hiding non-art controls for a clean black stage.
+normal window resizes, while hiding non-art controls for a clean black stage. If
+the host browser surface stalls or blocks native fullscreen, the same key path
+falls back to an app-level fullscreen presentation class.
 
 **F2 — InfraGrid InnerCuts:**
 *(Confirm feature name before starting — check comments in Grid.js or
