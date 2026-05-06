@@ -53,22 +53,22 @@ Sub-steps within that pipeline:
 > Backlog** tables below. This calendar is a template; populate it once Q1–Q4
 > above are answered and priorities are finalized.
 
-| Day | Focus | Target Items |
-|-----|-------|-------------|
-| 1 | ArtBlocks research + Q&A | Resolve Q1–Q7, read upload docs, set up test bench account if needed |
-| 2 | Bug: Safari compatibility | B1 |
-| 3 | Bug: Safari compatibility (cont.) + shading | B1, B3 |
-| 4 | Bug: Wrapping | B2 |
-| 5 | Bug: Wrapping (cont.) | B2 |
-| 6 | Feature: InfraGrid InnerCuts re-enable | F2 |
-| 7 | Feature: Rotation research + Post Params | F1 |
-| 8 | Feature: Rotation implementation (basic) | F1 |
-| 9 | Code cleanup pass | E1 |
-| 10 | Export Pipeline setup (answer-dependent) | E2 |
-| 11 | Animation: timing polish | B4 |
-| 12 | Animation: performance (cont.) | B4 |
-| 13 | Integration testing against ArtBlocks test bench | E3 |
-| 14 | Buffer / overflow / final upload | — |
+| Day | Focus | Target Items | Status |
+|-----|-------|-------------|----------|
+| 1 | ArtBlocks research + Q&A | Resolve Q1–Q7, read upload docs, set up test bench account if needed | ✅ Completed |
+| 2 | Bug: Safari compatibility | B1 | ✅ Completed |
+| 3 | Bug: Safari compatibility (cont.) + shading | B1, B3 | ✅ Completed |
+| 4 | Bug: Wrapping | B2 | ♻️ Deferred |
+| 5 | Feature: InfraGrid InnerCuts re-enable | F2 | ♻️ Deferred |
+| 6 | Bug: Shading  | ?? | 🟡 In Process |
+| 7 | Animation: timing polish | B4 | Not started |
+| 8 | Animation: performance (cont.) | B4 | Not started |
+| 9 | Feature: Rotation implementation (basic) | F1 | 🟡 In Process  |
+| 10 | Feature: Rotation research + Post Params | F1 | 🟡 In Process |
+| 11 | Code cleanup pass | E1 | Not started |
+| 12 | Export Pipeline setup (answer-dependent) | E2 | Planned |
+| 13 | Integration testing against ArtBlocks test bench | E3 | Planned |
+| 14 | Buffer / overflow / final upload | — | Planned |
 
 > Days 13–14 are intentionally light on new work to allow for unexpected
 > integration issues. Do not schedule new features here.
