@@ -100,7 +100,13 @@ class AnimationController {
 
     if (actualFrameTime >= this.frameDuration) {
       this.frameStartTime = now - (actualFrameTime % this.frameDuration)
-      globalControls.shadAngle = (millis() / (1000 * ROT)) * 360 % 360
+      const screenAngle = (millis() / (1000 * ROT)) * 360 % 360
+      if (typeof noteArtworkScreenLightAngle === 'function') {
+        noteArtworkScreenLightAngle(screenAngle)
+      }
+      globalControls.shadAngle = typeof artworkLocalLightAngleFor === 'function'
+        ? artworkLocalLightAngleFor(screenAngle)
+        : screenAngle
       this.shadVect = createVector(1, 0).rotate(radians(globalControls.shadAngle))
       this.batchUpdateFilters(this.shadVect)
     }
