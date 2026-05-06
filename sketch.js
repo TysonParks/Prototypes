@@ -48,6 +48,8 @@ function setup() {
   // Initialise ProtoBatch and build from the startup hash
   installArtworkRotationHooks()
   installArtworkRotationControls()
+  // Apply PostParams rotation (if present) before initial build so saved rotation applies
+  if (typeof applyPostParamRotation === 'function') applyPostParamRotation(tokenData)
   protoBatch = new ProtoBatch()
   protoBatch.buildFromHash(tokenData.hash)
   // protoBatch.batchAnimationExport()
@@ -932,7 +934,6 @@ function scheduleArtworkRotationSync() {
   syncArtworkRotationToViewport()
   requestAnimationFrame(syncArtworkRotationToViewport)
   setTimeout(syncArtworkRotationToViewport, 0)
-  setTimeout(syncArtworkRotationToViewport, 900)
 }
 
 function installArtworkRotationControls() {
@@ -944,9 +945,10 @@ function installArtworkRotationControls() {
 function handleArtworkRotationKey(event) {
   const tag = event.target?.tagName?.toLowerCase()
   if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+  if (event.metaKey || event.ctrlKey || event.altKey) return
   const key = event.key
   const lowerKey = typeof key === 'string' ? key.toLowerCase() : key
-  const direction = (key === 'ArrowRight' || lowerKey === 'r') ? 1
+  const direction = key === 'ArrowRight' ? 1
     : (key === 'ArrowLeft' || lowerKey === 'l') ? -1
       : 0
   if (!direction || isWebKitRotationClass()) return
@@ -1004,6 +1006,14 @@ function syncArtworkRotationToViewport() {
   }
 }
 
+function resetArtworkRotationToDefault() {
+  artworkRotationState.angle = 0
+  artworkRotationState.scale = artworkRotationScaleFor(0)
+  artworkRotationState.screenLightAngle = 90
+  applyArtworkRotationTransform(0, artworkRotationState.scale)
+  updateArtworkRotationLight(0)
+}
+
 function animateArtworkRotationPhase(fromAngle, toAngle, fromScale, toScale, durationMs) {
   return new Promise(resolve => {
     const startMs = performance.now()
@@ -1033,13 +1043,61 @@ function applyArtworkRotationTransform(angle, scale) {
 function updateArtworkRotationLight(visualAngle) {
   if (!globalControls || !S?.offsetElts || typeof Shade === 'undefined') return
   const screenAngle = artworkRotationState.screenLightAngle ?? normalizeDegree(globalControls.shadAngle ?? 90)
-  const compensatedAngle = normalizeDegree(screenAngle - visualAngle)
+  const compensatedAngle = artworkLocalLightAngleFor(screenAngle, visualAngle)
   globalControls.shadAngle = compensatedAngle
   const shadVect = Shade.shadVect(compensatedAngle)
   S.offsetElts.forEach(({ elt, mag }) => {
     elt.attribute('dx', shadVect.x * mag)
     elt.attribute('dy', shadVect.y * mag)
   })
+}
+
+function artworkLocalLightAngleFor(screenAngle, visualAngle = artworkRotationState.angle) {
+  return normalizeDegree(screenAngle - visualAngle)
+}
+
+function noteArtworkScreenLightAngle(screenAngle) {
+  artworkRotationState.screenLightAngle = normalizeDegree(screenAngle)
+}
+
+// Parse a PostParam rotation value into degrees (snaps to nearest 90°).
+function parseRotationParam(raw) {
+  if (raw === undefined || raw === null) return 0
+  const s = String(raw).trim().toLowerCase()
+  if (!s) return 0
+  if (s === 'up' || s === '0' || s === '0deg' || s === '0°') return 0
+  if (s === 'right' || s === '90' || s === '90deg' || s === '90°') return 90
+  if (s === 'down' || s === '180' || s === '180deg' || s === '180°') return 180
+  if (s === 'left' || s === '270' || s === '270deg' || s === '270°') return 270
+  const n = Number.parseFloat(s)
+  if (Number.isFinite(n)) {
+    const snapped = Math.round(n / 90) * 90
+    return ((snapped % 360) + 360) % 360
+  }
+  return 0
+}
+
+// Apply PostParams rotation if present on the provided tokenData.
+function applyPostParamRotation(tokenData) {
+  const postParams = tokenData?.externalAssetDependencies?.[0] ?? tokenData?.postParams ?? null
+  const raw = postParams?.data?.['Rotation'] ?? postParams?.data?.['rotation'] ?? postParams?.data?.['RotationDirection'] ?? postParams?.data?.['rotationDirection'] ?? null
+  const angle = parseRotationParam(raw)
+  artworkRotationState.angle = angle
+  artworkRotationState.scale = artworkRotationScaleFor(angle)
+  // Expose feature for marketplace indexing
+  if (typeof window !== 'undefined') {
+    window.$features = window.$features || {}
+    window.$features.Rotation = raw ?? 'Up'
+  }
+}
+
+function artworkRotationSnapshot() {
+  return {
+    angle: normalizeDegree(artworkRotationState.angle),
+    rawAngle: artworkRotationState.angle,
+    scale: artworkRotationState.scale,
+    isSideways: normalizeDegree(artworkRotationState.angle) % 180 !== 0,
+  }
 }
 
 function artworkRotationScaleFor(angle) {
@@ -1065,3 +1123,9 @@ function artworkRotationBaseSize() {
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 }
+
+window.artworkRotationSnapshot = artworkRotationSnapshot
+window.syncArtworkRotationToViewport = syncArtworkRotationToViewport
+window.artworkLocalLightAngleFor = artworkLocalLightAngleFor
+window.noteArtworkScreenLightAngle = noteArtworkScreenLightAngle
+window.resetArtworkRotationToDefault = resetArtworkRotationToDefault
