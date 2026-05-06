@@ -102,8 +102,8 @@
   // object first and only then resume Safari experimentation.
   const CHROME_REFERENCE_PRESET = Object.freeze({
     blurUserUnits: 20,
-    revealDurationMs: 1000,
-    hideDurationMs: 1000,
+    revealDurationMs: 800,
+    hideDurationMs: 800,
     phaseOffset: 0.5,
     hiddenScale: 0.5,
   })
@@ -113,12 +113,13 @@
     SINGLE_PHASE: 'single-phase',
   })
   const ROTATION_RELOAD_MODES = Object.freeze({
+    NEUTRAL_RESET: 'neutral-reset',
     PRE_ROTATE_DUMMY: 'pre-rotate-dummy',
     HORIZONTAL_MORPH_RESET: 'horizontal-morph-reset',
   })
   const DEFAULT_CHROME_TRANSITION_VARIANT = CHROME_TRANSITION_VARIANTS.SINGLE_PHASE
   let chromeTransitionVariant = DEFAULT_CHROME_TRANSITION_VARIANT
-  let rotationReloadMode = ROTATION_RELOAD_MODES.PRE_ROTATE_DUMMY
+  let rotationReloadMode = ROTATION_RELOAD_MODES.NEUTRAL_RESET
 
   //SECT: Chrome shared variables
   const blurUserUnits = CHROME_REFERENCE_PRESET.blurUserUnits // dummy hidden-state blur in uu
@@ -201,6 +202,7 @@
   // it only uses this during cold-load reveal bookkeeping.
   let _rebuildInFlight = true
   let _reloadRotationSnapshot = null
+  let _neutralHorizontalHiddenPill = null
   let _currentMetrics = defaultFrameMetrics      // last applied frame metrics (used as hide-stage-2 START shape)
   // Safari persistent overlay — created once at init(), NEVER destroyed.
   // Survives every ProtoBatch teardown/rebuild cycle (BG.elt does not).
@@ -656,6 +658,33 @@
 
   function clearReloadRotationSnapshot() {
     _reloadRotationSnapshot = null
+    _neutralHorizontalHiddenPill = null
+  }
+
+  function isNeutralHorizontalReloadActive() {
+    const snap = rotationReloadSnapshot()
+    return !isWebKitClass
+      && rotationReloadMode === ROTATION_RELOAD_MODES.NEUTRAL_RESET
+      && snap.isSideways
+  }
+
+  function captureNeutralHorizontalHiddenPill() {
+    if (!isNeutralHorizontalReloadActive()) return
+    const style = getComputedStyle(document.documentElement)
+    const width = parseFloat(style.getPropertyValue('--dummy-pill-width'))
+    const height = parseFloat(style.getPropertyValue('--dummy-pill-height'))
+    if (!Number.isFinite(width) || !Number.isFinite(height)) return
+    _neutralHorizontalHiddenPill = { width, height }
+  }
+
+  function isUpsideDownReloadRotation() {
+    return normalizeReloadAngle(rotationReloadSnapshot().angle) === 180
+  }
+
+  function normalizeReloadAngle(angle) {
+    const n = Number(angle)
+    if (!Number.isFinite(n)) return 0
+    return ((Math.round(n / 90) * 90) % 360 + 360) % 360
   }
 
   function isPreRotatedReloadActive() {
@@ -711,14 +740,34 @@
       && snap.isSideways
   }
 
+  function shouldPreserveNeutralHorizontalHiddenPill() {
+    return isNeutralHorizontalReloadActive()
+      && _dummy
+      && !_dummy.classList.contains('revealed')
+  }
+
   function prepRotationForReloadBuild() {
+    if (rotationReloadMode === ROTATION_RELOAD_MODES.NEUTRAL_RESET) {
+      if (isUpsideDownReloadRotation()
+        && typeof resetArtworkRotationToDefault === 'function') {
+        resetArtworkRotationToDefault()
+        clearReloadRotationSnapshot()
+        updateLayoutVarsWithoutDummyTransition(defaultFrameMetrics)
+      }
+      return
+    }
     if (!shouldResetRotationAfterHorizontalReload()) return
     if (typeof resetArtworkRotationToDefault === 'function') resetArtworkRotationToDefault()
-    updateLayoutVars(defaultFrameMetrics)
+    clearReloadRotationSnapshot()
+    updateLayoutVarsWithoutDummyTransition(defaultFrameMetrics)
   }
 
   function syncArtworkRotationBeforeRevealLayout() {
-    if (!isPreRotatedReloadActive()) return
+    const shouldSync = isPreRotatedReloadActive()
+      || (!isWebKitClass
+        && rotationReloadMode === ROTATION_RELOAD_MODES.NEUTRAL_RESET
+        && rotationReloadSnapshot().isSideways)
+    if (!shouldSync) return
     if (typeof syncArtworkRotationToViewport === 'function') syncArtworkRotationToViewport()
   }
 
@@ -733,6 +782,12 @@
     void getComputedStyle(_dummy).transform
     _dummy.style.transition = oldTransition
     _dummy.style.webkitTransition = oldWebkitTransition
+  }
+
+  function syncRevealLayoutToArtwork() {
+    if (isWebKitClass) return
+    _currentMetrics = getCurrentFrameMetrics()
+    updateLayoutVarsWithoutDummyTransition(_currentMetrics)
   }
 
   //FUNC: updateLayoutVars(metrics) : void
@@ -752,6 +807,9 @@
     const rotationSnap = rotationReloadSnapshot()
     const usePreRotatedDummy = !isWebKitClass
       && rotationReloadMode === ROTATION_RELOAD_MODES.PRE_ROTATE_DUMMY
+      && rotationSnap.isSideways
+    const useNeutralHorizontalDummy = !isWebKitClass
+      && rotationReloadMode === ROTATION_RELOAD_MODES.NEUTRAL_RESET
       && rotationSnap.isSideways
     const useHorizontalMorphReset = !isWebKitClass
       && rotationReloadMode === ROTATION_RELOAD_MODES.HORIZONTAL_MORPH_RESET
@@ -795,21 +853,35 @@
       ? frameSize : computeFrameSize()
     let pillW = Math.min(fs.x * (9 / 11), window.innerWidth * 0.9)
     let pillH = pillW * (defaultFrameMetrics.height / defaultFrameMetrics.width)
-    const uuToPxPill = pillW / defaultFrameMetrics.width
     if (usePreRotatedDummy) {
       const visualW = Math.min(fs.y * (rotationSnap.scale || 1), window.innerWidth * 0.98)
       pillH = visualW
       pillW = visualW * (defaultFrameMetrics.width / defaultFrameMetrics.height)
     }
-    if (useHorizontalMorphReset) {
+    if (useNeutralHorizontalDummy) {
+      const visualW = Math.min(pillH, window.innerWidth * 0.98)
+      pillW = visualW
+      pillH = visualW * (defaultFrameMetrics.width / defaultFrameMetrics.height)
+    } else if (useHorizontalMorphReset) {
       const baseW = pillW
       pillW = pillH
       pillH = baseW
     }
-    const pillLeft = (window.innerWidth - pillW) / 2
-    const pillTop = (window.innerHeight - pillH) / 2
-    const pillCx = pillLeft + pillW / 2
-    const pillCy = pillTop + pillH / 2
+    let uuToPxPill = pillW / ((useNeutralHorizontalDummy || useHorizontalMorphReset)
+      ? defaultFrameMetrics.height : defaultFrameMetrics.width)
+    let pillLeft = (window.innerWidth - pillW) / 2
+    let pillTop = (window.innerHeight - pillH) / 2
+    let pillCx = pillLeft + pillW / 2
+    let pillCy = pillTop + pillH / 2
+
+    function syncPillPlacement() {
+      uuToPxPill = pillW / ((useNeutralHorizontalDummy || useHorizontalMorphReset)
+        ? defaultFrameMetrics.height : defaultFrameMetrics.width)
+      pillLeft = (window.innerWidth - pillW) / 2
+      pillTop = (window.innerHeight - pillH) / 2
+      pillCx = pillLeft + pillW / 2
+      pillCy = pillTop + pillH / 2
+    }
 
     if (artW == null && typeof BG !== 'undefined' && BG && BG.elt) {
       const bgRect = BG.elt.getBoundingClientRect && BG.elt.getBoundingClientRect()
@@ -843,8 +915,22 @@
       artTop = baseRect.top
       artW = baseRect.width
       artH = baseRect.height
-    } else if (useHorizontalMorphReset && artRadiiPx) {
+    } else if ((useNeutralHorizontalDummy || useHorizontalMorphReset) && artRadiiPx) {
       artRadiiPx = rotateCornerRadii(artRadiiPx, rotationSnap.angle)
+    }
+
+    if (useNeutralHorizontalDummy && artW != null && artW > pillW) {
+      pillW = Math.min(artW, window.innerWidth * 0.98)
+      pillH = pillW * (defaultFrameMetrics.width / defaultFrameMetrics.height)
+      syncPillPlacement()
+    }
+
+    if (useNeutralHorizontalDummy
+      && shouldPreserveNeutralHorizontalHiddenPill()
+      && _neutralHorizontalHiddenPill) {
+      pillW = Math.min(_neutralHorizontalHiddenPill.width, window.innerWidth * 0.98)
+      pillH = _neutralHorizontalHiddenPill.height
+      syncPillPlacement()
     }
 
     // ---- Write CSS vars ----
@@ -1433,6 +1519,7 @@
     _currentMetrics = getCurrentFrameMetrics()
     if (isPreRotatedReloadActive()) updateLayoutVarsWithoutDummyTransition(_currentMetrics)
     else updateLayoutVars(_currentMetrics)
+    captureNeutralHorizontalHiddenPill()
     setDirectionTiming(hideDurationMs, false)
     if (_dummy) {
       void _dummy.offsetWidth
@@ -1493,7 +1580,7 @@
       // Chrome only: reset dummy to pill geometry before build.
       // Safari keeps its own path isolated for now.
       if (!isWebKitClass) {
-        updateLayoutVars(defaultFrameMetrics)
+        if (!shouldPreserveNeutralHorizontalHiddenPill()) updateLayoutVars(defaultFrameMetrics)
         setChromeSharedBlurState(false, false)
         startChromeHiddenPulse()
       }
@@ -1670,6 +1757,7 @@
     get rotationReloadMode() { return rotationReloadMode },
     setChromeTransitionVariant,
     setRotationReloadMode,
+    syncRevealLayoutToArtwork,
     revealNow,
     hideNow,
     resetForRebuild,
