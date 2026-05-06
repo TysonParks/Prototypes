@@ -30,6 +30,7 @@ let
 const artworkRotationState = {
   angle: 0,
   scale: 1,
+  backingScale: 1,
   screenLightAngle: null,
   animating: false,
   controlsInstalled: false,
@@ -982,10 +983,14 @@ async function rotateArtworkBy(direction) {
   try {
     if (shrinkFirst) {
       await animateArtworkRotationPhase(startAngle, startAngle, startScale, targetScale, 260)
+      setArtworkBackingScale(targetScale, startAngle, targetScale)
+      await waitForStaticArtworkFrame(startAngle, targetScale)
       await animateArtworkRotationPhase(startAngle, targetAngle, targetScale, targetScale, 520)
     } else {
       await animateArtworkRotationPhase(startAngle, targetAngle, startScale, startScale, 520)
       await animateArtworkRotationPhase(targetAngle, targetAngle, startScale, targetScale, 260)
+      setArtworkBackingScale(targetScale, targetAngle, targetScale)
+      await waitForStaticArtworkFrame(targetAngle, targetScale)
     }
     artworkRotationState.angle = targetAngle
     artworkRotationState.scale = targetScale
@@ -993,23 +998,28 @@ async function rotateArtworkBy(direction) {
     updateArtworkRotationLight(targetAngle)
   } finally {
     artworkRotationState.animating = false
+    applyArtworkRotationTransform(artworkRotationState.angle, artworkRotationState.scale)
+    syncRevealLayoutAfterArtworkRotation()
   }
 }
 
 function syncArtworkRotationToViewport() {
   if (!FRAME?.bleed?.elt) return
   const targetScale = artworkRotationScaleFor(artworkRotationState.angle)
+  setArtworkBackingScale(targetScale, artworkRotationState.angle, targetScale)
   artworkRotationState.scale = targetScale
   applyArtworkRotationTransform(artworkRotationState.angle, targetScale)
   if (artworkRotationState.screenLightAngle !== null) {
     updateArtworkRotationLight(artworkRotationState.angle)
   }
+  syncRevealLayoutAfterArtworkRotation()
 }
 
 function resetArtworkRotationToDefault() {
   artworkRotationState.angle = 0
   artworkRotationState.scale = artworkRotationScaleFor(0)
   artworkRotationState.screenLightAngle = 90
+  setArtworkBackingScale(artworkRotationState.scale, 0, artworkRotationState.scale)
   applyArtworkRotationTransform(0, artworkRotationState.scale)
   updateArtworkRotationLight(0)
 }
@@ -1031,13 +1041,80 @@ function animateArtworkRotationPhase(fromAngle, toAngle, fromScale, toScale, dur
   })
 }
 
+function waitForStaticArtworkFrame(visualAngle, visualScale) {
+  const wasAnimating = artworkRotationState.animating
+  artworkRotationState.animating = false
+  applyArtworkRotationTransform(visualAngle, visualScale)
+  artworkRotationState.animating = wasAnimating
+  return new Promise(resolve => requestAnimationFrame(resolve))
+}
+
 function applyArtworkRotationTransform(angle, scale) {
   const elt = FRAME?.bleed?.elt
   if (!elt) return
+  ensureArtworkRotationViewport()
+  const backingScale = artworkRotationState.backingScale || 1
+  const displayScale = scale / backingScale
   elt.style.transformOrigin = 'center center'
   elt.style.transformBox = 'fill-box'
   elt.style.willChange = artworkRotationState.animating ? 'transform' : 'auto'
-  elt.style.transform = `rotate(${angle}deg) scale(${scale})`
+  elt.style.transform = `translate(-50%, -50%) rotate(${angle}deg) scale(${displayScale})`
+}
+
+function ensureArtworkRotationViewport() {
+  const elt = FRAME?.bleed?.elt
+  if (!elt || !frameSize) return null
+  let viewport = document.getElementById('artwork-rotation-viewport')
+  if (!viewport || viewport.parentNode !== BG?.elt) {
+    viewport = document.createElement('div')
+    viewport.id = 'artwork-rotation-viewport'
+    if (elt.parentNode) elt.parentNode.insertBefore(viewport, elt)
+  }
+  if (elt.parentNode !== viewport) viewport.appendChild(elt)
+  Array.from(viewport.children).forEach(child => {
+    if (child !== elt) child.remove()
+  })
+  viewport.style.position = 'relative'
+  viewport.style.width = `${frameSize.x}px`
+  viewport.style.height = `${frameSize.y}px`
+  viewport.style.flex = '0 0 auto'
+  viewport.style.overflow = 'visible'
+  viewport.style.pointerEvents = 'auto'
+
+  elt.style.position = 'absolute'
+  elt.style.left = '50%'
+  elt.style.top = '50%'
+  elt.style.maxWidth = 'none'
+  elt.style.maxHeight = 'none'
+  return viewport
+}
+
+function setArtworkBackingScale(
+  requiredScale = 1,
+  visualAngle = artworkRotationState.angle,
+  visualScale = artworkRotationState.scale,
+) {
+  const elt = FRAME?.bleed?.elt
+  if (!elt || !frameSize) return
+  ensureArtworkRotationViewport()
+  const nextScale = Math.max(1, Number.isFinite(requiredScale) ? requiredScale : 1)
+  const targetWidth = frameSize.x * nextScale
+  const targetHeight = frameSize.y * nextScale
+  const currentWidth = parseFloat(elt.getAttribute('width'))
+  const currentHeight = parseFloat(elt.getAttribute('height'))
+  const backingScaleMatches = Math.abs((artworkRotationState.backingScale || 1) - nextScale) < 0.0001
+  const svgSizeMatches = Math.abs(currentWidth - targetWidth) < 0.01
+    && Math.abs(currentHeight - targetHeight) < 0.01
+  if (backingScaleMatches && svgSizeMatches) return
+  artworkRotationState.backingScale = nextScale
+  elt.setAttribute('width', `${targetWidth}`)
+  elt.setAttribute('height', `${targetHeight}`)
+  applyArtworkRotationTransform(visualAngle, visualScale)
+}
+
+function syncRevealLayoutAfterArtworkRotation() {
+  if (artworkRotationState.animating) return
+  window.SafariCompatUX?.syncRevealLayoutToArtwork?.()
 }
 
 function updateArtworkRotationLight(visualAngle) {
@@ -1112,10 +1189,8 @@ function artworkRotationScaleFor(angle) {
 }
 
 function artworkRotationBaseSize() {
-  const elt = FRAME?.bleed?.elt
-  if (!elt) return
-  const width = parseFloat(elt.getAttribute('width')) || frameSize?.x
-  const height = parseFloat(elt.getAttribute('height')) || frameSize?.y
+  const width = frameSize?.x
+  const height = frameSize?.y
   if (!width || !height) return
   return { x: width, y: height }
 }
