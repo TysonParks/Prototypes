@@ -446,12 +446,47 @@ The remaining productive avenues, in order:
 ### Feature Notes
 
 **F1 — Rotation + Post Params:**
-Status: Implemented (Chrome-only). The interactive 90° rotation feature is now
+Status: Complete (Chrome-only basic rotation). The interactive 90° rotation feature is now
 available via keyboard controls and the generator reads a `Rotation` PostParam
 (if present) to set the initial orientation. If the PostParam is absent the
-default is `Up` (0°). Rotating light timing still requires fine-tuning and
-should be validated against rotation in the final QA pass before submission.
-PostParam values supported: `Up` | `Right` | `Down` | `Left` (maps to 0°/90°/180°/270°).
+default is `Up` (0°). PostParam values supported: `Up` | `Right` | `Down` |
+`Left` (maps to position 0/1/2/3 = 0°/90°/180°/270°).
+
+**Final stable state (2026-05-06):** rotation is a viewport transform on the
+finished SVG, not a geometry regeneration. Arrow keys are the only path that
+animate rotation. During seed regeneration, dummy orientation and artwork
+orientation now stay matched by geometry: positions 0/2 use vertical dummy
+layout and positions 1/3 use horizontal dummy layout. Horizontal regeneration
+preserves horizontal orientation for the next seed; upside-down position 2
+resets to position 0 on the next seed. The dummy itself remains unrotated
+(`--dummy-rotation: 0deg`) in the normal path. Horizontal hide/reveal also
+derives the hidden dummy pill from the measured horizontal artwork span, so the
+small dummy target scales from the horizontal footprint rather than the vertical
+fallback pill, and that hidden pill is preserved through rebuild prep so reveal
+starts from the same corrected horizontal target instead of recomputing a smaller
+new-artwork pill while hidden.
+
+Live rotation uses phase-matched SVG backing scale for performance. The artwork
+rotates at the smaller of the start/target display scales, and live `#bleed`
+backing resizes only while the visual transform is static: grow-after-settle when
+the target orientation is larger, and shrink-before-rotate after the visual
+shrink when the target orientation is smaller. Each backing resize gets a static
+paint frame before motion resumes. A fixed-size
+`#artwork-rotation-viewport` wrapper plus inverse CSS scale compensation keeps
+the visual layout stable while reducing filter/raster work during animated
+rotation and scale phases.
+
+PNG saving is rotation-aware. The existing vertical resolution presets are
+reused directly for positions 0/2 and flipped for positions 1/3 (for example,
+3000×5400 becomes 5400×3000). Filenames now include the capture date followed
+by the rotation code before the hash:
+`Prototypes-{YYYY.MM.DD}-r#A-{hash}-{resolution}.png`, where `#` is position
+0–3 and `A` is `V` or `H` (examples: `r0V`, `r1H`, `r2V`, `r3H`).
+
+Fullscreen presentation mode is available from the keyboard. Press `f` to enter
+or exit browser fullscreen, and press `Escape` to exit. Fullscreen mode syncs the
+same frame sizing, rotation viewport, backing scale, and reveal layout used by
+normal window resizes, while hiding non-art controls for a clean black stage.
 
 **F2 — InfraGrid InnerCuts:**
 *(Confirm feature name before starting — check comments in Grid.js or
