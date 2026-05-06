@@ -66,6 +66,12 @@ The final Safari implementation solved four requirements simultaneously:
 - no hard-edged hidden-scale rectangle flash during handoff, and
 - no intermittent low-resolution final artwork raster.
 
+Note: A separate Chrome-only rotation feature has been implemented and
+integrated with the reveal/build choreography. The generator now supports an
+initial `Rotation` PostParam (defaults to `Up` / 0°) and interactive keyboard
+rotation in Chrome; rotating light timing still needs fine-tuning and should be
+validated against rotated states during final QA.
+
 The key architectural decisions that made this stable were:
 
 - keep all visible motion on persistent body-level helper layers,
