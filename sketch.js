@@ -37,6 +37,12 @@ const artworkRotationState = {
   hooksInstalled: false,
 }
 
+const artworkFullscreenState = {
+  controlsInstalled: false,
+  syncing: false,
+  fallbackActive: false,
+}
+
 
 // MARK: setup
 // FUNC: setup()
@@ -49,6 +55,7 @@ function setup() {
   // Initialise ProtoBatch and build from the startup hash
   installArtworkRotationHooks()
   installArtworkRotationControls()
+  installArtworkFullscreenControls()
   // Apply PostParams rotation (if present) before initial build so saved rotation applies
   if (typeof applyPostParamRotation === 'function') applyPostParamRotation(tokenData)
   protoBatch = new ProtoBatch()
@@ -943,6 +950,114 @@ function installArtworkRotationControls() {
   document.addEventListener('keydown', handleArtworkRotationKey)
 }
 
+function installArtworkFullscreenControls() {
+  if (artworkFullscreenState.controlsInstalled) return
+  artworkFullscreenState.controlsInstalled = true
+  document.addEventListener('keydown', handleArtworkFullscreenKey, true)
+  document.addEventListener('fullscreenchange', handleArtworkFullscreenChange)
+  document.addEventListener('webkitfullscreenchange', handleArtworkFullscreenChange)
+  document.addEventListener('mozfullscreenchange', handleArtworkFullscreenChange)
+  document.addEventListener('MSFullscreenChange', handleArtworkFullscreenChange)
+  syncArtworkFullscreenClass()
+}
+
+function handleArtworkFullscreenKey(event) {
+  const tag = event.target?.tagName?.toLowerCase()
+  if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+  const lowerKey = typeof event.key === 'string' ? event.key.toLowerCase() : event.key
+  const isToggle = lowerKey === 'f'
+  const isExit = event.key === 'Escape' && isArtworkFullscreenActive()
+  if (!isToggle && !isExit) return
+  event.preventDefault()
+  event.stopImmediatePropagation()
+  if (isToggle) toggleArtworkFullscreen()
+  else exitArtworkFullscreen()
+}
+
+function handleArtworkFullscreenChange() {
+  artworkFullscreenState.fallbackActive = false
+  syncArtworkFullscreenClass()
+  scheduleArtworkFullscreenLayoutSync()
+}
+
+async function toggleArtworkFullscreen() {
+  if (isArtworkFullscreenActive()) return exitArtworkFullscreen()
+  return enterArtworkFullscreen()
+}
+
+async function enterArtworkFullscreen() {
+  const root = document.documentElement
+  try {
+    const request = root.requestFullscreen
+      || root.webkitRequestFullscreen
+      || root.mozRequestFullScreen
+      || root.msRequestFullscreen
+    if (request) await waitForFullscreenRequest(request.call(root))
+    if (!isNativeArtworkFullscreenActive()) artworkFullscreenState.fallbackActive = true
+  } catch (err) {
+    console.warn('[Fullscreen] request failed', err)
+    artworkFullscreenState.fallbackActive = true
+  } finally {
+    syncArtworkFullscreenClass()
+    scheduleArtworkFullscreenLayoutSync()
+  }
+}
+
+function waitForFullscreenRequest(requestResult) {
+  if (!requestResult || typeof requestResult.then !== 'function') return Promise.resolve()
+  const guarded = requestResult.catch(err => { throw err })
+  guarded.catch(() => { })
+  return Promise.race([
+    guarded,
+    new Promise(resolve => setTimeout(resolve, 500)),
+  ])
+}
+
+async function exitArtworkFullscreen() {
+  try {
+    const exit = document.exitFullscreen
+      || document.webkitExitFullscreen
+      || document.mozCancelFullScreen
+      || document.msExitFullscreen
+    if (isNativeArtworkFullscreenActive() && exit) await exit.call(document)
+  } catch (err) {
+    console.warn('[Fullscreen] exit failed', err)
+  } finally {
+    artworkFullscreenState.fallbackActive = false
+    syncArtworkFullscreenClass()
+    scheduleArtworkFullscreenLayoutSync()
+  }
+}
+
+function isNativeArtworkFullscreenActive() {
+  return !!(document.fullscreenElement
+    || document.webkitFullscreenElement
+    || document.mozFullScreenElement
+    || document.msFullscreenElement)
+}
+
+function isArtworkFullscreenActive() {
+  return isNativeArtworkFullscreenActive() || artworkFullscreenState.fallbackActive
+}
+
+function syncArtworkFullscreenClass() {
+  document.body?.classList.toggle('artwork-fullscreen-active', isArtworkFullscreenActive())
+}
+
+function scheduleArtworkFullscreenLayoutSync() {
+  if (artworkFullscreenState.syncing) return
+  artworkFullscreenState.syncing = true
+  const sync = () => {
+    artworkFullscreenState.syncing = false
+    sizeFrame()
+    if (BG?.elt) BG.size(windowWidth, windowHeight)
+    syncArtworkRotationToViewport()
+    if (typeof positionRegenBtn === 'function') positionRegenBtn()
+  }
+  requestAnimationFrame(() => requestAnimationFrame(sync))
+}
+
 function handleArtworkRotationKey(event) {
   const tag = event.target?.tagName?.toLowerCase()
   if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
@@ -1204,3 +1319,5 @@ window.syncArtworkRotationToViewport = syncArtworkRotationToViewport
 window.artworkLocalLightAngleFor = artworkLocalLightAngleFor
 window.noteArtworkScreenLightAngle = noteArtworkScreenLightAngle
 window.resetArtworkRotationToDefault = resetArtworkRotationToDefault
+window.toggleArtworkFullscreen = toggleArtworkFullscreen
+window.exitArtworkFullscreen = exitArtworkFullscreen
