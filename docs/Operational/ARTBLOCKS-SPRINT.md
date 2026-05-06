@@ -440,18 +440,18 @@ The remaining productive avenues, in order:
 
 | ID | Feature | Priority | Est. Time | Open Questions | Status |
 |----|---------|----------|-----------|----------------|--------|
-| F1 | **Prototype object Rotation** — basic rotation for ProtoLayerObjects; research ArtBlocks Post Params integration to allow rotation parameter to be passed externally | P2 | 2–3 days | Q5 (Post Params API) | ❌ Not started |
+| F1 | **Prototype object Rotation** — basic rotation for ProtoLayerObjects; Chrome-only interactive rotation implemented and PostParams trait added (`Rotation`, defaults to Up/0°) | P2 | 2–3 days | Q5 (Post Params API) | ✅ Done |
 | F2 | **InfraGrid InnerCuts re-enable** — fix and re-enable the feature that cuts new shapes within a parent shape using only Direction hierarchy 0/1 (the feature whose name is uncertain — likely "InnerCuts" or "InsideCuts" related to infraGrids) | P2 | 1–2 days | — | ❌ Not started |
 
 ### Feature Notes
 
 **F1 — Rotation + Post Params:**
-Research phase first: understand how ArtBlocks Post Params are exposed at runtime
-(Q5). If Post Params are query-string or hash-based, a rotation parameter could
-be added without touching the core PRNG seed. Basic rotation (90° increments or
-free-angle) for the prototype layer objects is the implementation target — not
-a full transform system. Scope creep risk is high here; timebox research to half
-a day.
+Status: Implemented (Chrome-only). The interactive 90° rotation feature is now
+available via keyboard controls and the generator reads a `Rotation` PostParam
+(if present) to set the initial orientation. If the PostParam is absent the
+default is `Up` (0°). Rotating light timing still requires fine-tuning and
+should be validated against rotation in the final QA pass before submission.
+PostParam values supported: `Up` | `Right` | `Down` | `Left` (maps to 0°/90°/180°/270°).
 
 **F2 — InfraGrid InnerCuts:**
 *(Confirm feature name before starting — check comments in Grid.js or
@@ -538,6 +538,7 @@ lock mechanism so that once set, they cannot be unset (see Q10).
 |------------|------|--------------|---------------|-------------------|-------|
 | `Produced` | Boolean | `false` | Production contract address (authorized via Creator Dashboard) | Yes — should lock permanently on first `true` write | Indicates this Prototype has been paired to a Production token; flows into `window.$features` for marketplace trait indexing |
 | `ProductionTokenId` | String (or Integer) | `undefined` | Production contract address | Yes — should lock permanently once set | The token ID of the paired Production token; drives a visible link in the Prototype's rendered output (optional) |
+| `Rotation` | Enum / String | `Up` (0°) | Creator / Authorized address | No — writable until explicitly locked by policy | Initial orientation for the rendered artwork; values: `Up`, `Right`, `Down`, `Left`. Generator applies this as the initial viewport rotation on first build.
 
 **Feature integration (Prototype script):**
 
