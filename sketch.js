@@ -83,7 +83,7 @@ function setupPrefs() {
   S = new Store()
   RuID = new Random()
   frameRate = 12
-  ROT = 10 * PI
+  ROT = 20 * PI // PI = 1 arc second (my made up unit), so 20 * PI = 1 full rotation per ~2.832 seconds
   animationController = new AnimationController(frameRate)
 }
 
