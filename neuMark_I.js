@@ -560,11 +560,14 @@ class Shade {
         // blur = true
         neuShades = offsets
           .map((offset, i) => {
-            mag = offset / pixToUserUnits * 1               // convert pixelUnit to userUnit magnitude
+            mag = offset * .2               // convert pixelUnit to userUnit magnitude
+            // mag = offset / pixToUserUnits * 1               // convert pixelUnit to userUnit magnitude
             mag = curve === 'i' ? mag * 1 : mag * 1.2
             const
-              iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6,  //
-              r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6,  //
+              iBlurRadius = mag * 1 / 6,  //
+              r2BlurRadius = mag * 1 / 6,  //
+              // iBlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6,  //
+              // r2BlurRadius = (mag - 1 * offsets[0] / pixToUserUnits) * 1 / 6,  //
               blurRadius = curve === 'i' ? iBlurRadius : r2BlurRadius,
               highColLuma = maxHighlight - (highColSpread * easeInCircNormalized(offset, 2) / perceptualDivisor),
               shadColLuma1 = minShadow + (shadColSpread * easeInOutCircNormalized(offset, 3) / perceptualDivisor),
@@ -620,22 +623,27 @@ class Shade {
         let shadowReducer = curve === 'r' ? min(0.2, (20 / (mag * mag * pixToUserUnits))) : 0
         // shadowReducer = curve === 'r' ? (1 / (mag * pixToUserUnits) * 5) : 0
         // shadowReducer = 0
-        const minShadow = (1 - highColSpread - shadColSpread) + shadowReducer       // 0.9 -0.1 - 0.25 = .65
-
+        const minShadow = (1 - highColSpread - shadColSpread)       // 0.9 -0.1 - 0.25 = .65
+        // const minShadow = (1 - highColSpread - shadColSpread) + shadowReducer       // 0.9 -0.1 - 0.25 = .65
         DeBug.log(``)
         DeBug.warn(`offsets`, offsets)
         neuShades = offsets
           .map(offset => {
-            let mag = offset / pixToUserUnits             // convert pixelUnit to userUnit magnitude
+            let mag = offset * .2             // convert pixelUnit to userUnit magnitude
+            //  let mag = offset / pixToUserUnits             // convert pixelUnit to userUnit magnitude
+
             //MARK: This is the main control for inner shade depth
+
             mag = curve === 'j' ? mag * 1 : mag * .75
             let
               isSCurve = false,
               highBlurRad = mag * 1,
               shadBlurRad = mag * 1,
               blurRadius = mag
-            blurRadius = isSCurve ? mag - offsets[0] / pixToUserUnits * .5
-              : mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
+            // blurRadius = isSCurve ? mag - offsets[0] / pixToUserUnits * .5
+            //   : mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
+            // blurRadius = isSCurve ? mag - offsets[0] / pixToUserUnits * .5
+            // : mag - offsets[0] / pixToUserUnits * 1 // subtract 1pix so thin layers full value at ~0 blur
             highBlurRad = blurRadius
 
             let highColLuma, shadColLuma
