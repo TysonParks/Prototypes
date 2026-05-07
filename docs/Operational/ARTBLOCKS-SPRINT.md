@@ -84,7 +84,7 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 | B1 | **Safari compatibility** — three sub-issues: (1) 10s–1min render delay (WebKit per-shape masker O(N) cost, Bug #172338); (2) missing/incorrect shapes (same root cause + cross-SVG filter ID resolution, §9.14.4b); (3) animation non-functional (software-path RAF, Bug #19118). Primary workaround: no-op `<filter>` on masked groups. | P1 | 2–3 days | — | §9.14.4b, §9.14.6 | 🟡 In progress |
 | B2 | **Remaining wrapping bugs** — adjacent wrapper visual verification still pending; Bug B (opposite-facing collinear) deferred | P2 | 2–3 days | Wrapper audit §1 in ROADMAP | §9.7, §9.12 | 🟡 In progress (audit) |
 | B3 | **Remaining shading bugs** — R-in shade layer not centered; potential mask cropping edge cases | P2 | 1–2 days | — | §9.14.9, §9.13 | ❌ Not started |
-| B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | ❌ Not started |
+| B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | 🟡 In progress (clock sync implemented) |
 
 ### Bug Notes
 
@@ -115,8 +115,56 @@ R-in shade layer centering (§9.14.9) is the most concrete open item. Audit wave
 ordinal mask mismatch briefly before committing time.
 
 **B4 — Animation:**
-Lower priority for evaluation unless animation is a primary feature being demonstrated.
-Can be deferred to post-upload if needed.
+Timing polish is now centered on a synchronized light clock rather than a
+page-local animation timer. `setupPrefs()` defines one invented `arcSecond` as
+`PI` seconds; a full light revolution is `20 * PI` seconds, or about 62.83s.
+The default clock source is Unix epoch wall time (`Date.now()`), so separate
+windows and separate computers with reasonably synchronized system clocks can
+share the same global light direction.
+
+Clock-source options considered:
+
+- `Date.now()` / Unix epoch — best default for cross-window and cross-computer
+  synchronization; conceptually tied to civic computer time and UTC.
+- `performance.timeOrigin + performance.now()` — also epoch-shaped and smoother
+  within one browser process, but still anchored by the local machine clock and
+  not meaningfully more conceptual than Unix time.
+- `performance.now()` / p5 `millis()` — smooth and monotonic, but page-local;
+  separate windows start out of phase, so it is not suitable for synchronized
+  collector views.
+- UTC day phase — derives from Unix time but resets at midnight; conceptually
+  solar/civic, though every day repeats the same phase history.
+- Project epoch — Unix time minus a chosen project launch timestamp; keeps sync
+  while making phase zero artist-defined rather than 1970-defined.
+- Token/mint/block timestamp — conceptually tied to the chain or token event,
+  but only useful if that timestamp is reliably available in the runtime.
+- Server/NTP time — strongest cross-device sync if fetched from a trusted source,
+  but introduces networking, latency, and external dependency concerns.
+- `AudioContext.currentTime` — excellent for local audio-rate timing, but
+  context-local and not cross-window/cross-device synchronized.
+
+Initial implementation (2026-05-07): `AnimationController` computes the global
+clock angle from absolute time, then creates a one-shot sync transition whenever
+animation starts. The transition compares the current rendered screen-light
+angle to the unwrapped global clock position and chooses the smoother of two
+paths: coast forward below clock speed if the global clock will catch it soon,
+or run a faster forward Hermite chase curve when the rendered light is behind.
+Both transition types start from rest and end at the clock's base angular
+velocity. During steady-state sync, each frame reads the absolute clock directly;
+during catch-up, the precomputed transition supplies the rendered angle without
+constantly replanning. Filter updates use direct sine / cosine values instead of
+allocating a p5 vector per frame.
+
+Trigger policy (2026-05-07): artwork rotation does **not** stop the synchronized
+light animation. While the artwork is visually rotating, the light clock keeps
+advancing and the shader-local angle is compensated against the current visual
+rotation angle so the screen-space light direction remains continuous. Seed
+regeneration is intentionally different: rebuild teardown stops the light clock,
+cancels any pending animation frame, and resets the screen-light angle to the
+default `90` before fresh geometry is built. If the artwork orientation is
+horizontal, the shader-local `globalControls.shadAngle` may read as `0` after
+rebuild because it is compensated against the 90° artwork rotation; the tracked
+screen-light angle remains the reset/default `90`.
 
 **Rotation feature plan (initial implementation):** Chrome-only keyboard-driven
 90-degree rotation. Safari/WebKit ignores rotation keys for now. Use right
