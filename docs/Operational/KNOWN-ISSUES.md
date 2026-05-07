@@ -54,6 +54,7 @@ Maintenance note:
   - [9.14.7 SVG Filter Banding / Quantization (Resolved)](#9147-svg-filter-banding--quantization)
   - [9.14.8 R-in Backgrid Edge White-Out (Resolved)](#9148-r-in-backgrid-edge-white-out-resolved)
   - [9.14.9 R-in Shade Layer Not Centered (Open)](#9149-r-in-shade-layer-not-centered-open)
+  - [9.14.10 Viewport-Scale Dependent Shade Calibration (Open)](#91410-viewport-scale-dependent-shade-calibration-open)
 - [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
   - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
   - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
@@ -2179,6 +2180,81 @@ Additional considerations identified:
   bottleneck.
 
 ---
+
+### 9.14.10 Viewport-Scale Dependent Shade Calibration (Open)
+
+*Added: 2026-05-07*
+
+**Status:** 🔴 Top remaining shading bug
+
+**Symptom:** R-out shading, especially the large soft frame/body bevels, only
+looks naturally calibrated in the artist's usual launch context: a tall vertical
+browser window stretched nearly full-height on a 4K Retina display. Pixel-
+aligned screenshots show the same shadow span in CSS pixels between a tiny
+launch window and the normal full-size window, even though the small artwork is
+less than one third the size. When the same hash is loaded in a smaller window,
+the bevels and soft shade layers therefore look too broad/graphic and less
+physically dimensional. This is not primarily a resize invalidation problem;
+the initial filter authoring is preserving a screen-pixel length where the
+shade should scale with the artwork's SVG user units. A vertically oriented
+monitor or horizontal fullscreen/export context may produce the opposite
+problem: blurs/depth reading too small or too shallow relative to the intended
+physical artwork size.
+
+**Why this is likely scale-coupled:** `Shade.neuShadeSVGFactory()` accepts
+`pixToUserUnits = FRAME.pixToUserUnits`, and `Frame.pixToUserUnits` is a
+memoized read of `this.svgElt.elt.getScreenCTM().a`. The shade factory then
+constructs a pixel-like offset ladder (`1`, `2`, `4`, `mag / 2`, `mag / 4`,
+etc.) and converts offsets back into SVG user units with `offset /
+pixToUserUnits`. Blur radii are derived from those converted magnitudes. This
+means the generated filter stack can depend on the screen CTM at the moment the
+SVG is built. Because filter primitives are not rebuilt on resize/fullscreen,
+the launch window scale can become baked into the rendered shade depth.
+
+**Primary suspects:**
+
+1. `Frame.pixToUserUnits` memoization: the value can become stale after
+  `windowResized()`, fullscreen entry/exit, or export-orientation changes.
+2. `Shade.neuShadeSVGFactory()` offset ladder: it mixes fixed pixel-scale
+  offsets (`1`, `2`, `4`) with depth-derived offsets (`mag / n`), then converts
+  them through the current screen scale.
+3. Layer-count thresholds in `keep()`: the number of shade layers is based on
+  the pre-conversion `mag` value, while blur and layer spacing are later
+  affected by `pixToUserUnits`.
+4. Export path: `Export.exportFrames()` serializes the already-built SVG and
+  rasterizes it at the requested output size. If the shade stack was built for
+  the live launch viewport, high-resolution or horizontal exports may inherit
+  the wrong blur calibration.
+
+**Important clue:** The shadow span can match exactly in screen pixels across
+very different SVG display sizes. That points to a mistaken user-unit/pixel
+conversion at initial filter construction, not to a browser raster-resolution
+artifact and not mainly to missing recomputation on resize.
+
+**Initial diagnosis plan:**
+
+1. Capture `FRAME.pixToUserUnits`, `windowWidth`, `windowHeight`,
+  `devicePixelRatio`, `frameSize`, and generated `feGaussianBlur`
+  `stdDeviation` values for the same hash across at least three launch sizes.
+2. Rebuild the same hash after resizing and compare the generated filter attrs
+  against resize-without-rebuild. If rebuild changes the shade stack, the bug
+  is definitely build-time scale coupling.
+3. Compare live vertical, live horizontal/fullscreen, PNG export, and animation
+  frame export for the same hash and target size.
+4. Treat `Shade.neuShadeSVGFactory()` as the first code target, but do not tune
+  visual coefficients until the intended unit model is chosen.
+
+**Likely fix direction:** Define shade depth, blur radius, and shade-layer
+spacing in stable SVG user units or in an explicit target output pixel density,
+not in whatever screen CTM exists at page build time. If display-adaptive shading
+is desired, rebuild/recompute all shade filters when the presentation scale
+changes. For ArtBlocks/final outputs, prefer a deterministic canonical render
+scale so the same hash produces the same intended depth regardless of collector
+window size.
+
+**Release risk:** High for visual consistency. This should be the first item in
+the remaining shading bug list, ahead of older fixed or lower-confidence shading
+notes.
 
 ## 9.15 Performance Optimization Strategy
 
