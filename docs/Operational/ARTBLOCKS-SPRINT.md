@@ -243,6 +243,10 @@ const t0 = performance.now();
 parent.appendChild(mainSVGElement);
 
 // Double rAF: after 2 frames, the browser has painted at least once
+
+## Presentation: Fullscreen Mode
+
+A fullscreen presentation mode was added to improve live viewing and reviewer
 requestAnimationFrame(() => requestAnimationFrame(() => {
   console.log(`[Safari perf] SVG first-paint: ${(performance.now() - t0).toFixed(0)}ms`);
 }));
@@ -253,6 +257,7 @@ bottleneck is Safari compositing subsequent frames (progressive layout recalc).
 If the double-rAF itself is slow, the bottleneck is initial paint.
 
 **Step 2 — Count shapes per masked group.** The O(N) masker multiplier is the
+
 most likely culprit. In DeBug mode, add a one-time audit:
 
 ```js
