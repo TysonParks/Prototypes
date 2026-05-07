@@ -111,7 +111,8 @@ because understanding the geometry is prerequisite to knowing which
 |---|------|------|------------|--------|-------|
 | 17 | Visual edge-case debugging using image + log workflow | Ask | 13 | 🟡 Ongoing | Using WrapperDebugOverlay + hash-specific debugging. See [TESTING](TESTING.md). |
 | 18 | Frame artifact diagnosis via clean SVG-layout A/Bs | Ask → Agent | 17 | 🟡 In progress | Primary hash `0x3e8a98...251d34`. KNOWN-ISSUES § 9.14.7 now distinguishes a fixed filter-region regression from a still-open vertical/cropping artifact. Next step is `FilterDebugHarness`-driven isolation of filter region, viewport, overflow, and mask behavior before any shader rewrites. |
-| 19 | Viewport-scale shade calibration audit | Ask → Agent | 17 | 🔴 Top shading bug | KNOWN-ISSUES § 9.14.10. R-out blur/depth calibration appears coupled to launch window scale via `FRAME.pixToUserUnits` / `getScreenCTM()`. Compare generated `stdDeviation`, offsets, layer count, DPR, and `frameSize` across launch sizes, fullscreen, and export contexts before changing shader coefficients. |
+| 19 | Viewport-scale shade calibration audit | Ask → Agent | 17 | ✅ Solved for now | KNOWN-ISSUES § 9.14.10. Removed active `pixToUserUnits` divisions from shade offset/blur construction and retuned current constants. Small-vs-large launch output is now fairly consistent; any remaining delta appears more likely tied to `offsets.slice(start, keep())` stack density than unit conversion. |
+| 20 | Objective Shade retuning pass | Ask → Agent | 19 | 🟡 Before release | Build a visual A/B workflow for `Shade.neuShadeSVGFactory()` across representative hashes, launch sizes, fullscreen, and export targets. Tune `keep()` thresholds, offset ladder shape, blur constants, and luma response with screenshots/contact sheets rather than single-window eyeballing. Consider S-curve shading revival as a feature upgrade during this pass. |
 
 ### Post-Plan Addition: Unified Wrapper Funnel
 
