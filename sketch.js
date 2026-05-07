@@ -22,7 +22,7 @@ let
   frameSize,
   //  FTS                   // Feature Set
   BG, FRAME, BGRID, GRID,   // Background, Frame, Background Grid, Grid
-  ROT, frameRate,           // Rotation, Frame Rate
+  ROT, frameRate, lightClock, arcSecond, // Rotation, Frame Rate, Synced Light Clock
   R, S, RuID,               // Random, Store, Random UID
   animationController,       // Animation Controller
   protoBatch                 // Batch Renderer
@@ -83,8 +83,22 @@ function setupPrefs() {
   S = new Store()
   RuID = new Random()
   frameRate = 12
-  ROT = 20 * PI // PI = 1 arc second (my made up unit), so 20 * PI = 1 full rotation per ~2.832 seconds
-  animationController = new AnimationController(frameRate)
+  arcSecond = PI
+  ROT = 20 * arcSecond
+  lightClock = {
+    source: 'unix-epoch',
+    epochMs: 0,
+    arcSecondMs: arcSecond * 1000,
+    arcSecondsPerRotation: 20,
+    rotationDurationMs: ROT * 1000,
+    maxHoldMs: ROT * 500,
+    minChaseMs: arcSecond * 1000,
+    maxChaseMs: ROT * 500,
+    maxChaseSpeedRatio: 2,
+    catchUpCoastRatio: 0.25,
+    syncToleranceDeg: 0.15,
+  }
+  animationController = new AnimationController(frameRate, lightClock)
 }
 
 // FUNC: setupFeatures()
@@ -896,12 +910,27 @@ function gridTests2(features) {
 function startAnimationLoop() {
   if (globalControls.animated) return     // Don't start if already running
   globalControls.animated = true
+  animationController.startClockSync()
   animationController.globalAnimation()
 }
 
 // FUNC: stopAnimationLoop()
 function stopAnimationLoop() {
+  if (animationController?.stop) {
+    animationController.stop()
+    return
+  }
   globalControls.animated = false
+}
+
+function stopAnimationLoopAndResetLight() {
+  if (animationController?.stop) {
+    animationController.stop({ resetLight: true, screenAngle: 90 })
+  } else {
+    globalControls.animated = false
+    globalControls.shadAngle = 90
+    if (typeof noteArtworkScreenLightAngle === 'function') noteArtworkScreenLightAngle(90)
+  }
 }
 
 // // FUNC: shadeAnimation()
@@ -1083,7 +1112,6 @@ function isWebKitRotationClass() {
 
 async function rotateArtworkBy(direction) {
   if (artworkRotationState.animating || !FRAME?.bleed?.elt) return
-  if (globalControls?.animated) stopAnimationLoop()
   if (artworkRotationState.screenLightAngle === null) {
     artworkRotationState.screenLightAngle = normalizeDegree(globalControls?.shadAngle ?? 90)
   }
@@ -1170,6 +1198,7 @@ function applyArtworkRotationTransform(angle, scale) {
   ensureArtworkRotationViewport()
   const backingScale = artworkRotationState.backingScale || 1
   const displayScale = scale / backingScale
+  artworkRotationState.visualAngle = angle
   elt.style.transformOrigin = 'center center'
   elt.style.transformBox = 'fill-box'
   elt.style.willChange = artworkRotationState.animating ? 'transform' : 'auto'
@@ -1245,7 +1274,8 @@ function updateArtworkRotationLight(visualAngle) {
 }
 
 function artworkLocalLightAngleFor(screenAngle, visualAngle = artworkRotationState.angle) {
-  return normalizeDegree(screenAngle - visualAngle)
+  const currentVisualAngle = artworkRotationState.visualAngle ?? visualAngle
+  return normalizeDegree(screenAngle - currentVisualAngle)
 }
 
 function noteArtworkScreenLightAngle(screenAngle) {
