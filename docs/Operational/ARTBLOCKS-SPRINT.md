@@ -61,9 +61,9 @@ Sub-steps within that pipeline:
 | 4 | Bug: Wrapping | B2 | ♻️ Deferred |
 | 5 | Feature: InfraGrid InnerCuts re-enable | F2 | ♻️ Deferred |
 | 6 | Bug: Shading  | ?? | 🟡 In Process |
-| 7 | Animation: timing polish | B4 | Not started |
+| 7 | Animation: timing polish | B4 | 🟡 In Process |
 | 8 | Animation: performance (cont.) | B4 | Not started |
-| 9 | Feature: Rotation implementation (basic) | F1 | 🟡 In Process  |
+| 9 | Feature: Rotation implementation (basic) | F1 | ✅ Completed  |
 | 10 | Feature: Rotation research + Post Params | F1 | 🟡 In Process |
 | 11 | Code cleanup pass | E1 | Not started |
 | 12 | Export Pipeline setup (answer-dependent) | E2 | Planned |
@@ -243,10 +243,6 @@ const t0 = performance.now();
 parent.appendChild(mainSVGElement);
 
 // Double rAF: after 2 frames, the browser has painted at least once
-
-## Presentation: Fullscreen Mode
-
-A fullscreen presentation mode was added to improve live viewing and reviewer
 requestAnimationFrame(() => requestAnimationFrame(() => {
   console.log(`[Safari perf] SVG first-paint: ${(performance.now() - t0).toFixed(0)}ms`);
 }));
@@ -469,7 +465,10 @@ derives the hidden dummy pill from the measured horizontal artwork span, so the
 small dummy target scales from the horizontal footprint rather than the vertical
 fallback pill, and that hidden pill is preserved through rebuild prep so reveal
 starts from the same corrected horizontal target instead of recomputing a smaller
-new-artwork pill while hidden.
+new-artwork pill while hidden. **Known follow-up (2026-05-07):** a rare,
+unreproduced tall-window sequence may still animate the dummy's rotation during
+the hide transition; track this as residual rotation/reveal polish rather than
+assuming the dummy path is fully closed.
 
 Live rotation uses phase-matched SVG backing scale for performance. The artwork
 rotates at the smaller of the start/target display scales, and live `#bleed`
@@ -486,7 +485,11 @@ reused directly for positions 0/2 and flipped for positions 1/3 (for example,
 3000×5400 becomes 5400×3000). Filenames now include the capture date followed
 by the rotation code before the hash:
 `Prototypes-{YYYY.MM.DD}-r#A-{hash}-{resolution}.png`, where `#` is position
-0–3 and `A` is `V` or `H` (examples: `r0V`, `r1H`, `r2V`, `r3H`).
+0–3 and `A` is `V` or `H` (examples: `r0V`, `r1H`, `r2V`, `r3H`). Horizontal
+export now treats the live CSS rotation as a fallback authority and rasterizes
+using the serialized SVG's intrinsic dimensions, so a horizontal capture cannot
+land on a portrait canvas with large empty top/bottom padding if state and live
+transform momentarily disagree.
 
 Fullscreen presentation mode is available from the keyboard. Press `f` to enter
 or exit browser fullscreen, and press `Escape` to exit. Fullscreen mode syncs the
