@@ -2182,8 +2182,8 @@ Additional considerations identified:
 
 ## 9.15 Performance Optimization Strategy
 
-**Status:** 📋 Planned — correctness-first phase complete, optimization
-phase not yet started
+**Status:** 🟡 Audited — low-risk live-animation cleanup completed;
+aggressive cache/video paths deferred
 
 **Context:** The § 9.14.1 three-layer fix achieved 100% visual
 correctness across 100+ test hashes, but sacrificed three performance
@@ -2192,9 +2192,18 @@ sacrificed, preserves the original optimization logic, and proposes an
 incremental path back to optimal performance.
 
 **Goals:**
-1. Optimize real-time animation frame rate (currently 12 FPS target)
-2. Optimize initial load time (target < 1-2 seconds)
-3. Both goals are complementary, not competing
+1. Preserve visual correctness and synchronized light timing.
+2. Improve real-time animation where possible without quality tiers or
+  renderer-specific hacks.
+3. Keep heavier cache/video paths documented for exhibition contexts rather
+  than making them release blockers.
+
+**2026-05-07 live-animation audit:** the current bottleneck is SVG filter
+paint/raster work after animated `feOffset` attributes change. On the current
+main hash, JavaScript offset writes were well under 1ms while effective light
+updates remained around 4.5-5fps on the test machine. `AnimationController` is
+therefore treated as a clock/sync controller and instrumentation point, not as a
+self-calibrating performance optimizer.
 
 ### 9.15.1 What Was Sacrificed
 
@@ -2361,13 +2370,20 @@ These optimizations don't touch the viewport/filter-region system:
 - Impact: for cuts with shapes in one corner of the frame, filter
   processes 25-50% of the pixel area instead of 100%
 
-**1c. Animation batch optimization**
-- Current: `batchUpdateFilters()` updates ALL `S.offsetElts` per frame
-- The `AnimationController` already has calibration logic (`optimizeFrameRate`)
-  but the batch size optimization path isn't fully utilized
-- Potential: batch offsetElt updates across multiple animation frames
-  (update half per frame at 2× frame rate for the same visual result
-  at lower per-frame cost)
+**1c. Animation hot-loop cleanup**
+- 2026-05-07: completed.
+- `AnimationController` now caches raw DOM `feOffset` nodes instead of resolving
+  `S.offsetElts` every frame.
+- The hot loop uses direct `setAttribute()` calls rather than p5 wrapper
+  `.attribute()` calls.
+- Debug overlay now shows real RAF FPS, actual light-update FPS, offset count,
+  and recent JavaScript batch time.
+- Removed legacy `getMaxFPS()`, `optimizeFrameRate()`, `isCalibrating`,
+  `batchSize`, and `frameTimes`: they measured cheap JS writes, not renderer
+  paint/raster throughput, and could push the controller to fight the browser.
+- Do not split offset batches across visual frames for this release. It would
+  make different shadow layers temporarily disagree about light direction and is
+  therefore a quality/temporal-coherence tradeoff.
 
 #### Tier 2 — Viewport Tightening (requires careful testing)
 
@@ -2429,17 +2445,26 @@ These optimizations don't touch the viewport/filter-region system:
   whose `dx`/`dy` change is below a perceptual threshold (sub-pixel)
 - Impact: reduces DOM mutations per frame, especially at slow rotation
   speeds where frame-to-frame angle change is tiny
+- Status: deferred. Exact no-op skips are safe but probably too rare to matter;
+  threshold skips are likely visually harmless at tiny thresholds but still
+  count as intentional temporal quantization.
 
 **4b. CSS transform animation instead of SVG attribute mutation**
 - Investigate whether the shadow offset could be animated via CSS
   `transform: translate(dx, dy)` on the filter wrapper `<g>` instead
   of mutating `feOffset` `dx`/`dy` attributes
 - CSS transforms can be GPU-composited without layout/paint
+- Status: not recommended for current architecture. The animated values are SVG
+  filter primitive offsets, and moving a wrapper with CSS does not preserve the
+  same neumorphic shadow-vector semantics. CSS/WAAPI/SMIL would still leave the
+  filter renderer doing paint/raster work for equivalent `feOffset` animation.
 
 **4c. `will-change` / `contain` CSS properties**
 - Add `will-change: transform` or `contain: paint` to animated
   SVG elements to hint the browser to promote them to GPU layers
 - Must verify SVG element support (may only work on certain elements)
+- Status: low confidence. These hints help compositor-friendly properties, but
+  the measured bottleneck is SVG filter rasterization, not layer composition.
 
 **4d. Reduce offsetElt count via filter consolidation**
 - Each ProtoFilter creates one or more `feOffset` elements pushed to
@@ -2447,6 +2472,31 @@ These optimizations don't touch the viewport/filter-region system:
 - If multiple filter primitives share the same magnitude, they could
   share an offset group updated by a single parent transform
 - Reduces per-frame `setAttribute` calls
+- Status: deferred. Current JavaScript write time is already small; meaningful
+  improvement would require changing filter topology or visual grouping.
+
+**4e. Progressive raster frame cache**
+- Possible future path: render a coarse ring of cached frames first, play those
+  cheaply through canvas, then fill missing intermediate frames in the
+  background.
+- Example: a `20π`-second revolution needs ~754 frames for 12fps. A 248-frame
+  cache is about 4fps; it does not add linearly to live SVG rendering, but can
+  become smoother as more missing frames are generated.
+- Practical cache shape: compressed blobs on disk (IndexedDB / Cache API / OPFS)
+  plus a small decoded `ImageBitmap` ring buffer in memory.
+- Grayscale art should compress well, but normal browser canvas/ImageBitmap
+  playback generally expands decoded frames to RGB/RGBA surfaces.
+- Full 4K decoded revolution cache is not practical: 3840×2160×4 bytes is about
+  31.6 MiB per frame; ~754 decoded frames would exceed 20 GiB.
+- Status: deferred. This is promising for a later playback engine, but too large
+  for the current optimization phase.
+
+**4f. Pre-rendered exhibition video**
+- For contexts that require smooth synchronized playback, render clean videos
+  ahead of time and coordinate sync with the gallery's playback stack.
+- This is operationally more appropriate than forcing the live browser/SVG
+  renderer to provide exhibition-grade animation.
+- Status: recommended future exhibition path, not a release blocker.
 
 ### 9.15.4 Load Time Optimization (Separate from Animation)
 
@@ -2484,18 +2534,19 @@ Before implementing any optimization, establish baselines:
 
 1. **Initial load time:** `performance.now()` at `setup()` entry vs
    `animationController.globalAnimation()` start
-2. **Per-frame animation cost:** Already measured by
-   `AnimationController.frameTimes[]` during calibration
+2. **Per-frame animation cost:** Use the debug FPS overlay and
+  `AnimationController.batchTimeSamples`; do not rely on removed calibration
+  fields.
 3. **offsetElt count:** Already displayed in debug FPS overlay
    (`DeBugging.js L353-354`)
 4. **ShapeGroup count per hash:** `S.ShapeGroups.db.length`
 5. **Filter count per hash:** `S.Effects.db.length`
 6. **DOM element count:** `document.querySelectorAll('*').length`
 
-The `AnimationController.optimizeFrameRate()` already adapts FPS based
-on measured frame times — this self-calibration means animation
-performance improvements will automatically translate to higher FPS
-without code changes.
+The old `AnimationController.optimizeFrameRate()` path was removed because it
+measured JavaScript write time rather than browser paint/raster throughput.
+Future adaptive logic, if needed, should use measured effective light FPS / RAF
+health rather than local batch write cost.
 
 ---
 
