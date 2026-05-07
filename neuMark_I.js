@@ -108,6 +108,11 @@ class ProtoCut {
   shapeGroups = new OpArray
   filters = new OpArray
 
+  static shadeFilterRegion = {
+    fixedMargin: 0,
+    comboDepthMarginRatio: 0.25,
+  }
+
   constructor({
     profile,
     depth,
@@ -192,12 +197,15 @@ class ProtoCut {
   //      A fixed 50-unit margin past FRAME is enough for the §9.14.7
   //      seam fix and small enough that Safari does not abort.
   //
-  // Resulting region (absolute user units, userSpaceOnUse):
+  // Current test region (absolute user units, userSpaceOnUse):
+  //   fixed margin = 5 user units on all sides.
+  //   optional combo-only depth margin = max(5, cut depth * 0.25).
+  // Previous correctness fallback:
   //   x = -50, y = -50, width = 200, height = 300
-  //   = FRAME (0,0,100,200) expanded by 50 on every side.
-  // Symmetric on all four sides → covers any light rotation angle.
-  // Anything outside (0,0,100,200) is mask-cropped at final composite,
-  // so the extra 50-unit border costs only a small filter-buffer pad.
+  //   = FRAME expanded by 50 on every side.
+  // Anything outside (0,0,100,200) is mask-cropped at final composite.
+  // This is intentionally overbroad for small ShapeGroups; it is a bounded
+  // correctness workaround, not a precise or intrinsically cheap region.
   //
   // Future precision opportunity (§9.15.3 Tier 1b, ATTEMPTED 2026-04-28
   // and BLOCKED — see KNOWN-ISSUES § 9.15.6): the union of
@@ -212,15 +220,15 @@ class ProtoCut {
       (window.SAFARI_FILTER_REGION_USERSPACE_FIX !== false)
 
     if (useUserSpaceFix) {
-      // Fixed 50-unit margin past FRAME on every side. See block comment
-      // above for the two hard constraints driving this exact region.
+      // Centralized margin test point. To compare against fixed padding, swap
+      // the active return in shadeFilterRegionMarginFor().
       const fb = FRAME.boundsRect
-      const margin = 50
-      const x = fb.x - margin
-      const y = fb.y - margin
-      const width = fb.width + margin * 2
-      const height = fb.height + margin * 2
       this.filters.forEach(f => {
+        const margin = ProtoCut.shadeFilterRegionMarginFor(this, f)
+        const x = fb.x - margin
+        const y = fb.y - margin
+        const width = fb.width + margin * 2
+        const height = fb.height + margin * 2
         f.filter
           .attribute('filterUnits', 'userSpaceOnUse')
           .attribute('x', x)
@@ -243,6 +251,16 @@ class ProtoCut {
         .attribute('height', `${layout.height}%`)
         .attribute('filterUnits', 'userSpaceOnUse')
     })
+  }
+
+  static shadeFilterRegionMarginFor(cut, filter) {
+    const { fixedMargin, comboDepthMarginRatio } = ProtoCut.shadeFilterRegion
+    const fixed = fixedMargin
+    const comboDepthScaled = Math.max(fixedMargin, Math.abs(cut.depth) * comboDepthMarginRatio)
+
+    // return comboDepthScaled
+    // return fixed
+    return filter.type === 'combo' ? comboDepthScaled : fixed
   }
   //METH: curve() : type :
   curve(layer) {
