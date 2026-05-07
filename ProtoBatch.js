@@ -44,8 +44,13 @@ class ProtoBatch {
 
   //METH: teardown() — remove SVG DOM and null globals so a fresh build can run
   teardown() {
-    // Stop any running animation
-    globalControls.animated = false
+    // Stop any running light animation and reset to the default screen angle.
+    if (typeof stopAnimationLoopAndResetLight === 'function') {
+      stopAnimationLoopAndResetLight()
+    } else {
+      globalControls.animated = false
+      globalControls.shadAngle = 90
+    }
 
     // Reset lighting to its default angle so each rebuild starts from a
     // known state. Without this, animation can leave shadAngle wherever
