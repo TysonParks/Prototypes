@@ -1,21 +1,44 @@
 class AnimationController {
 
   constructor(initialFrameRate = 12, clockOptions = {}) {
-    this.frameRate = initialFrameRate
-    this.frameDuration = 1000 / initialFrameRate
-    this.batchSize = Math.ceil(S.offsetElts.length / initialFrameRate)
+    this.setFrameRate(initialFrameRate)
+    this.offsetBatch = null
+    this.offsetBatchEffectsLength = -1
     this.frameStartTime = performance.now()
     this.pendingFrame = null
     this.syncTransition = null
     this.currentScreenAngle = this.readRenderedScreenAngle()
     this.lastAppliedScreenAngle = null
-    this.frameRateOptions = [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60]
-    this.maxFPS = this.getMaxFPS()
     this.lastBatchTime = 0
-    this.isCalibrating = true
-    this.calibrationFrames = 100
-    this.frameTimes = []
+    this.batchTimeSamples = []
+    this.maxBatchTimeSamples = 60
+    this.lightUpdateFPS = 0
+    this.lightUpdateFrameCount = 0
+    this.lightUpdateSampleStart = performance.now()
     this.clock = this.createClockOptions(clockOptions)
+  }
+
+  setFrameRate(frameRate) {
+    const rate = Number(frameRate)
+    this.frameRate = Number.isFinite(rate) && rate > 0 ? rate : 12
+    this.frameDuration = 1000 / this.frameRate
+  }
+
+  rebuildOffsetBatch() {
+    const sourceOffsets = S?.offsetElts || []
+    this.offsetBatch = sourceOffsets.map(({ elt, mag }) => ({
+      node: elt?.elt || elt,
+      mag,
+    })).filter(({ node }) => node && typeof node.setAttribute === 'function')
+    this.offsetBatchEffectsLength = S?.Effects?.length ?? 0
+    return this.offsetBatch
+  }
+
+  getOffsetBatch() {
+    if (!this.offsetBatch || this.offsetBatchEffectsLength !== (S?.Effects?.length ?? 0)) {
+      return this.rebuildOffsetBatch()
+    }
+    return this.offsetBatch
   }
 
   createClockOptions(clockOptions = {}) {
@@ -38,74 +61,35 @@ class AnimationController {
     }
   }
 
-  //METH: getMaxFPS() : Number : 
-  getMaxFPS() {
-    let maxFPS = 60 // Default fallback
-    // Try to get refresh rate from screen
-    if (window.screen && window.screen.refreshRate) {
-      maxFPS = window.screen.refreshRate
-    } else if (window.performance && window.performance.now) {
-      // Measure actual refresh rate
-      const start = window.performance.now()
-      let frames = 0
-      const loop = () => {
-        frames++
-        const now = window.performance.now()
-        if (now - start < 1000) {
-          requestAnimationFrame(loop)
-        } else {
-          maxFPS = frames
-        }
-      }
-      requestAnimationFrame(loop)
-    }
-    // Limit to supported frame rates
-    return this.frameRateOptions.reduce((prev, curr) =>
-      (curr <= maxFPS ? curr : prev), this.frameRateOptions[0])
-  }
-  //METH: optimizeFrameRate() : null :
-  optimizeFrameRate() {
-    const
-      averageFrameTime = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length,
-      singleFrameTime = 1000 / this.maxFPS,
-      frameAmount = ceil(averageFrameTime / singleFrameTime),
-      targetRate = this.maxFPS / frameAmount,
-      // Find highest frame rate option that's <= target rate
-      optimalFrameRate = this.frameRateOptions
-        .filter(rate => rate <= targetRate)
-        .reduce((prev, curr) => Math.max(prev, curr))
-
-    this.frameRate = optimalFrameRate
-    this.frameDuration = 1000 / this.frameRate
-    this.isCalibrating = false
-
-    DeBug.log(`Animation optimized - FPS: ${this.frameRate}, Batch Size: ${this.batchSize}`)
-  }
   //METH: batchUpdateFilters() : null :
   batchUpdateFilters(shadeX, shadeY) {
     const
-      currentBatch = S.offsetElts,
+      currentBatch = this.getOffsetBatch(),
       batchStartTime = performance.now()
 
-    currentBatch.forEach(({ elt, mag }) => {
-      elt.attribute('dx', shadeX * mag)
-      elt.attribute('dy', shadeY * mag)
+    this.trackLightUpdateFPS(batchStartTime)
+
+    currentBatch.forEach(({ node, mag }) => {
+      node.setAttribute('dx', shadeX * mag)
+      node.setAttribute('dy', shadeY * mag)
     })
 
-    if (this.isCalibrating) {
-      const batchTime = performance.now() - batchStartTime
-      this.frameTimes.push(batchTime)
-      // Dynamic batch size adjustment during calibration
-      if (batchTime < this.frameDuration * 0.75) {
-        this.batchSize = Math.min(this.batchSize + 1, S.offsetElts.length)
-      } else if (batchTime > this.frameDuration * 0.9) {
-        this.batchSize = Math.max(this.batchSize - 1, 1)
-      }
+    this.trackBatchTime(performance.now() - batchStartTime)
+  }
 
-      if (this.frameTimes.length >= this.calibrationFrames) {
-        this.optimizeFrameRate()
-      }
-    }
+  trackBatchTime(batchTime) {
+    this.lastBatchTime = batchTime
+    this.batchTimeSamples.push(batchTime)
+    if (this.batchTimeSamples.length > this.maxBatchTimeSamples) this.batchTimeSamples.shift()
+  }
+
+  trackLightUpdateFPS(now = performance.now()) {
+    this.lightUpdateFrameCount++
+    const elapsed = now - this.lightUpdateSampleStart
+    if (elapsed < 500) return
+    this.lightUpdateFPS = this.lightUpdateFrameCount * 1000 / elapsed
+    this.lightUpdateFrameCount = 0
+    this.lightUpdateSampleStart = now
   }
   //METH: globalAnimation() : null : 
   globalAnimation() {
@@ -144,10 +128,17 @@ class AnimationController {
 
   startClockSync() {
     const now = this.clockNowMs()
+    this.resetLightUpdateFPS()
     this.currentScreenAngle = this.readRenderedScreenAngle()
     this.syncTransition = this.planClockSync(this.currentScreenAngle, now)
     this.applyScreenLightAngle(this.currentScreenAngle)
     this.frameStartTime = performance.now()
+  }
+
+  resetLightUpdateFPS() {
+    this.lightUpdateFPS = 0
+    this.lightUpdateFrameCount = 0
+    this.lightUpdateSampleStart = performance.now()
   }
 
   planClockSync(currentAngle, startMs) {
