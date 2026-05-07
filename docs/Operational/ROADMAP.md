@@ -136,12 +136,27 @@ because understanding the geometry is prerequisite to knowing which
 | P0 | Establish measurement baselines (load time, FPS, element counts) | Research | 12a | ❌ Not started | § 9.15.5. Must quantify before optimizing. |
 | P1a | Per-profile padding precision | Agent + verify | P0 | ❌ Not started | § 9.15.3 Tier 1a. Vary padding by `hasInsetShade`/`hasOutsetShade`/`hasCastShadow`. |
 | P1b | Per-cut filter region tightening (`userSpaceOnUse` AABB) | Agent + verify | P0 | 🚫 Blocked | § 9.15.3 Tier 1b — *2026-04-28: ATTEMPTED. Tight AABB collapses to FRAME for every cut due to § 9.14.1 cascade broadening. Zero area reduction (1.12× speedup, within noise). See § 9.15.6. Re-attempt only after § 9.11 maskShape rebuild.* |
-| P1c | Animation batch optimization | Research + Agent | P0 | ❌ Not started | § 9.15.3 Tier 1c. Evaluate batch splitting for lower per-frame cost. |
+| P1c | Animation hot-loop cleanup | Research + Agent | P0 | ✅ Done | § 9.15.3 Tier 1c. Cached offset list, direct DOM writes, real FPS overlay, removed misleading calibration/batch optimizer. |
 | P2a | Restore tight ShapeGroup viewports (with overflow:visible) | Agent + verify | P1b | ❌ Not started | § 9.15.3 Tier 2a. Highest risk — coordinate system may shift. |
 | P2b | Selective overflow:visible (cascade-only) | Agent + verify | P2a | ❌ Not started | § 9.15.3 Tier 2b-2c. Non-cascade cuts get free GPU clipping. |
 | P3 | Per-ShapeGroup filter regions (requires filter cloning) | Agent + verify | P2a, 12b | ❌ Not started | § 9.15.3 Tier 3. Synergy with Safari fix (§ 9.14.4b). |
-| P4 | Animation-specific optimizations (diff updates, CSS transforms) | Research + Agent | P0 | ❌ Not started | § 9.15.3 Tier 4. Independent of viewport work. |
+| P4 | Animation-specific optimizations | Research + Agent | P0 | ♻️ Deferred | § 9.15.3 Tier 4. CSS/WAAPI not expected to help `feOffset`; frame-cache/video avenues documented but too aggressive for current release phase. |
 | P5 | Load time optimizations (lazy filters, deferred DOM) | Research + Agent | P0 | ❌ Not started | § 9.15.4. Profile setup pipeline first. |
+
+**2026-05-07 animation performance audit:** current live-light animation updates
+animated `feOffset` primitives each frame and is dominated by SVG filter
+re-rasterization, not JavaScript. The current main hash had 62 cached animated
+offsets, 9 shade filters, and 360 filter primitives; measured JavaScript batch
+time was well under 1ms while effective light FPS sat around 4.5-5fps on the
+test machine. Low-risk work completed: cached `S.offsetElts`, stored raw DOM
+nodes, direct `setAttribute()` writes, FPS overlay, and removal of the legacy
+JS-time calibration optimizer. Current filter region strategy is fixed margin 0
+for high/shad plus combo-only `abs(cut.depth) * 0.25`, reducing total shade
+filter region area on the main hash to ~186,075 user units vs the old 540,000
+baseline (~2.90x). CSS/WAAPI animation of `feOffset` is not expected to avoid
+filter re-rasterization. Progressive frame caches, compressed disk-backed image
+caches, and pre-rendered exhibition videos are documented future avenues, but
+are deferred as too aggressive for the current release phase.
 
 ---
 
