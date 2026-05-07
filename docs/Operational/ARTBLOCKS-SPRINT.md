@@ -61,8 +61,8 @@ Sub-steps within that pipeline:
 | 4 | Bug: Wrapping | B2 | ♻️ Deferred |
 | 5 | Feature: InfraGrid InnerCuts re-enable | F2 | ♻️ Deferred |
 | 6 | Bug: Shading  | ?? | 🟡 In Process |
-| 7 | Animation: timing polish | B4 | 🟡 In Process |
-| 8 | Animation: performance (cont.) | B4 | Not started |
+| 7 | Animation: timing polish | B4 | ✅ Completed |
+| 8 | Animation: performance (cont.) | B4 | 🟡 In Process |
 | 9 | Feature: Rotation implementation (basic) | F1 | ✅ Completed  |
 | 10 | Feature: Rotation research + Post Params | F1 | 🟡 In Process |
 | 11 | Code cleanup pass | E1 | Not started |
@@ -143,6 +143,15 @@ Clock-source options considered:
 - `AudioContext.currentTime` — excellent for local audio-rate timing, but
   context-local and not cross-window/cross-device synchronized.
 
+Current clock-source decision (2026-05-07): keep Unix epoch wall time via
+`Date.now()` as the implementation source for now. It is the best current
+balance of performance, universality across execution environments, and
+future-proof browser support. A custom project epoch remains the most appealing
+conceptual alignment because it can keep the same universal clock while shifting
+phase zero to a project-specific date/time, but the date itself is intentionally
+undecided. When that date is chosen, implement it as `lightClock.epochMs`
+instead of changing the clock source.
+
 Initial implementation (2026-05-07): `AnimationController` computes the global
 clock angle from absolute time, then creates a one-shot sync transition whenever
 animation starts. The transition compares the current rendered screen-light
@@ -165,6 +174,79 @@ default `90` before fresh geometry is built. If the artwork orientation is
 horizontal, the shader-local `globalControls.shadAngle` may read as `0` after
 rebuild because it is compensated against the 90° artwork rotation; the tracked
 screen-light angle remains the reset/default `90`.
+
+Animation performance audit (2026-05-07): current live-light animation still
+spends most of its time in SVG filter re-rasterization, not in clock math or
+JavaScript. On the current main hash, the controller cached 62 animated
+`feOffset` nodes; the full shade filter stack contained 9 filters, 360 filter
+primitives, 59 blurs, 62 offsets, 62 blends, and 106 composites. A runtime trace
+showed roughly 4.5-5 fps effective light updates while the raw JavaScript offset
+write batch averaged well under 1ms. The bottleneck is therefore browser paint /
+raster work after SVG filter primitive attributes change.
+
+Current filter-region tuning status:
+
+- Shade filters in `ProtoCut.setLayouts()` now use `userSpaceOnUse` with the
+  visible FRAME region plus selective margin. The current successful strategy is
+  `fixedMargin: 0` for high/shad filters and combo-only margin
+  `max(0, abs(cut.depth) * 0.25)`. On the current main hash this reduced total
+  shade filter region area from the old 540,000 user-unit baseline to about
+  186,075 user units (~2.90x smaller) while preserving the tested edge cases.
+- Mask/blur utility filters in `p5.Element.prototype.blur()` use
+  `userSpaceOnUse` with radius-scaled padding and a 50-unit floor. This was the
+  fix for the vertical-line artifact from clipped large blurs. It should stay
+  conservative unless a fresh repro proves a narrower bound is safe.
+- Per-cut AABB tightening remains blocked as a separate architecture project.
+  The prior Tier 1b attempt produced effectively no area reduction because
+  §9.14.1 cascade broadening makes cut ShapeGroup bounds collapse to FRAME.
+  Re-attempt after the mask/ShapeGroup bounds architecture is rebuilt, not as an
+  isolated animation tweak.
+
+Animation performance work completed in this pass:
+
+- Cached `S.offsetElts` inside `AnimationController` so the hot loop does not
+  flatten the store every frame.
+- Switched the live animation path from p5 wrapper `.attribute()` calls to raw
+  DOM `feOffset.setAttribute()` writes. This improves JavaScript overhead but
+  cannot avoid SVG filter re-rasterization.
+- Added overlay instrumentation for real RAF FPS, actual light-update FPS,
+  offset count, and recent JavaScript batch time.
+- Removed legacy `getMaxFPS()`, `optimizeFrameRate()`, `isCalibrating`,
+  `batchSize`, and `frameTimes` from `AnimationController`. That code measured
+  cheap JS write time rather than real render throughput, and could push the
+  target FPS in the wrong direction.
+
+Deferred / exhibition-grade avenues:
+
+- Progressive frame cache: generate a coarse ring of cached raster frames first
+  (for example 120-360 frames), play those cheaply through canvas, and fill
+  missing intermediate frames later. This is plausible but belongs after the
+  release-critical phase because generating the original frames still goes
+  through the expensive SVG filter renderer.
+- Disk-backed compressed frame cache: store PNG/WebP/AVIF blobs in IndexedDB,
+  Cache API, or OPFS, then keep only a small decoded `ImageBitmap` ring buffer
+  in memory. Grayscale artwork should compress well, but normal browser canvas /
+  bitmap playback usually expands decoded frames to RGB/RGBA surfaces.
+- Full-revolution decoded frame cache is not practical at 4K: `3840 * 2160 * 4`
+  is about 31.6 MiB per decoded frame, and roughly 754 frames for a 12fps
+  `20π`-second revolution would be over 20 GiB decoded.
+- Exhibition video path: for contexts that require smooth synchronized playback,
+  render clean videos ahead of time and coordinate sync with the gallery's tech
+  stack. This is a better operational fit than forcing the browser SVG runtime
+  to behave like a dedicated playback system.
+
+CSS/WAAPI note: animating `feOffset` `dx`/`dy` through CSS is not a reliable
+cross-browser performance shortcut. These are SVG filter primitive attributes,
+not compositor-friendly transform properties; CSS/SMIL/Web Animations approaches
+would still cause SVG filter re-rasterization and are harder to synchronize with
+rotation, regeneration, and the global arc-second clock. GPU-cheap CSS
+transforms are useful for moving whole layers, but they do not preserve the
+neumorphic shadow-vector semantics.
+
+Closing note for release positioning: live browser animation should be described
+as synchronized, experimental, and hardware-sensitive rather than guaranteed
+smooth playback. A ~4.5fps worst-case current-machine result is acceptable as a
+baseline if release copy leaves room for future browser and hardware gains.
 
 **Rotation feature plan (initial implementation):** Chrome-only keyboard-driven
 90-degree rotation. Safari/WebKit ignores rotation keys for now. Use right
