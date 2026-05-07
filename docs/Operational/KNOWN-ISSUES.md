@@ -54,7 +54,7 @@ Maintenance note:
   - [9.14.7 SVG Filter Banding / Quantization (Resolved)](#9147-svg-filter-banding--quantization)
   - [9.14.8 R-in Backgrid Edge White-Out (Resolved)](#9148-r-in-backgrid-edge-white-out-resolved)
   - [9.14.9 R-in Shade Layer Not Centered (Open)](#9149-r-in-shade-layer-not-centered-open)
-  - [9.14.10 Viewport-Scale Dependent Shade Calibration (Open)](#91410-viewport-scale-dependent-shade-calibration-open)
+  - [9.14.10 Viewport-Scale Dependent Shade Calibration (Solved for Now)](#91410-viewport-scale-dependent-shade-calibration-solved-for-now)
 - [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
   - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
   - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
@@ -2181,11 +2181,13 @@ Additional considerations identified:
 
 ---
 
-### 9.14.10 Viewport-Scale Dependent Shade Calibration (Open)
+### 9.14.10 Viewport-Scale Dependent Shade Calibration (Solved for Now)
 
 *Added: 2026-05-07*
+*Current status updated: 2026-05-07*
 
-**Status:** 🔴 Top remaining shading bug
+**Status:** ✅ Solved for now — user-unit/pixel conversion removed from shade
+offset/blur authoring and visually retuned
 
 **Symptom:** R-out shading, especially the large soft frame/body bevels, only
 looks naturally calibrated in the artist's usual launch context: a tall vertical
@@ -2231,6 +2233,18 @@ very different SVG display sizes. That points to a mistaken user-unit/pixel
 conversion at initial filter construction, not to a browser raster-resolution
 artifact and not mainly to missing recomputation on resize.
 
+**Resolution (May 7 2026):** Removed the active `pixToUserUnits` divisions from
+the shade offset/blur construction paths in `Shade.neuShadeSVGFactory()` and
+retuned the current constants. Results are now fairly consistent between small
+and large launch windows. The remaining small-vs-large difference is believed to
+come from shade-stack density decisions, especially `offsets.slice(start,
+keep())`, rather than from the original constant-screen-pixel unit bug.
+
+**Remaining follow-up:** Before release, run an objective Shade retuning pass
+using visual A/B comparison across representative hashes, launch sizes, and
+export targets. That pass should evaluate the `keep()` thresholds, offset ladder
+shape, blur constants, and whether S-curve shading can be made viable again.
+
 **Initial diagnosis plan:**
 
 1. Capture `FRAME.pixToUserUnits`, `windowWidth`, `windowHeight`,
@@ -2244,17 +2258,10 @@ artifact and not mainly to missing recomputation on resize.
 4. Treat `Shade.neuShadeSVGFactory()` as the first code target, but do not tune
   visual coefficients until the intended unit model is chosen.
 
-**Likely fix direction:** Define shade depth, blur radius, and shade-layer
-spacing in stable SVG user units or in an explicit target output pixel density,
-not in whatever screen CTM exists at page build time. If display-adaptive shading
-is desired, rebuild/recompute all shade filters when the presentation scale
-changes. For ArtBlocks/final outputs, prefer a deterministic canonical render
-scale so the same hash produces the same intended depth regardless of collector
-window size.
-
-**Release risk:** High for visual consistency. This should be the first item in
-the remaining shading bug list, ahead of older fixed or lower-confidence shading
-notes.
+**Release risk:** Lowered from active correctness bug to pre-release polish /
+calibration risk. Do not reintroduce screen-CTM-derived conversion into shade
+offset or blur authoring unless it is explicitly isolated as a display-adaptive
+mode.
 
 ## 9.15 Performance Optimization Strategy
 
