@@ -83,7 +83,7 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 |----|-----|----------|-----------|------------|-------------------|--------|
 | B1 | **Safari compatibility** — three sub-issues: (1) 10s–1min render delay (WebKit per-shape masker O(N) cost, Bug #172338); (2) missing/incorrect shapes (same root cause + cross-SVG filter ID resolution, §9.14.4b); (3) animation non-functional (software-path RAF, Bug #19118). Primary workaround: no-op `<filter>` on masked groups. | P1 | 2–3 days | — | §9.14.4b, §9.14.6 | 🟡 In progress |
 | B2 | **Remaining wrapping bugs** — adjacent wrapper visual verification still pending; Bug B (opposite-facing collinear) deferred | P2 | 2–3 days | Wrapper audit §1 in ROADMAP | §9.7, §9.12 | 🟡 In progress (audit) |
-| B3 | **Remaining shading bugs** — R-in shade layer not centered; potential mask cropping edge cases | P2 | 1–2 days | — | §9.14.9, §9.13 | ❌ Not started |
+| B3 | **Remaining shading bugs** — viewport-scale dependent r-out blur/depth calibration is top priority; older R-in/mask notes are secondary | P1 | 1–2 days | — | §9.14.10, §9.14.9, §9.13 | 🔴 Top remaining shading bug |
 | B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | 🟡 In progress (clock sync implemented) |
 
 ### Bug Notes
@@ -111,8 +111,12 @@ rare visual defects may remain in a tiny fraction of outputs without describing
 the exact artifact pattern.
 
 **B3 — Shading:**
-R-in shade layer centering (§9.14.9) is the most concrete open item. Audit wave +
-ordinal mask mismatch briefly before committing time.
+Top item is now viewport-scale dependent shade calibration (§9.14.10). R-out
+bevel/shade stacks appear tuned to the artist's usual tall 4K Retina launch
+window; smaller launch windows produce overly broad/graphic blur, and later
+window expansion does not repair the generated shade stack. Start with
+`Shade.neuShadeSVGFactory()`, `FRAME.pixToUserUnits`, and generated blur/offset
+attributes before spending time on older R-in/mask notes.
 
 **B4 — Animation:**
 Timing polish is now centered on a synchronized light clock rather than a
