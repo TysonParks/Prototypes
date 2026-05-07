@@ -111,6 +111,7 @@ because understanding the geometry is prerequisite to knowing which
 |---|------|------|------------|--------|-------|
 | 17 | Visual edge-case debugging using image + log workflow | Ask | 13 | 🟡 Ongoing | Using WrapperDebugOverlay + hash-specific debugging. See [TESTING](TESTING.md). |
 | 18 | Frame artifact diagnosis via clean SVG-layout A/Bs | Ask → Agent | 17 | 🟡 In progress | Primary hash `0x3e8a98...251d34`. KNOWN-ISSUES § 9.14.7 now distinguishes a fixed filter-region regression from a still-open vertical/cropping artifact. Next step is `FilterDebugHarness`-driven isolation of filter region, viewport, overflow, and mask behavior before any shader rewrites. |
+| 19 | Viewport-scale shade calibration audit | Ask → Agent | 17 | 🔴 Top shading bug | KNOWN-ISSUES § 9.14.10. R-out blur/depth calibration appears coupled to launch window scale via `FRAME.pixToUserUnits` / `getScreenCTM()`. Compare generated `stdDeviation`, offsets, layer count, DPR, and `frameSize` across launch sizes, fullscreen, and export contexts before changing shader coefficients. |
 
 ### Post-Plan Addition: Unified Wrapper Funnel
 
