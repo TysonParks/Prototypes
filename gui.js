@@ -35,7 +35,9 @@ function getArtworkExportRotationInfo() {
   const snap = typeof artworkRotationSnapshot === 'function'
     ? artworkRotationSnapshot()
     : { angle: 0 }
-  const angle = normalizeExportRotationAngle(snap.angle)
+  const stateAngle = normalizeExportRotationAngle(snap.angle)
+  const visualAngle = getLiveArtworkRotationAngle()
+  const angle = visualAngle === null ? stateAngle : visualAngle
   const position = angle / 90
   const aspect = position % 2 === 0 ? 'V' : 'H'
   return {
@@ -47,6 +49,13 @@ function getArtworkExportRotationInfo() {
   }
 }
 
+function getLiveArtworkRotationAngle() {
+  const transform = FRAME?.bleed?.elt?.style?.transform || ''
+  const match = transform.match(/rotate\((-?\d+(?:\.\d+)?)deg\)/)
+  if (!match) return null
+  return normalizeExportRotationAngle(Number(match[1]))
+}
+
 function normalizeExportRotationAngle(angle) {
   const n = Number(angle)
   if (!Number.isFinite(n)) return 0
@@ -54,8 +63,12 @@ function normalizeExportRotationAngle(angle) {
 }
 
 function getArtworkExportResolution(baseRez, rotationInfo, scale = 1) {
-  const width = rotationInfo.isHorizontal ? baseRez.y : baseRez.x
-  const height = rotationInfo.isHorizontal ? baseRez.x : baseRez.y
+  const isHorizontal = rotationInfo.isHorizontal
+    || normalizeExportRotationAngle(rotationInfo.angle) % 180 !== 0
+  let width = isHorizontal ? baseRez.y : baseRez.x
+  let height = isHorizontal ? baseRez.x : baseRez.y
+  if (isHorizontal && height > width) [width, height] = [height, width]
+  if (!isHorizontal && width > height) [width, height] = [height, width]
   return {
     width,
     height,
@@ -101,6 +114,16 @@ function createRotationAwareSVGMarkup(svgElement, rotationInfo, width, height) {
   return Export.createSVGMarkup(clone)
 }
 
+function getSVGMarkupIntrinsicSize(svgMarkup) {
+  const doc = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml')
+  const root = doc.documentElement
+  const width = Number.parseFloat(root?.getAttribute('width'))
+  const height = Number.parseFloat(root?.getAttribute('height'))
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return null
+  if (width <= 0 || height <= 0) return null
+  return { width, height, rezString: `${width}x${height}` }
+}
+
 function parseSVGViewBox(raw) {
   const vals = String(raw || '').trim().split(/[\s,]+/).map(Number)
   if (vals.length !== 4 || vals.some(v => !Number.isFinite(v))) return null
@@ -140,8 +163,9 @@ function keyPressed() {
       exportRez.width,
       exportRez.height,
     )
+    const exportSize = getSVGMarkupIntrinsicSize(svgMarkup) || exportRez
 
-    Export.exportPNG(svgMarkup, name, exportRez.width, exportRez.height, scale)
+    Export.exportPNG(svgMarkup, name, exportSize.width, exportSize.height, scale)
   }
   if (key === 'v') {
     // Export video frames — full 360° light rotation
