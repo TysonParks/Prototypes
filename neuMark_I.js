@@ -198,8 +198,8 @@ class ProtoCut {
   //      seam fix and small enough that Safari does not abort.
   //
   // Current test region (absolute user units, userSpaceOnUse):
-  //   fixed margin = 5 user units on all sides.
-  //   optional combo-only depth margin = max(5, cut depth * 0.25).
+  //   fixed margin = 0 user units for high/shad filters.
+  //   combo-only depth margin = max(0, cut depth * 0.25).
   // Previous correctness fallback:
   //   x = -50, y = -50, width = 200, height = 300
   //   = FRAME expanded by 50 on every side.
@@ -220,8 +220,8 @@ class ProtoCut {
       (window.SAFARI_FILTER_REGION_USERSPACE_FIX !== false)
 
     if (useUserSpaceFix) {
-      // Centralized margin test point. To compare against fixed padding, swap
-      // the active return in shadeFilterRegionMarginFor().
+      // Centralized margin test point. To compare against alternate padding
+      // strategies, swap the active return in shadeFilterRegionMarginFor().
       const fb = FRAME.boundsRect
       this.filters.forEach(f => {
         const margin = ProtoCut.shadeFilterRegionMarginFor(this, f)
