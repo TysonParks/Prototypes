@@ -62,7 +62,7 @@ Sub-steps within that pipeline:
 | 5 | Feature: InfraGrid InnerCuts re-enable | F2 | ♻️ Deferred |
 | 6 | Bug: Shading  | ?? | 🟡 In Process |
 | 7 | Animation: timing polish | B4 | ✅ Completed |
-| 8 | Animation: performance (cont.) | B4 | 🟡 In Process |
+| 8 | Animation: performance (cont.) | B4 | ✅ Completed  |
 | 9 | Feature: Rotation implementation (basic) | F1 | ✅ Completed  |
 | 10 | Feature: Rotation research + Post Params | F1 | 🟡 In Process |
 | 11 | Code cleanup pass | E1 | Not started |
