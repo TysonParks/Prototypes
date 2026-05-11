@@ -12,7 +12,7 @@ const Debuggable = {
   get isPerimeterShape() { return this.type === `PerimeterShape` },
   get isPerimeterIsland() { return this.type === `PerimeterIsland` },
   get isIsland() { return this.type.includes(`Island`) },
-  get isShape() { return this.type.includes(`Shape`) },
+  get isShape() { return this.type.includes(`Shape`) && !this.isShapeGroup },
   get isShapeGroup() { return this.type.includes(`ShapeGroup`) },
 
   get deBugAnchor() {
@@ -32,6 +32,8 @@ const Debuggable = {
   },
   //METH: showLabel() : null : show debug label
   showLabel() {
+    // console.warn(`showing label for ${this.id}`)
+    // console.log(`this`, this)
     if (this.drawSVG) {
       if (!this.deBugLabelElt) this.deBugLabelElt = createSVGText(this.id, 0, 0)
       let offset, font
@@ -39,8 +41,13 @@ const Debuggable = {
         offset = this.isPerimeterShape ? vert(1, 4) : vert(1, 8)
         font = this.isPerimeterShape ? `bold 3px sans-serif` : `3px sans-serif`
       } else if (this.isShapeGroup) {
-        offset = vert(1, 8)
-        font = `2px sans-serif`
+        // console.log(`showing label for shapeGroup ${this.id}`)
+        if (this.type.includes(`backing`)) offset = vert(1, 16)
+        if (this.type.includes(`combo`)) offset = vert(1, 7)
+        if (this.type.includes(`high`)) offset = vert(1, 10)
+        if (this.type.includes(`shad`)) offset = vert(1, 13)
+        // offset = vert(1, 16)
+        font = `2.3px sans-serif`
       } else if (this.isIsland) {
         offset = this.isPerimeterIsland ? vert(1, 4) : vert(1, 8)
         font = this.isPerimeterIsland ? `bold 3px sans-serif` : `3px sans-serif`
@@ -244,7 +251,7 @@ const Debuggable = {
     DeBug.log(`this.isShapeGroup`, this.isShapeGroup)
     if (this.isShapeGroup && this.cut?.profile) {
       this.shapes.forEach(sh => {
-        if (sh.maskShape) {
+        if (sh.maskShape && this.grid.maskElt) {
           // DeBug.log(`maskShape index`, i)
           const maskShape = createSVGElt('path').id(`${sh.id}-maskPath`)
             .attribute(`d`, sh.maskSVG)
