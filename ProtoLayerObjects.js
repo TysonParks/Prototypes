@@ -1752,6 +1752,8 @@ class ShapeGroup extends ProtoLayer {
     }
   }
 
+
+
   get cells() { return this.islands.map(i => i.cells).flat().gridVertSorted }
   get shapes() { return this.islands.map(i => i.shape) }
 
@@ -1820,12 +1822,12 @@ class ShapeGroup extends ProtoLayer {
       if (!this.masks.isEmpty) {                              // if there are masks, create a mask group
         const outsetShade = this.cut.profile.hasOutsetShade   //  outsetShade determines mask fill style
 
-        const mult = 1
-        const randomLCH = (l) => {
-          const hue = R.random_num(0, 360)
-          const chroma = R.random_num(.125, .125)
-          return `oklch(${l} ${chroma} ${hue})`
-        }
+        // const mult = 1
+        // const randomLCH = (l) => {
+        //   const hue = R.random_num(0, 360)
+        //   const chroma = R.random_num(.125, .125)
+        //   return `oklch(${l} ${chroma} ${hue})`
+        // }
 
         this.maskGroupElt = createElementNS(xmlns, 'g')
           .id(`${this.id}-maskGroup`)
@@ -3243,7 +3245,8 @@ class Shape extends ProtoLayer {
     const
       depthScale = this.cutDepthScale,                                              // cut depthScale
       scale = outsetShade ?
-        this.insetScale
+        // this.insetScale
+        Vertex.add(this.insetScale, depthScale.mult(0.8))
         // Vertex.add(this.insetScale, depthScale)                                     // outsetShade scale is insetScale + depthScale
         : Vertex.sub(this.insetScale, depthScale),                                  // insetShade scale is insetScale - depthScale
       // : this.insetScale,                                                          // insetShade scale is insetScale - depthScale
@@ -3271,11 +3274,11 @@ class Shape extends ProtoLayer {
     // return paths
   }
 
-  get minMaskShape() {
-    const baseMask = this.maskShape
-    if (!baseMask) return
+  // get minMaskShape() {
+  //   const baseMask = this.maskShape
+  //   if (!baseMask) return
 
-  }
+  // }
 
   //MARK: SVG Paths
   get svg() {
