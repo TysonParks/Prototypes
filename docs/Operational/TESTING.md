@@ -275,6 +275,9 @@ FDH.useUserSpaceFilterRegion()
 // Try alternate cut viewport behavior
 FDH.rebuild({ cutBoundsMode: 'cellBounds' })
 
+// Reproduce the historical overbroad §9.14.1 behavior
+FDH.rebuild({ cutBoundsMode: 'frameBounds' })
+
 // Try explicit cut SVG overflow behavior
 FDH.rebuild({ cutOverflow: 'hidden' })
 
@@ -302,6 +305,11 @@ The current SVG cropping work spans multiple independent mechanisms:
 2. nested SVG viewport sizing
 3. overflow behavior
 4. `Magical` grid bounds that currently may extend beyond the frame and then get clipped back to `100x200`
+
+2026-05-11 rollback note: use `FDH.rebuild({ cutBoundsMode: 'cellBounds' })`
+as the A/B preview for removing `this.cut` from `ShapeGroup.boundsRect`. Compare
+against `cutBoundsMode: 'frameBounds'` on cascade and J-in cropping hashes before
+retuning shade constants or drawing Safari/performance conclusions.
 
 For the current Mar 6 bottom-bar investigation, the newest high-value probe is:
 
