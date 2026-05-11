@@ -825,10 +825,10 @@ function gridTests2(features) {
   // FRAME.backGrid.showShapesDebug()
   // FRAME.backGrid.showShapeGroupsDebug(false)
   // FRAME.backGrid.showMasksDebug()
-  // GRID.showCellsDebug(false)
-  // GRID.showShapesDebug(false)
-  // GRID.showShapeGroupsDebug(false)
-  // GRID.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
+  GRID.showCellsDebug()
+  GRID.showShapesDebug()
+  GRID.showShapeGroupsDebug()
+  GRID.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
   // GRID.showFrameRate(animationController)
   // GRID.showSizeGrid(4)
 
@@ -875,7 +875,7 @@ function gridTests2(features) {
   DeBug.warn(`Linear Cuts`, features.linearCuts)
   DeBug.log(`Mill`, mill)
   DeBug.log('all ProtoLayers', S.allLayers)
-  DeBug.log(`GRID`, GRID)
+  console.log(`GRID`, GRID)
   DeBug.warn(`cellSize`, GRID.cellSize)
   DeBug.warn(`GRID cells`, features.x, features.y)
   DeBug.error(`F.groups`, features.groups)
