@@ -83,7 +83,8 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 |----|-----|----------|-----------|------------|-------------------|--------|
 | B1 | **Safari compatibility** — three sub-issues: (1) 10s–1min render delay (WebKit per-shape masker O(N) cost, Bug #172338); (2) missing/incorrect shapes (same root cause + cross-SVG filter ID resolution, §9.14.4b); (3) animation non-functional (software-path RAF, Bug #19118). Primary workaround: no-op `<filter>` on masked groups. | P1 | 2–3 days | — | §9.14.4b, §9.14.6 | 🟡 In progress |
 | B2 | **Remaining wrapping bugs** — adjacent wrapper visual verification still pending; Bug B (opposite-facing collinear) deferred | P2 | 2–3 days | Wrapper audit §1 in ROADMAP | §9.7, §9.12 | 🟡 In progress (audit) |
-| B3 | **Shade retuning before release** — viewport-scale unit bug solved for now; objective A/B retune of offsets, `keep()`, blur constants, and possible S-curves remains | P2 | 1–2 days | — | §9.14.10, §9.14.9, §9.13 | 🟡 Retuning needed |
+| B3 | **Shade retuning before release** — viewport-scale unit bug solved for now; objective A/B retune should happen after the ShapeGroup bounds rollback is revalidated | P2 | 1–2 days | B5 | §9.14.10, §9.14.9, §9.13 | 🟡 Retuning needed |
+| B5 | **ShapeGroup bounds rollback / J-in cropping** — remove overbroad `this.cut -> FRAME.boundsRect`, then re-test cascade/J-in cropping, Safari, animation FPS, and per-cut filter AABBs | P2 | 1 day | — | §9.14.1, §9.15 | 🟡 Before release |
 | B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | 🟡 In progress (clock sync implemented) |
 
 ### Bug Notes
@@ -115,9 +116,19 @@ The viewport-scale shade calibration bug is solved for now (§9.14.10): active
 `pixToUserUnits` conversion was removed from shade offset/blur authoring and the
 current constants were visually retuned. Remaining small-vs-large launch
 differences likely come from shade-stack density, especially `offsets.slice(start,
-keep())`. Before release, run an objective Shade A/B retuning pass across
+keep())`. Before release, but after the `ShapeGroup.boundsRect` rollback is
+revalidated, run an objective Shade A/B retuning pass across
 representative hashes and output contexts. Include `keep()` thresholds, offset
 ladder shape, blur constants, and possible S-curve shading revival.
+
+**B5 — ShapeGroup bounds rollback / J-in cropping:**
+The §9.14.1 `ShapeGroup.boundsRect` branch currently returns FRAME for any cut,
+which makes nearly all shaded groups frame-sized. That was too broad for a
+cascade/J-in coverage problem and likely distorted recent shade, Safari, and
+performance diagnostics. Roll it back to frame-only behavior, keep the
+`FilterDebugHarness` `cellBounds`/`frameBounds` A/B modes, and then solve any
+returned cropping with explicit filter, mask, or cascade-specific SVG region
+math in user units.
 
 **B4 — Animation:**
 Timing polish is now centered on a synchronized light clock rather than a
@@ -204,8 +215,9 @@ Current filter-region tuning status:
 - Per-cut AABB tightening remains blocked as a separate architecture project.
   The prior Tier 1b attempt produced effectively no area reduction because
   §9.14.1 cascade broadening makes cut ShapeGroup bounds collapse to FRAME.
-  Re-attempt after the mask/ShapeGroup bounds architecture is rebuilt, not as an
-  isolated animation tweak.
+  Re-attempt immediately after the `ShapeGroup.boundsRect` `this.cut` rollback;
+  if true cell-bound unions still do not explain the crop/perf tradeoff, then
+  escalate to the broader mask/ShapeGroup bounds architecture rebuild.
 
 Animation performance work completed in this pass:
 
