@@ -1352,11 +1352,35 @@ the SVG `<mask>` element approach.
 
 ## 9.14 SVG Filter Layout & Mask Cropping Issues
 
-**Status:** � Active — cascade and mask cropping fixed; waves+ordinal remains
+**Status:** Active — cascade/mask history retained; ShapeGroup bounds rollback now pending
 
 ### 9.14.1 Issue 1: Cascade SVG Cropping (Frame & Grid)
 
-**Status:** ✅ Fixed (both frame-layer and grid-layer cascades)
+**Status:** Re-opened 2026-05-11 — rollback pending for overbroad ShapeGroup bounds
+
+**May 11 correction:** The prior runtime fix broadened `ShapeGroup.boundsRect`
+for every `ShapeGroup` with `this.cut`:
+
+```js
+if (this.isFrame || this.cut) return FRAME.boundsRect
+```
+
+That is too broad. In practice almost every shaded ShapeGroup has a cut, so
+the fix makes ordinary cut groups pretend they own the entire `(0, 0, 100, 200)`
+frame. This contaminates basic geometry (`anchor`, `size`, nested `<svg>`
+viewBox/layout, masks, filter consumers), blocks meaningful per-cut AABB region
+work, and likely distorted recent shading, animation, Safari, and cropping
+diagnostics. The intended rollback is to leave frame groups frame-sized while
+letting non-frame cut groups use their true cell bounds:
+
+```js
+if (this.isFrame) return FRAME.boundsRect
+return this.cellBounds.boundsRect
+```
+
+Do not treat the old `this.cut` branch as an accepted final architecture. The
+cascade/J-in cropping problem still needs a precise region solution in user
+units after the rollback is verified.
 
 **Symptom:** Islands with `amount > 1` and `insideCutStyle = 'Cascades'` (or
 `'Waves'`) show clipped filter effects — the shadow/highlight bleeds are
@@ -1378,7 +1402,7 @@ were all contributing to filter crop:
 For grid cascades, outset profile shapes (r-in) physically extend
 beyond cell grid boundaries, making all three clipping layers active.
 
-**Fix — three coordinated changes:**
+**Historical fix attempt — now partially rejected:**
 
 1. **`filterUnits="userSpaceOnUse"`** (neuMark_I `setLayouts()` L169):
    Switches filters from percentage-based to fixed user-unit bounds.
@@ -1393,31 +1417,32 @@ beyond cell grid boundaries, making all three clipping layers active.
      .attribute("height", FRAME.size.y + pad.y * 2)
    ```
 
-2. **`ShapeGroup.boundsRect` expanded** (ProtoLayerObjects L1732):
-   All cut ShapeGroups use `FRAME.boundsRect` as their viewport,
-   matching the `userSpaceOnUse` filter coordinate space.
+2. **`ShapeGroup.boundsRect` expanded** (ProtoLayerObjects `boundsRect` getter): All cut ShapeGroups use `FRAME.boundsRect` as their viewport, matching the `userSpaceOnUse` filter coordinate space. This is the bad broadening now targeted for rollback.
    ```js
    if (this.isFrame || this.cut) return FRAME.boundsRect
    ```
-   Safe because `maxLayout` percentage pipeline is bypassed — the
-   previous regression (thin percentage margins from large viewports)
-   no longer applies.
+   It was useful as a temporary diagnostic/correctness lever, but it is not
+   safe as a permanent geometry rule because `this.cut` is not cascade-specific.
 
-3. **`overflow: visible`** on ShapeGroup + Grid SVGs:
+3. **`overflow: visible`** on ShapeGroup SVGs:
    - ShapeGroup: `if (this.cut) this.svgElt.attribute('overflow', 'visible')`
      (ProtoLayerObjects `assignElement()` L1790)
-   - Grid: `this.svgElt.attribute('overflow', 'visible')`
-     (Grid.js `assignElement()` L2327)
-   Allows filter effects to extend beyond viewport bounds. The FRAME
-   `<svg>` (viewBox `0 0 100 200`) provides final clip.
+   - Grid overflow was considered under §9.14.1 but is currently commented out
+     in `Grid.assignElement()`.
+   Allows filter effects to extend beyond ShapeGroup viewport bounds. The FRAME
+   `<svg>` and final mask provide the final visible clip.
 
-**Why all three changes were needed:**
+**Why the old conclusion no longer holds:**
 - `userSpaceOnUse` alone: filter region large enough, but ShapeGroup
   viewport still clips rendered output at tight cell bounds.
 - `boundsRect` alone (without `userSpaceOnUse`): caused regression —
   FRAME-sized viewport + `maxLayout` percentage pipeline = thin margins.
 - `overflow: visible` alone: unfiltered backing layers rendered, but
   filter layers still clipped at their percentage-based filter regions.
+- New finding: `boundsRect -> FRAME.boundsRect` for every cut solves one
+  visibility family by corrupting the coordinate/layout basis for nearly all
+  shade groups. Cascade coverage belongs in filter/mask/SVG region math, not in
+  a global `ShapeGroup.boundsRect` override.
 
 **Failed approaches (for reference):**
 1. **`ShapeGroup.padding` override for backGroup** — `CellGroup.isBackGroup`
@@ -1433,21 +1458,22 @@ beyond cell grid boundaries, making all three clipping layers active.
 5. **`this.grid.boundsRect` for cuts** — Grid's outer bounds from
    `FRAME.insetBoundsRect`, no visible change.
 
-**Dead code note:** `ProtoCut.maxLayout` (neuMark_I L149) and
-`ShapeGroup.finalSize` (ProtoLayerObjects L1743) are now dead code —
-the percentage pipeline is fully bypassed by `userSpaceOnUse`.
+**Dead code note under review:** `ProtoCut.maxLayout` and
+`ShapeGroup.finalSize` were previously considered dead because the percentage
+pipeline is bypassed by `userSpaceOnUse`. After the bounds rollback, preserve
+these until the exact post-rollback filter/mask region strategy is chosen.
 
 **Key code paths:**
 - `setLayouts()`: neuMark_I L169-180 ← **userSpaceOnUse filter bounds**
-- `ShapeGroup.boundsRect`: ProtoLayerObjects L1732 ← **viewport expansion**
-- `ShapeGroup.assignElement()`: ProtoLayerObjects L1790 ← **overflow:visible**
-- `Grid.assignElement()`: Grid.js L2327 ← **overflow:visible**
+- `ShapeGroup.boundsRect`: ProtoLayerObjects `boundsRect` getter ← **rollback `this.cut` broadening**
+- `ShapeGroup.assignElement()`: ProtoLayerObjects `assignElement()` ← **overflow:visible; revalidate after rollback**
+- `Grid.assignElement()`: Grid.js `assignElement()` ← **overflow:visible is currently commented out**
 - `ProtoCut.padding`: neuMark_I L136 (`depth * 2`)
 - `applyFilterToElement()`: ProtoFilter L190 (filter wrapper `<g>`)
 - `S.Cuts.db...setLayouts()`: sketch.js L765
 
-**Test hashes:** `cascade_frame_crop_1`, `cascade_grid_crop_1` in
-WrapperTestHarness.js
+**Test hashes:** `cascade_frame_crop_1`, `cascade_grid_crop_1`,
+`cascade_grid_crop_2`, and current J-in cropping repros in WrapperTestHarness.js
 
 ### 9.14.2 Issue 2: R-Profile Mask Cropping
 
@@ -1653,10 +1679,10 @@ the accidental coupling between call order and DOM placement.
 3. Trace a Waves+ordinal hash to log the `direction` and
    `hasOrdinalConnections` state at each cascade level.
 
-**Phase B — Fix cascade filter cropping (Issue 1)** ✅ Fixed
-- Final approach: `ShapeGroup.boundsRect` returns `FRAME.boundsRect` for
-  all cascade layers (frame + grid). Single-line fix, filter sharing
-  preserved. See § 9.14.1.
+**Phase B — Fix cascade filter cropping (Issue 1)** Re-opened
+- Previous approach: `ShapeGroup.boundsRect` returned `FRAME.boundsRect` for
+  cut groups. This was overbroad because `this.cut` is not cascade-specific.
+  See § 9.14.1 for the rollback and revalidation plan.
 
 **Phase C — Fix mask cropping (Issue 2)** ✅ Fixed
 - Final approach: `maskUnits="userSpaceOnUse"` with explicit bounds on the
@@ -1905,14 +1931,15 @@ regions, padding, and bounding boxes for all backgrid ShapeGroups.
 
 #### 9.14.7.7 Cascade Crop Fix (Mar 9 2026)
 
-**Status:** ✅ Fixed (selective changes applied)  
+**Status:** Historical — visual fix succeeded, bounds broadening now being rolled back  
 **Date:** 2026-03-09  
 **Summary:** After the group-mask blur fix was applied, the cascade
 cropping regression was resolved by two targeted, low-risk changes:
 
 - (A) Broadening `ShapeGroup.boundsRect` for cuts to return
-  `FRAME.boundsRect` (ensures shape groups contributing deep cascade
-  effects are laid out in the full frame user-space).
+  `FRAME.boundsRect` (ensured shape groups contributing deep cascade
+  effects were laid out in full frame user-space). This is now considered the
+  wrong layer for the fix because `this.cut` applies far beyond cascades.
 - (C) Switching `ProtoCut.setLayouts()` to use
   `filterUnits="userSpaceOnUse"` and absolute FRAME bounds instead of
   percentage-based (`objectBoundingBox`) margins.
@@ -1924,11 +1951,16 @@ measurable performance concerns; it is **not** part of the retained
 fix. The retained fixes (A + C) correct cascade cropping without
 requiring permanent `overflow: visible`.
 
-**Why this works:** Using absolute user-space filter bounds decouples
+**Why this appeared to work:** Using absolute user-space filter bounds decouples
 filter region calculation from ShapeGroup viewport sizes (the source
 of percentage-based under-coverage). Broadening `boundsRect` for cut
 ShapeGroups ensures padding and mask calculations include the full
 frame area where deep blurs and cascades can extend.
+
+**May 11 follow-up:** remove the `this.cut` part of `ShapeGroup.boundsRect`,
+then re-test the cascade/J-in/cropping pool. If cropping returns, address it in
+explicit filter regions, mask regions, or cascade-specific overflow/layout
+rules rather than making every cut group frame-sized.
 
 **Implementation:** See `ProtoLayerObjects.js` (`ShapeGroup.boundsRect`
 and caller code) and `ProtoCut.setLayouts()` in `neuMark_I.js` for the
@@ -2268,11 +2300,10 @@ mode.
 **Status:** 🟡 Audited — low-risk live-animation cleanup completed;
 aggressive cache/video paths deferred
 
-**Context:** The § 9.14.1 three-layer fix achieved 100% visual
-correctness across 100+ test hashes, but sacrificed three performance
-optimizations to get there. This section documents exactly what was
-sacrificed, preserves the original optimization logic, and proposes an
-incremental path back to optimal performance.
+**Context:** The § 9.14.1 three-layer fix achieved broad visual coverage across
+the historical hash pool, but one part of it is now known to be overbroad:
+`ShapeGroup.boundsRect` returns FRAME for every cut. This section preserves the
+performance history and defines the revalidation path after that rollback.
 
 **Goals:**
 1. Preserve visual correctness and synchronized light timing.
@@ -2300,20 +2331,22 @@ overhead to every frame of animation and to initial render:
 ShapeGroups had small viewports, meaning the browser only composited
 a small pixel region.
 
-**After:** All cut ShapeGroups use `FRAME.boundsRect` `(0, 0, 100, 200)`
-as their viewport. Every ShapeGroup is now frame-sized regardless of
-how many cells it covers.
+**Current:** All cut ShapeGroups use `FRAME.boundsRect` `(0, 0, 100, 200)`
+as their viewport. Every cut ShapeGroup is now frame-sized regardless of
+how many cells it covers. This is no longer accepted as a final state.
 
-**Performance cost:** The browser composites the **full frame area**
+**Performance/correctness cost:** The browser composites the **full frame area**
 for every ShapeGroup, not just the area the ShapeGroup actually
 occupies. For a grid with many small ShapeGroups, this is a significant
-multiplier on pixel fill.
+multiplier on pixel fill. It also poisons geometry-based diagnostics because
+the reported bounds no longer describe the group.
 
 **Code location:** ProtoLayerObjects `boundsRect` getter (L1732-1738)
 ```js
-// CURRENT (broadened for correctness):
+// CURRENT (overbroad; rollback pending):
 if (this.isFrame || this.cut) return FRAME.boundsRect
-// ORIGINAL (tight, per-ShapeGroup):
+// TARGET rollback:
+if (this.isFrame) return FRAME.boundsRect
 return this.cellBounds.boundsRect
 ```
 
@@ -2371,26 +2404,26 @@ get finalSize() {
 }
 ```
 
-#### Sacrifice C — `overflow: visible` on ShapeGroup + Grid SVGs
+#### Sacrifice C — `overflow: visible` on ShapeGroup SVGs
 
-**Before:** Default `overflow: hidden` on ShapeGroup SVGs and Grid SVGs
+**Before:** Default `overflow: hidden` on ShapeGroup SVGs
 allowed the browser to skip compositing any pixel output extending
 beyond the viewport. This is a free GPU-level clip optimization.
 
-**After:** `overflow: visible` on both layers to allow filter effects
-(shadows, highlights) to bleed beyond the ShapeGroup and Grid viewports.
-The FRAME `<svg>` at `(0, 0, 100, 200)` provides the only hard clip.
+**After:** `overflow: visible` on cut ShapeGroup SVGs allows filter effects
+(shadows, highlights) to bleed beyond the ShapeGroup viewports. Grid-level
+overflow was tested historically but is currently commented out. The FRAME SVG
+and final mask provide the hard visible clip.
 
 **Performance cost:** The browser can no longer skip compositing for
-pixel data outside ShapeGroup/Grid viewport bounds. Combined with
+pixel data outside ShapeGroup viewport bounds. Combined with
 Sacrifice A (FRAME-sized viewports), this means every ShapeGroup's
 filter output is composited across the full frame.
 
 **Code locations:**
 - `ShapeGroup.assignElement()` — ProtoLayerObjects L1790:
   `if (this.cut) this.svgElt.attribute('overflow', 'visible')`
-- `Grid.assignElement()` — Grid.js L2327:
-  `this.svgElt.attribute('overflow', 'visible')`
+- `Grid.assignElement()` has the old overflow line commented out.
 
 ### 9.15.2 Why These Sacrifices Were Necessary
 
@@ -2437,10 +2470,13 @@ These optimizations don't touch the viewport/filter-region system:
 
 **1b. Filter region tightened to actual content bounds**
 - *2026-04-28: ATTEMPTED, BLOCKED. See § 9.15.6 for measurements. The
-  union of `shapeGroups[*].boundsRect` collapses to FRAME for every
-  cut due to § 9.14.1 cascade broadening, so this tier produces zero
-  area reduction. Re-enable only after § 9.11 maskShape rebuild
-  removes the FRAME-broadening for cut groups.*
+  union of `shapeGroups[*].boundsRect` collapsed to FRAME for every
+  cut due to § 9.14.1 cascade broadening, so that tier produced zero
+  area reduction.*
+- *2026-05-11: unblock condition changed. Re-attempt after removing the
+  `this.cut` branch from `ShapeGroup.boundsRect`, then compare true cell-bound
+  unions against current FRAME-wide regions. Do not wait for a full §9.11
+  maskShape rebuild if the rollback itself restores meaningful bounds.*
 - Current: filter region = FRAME `(0, 0, 100, 200)` for ALL cuts
 - Optimized: compute per-cut AABB from all ShapeGroup cell bounds,
   expand by `padding`, clamp to FRAME bounds
@@ -2471,6 +2507,7 @@ These optimizations don't touch the viewport/filter-region system:
 #### Tier 2 — Viewport Tightening (requires careful testing)
 
 **2a. Restore tight ShapeGroup viewports WITH overflow:visible**
+- This is now the immediate rollback/revalidation path, not a distant tier.
 - Currently both broadened viewports AND overflow:visible are set
 - With `overflow: visible`, the viewport is just a coordinate system
   origin — the browser doesn't clip at the viewport boundary
