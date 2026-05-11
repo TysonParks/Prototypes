@@ -93,7 +93,7 @@ because understanding the geometry is prerequisite to knowing which
 | 10b | Add `intershape` test hash to WRAPPER_TEST_CASES | Agent | 10a | ✅ Done | User added `intershape_1/2/3` + `collinear_basic_2` + `broken_07` hashes manually. |
 | 11 | Design inner mask implementation plan against working branch | Ask | 10a | ✅ Done | Mask pipeline audited (KNOWN-ISSUES § 9.13). Re-enablement plan in § 9.13.7. |
 | 12 | Implement inner mask feature incrementally | Agent + verify | 11 | 🟡 In progress | § 9.13.7 Steps 1-2 done: maskShape return-type fix, degenerate-path guard, createMaskGroup re-enabled at drawElement. Steps 3-5 remain. |
-| 12a | **Fix SVG filter/mask cropping** — cascade, r-out, waves+ordinal | Agent + verify | 12 | 🟡 In progress | Cascade cropping (§ 9.14.1) ✅ fixed. R-profile mask (§ 9.14.2) ✅ fixed. Mar 6 `userSpaceOnUse` shared-filter-region rewrite was diagnosed as a visual regression and reverted from the runtime default (§ 9.14.6). Waves+ordinal (§ 9.14.3) remains, and the current frame artifact should be approached as a fresh layout/cropping isolation problem. |
+| 12a | **Fix SVG filter/mask cropping** — cascade, r-out, waves+ordinal | Agent + verify | 12 | 🟡 In progress | Cascade cropping (§ 9.14.1) re-opened: the `ShapeGroup.boundsRect` `this.cut -> FRAME.boundsRect` fix is overbroad and should be rolled back, then cascade/J-in cropping should be solved with precise filter/SVG/mask regions. R-profile mask (§ 9.14.2) ✅ fixed. Waves+ordinal (§ 9.14.3) remains. |
 | 12b | **Safari rendering** — percentage vs userSpaceOnUse filter regions | Research + Agent | 12a | ❌ Deferred | KNOWN-ISSUES § 9.14.4-5. Only after B-D stabilize the layout system. |
 | 13 | Add structured corner-tracing debug log to `maximizeCuddles` | Agent | 5 | ❌ Not started | Useful during step 12 and all future debugging. |
 
@@ -113,6 +113,7 @@ because understanding the geometry is prerequisite to knowing which
 | 18 | Frame artifact diagnosis via clean SVG-layout A/Bs | Ask → Agent | 17 | 🟡 In progress | Primary hash `0x3e8a98...251d34`. KNOWN-ISSUES § 9.14.7 now distinguishes a fixed filter-region regression from a still-open vertical/cropping artifact. Next step is `FilterDebugHarness`-driven isolation of filter region, viewport, overflow, and mask behavior before any shader rewrites. |
 | 19 | Viewport-scale shade calibration audit | Ask → Agent | 17 | ✅ Solved for now | KNOWN-ISSUES § 9.14.10. Removed active `pixToUserUnits` divisions from shade offset/blur construction and retuned current constants. Small-vs-large launch output is now fairly consistent; any remaining delta appears more likely tied to `offsets.slice(start, keep())` stack density than unit conversion. |
 | 20 | Objective Shade retuning pass | Ask → Agent | 19 | 🟡 Before release | Build a visual A/B workflow for `Shade.neuShadeSVGFactory()` across representative hashes, launch sizes, fullscreen, and export targets. Tune `keep()` thresholds, offset ladder shape, blur constants, and luma response with screenshots/contact sheets rather than single-window eyeballing. Consider S-curve shading revival as a feature upgrade during this pass. |
+| 21 | ShapeGroup bounds rollback + region revalidation | Ask → Agent | 17 | 🟡 Before release | Remove the `this.cut` broadening from `ShapeGroup.boundsRect`, then re-test cascade/J-in cropping, mask coverage, Safari first paint, live-light FPS, and Tier 1b per-cut AABB opportunities. Keep `FilterDebugHarness` A/B modes for controlled comparison. |
 
 ### Post-Plan Addition: Unified Wrapper Funnel
 
@@ -130,16 +131,17 @@ because understanding the geometry is prerequisite to knowing which
 
 > **Context:** The § 9.14.1 three-layer fix broadened all filter
 > regions and ShapeGroup viewports to FRAME bounds for correctness.
-> This phase incrementally tightens them back for performance without
-> breaking correctness. See KNOWN-ISSUES § 9.15 for full details.
+> The ShapeGroup `this.cut` bounds broadening is now identified as
+> overbroad and should be rolled back before further performance
+> conclusions are trusted. See KNOWN-ISSUES § 9.14.1 and § 9.15.
 
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
 | P0 | Establish measurement baselines (load time, FPS, element counts) | Research | 12a | ❌ Not started | § 9.15.5. Must quantify before optimizing. |
 | P1a | Per-profile padding precision | Agent + verify | P0 | ❌ Not started | § 9.15.3 Tier 1a. Vary padding by `hasInsetShade`/`hasOutsetShade`/`hasCastShadow`. |
-| P1b | Per-cut filter region tightening (`userSpaceOnUse` AABB) | Agent + verify | P0 | 🚫 Blocked | § 9.15.3 Tier 1b — *2026-04-28: ATTEMPTED. Tight AABB collapses to FRAME for every cut due to § 9.14.1 cascade broadening. Zero area reduction (1.12× speedup, within noise). See § 9.15.6. Re-attempt only after § 9.11 maskShape rebuild.* |
+| P1b | Per-cut filter region tightening (`userSpaceOnUse` AABB) | Agent + verify | P0, 21 | 🟡 Re-test after rollback | § 9.15.3 Tier 1b — *2026-04-28 attempt was blocked because tight AABB collapsed to FRAME for every cut due to § 9.14.1 bounds broadening. After task 21 removes the `this.cut` branch, re-measure true cell-bound unions and only then decide whether further maskShape rebuild work is required.* |
 | P1c | Animation hot-loop cleanup | Research + Agent | P0 | ✅ Done | § 9.15.3 Tier 1c. Cached offset list, direct DOM writes, real FPS overlay, removed misleading calibration/batch optimizer. |
-| P2a | Restore tight ShapeGroup viewports (with overflow:visible) | Agent + verify | P1b | ❌ Not started | § 9.15.3 Tier 2a. Highest risk — coordinate system may shift. |
+| P2a | Restore tight ShapeGroup viewports (with overflow:visible) | Agent + verify | 21 | 🟡 Pending rollback | § 9.15.3 Tier 2a. This is now the immediate `ShapeGroup.boundsRect` rollback path; highest risk is coordinate/filter-region mismatch after viewBox changes. |
 | P2b | Selective overflow:visible (cascade-only) | Agent + verify | P2a | ❌ Not started | § 9.15.3 Tier 2b-2c. Non-cascade cuts get free GPU clipping. |
 | P3 | Per-ShapeGroup filter regions (requires filter cloning) | Agent + verify | P2a, 12b | ❌ Not started | § 9.15.3 Tier 3. Synergy with Safari fix (§ 9.14.4b). |
 | P4 | Animation-specific optimizations | Research + Agent | P0 | ♻️ Deferred | § 9.15.3 Tier 4. CSS/WAAPI not expected to help `feOffset`; frame-cache/video avenues documented but too aggressive for current release phase. |
