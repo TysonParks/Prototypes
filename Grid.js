@@ -78,6 +78,14 @@ class Grid extends ProtoLayer {
         height: this.size.y,
       })
   }
+  get visibleBoundsRect() {
+    return DOMRect.fromRect({
+      x: 0,
+      y: this.insetAnchor.y - this.insetAmount.x,
+      width: 100,
+      height: this.insetSize.y + this.insetAmount.x * 2,
+    })
+  }
   // MARK: Grid Computed Properties
   // #region Computed Properties
   get isBackGrid() { return this.type === `BackGrid` }
