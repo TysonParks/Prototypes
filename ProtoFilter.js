@@ -327,6 +327,98 @@ p5.Element.prototype.layout = function (x, y, width, height, padding = vert(0)) 
   return this
 }
 
+//FUNC: svgLayoutRect() : { x, y, width, height } : normalize layout/viewBox arguments
+function svgLayoutRect(args) {
+  let [x, y, width, height, padding = vert(0)] = args
+
+  if (args.length === 1 || (args.length === 2 && !args[0]?.xMin)) {
+    const rect = args[0]
+    x = rect.x
+    y = rect.y
+    width = rect.width
+    height = rect.height
+    if (rect.padding) padding = rect.padding
+  }
+
+  if (args.length > 1 && args.slice(0, 2).every(a => a instanceof Vertex)) {
+    x = args[0].x
+    y = args[0].y
+    width = args[1].x
+    height = args[1].y
+    if (args[2] instanceof Vertex) padding = args[2]
+  }
+
+  return {
+    x: x - padding.x,
+    y: y - padding.y,
+    width: width + padding.x * 2,
+    height: height + padding.y * 2,
+  }
+}
+
+//FUNC: svgRectToBounds() : BoundsObject : convert x/y/width/height rects for boundsOverlap()
+function svgRectToBounds(rect) {
+  return {
+    xMin: rect.x,
+    xMax: rect.x + rect.width,
+    yMin: rect.y,
+    yMax: rect.y + rect.height,
+  }
+}
+
+//FUNC: svgBoundsToRect() : { x, y, width, height } : convert boundsOverlap() result to SVG rect attrs
+function svgBoundsToRect(bounds) {
+  return {
+    x: bounds.xMin,
+    y: bounds.yMin,
+    width: bounds.xMax - bounds.xMin,
+    height: bounds.yMax - bounds.yMin,
+  }
+}
+
+//FUNC: svgLimitBounds() : BoundsObject : resolve explicit limit or default visible grid bounds
+function svgLimitBounds(limitBounds) {
+  const rect = limitBounds
+    || (typeof GRID !== 'undefined' ? GRID?.visibleBoundsRect : undefined)
+    || (typeof BGRID !== 'undefined' ? BGRID?.visibleBoundsRect : undefined)
+    || (typeof FRAME !== 'undefined' ? FRAME?.boundsRect : undefined)
+  if (!rect) return
+  return rect.xMin !== undefined ? rect : svgRectToBounds(rect)
+}
+
+//FUNC: isSVGLimitBounds() : Bool : identify explicit rect/bounds limiter arguments
+function isSVGLimitBounds(obj) {
+  return !!obj && (
+    hasProperties(obj, ['xMin', 'xMax', 'yMin', 'yMax']) ||
+    hasProperties(obj, ['x', 'y', 'width', 'height'])
+  )
+}
+
+//FUNC: limitedSVGLayoutRect() : { x, y, width, height } : clamp realized SVG rect to limit bounds
+function limitedSVGLayoutRect(args) {
+  const
+    lastArg = args[args.length - 1],
+    hasExplicitLimit = args.length > 1 && isSVGLimitBounds(lastArg),
+    limitBounds = svgLimitBounds(hasExplicitLimit ? lastArg : undefined),
+    rect = svgLayoutRect(hasExplicitLimit ? args.slice(0, -1) : args)
+
+  if (!limitBounds) return rect
+
+  const limited = boundsOverlap({ geo: [svgRectToBounds(rect), limitBounds] })
+  return limited ? svgBoundsToRect(limited) : { x: 0, y: 0, width: 0, height: 0 }
+}
+
+//PROTOTYPE: p5.Element.layoutLimited(x, y, width, height, padding, limitBounds) : p5.Element : set visible-bounds-limited layout attrs
+p5.Element.prototype.layoutLimited = function () {
+  const { x, y, width, height } = limitedSVGLayoutRect(OpArray.from(arguments))
+  this
+    .attribute('x', x)
+    .attribute('y', y)
+    .attribute('width', width)
+    .attribute('height', height)
+  return this
+}
+
 //PROTOTYPE: p5.Element.viewBox(x, y, width, height) : p5.Element : set the viewBox of the element
 p5.Element.prototype.viewBox = function (x, y, width, height, padding = vert(0)) {
   const args = OpArray.from(arguments)
@@ -347,6 +439,13 @@ p5.Element.prototype.viewBox = function (x, y, width, height, padding = vert(0))
     if (args[2]) padding = args[2]
   }
   this.attribute('viewBox', `${x - padding.x} ${y - padding.y} ${width + padding.x * 2} ${height + padding.y * 2}`)
+  return this
+}
+
+//PROTOTYPE: p5.Element.viewBoxLimited(x, y, width, height, padding, limitBounds) : p5.Element : set visible-bounds-limited viewBox
+p5.Element.prototype.viewBoxLimited = function () {
+  const { x, y, width, height } = limitedSVGLayoutRect(OpArray.from(arguments))
+  this.attribute('viewBox', `${x} ${y} ${width} ${height}`)
   return this
 }
 
