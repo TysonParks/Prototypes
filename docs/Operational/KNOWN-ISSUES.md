@@ -1832,6 +1832,23 @@ For the **remaining** artifact, the current suspects are now:
 4. only after those are ruled out: shade-stack quantization inside
   `neuShadeSVGFactory()`
 
+**2026-05-11 Grid geometry query:** If this banding family reappears,
+re-check `Grid.anchor`, `Grid.size`, `Grid.boundsRect`, and
+`Grid.gridAspect` before returning to shader math. `FeatureSet` currently
+encodes `Magical` as square-cell, variable-ratio grids and `Flexible` as
+cell-aspect-driven grids where `y` is chosen from the intended aspect.
+That means the old-looking `Flexible -> super bounds, Magical ->
+computed bounds` split may be intentional: full `FRAME` bounds preserve
+the generated `Flexible` `Square`/`Tall`/`Wide` cell aspect, while computed
+`Magical` bounds preserve square cells but can extend past the visible
+`100x200` frame and then get clipped. Do not use the measured
+`Grid.cellAspect` getter inside `Grid.gridAspect`; it depends on
+`cellSize -> insetSize -> size -> gridAspect` and creates a recursive
+layout dependency. If an explicit flexible-grid aspect correction is
+needed, pass the intended feature aspect (or a derived numeric ratio)
+from `FeatureSet`/`ProtoMill.mkGrid()` into `Grid` instead of reading
+`Grid.cellAspect` during bounds calculation.
+
 #### 9.14.7.4 Hypothetical Fix Sequence
 
 Preferred workflow: **diagnose → hypothesize fix → document → debug**.
