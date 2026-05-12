@@ -289,12 +289,6 @@ class Frame extends ProtoLayer {
   get svgMarkup() { return Export.createSVGMarkup(this.bleed.elt) }
 
   // MARK: Frame modifiers
-  //METH:  setCornerRadii()                                                   //UNUSED:
-  // setCornerRadii(corners, padding) {
-  //   const radius = corners.upLeft.x + 1.4 * padding.x
-  //   this.cornerRadius = min(radius, 50)
-  //   this.drawElement()
-  // }
   //METH: setGrid()
   setGrid(grid) {
     this.grid = grid
