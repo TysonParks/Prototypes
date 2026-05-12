@@ -1730,7 +1730,8 @@ class ShapeGroup extends ProtoLayer {
   // MARK: ShapeGroup Computed Properties
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
   get boundsRect() {
-    if (this.isFrame || this.cut) return FRAME.boundsRect   // § 9.14.1 — broadened for cascade filter coverage
+    // if (this.isFrame || this.cut) return FRAME.boundsRect   // § 9.14.1 — broadened for cascade filter coverage
+    if (this.isFrame) return FRAME.boundsRect  // frames should always use the full grid bounds to allow for filter bleed and prevent cropping bugs
     return this.cellBounds.boundsRect
   }
   get padding() {
@@ -1846,8 +1847,8 @@ class ShapeGroup extends ProtoLayer {
           // .attribute('y', this.anchor.y - this.size.y * 1 / mult)
           // .attribute('width', this.size.x * mult)
           // .attribute('height', this.size.y * mult)
-          .viewBox(this.anchor, this.size, this.padding)
-          .layout(this.anchor, this.size, this.padding)
+          .viewBoxLimited(this.anchor, this.size, this.padding)
+          .layoutLimited(this.anchor, this.size, this.padding)
           .attribute('fill', 'white')
           // .attribute('fill', 'black')
           // .attribute('fill', randomLCH(0.9))
