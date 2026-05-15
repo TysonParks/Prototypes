@@ -216,8 +216,9 @@ class ProtoCut {
   //
   // Revert flag: window.SAFARI_FILTER_REGION_USERSPACE_FIX = false (reload).
   setLayouts() {
-    const useUserSpaceFix = (typeof window !== 'undefined') &&
+    let useUserSpaceFix = (typeof window !== 'undefined') &&
       (window.SAFARI_FILTER_REGION_USERSPACE_FIX !== false)
+    // useUserSpaceFix = false
 
     if (useUserSpaceFix) {
       // Centralized margin test point. To compare against alternate padding
