@@ -34,6 +34,10 @@
   - [12.3 `inWrapPerimeter` — Inner→Outer Wrapping](#123-inwrapperimeter--innerouter-wrapping)
   - [12.4 Intershape Wrapping Context](#124-intershape-wrapping-context)
   - [12.5 Future: Second Frame Wrapping Mode](#125-future-second-frame-wrapping-mode)
+- [13. ProtoLayer SVG Realization and Inset Propagation](#13-protolayer-svg-realization-and-inset-propagation)
+  - [13.1 Which Layers Produce SVG](#131-which-layers-produce-svg)
+  - [13.2 Inset and Bounds Propagation](#132-inset-and-bounds-propagation)
+  - [13.3 Filter Region Implications](#133-filter-region-implications)
 
 > **Note on numbering:** Section numbers 10–11 preserved from the
 > original GEOMETRY-REFERENCE.md for consistency with any existing
@@ -414,5 +418,113 @@ See KNOWN-ISSUES § 9.11.4 for the BrokenFuture state of this code.
 
 ---
 
+## 13. ProtoLayer SVG Realization and Inset Propagation
+
+This map captures the current layer/bounds architecture as of 2026-05-15,
+with emphasis on why precise shade-filter regions are hard to compute in
+`ProtoCut.setLayouts()`. It separates three different things that often look
+similar while debugging:
+
+- **Geometry/data layers**: objects that calculate cells, islands, paths, and
+  bounds but normally do not create persistent visible SVG.
+- **Structural SVG layers**: SVG elements used as nested coordinate systems,
+  filter consumers, masks, or grouping containers. They may be invisible but
+  still affect filter region cost and clipping.
+- **Visual SVG layers**: elements that paint rects or paths into the artwork.
+
+### 13.1 Which Layers Produce SVG
+
+| Class / helper | Default role | SVG realization | Notes |
+|----------------|--------------|-----------------|-------|
+| `ProtoLayer` | Base layout contract | Creates a nested `<svg>` when `drawSVG` is true; creates a debug/front `<rect>` when `drawRect` is true | `assignElement()` is the shared place where `layout(anchor, size, padding)` and `viewBox(anchor, size, padding)` are applied. Subclasses can become structural or visual depending on constructor flags. |
+| `Frame` | Artwork root and backing frame | Visual + structural | Creates `bleed` `<svg>`, `bleedRect`, the main frame `<svg>` via `super.assignElement()`, optional frame debug rect, and frame masks. Its `boundsRect` is the canonical `(0,0,100,200)` frame. |
+| `Grid` / `BackGrid` | Grid coordinate system and shader layer owner | Structural by default | `Grid` creates its own `<svg>` via `ProtoLayer`. The front grid also creates persistent shader `<g>` layers: `backElt`, `comboElt`, `highElt`, `shadElt`, and `maskElt`. The back grid shares those shader layers after `Frame.setGrid()`. |
+| `SelectionBounds` | Cell selection measurement helper | Data only | Not a `ProtoLayer`; computes cell selection bounds and related cell metrics. No DOM. |
+| `CellGroup` | Group of selected cells and island factory | Structural SVG | Defaults to `drawSVG: true`, so it creates a nested `<svg>` container, but it normally paints no paths itself. It owns `perimeterIslands`, `shapeGroups`, and `cuts`. |
+| `ShapeGroup` | Render layer for one cut/filter/backing pass | Visual + structural | Creates an outer nested `<svg>`, an inner `svgGroupElt` `<g>`, path copies for each shape, optional `<defs>/<mask>` structures, and applies the shade filter to `svgGroupElt`. This is the main filter consumer. |
+| `Cell` | Grid cell data | Data only by default | `drawSVG: false`. Debug methods can temporarily enable drawing and call `assignElement()`, but normal rendering uses cells only as geometry/state. |
+| `Island` / `PerimeterIsland` | Connected cell island and shape source | Data only | `drawSVG: false`. Stores cells, cut, direction, inset scale, and creates/copies `Shape` objects. |
+| `Shape` / `PerimeterShape` | Path geometry source | Data only by default | `drawSVG: false`. Computes SVG path strings and mask path strings. Actual `<path>` elements are created later by `ShapeGroup.assignShapes()`. |
+
+The important filter-layout consequence is that the visible path can be much
+tighter than its structural SVG envelope. `Shape` may know the inset geometry,
+but the filter is applied to the `ShapeGroup`'s `svgGroupElt`, whose current
+layout is based on the ShapeGroup's cell selection bounds plus padding.
+
+### 13.2 Inset and Bounds Propagation
+
+All `ProtoLayer` subclasses inherit the same computed geometry unless they
+override it:
+
+```
+insetScale       = explicit _insetScale, else protoParent.insetScale
+boundsRect       = protoParent.insetBoundsRect
+anchor / size    = boundsRect x/y/width/height
+insetSize        = size * insetScale
+insetAmount      = (size - insetSize) / 2
+insetAnchor      = centered anchor for insetSize
+insetBoundsRect  = insetAnchor + insetSize
+```
+
+Current propagation chain:
+
+| Step | Inset/bounds behavior | Where the value continues |
+|------|-----------------------|---------------------------|
+| `Frame` | Hard-codes `insetScale: 1`, `anchor = (0,0)`, `size = (100,200)`, and `boundsRect = FRAME`. | Parent region for front grid and back grid. |
+| `ProtoMill.mkGrid()` -> `new Grid(...)` | Passes feature-selected `gridInsetScale` into `Grid`. | Grid `insetSize` drives `cellSize`, so cell dimensions already include the grid inset. |
+| `Grid` | Flexible grids inherit parent inset bounds; fixed/magical style grids override `anchor`, `size`, and `boundsRect` from `gridAspect`. | `cellSize = grid.insetSize / gridSize`; `visibleBoundsRect` is a separate visible constraint region, not the intrinsic grid bounds. |
+| `Cell` | Constructor sets `insetScale: 1`; `size` is `grid.cellSize`. | Cell bounds are already grid-inset-aware through `grid.cellSize`, but each Cell's own `insetSize` equals its cell size. |
+| `CellGroup` | Constructor sets `insetScale: 1`; `boundsRect` comes from `grid.cellBounds(selection)`. | This intentionally resets group layout to selected cell bounds. It does not inherit a smaller child/shape inset. |
+| `CellGroup.cutIslands()` | Computes cut-specific `insetScale` from `layerStart`, `layerEnd`, profile, dilation, and cut loop state. | Passed into `createSubIslands(...)`. |
+| `Grid.createIslands()` / `Island.createSubIslands()` | Creates `Island` objects with the current `insetScale`. Copy/recalc paths preserve that scale. | Passed into `Island.createShape(insetScale)`. |
+| `Island.createShape()` / `Shape` | Creates `Shape` with the same `insetScale`; Shape inherits the base `insetSize = size * insetScale`. | This is where the tight inset geometry exists for paths and masks. |
+| `CellGroup.islandsToShapeGroups()` | Iterates `cut.filters` and creates one `ShapeGroup` per filter/backing pass. The current call does not pass the cut/island `insetScale`; the old `insetScale` argument is commented out. | ShapeGroup falls back to `insetScale: 1`. This is the main propagation stop for render-region sizing. |
+| `ShapeGroup` | `boundsRect` is frame bounds only for `isFrame`; otherwise it uses `cellBounds.boundsRect`. `padding` comes from `cut.padding` or grid inset padding. | Outer `<svg>`, inner `<g>`, masks, and filter consumer layout are based on ShapeGroup cell bounds, not actual Shape path bounds. |
+| `ProtoCut.maxLayout` | Legacy percent path computes a shared percent region from `shapeGroups[*].insetSize` and padding. | Because ShapeGroups normally have `insetScale: 1`, this is a cell-bounds calculation, not a true inset/path-region calculation. |
+| `ProtoCut.setLayouts()` | Current user-space path uses `FRAME.boundsRect` plus margin for every filter. | Correctness-biased but overbroad; it bypasses the incomplete propagation chain entirely. |
+
+This split appears intentional up to the point where geometry objects remain
+data-only and render objects aggregate many shapes into one filter pass. The
+incomplete part is that no separate, explicit render/filter bounds contract is
+carried across that boundary. `ShapeGroup` currently has to choose between
+coarse cell bounds and global frame bounds, even though tighter inset/path
+geometry exists one level down on the Shapes.
+
+### 13.3 Filter Region Implications
+
+`ProtoCut` owns shared filters, and each cut creates one ShapeGroup per filter
+type. Without cloning filters per ShapeGroup, the tightest practical
+`userSpaceOnUse` region is a per-cut/per-filter union of all consuming
+ShapeGroups, expanded by the needed blur/offset margin. A per-ShapeGroup filter
+region would require unique filter instances or another isolation layer.
+
+Recommended replacement direction for the current `FRAME.boundsRect` branch:
+
+1. Keep the legacy percent `maxLayout` branch for A/B and historical reference.
+2. Add an explicit ShapeGroup render/filter bounds getter instead of overloading
+  `boundsRect`. Candidate inputs, from coarse to tight, are: `cellBounds`,
+  `insetBoundsRect`, union of `shapes[*].insetBoundsRect`, or path-derived
+  bounds from actual SVG geometry.
+3. Preserve the cut/island inset intent at the render boundary. This could be a
+  passed `sourceInsetScale`, a stored `sourceInsetBoundsRect`, or a dedicated
+  `filterBoundsRect` computed from the group's Shapes. It does not necessarily
+  mean the ShapeGroup's structural SVG viewport should shrink immediately.
+4. In `ProtoCut.setLayouts()`, compute `region = union(shapeGroup.filterBoundsRect
+  for shapeGroups using this filter)`, expand it by the filter's required
+  blur/offset/padding margin, then set the filter element with `filterUnits =
+  userSpaceOnUse` and absolute user-unit `x/y/width/height`.
+5. Use `layout()` for the final filter element attributes if the region is a
+  normal `{ x, y, width, height }` rect. Use `layoutLimited()` only when the
+  desired behavior is to clamp the expanded filter region to an explicit visible
+  limit; it should not be the default while debugging filter bleed because it
+  can hide genuine blur/offset requirements.
+
+`layout()` works on `<filter>` elements because filters use the same `x`, `y`,
+`width`, and `height` attributes as SVG viewport elements. It does not set
+`filterUnits`, so `setLayouts()` still needs to assign `filterUnits` explicitly.
+`viewBox()` is not relevant to `<filter>`.
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-03-04*
+*Last updated: 2026-05-15*
