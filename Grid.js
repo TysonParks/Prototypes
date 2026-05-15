@@ -2438,8 +2438,17 @@ class Grid extends ProtoLayer {
       c.showDeBug()
     })
   }
-  showShapesDebug(label = true) {
+  showPerimeterShapesDebug(label = true) {
     this.perimeterShapes.forEach(sh => {
+      sh.drawSVG = true
+      sh.drawLabel = label
+      sh.drawDeBugRect = true
+      sh.assignElement()
+      sh.showDeBug()
+    })
+  }
+  showShapesDebug(label = true) {
+    this.shapes.forEach(sh => {
       sh.drawSVG = true
       sh.drawLabel = label
       sh.drawDeBugRect = true
