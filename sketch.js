@@ -822,11 +822,12 @@ function gridTests2(features) {
 
   // DeBug.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
   // FRAME.backGrid.showCellsDebug()
-  // FRAME.backGrid.showShapesDebug()
+  // FRAME.backGrid.showPerimeterShapesDebug()
   // FRAME.backGrid.showShapeGroupsDebug(false)
   // FRAME.backGrid.showMasksDebug()
   // GRID.showCellsDebug()
-  GRID.showShapesDebug()
+  GRID.showPerimeterShapesDebug()
+  // GRID.showShapesDebug()
   GRID.showShapeGroupsDebug()
   GRID.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
   // GRID.showFrameRate(animationController)
