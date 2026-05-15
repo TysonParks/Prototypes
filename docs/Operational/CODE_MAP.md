@@ -57,6 +57,7 @@ Prioritizes orientation over completeness — only architectural methods and rel
 [ProtoLayerObjects.js](ProtoLayerObjects.js)
 - Class: `ProtoLayer` (base)
   - Responsibilities: base drawing/layout/ID/storage behaviors used by `Grid`, `CellGroup`, `Frame`, etc.
+  - Architecture map: see [ARCHITECTURE § 13](../Canonical/ARCHITECTURE.md#13-protolayer-svg-realization-and-inset-propagation) for which subclasses are data-only vs. structural/visual SVG, and where `insetScale` propagation stops before ShapeGroup filter layout.
 
 - Class: `Frame`
   - Key methods: `setGrid()`, `createBackGrid()`, `setBackGridGroup()`
