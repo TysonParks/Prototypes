@@ -1730,8 +1730,8 @@ class ShapeGroup extends ProtoLayer {
   }
   get padding() {
     const
-      backGroupPadding = Vertex.mult(this.grid.insetAmount, 2),
-      defaultPadding = Vertex.mult(this.cut?.padding || backGroupPadding, 2)
+      backGroupPadding = Vertex.mult(this.grid.insetAmount, 1),
+      defaultPadding = Vertex.mult(this.cut?.padding || backGroupPadding, 1)
     return this.cellGroup.isBackGroup ? backGroupPadding : defaultPadding
   }
   get maxLayout() { return this.cut?.maxLayout }
@@ -1855,16 +1855,17 @@ class ShapeGroup extends ProtoLayer {
           // .blur(this.cut.depth / 4)
 
           if (outsetShade) {
+            //FIXME: implement proper j-in mask using photoshop reference
             this.maskGroupElt
-              // .attribute('stroke', 'white')
-              // .attribute('stroke-width', m.outerMaskSize || 1)
-              // .attribute('fill', 'white')
-              .attribute('fill', 'black')
-              .blur(this.cut.depth / 4)
+            // .attribute('stroke', 'white')
+            // .attribute('stroke-width', m.outerMaskSize || 1)
+            // .attribute('fill', 'white')
+            // .attribute('fill', 'black')
+            // .blur(this.cut.depth / 4)
             // .attribute('overflow', 'visible')
-            maskRect
-              // .attribute('fill', 'black')
-              .attribute('fill', 'white')
+            // maskRect
+            //   // .attribute('fill', 'black')
+            //   .attribute('fill', 'white')
           } else {
             this.maskGroupElt
               // .blur(this.cut.depth / 4)
