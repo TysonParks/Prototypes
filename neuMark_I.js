@@ -256,12 +256,11 @@ class ProtoCut {
 
   static shadeFilterRegionMarginFor(cut, filter) {
     const { fixedMargin, comboDepthMarginRatio } = ProtoCut.shadeFilterRegion
-    const fixed = fixedMargin
     const comboDepthScaled = Math.max(fixedMargin, Math.abs(cut.depth) * comboDepthMarginRatio)
 
     // return comboDepthScaled
-    // return fixed
-    return filter.type === 'combo' ? comboDepthScaled : fixed
+    // return fixedMargin
+    return filter.type === 'combo' ? comboDepthScaled : fixedMargin
   }
   //METH: curve() : type :
   curve(layer) {
