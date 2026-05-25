@@ -524,6 +524,12 @@ Recommended replacement direction for the current `FRAME.boundsRect` branch:
 `filterUnits`, so `setLayouts()` still needs to assign `filterUnits` explicitly.
 `viewBox()` is not relevant to `<filter>`.
 
+2026-05-25 test note: the first implementation of this path used a
+`ShapeGroup.filterBoundsRect` based on the union of `shapes[*].insetBoundsRect`
+and switched shared filters to the per-filter union. It introduced cropping and
+was reverted. Revisit after the current J-in masking work, with dedicated
+hashes and visual A/B coverage.
+
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
