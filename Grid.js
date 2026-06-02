@@ -20,6 +20,9 @@ class Grid extends ProtoLayer {
   comboElt
   highElt
   shadElt
+  maskElt
+  finalMaskElt
+  finalMaskDebugElt
   shaderElts
   groups = new OpArray
 
@@ -2390,8 +2393,9 @@ class Grid extends ProtoLayer {
       this.shadElt = createElementNS(xmlns, 'g').id(`${this.id}-shadLayer`)
 
       this.maskElt = createElementNS(xmlns, 'g').id(`${this.id}-mask`)
+      this.finalMaskElt = createElementNS(xmlns, 'g').id(`${this.id}-finalMask`)
 
-      this.shaderElts = OpArray.format([this.backElt, this.comboElt, this.highElt, this.shadElt, this.maskElt])
+      this.shaderElts = OpArray.format([this.backElt, this.comboElt, this.highElt, this.shadElt, this.maskElt, this.finalMaskElt])
       this.shaderElts.forEach(elt => {
         elt
           .parent(this.svgElt)
@@ -2434,7 +2438,7 @@ class Grid extends ProtoLayer {
       c.drawSVG = true
       c.drawLabel = label
       c.drawDeBugRect = true
-      c.assignElement()
+      if (!c.svgElt) c.assignElement()
       c.showDeBug()
     })
   }
@@ -2443,7 +2447,7 @@ class Grid extends ProtoLayer {
       sh.drawSVG = true
       sh.drawLabel = label
       sh.drawDeBugRect = true
-      sh.assignElement()
+      if (!sh.svgElt) sh.assignElement()
       sh.showDeBug()
     })
   }
@@ -2452,7 +2456,7 @@ class Grid extends ProtoLayer {
       sh.drawSVG = true
       sh.drawLabel = label
       sh.drawDeBugRect = true
-      sh.assignElement()
+      if (!sh.svgElt) sh.assignElement()
       sh.showDeBug()
     })
   }
@@ -2463,7 +2467,7 @@ class Grid extends ProtoLayer {
       sh.drawSVG = true
       sh.drawLabel = label
       sh.drawLoft = true
-      sh.assignElement()
+      if (!sh.svgElt) sh.assignElement()
       sh.showDeBug()
     })
     DeBug.groupEnd()
@@ -2474,7 +2478,35 @@ class Grid extends ProtoLayer {
     this.shapeGroups.forEach(sh => {
       sh.drawSVG = true
       sh.drawMask = true
+      sh.drawFinalMask = false
       // sh.assignElement()
+      sh.showDeBug()
+    })
+    DeBug.groupEnd()
+  }
+  showFinalMasksDebug() {
+    DeBug.log(``)
+    DeBug.groupCollapsed(`DEBUG: showFinalMasks`)
+
+    const finalMaskLayer = this.finalMaskElt || this.frontGrid?.finalMaskElt
+    if (!finalMaskLayer) {
+      DeBug.warn(`No final mask debug layer available`, this)
+      DeBug.groupEnd()
+      return
+    }
+
+    if (!this.finalMaskDebugElt) {
+      this.finalMaskDebugElt = createElementNS(xmlns, 'g')
+        .id(`${this.id}-finalMaskDebug`)
+        .parent(finalMaskLayer)
+        .addToClassList(this.id)
+    }
+
+    this.finalMaskDebugElt.elt.innerHTML = ''
+    this.shapeGroups.forEach(sh => {
+      sh.drawSVG = true
+      sh.drawMask = false
+      sh.drawFinalMask = true
       sh.showDeBug()
     })
     DeBug.groupEnd()
