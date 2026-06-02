@@ -34,7 +34,7 @@ class ProtoLayer {
   } = {}) {
     if (protoParent instanceof ProtoLayer) {
       this.protoParent = protoParent
-      this.svgParent = protoParent.svgElt
+      this.svgParent = protoParent.svgElt || protoParent.svgParent
     }
     else if (protoParent instanceof p5.Element) { this.svgParent = protoParent }
     else { DeBug.error('protoParent is not valid') }
@@ -304,6 +304,7 @@ class Frame extends ProtoLayer {
     this.backGrid.highElt = this.grid.highElt
     this.backGrid.shadElt = this.grid.shadElt
     this.backGrid.maskElt = this.grid.maskElt
+    this.backGrid.finalMaskElt = this.grid.finalMaskElt
     this.backGrid.shaderElts = this.grid.shaderElts
   }
   //METH: createBackGrid()
@@ -1682,6 +1683,10 @@ class ShapeGroup extends ProtoLayer {
   islands
   isFrame
   svgGroupElt
+  maskGroupElt
+  finalMaskElt
+  finalMaskGroupElt
+  finalMaskID
 
   paths = new OpArray
   masks = new OpArray
@@ -1835,6 +1840,18 @@ class ShapeGroup extends ProtoLayer {
         // .attribute('overflow', 'visible')
 
 
+        const
+          maskRectFill = outsetShade ? 'black' : 'white',
+          maskPathFill = outsetShade ? 'white' : 'black',
+          maskBlur = this.cut.depth / 16,
+          blurDivs = [
+            // 4,
+            // 8,
+            // 16,
+            32,
+            64
+          ]
+
         const maskRect = createSVGElt('rect')
           .id(`${this.id}-maskRect`)
           // .attribute('x', this.anchor.x - this.size.x * 1 / mult)
@@ -1843,47 +1860,37 @@ class ShapeGroup extends ProtoLayer {
           // .attribute('height', this.size.y * mult)
           .viewBoxLimited(this.anchor, this.size, this.padding)
           .layoutLimited(this.anchor, this.size, this.padding)
-          .attribute('fill', 'white')
+          // .viewBox(this.anchor, this.size, this.padding)
+          // .layout(this.anchor, this.size, this.padding)
+          .attribute('fill', maskRectFill)
           // .attribute('fill', 'black')
           // .attribute('fill', randomLCH(0.9))
           .parent(this.maskGroupElt)
         // .attribute('maskUnits', 'userSpaceOnUse')
 
         //------------------------------------------------------------  
-        this.masks.forEach(m => {
-          m.parent(this.maskGroupElt)
-          // .blur(this.cut.depth / 4)
+        this.maskGroupElt.attribute('fill-rule', `evenodd`)
 
-          if (outsetShade) {
-            //FIXME: implement proper j-in mask using photoshop reference
-            this.maskGroupElt
-            // .attribute('stroke', 'white')
-            // .attribute('stroke-width', m.outerMaskSize || 1)
-            // .attribute('fill', 'white')
-            // .attribute('fill', 'black')
-            // .blur(this.cut.depth / 4)
-            // .attribute('overflow', 'visible')
-            // maskRect
-            //   // .attribute('fill', 'black')
-            //   .attribute('fill', 'white')
-          } else {
-            this.maskGroupElt
-              // .blur(this.cut.depth / 4)
-              .attribute('fill', 'black')
-              .blur(this.cut.depth / 4)
-          }
+        this.masks.forEach(m => {
+          m
+            .attribute('fill', maskPathFill)
+            .attribute('stroke', 'none')
+            .attribute('fill-rule', `evenodd`)
+            .parent(this.maskGroupElt)
 
           const createBlurMask = (div) => {           // create additional blurred masks for deeper cuts
             const
               blurred = m.elt.cloneNode(true),
               blurredP5 = addElement(blurred, window)
+            blurred.setAttribute('id', `${m.elt.id}-blur-${div}`)
             blurredP5
-              .blur(this.cut.depth / div)
               .parent(this.maskGroupElt)
+              .blur(this.cut.depth / div)
           }
-          const divs = [8, 16, 32]                       // divisors for additional masks, max cut is <50 so these should suffice
-          divs.forEach(d => { if (this.cut.depth > d) createBlurMask(d) }) // create additional masks as needed
+          // blurDivs.forEach(d => { if (this.cut.depth > d) createBlurMask(d) }) // create additional masks as needed
         })
+
+        this.maskGroupElt.blur(maskBlur)
 
         let defs = createSVGElt(`defs`)
           // .parent(this.svgElt)
@@ -1893,9 +1900,14 @@ class ShapeGroup extends ProtoLayer {
           maskID = `${this.id}-mask`,
           mask = createSVGElt(`mask`)
             .id(maskID)
+            .attribute('mask-type', 'luminance')
             .attribute('maskUnits', 'userSpaceOnUse')
             .layout(this.anchor, this.size, this.padding)
             .parent(defs)
+
+        this.finalMaskID = maskID
+        this.finalMaskElt = mask
+        this.finalMaskGroupElt = this.maskGroupElt
 
         // this.maskGroupElt.parent(this.svgGroupElt)   // append the maskGroupElt to the groupElt
         this.maskGroupElt.parent(mask.elt)   // append the maskGroupElt to the groupElt
@@ -3232,6 +3244,7 @@ class Shape extends ProtoLayer {
       this.grid.isFrontGrid                                                       // backGrids always have maskShapes
       &&
       !outsetShade                                                               // for insetShades, no maskShapes for: 
+      // && this.hasBulges
       && (this.isMaxEqualRadiusQuad                                                 // quads with max equal radius (circles, pills)  
         || this.isTurnip || this.isLemon                                            // turnips and lemons             
         || this.hasBulges                                                           // has bulges
