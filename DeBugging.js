@@ -6,6 +6,7 @@ const Debuggable = {
   drawInset: false,
   drawLoft: false,
   drawMask: false,
+  drawFinalMask: false,
   frameRateRafId: null,
 
   //MARK: Debuggable Computed Properties
@@ -29,6 +30,7 @@ const Debuggable = {
     if (this.drawInset) this.showInset()
     if (this.drawLoft) this.showLofts()
     if (this.drawMask) this.showMasks()
+    if (this.drawFinalMask) this.showFinalMask()
   },
   //METH: showLabel() : null : show debug label
   showLabel() {
@@ -159,6 +161,8 @@ const Debuggable = {
     DeBug.groupCollapsed(this.id)
     DeBug.log(`this`, this)
     if (this.isShapeGroup && this.cut?.profile) {
+      this.svgElt.elt.querySelectorAll(`[id="${this.id}-debugStart"], [id="${this.id}-debugEnd"]`)
+        .forEach(elt => elt.remove())
       this.debugStartElt = createElementNS(xmlns, 'g').id(`${this.id}-debugStart`)
       this.debugEndElt = createElementNS(xmlns, 'g').id(`${this.id}-debugEnd`)
       const debugElts = OpArray.format([
@@ -183,7 +187,7 @@ const Debuggable = {
         //ARROW:
         const makeDeBugElt = (segPath, i, start) => {
           const svgPath = SVGPath.fromProtoSegPath(segPath),
-            elt = createSVGElt('path').id(`${sh.id}-debug${start ? 'Start' : 'End'}Path-${i}`)
+            elt = createSVGElt('path').id(`${this.id}-${sh.id}-debug${start ? 'Start' : 'End'}Path-${i}`)
               .attribute(`d`, svgPath)
               .parent(start ? this.debugStartElt : this.debugEndElt)
               .attribute(`stroke`, start ? 'red' : 'blue')
@@ -280,6 +284,51 @@ const Debuggable = {
           // .blur(sh.cut.depth / 8)
         }
       })
+    }
+    DeBug.groupEnd()
+  },
+
+  // METH: showFinalMask() : null : show final composed mask image used by ShapeGroup.createMaskGroup()
+  showFinalMask() {
+    DeBug.groupCollapsed(`showing Final Mask`, this.id)
+    DeBug.log(`this`, this)
+    DeBug.log(`this.cut`, this.cut)
+    DeBug.log(`this.finalMaskID`, this.finalMaskID)
+    if (this.isShapeGroup && this.finalMaskGroupElt && this.grid?.finalMaskDebugElt) {
+      const
+        clone = this.finalMaskGroupElt.elt.cloneNode(true),
+        cloneP5 = addElement(clone, window),
+        debugID = `${this.id}-finalMaskDebug`,
+        isJInMask = this.cut?.profile?.hasOutsetShade,
+        maskDarkFill = isJInMask ? protoColor(0, 210, 210, 100) : protoColor(40, 255, 90, 100),
+        maskDarkStroke = isJInMask ? protoColor(0, 255, 255, 152) : protoColor(90, 255, 130, 152),
+        maskLightFill = protoColor(255, 255, 255, 200),
+        maskLightStroke = protoColor(255, 255, 255, 152),
+        debugFillFor = (elt) => elt.getAttribute('fill') === 'black' ? maskDarkFill : maskLightFill,
+        debugStrokeFor = (elt) => elt.getAttribute('fill') === 'black' ? maskDarkStroke : maskLightStroke
+
+      clone.id = debugID
+      clone.setAttribute('data-source-mask', this.finalMaskID || '')
+      clone.setAttribute('data-mask-profile', this.cut?.profile?.description || '')
+      clone.setAttribute('data-mask-kind', isJInMask ? 'outsetShade' : 'insetShade')
+      clone.querySelectorAll('rect, path').forEach(elt => {
+        const maskFill = elt.getAttribute('fill') || 'inherited'
+        elt.setAttribute('data-mask-fill', maskFill)
+        const
+          debugFill = debugFillFor(elt),
+          debugStroke = debugStrokeFor(elt)
+        elt.setAttribute('fill', debugFill)
+        elt.setAttribute('stroke', debugStroke)
+        elt.setAttribute('stroke-width', 0.125)
+        if (elt.tagName === 'rect') elt.setAttribute('stroke-dasharray', '1 1')
+      })
+      clone.querySelectorAll('[id]').forEach((elt, i) => {
+        elt.id = `${elt.id}-${debugID}-${i}`
+      })
+
+      cloneP5
+        .parent(this.grid.finalMaskDebugElt)
+        .attribute('pointer-events', 'none')
     }
     DeBug.groupEnd()
   },
