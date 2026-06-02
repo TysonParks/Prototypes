@@ -826,10 +826,11 @@ function gridTests2(features) {
   // FRAME.backGrid.showShapeGroupsDebug(false)
   // FRAME.backGrid.showMasksDebug()
   // GRID.showCellsDebug()
-  GRID.showPerimeterShapesDebug()
+  // GRID.showPerimeterShapesDebug()
   // GRID.showShapesDebug()
-  GRID.showShapeGroupsDebug()
-  GRID.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
+  // GRID.showShapeGroupsDebug()
+  // GRID.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
+  // GRID.showFinalMasksDebug()
   // GRID.showFrameRate(animationController)
   // GRID.showSizeGrid(4)
 
