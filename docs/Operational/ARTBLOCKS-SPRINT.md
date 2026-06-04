@@ -60,15 +60,17 @@ Sub-steps within that pipeline:
 | 3 | Bug: Safari compatibility (cont.) + shading | B1, B3 | ✅ Completed |
 | 4 | Bug: Wrapping | B2 | ♻️ Deferred |
 | 5 | Feature: InfraGrid InnerCuts re-enable | F2 | ♻️ Deferred |
-| 6 | Bug: Shading  | ?? | 🟡 In Process |
+| 6 | Bug: Shading  | ?? | ♻️ Deferred |
 | 7 | Animation: timing polish | B4 | ✅ Completed |
 | 8 | Animation: performance (cont.) | B4 | ✅ Completed  |
 | 9 | Feature: Rotation implementation (basic) | F1 | ✅ Completed  |
 | 10 | Feature: Rotation research + Post Params | F1 | 🟡 In Process |
-| 11 | Code cleanup pass | E1 | Not started |
-| 12 | Export Pipeline setup (answer-dependent) | E2 | Planned |
-| 13 | Integration testing against ArtBlocks test bench | E3 | Planned |
-| 14 | Buffer / overflow / final upload | — | Planned |
+| 11 | AB Features Cleanup | ?? | Not started |
+| 12 | AB Features Local Rarity Implementation | ?? | Not started |
+| 13 | Code cleanup pass | E1 | Not started |
+| 14 | Export Pipeline setup (answer-dependent) | E2 | Planned |
+| 15 | Integration testing against ArtBlocks test bench | E3 | Planned |
+| 16 | Buffer / overflow / final upload | — | Planned |
 
 > Days 13–14 are intentionally light on new work to allow for unexpected
 > integration issues. Do not schedule new features here.

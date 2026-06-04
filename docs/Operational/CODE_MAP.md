@@ -67,6 +67,13 @@ Prioritizes orientation over completeness — only architectural methods and rel
 
 - Other: `CellGroup`, `SelectionBounds` — helpers for grouping/island management used by perimeter creation.
 
+- Class: `ShapeGroup`
+  - Key methods: `createSVGGroup()`, `createMaskGroup()`, `createBBoxKeeper()`, `assignShapes()`, `drawElement()`
+  - Responsibilities:
+    - Owns the nested SVG/group structure used for backing/combo/high/shad layers.
+    - Applies cut filters and R-profile combo masks.
+    - `createBBoxKeeper()` is the scoped frame/backgrid `rIn` crop fix: an invisible child rect under `ShapeGroup.svgElt` that stabilizes the masked SVG's effective painted bounds without reopening global filter/layout regions.
+
 
 [testing/WrapperDebugOverlay.js](testing/WrapperDebugOverlay.js)
 - Utility class: `WrapperDebugOverlay`

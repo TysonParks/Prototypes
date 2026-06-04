@@ -55,6 +55,7 @@ Maintenance note:
   - [9.14.8 R-in Backgrid Edge White-Out (Resolved)](#9148-r-in-backgrid-edge-white-out-resolved)
   - [9.14.9 R-in Shade Layer Not Centered (Open)](#9149-r-in-shade-layer-not-centered-open)
   - [9.14.10 Viewport-Scale Dependent Shade Calibration (Solved for Now)](#91410-viewport-scale-dependent-shade-calibration-solved-for-now)
+  - [9.14.11 Frame/Backgrid R-in Masked SVG BBox Crop (Resolved)](#91411-framebackgrid-r-in-masked-svg-bbox-crop-resolved)
 - [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
   - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
   - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
@@ -1352,7 +1353,7 @@ the SVG `<mask>` element approach.
 
 ## 9.14 SVG Filter Layout & Mask Cropping Issues
 
-**Status:** Active — cascade/mask history retained; ShapeGroup bounds rollback now pending
+**Status:** Active — cascade/mask history retained; `rIn` masked SVG bbox crop fixed; ShapeGroup bounds rollback now pending
 
 ### 9.14.1 Issue 1: Cascade SVG Cropping (Frame & Grid)
 
@@ -1477,7 +1478,7 @@ these until the exact post-rollback filter/mask region strategy is chosen.
 
 ### 9.14.2 Issue 2: R-Profile Mask Cropping
 
-**Status:** ✅ Fixed
+**Status:** ✅ Fixed — mask bounds fixed; frame/backgrid `rIn` bbox crop handled separately in §9.14.11
 
 **Symptom:** Shapes with R-profile cuts that have group masks (re-enabled
 `createMaskGroup()`) show clipped mask effects — the blurred mask paths
@@ -2311,6 +2312,55 @@ shape, blur constants, and whether S-curve shading can be made viable again.
 calibration risk. Do not reintroduce screen-CTM-derived conversion into shade
 offset or blur authoring unless it is explicitly isolated as a display-adaptive
 mode.
+
+### 9.14.11 Frame/Backgrid R-in Masked SVG BBox Crop (Resolved)
+
+*Added: 2026-06-03*
+
+**Status:** ✅ Resolved with scoped `bboxKeeper` in `ShapeGroup.createMaskGroup()`
+
+**Symptom:** A small cluster of recent `lastHash` outputs showed hard side-edge
+clipping/cropping on large frame/backgrid `rIn` cuts in the combo shade region.
+The artifact looked like a vertical crop of the soft shader/mask region along
+the sides while top/bottom expansion still appeared mostly correct.
+
+**Key clue:** Calling `FRAME.backGrid.showShapeGroupsDebug(false)` made the crop
+disappear. Setting the debug loft paths to `display:none` made the crop return.
+That proved the debug overlay was not fixing shader math; visible/painted
+geometry under the same masked parent SVG was changing the browser's effective
+bbox / painted bounds.
+
+**Root cause:** The R combo mask is applied to the outer nested
+`ShapeGroup.svgElt`, while the filtered content sits inside sibling/child
+structures. For these large backgrid `rIn` cases, the browser's effective bounds
+for the masked outer SVG were too tight when only the real filtered content was
+present. Visible debug loft geometry expanded those effective bounds, so the
+masked shade stopped clipping. This was a masked-parent-SVG bbox issue, not a
+generic shade filter region problem.
+
+**Fix:** Add `ShapeGroup.createBBoxKeeper()` and call it only for backgrid R
+combo masks with `outsetShade`:
+
+```js
+if (outsetShade && this.grid?.isBackGrid) this.createBBoxKeeper()
+```
+
+The keeper is a zero-opacity filled rect parented to `this.svgElt`, as a sibling
+of the filtered `svgGroupElt`, immediately before the mask is applied. Its
+layout uses the ShapeGroup's anchor/size with padding expanded by the cut depth.
+It gives the masked outer SVG a real child participating in the browser's bounds
+calculation without drawing visible geometry.
+
+**Why this is not a broad rollback:** This fix does not reopen generic filter
+regions, does not restore broad `ShapeGroup.boundsRect`, does not loosen
+`Grid.visibleBoundsRect`, and does not change the limited SVG layout helpers. It
+is a targeted browser-bounds shim for one masked backgrid `rIn` combo path.
+
+**Test results:** The keeper continued to work with `fill-opacity: 0` and after
+all stroke attributes were removed. Approximately 50 manual outputs looked good
+after the fix.
+
+**Related doc:** `docs/Operational/FRAME-RIN-CROP-AUDIT.md`
 
 ## 9.15 Performance Optimization Strategy
 

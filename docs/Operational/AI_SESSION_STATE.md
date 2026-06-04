@@ -1,3 +1,5 @@
+# AI Session State
+
 ## What This Document Is Not
 
 This file is temporary working memory for the current debugging/development
@@ -6,47 +8,66 @@ sessions.
 
 Permanent knowledge belongs in:
 
-- docs/Canonical/*
-- docs/Operational/KNOWN-ISSUES.md
-- docs/Operational/ROADMAP.md
-- docs/Operational/REVEAL-ANIMATION-STATUS.md
+- `docs/Canonical/*`
+- `docs/Operational/KNOWN-ISSUES.md`
+- `docs/Operational/ROADMAP.md`
+- `docs/Operational/ARTBLOCKS-SPRINT.md`
+- `docs/Operational/REVEAL-ANIMATION-STATUS.md`
 
 ---
 
-Session snapshot (short, editable)
+## Session Snapshot
 
-Current Focus
-- Safari reveal/transition implementation is complete for the Art Blocks
-- Safari and Chrome reveal/transition implementations are complete and
-	approved for the Art Blocks submission scope.
-- The authoritative handoff is now `docs/Operational/REVEAL-ANIMATION-STATUS.md`.
-- Next sessions should move on to non-Safari-transition work unless the user
-	explicitly reopens Safari reveal tuning.
+Session timestamp: 2026-06-03
 
-Completed Safari Outcomes
-- Safari initial load starts in the hidden dummy state.
-- Loading text is visible before WebKit's synchronous SVG build lock.
-- Safari `n` is ignored; Safari `s` remains available.
-- Hidden-state loading motion uses `#safari-dummy-core` transform pulse.
-- The reveal transition is stable and user-approved.
-- The hard-edged hidden-scale rectangle flash was removed.
-- Final Safari artwork raster quality is stable; `BG.elt` is now natural-size
-	and opacity-only during reveal while `#safari-dummy` carries the visible
-	scale/blur/morph motion.
+### Current Focus
 
-Current Safari Architecture Constraints
-- Keep Chrome as the locked reference execution.
-- Keep Safari reveal work behind `isWebKitClass`.
-- Do not scale, blur, or force-promote `BG.elt` during Safari reveal.
-- Let `#safari-dummy` own visible motion; let `BG.elt` prepaint at normal size
-	with near-zero opacity and fade in at natural resolution.
+- Frame/backgrid `rIn` side-crop bug is fixed.
+- Remaining small shading issues are rare/subtle and can be deferred unless a
+  high-incidence repro appears.
+- Remaining geometry, curve, and wrapping bugs are also rare and deferred for
+  the ArtBlocks submission path.
+- Next implementation focus: Rotation via ArtBlocks PostParams, overlapping
+  with ABFeatures cleanup.
+- New TODO: local rarity planning is not yet fully designed or implemented.
 
-Next Investigation Steps
-1. Do not resume Safari reveal changes unless the user explicitly asks.
-2. If future Safari regressions appear, start from
-	 `docs/Operational/REVEAL-ANIMATION-STATUS.md` rather than the old
-	 canvas-image-swap plan.
-3. Treat `safariImageSwap.js` as the active Safari reveal module despite the
-	 legacy filename.
+### Completed Outcomes
 
-Session timestamp: 2026-05-03
+- Added `ShapeGroup.createBBoxKeeper()` in `ProtoLayerObjects.js`.
+- `bboxKeeper` is scoped to backgrid R combo masks with `outsetShade`.
+- It sits under `ShapeGroup.svgElt` as a sibling of the filtered
+  `svgGroupElt`, immediately before the mask is applied to `this.svgElt`.
+- It fixed the crop without reopening generic/generous filter bounds.
+- Manual validation: roughly 50 outputs looked good after the fix.
+- Documentation updated:
+  - `docs/Operational/FRAME-RIN-CROP-AUDIT.md`
+  - `docs/Operational/KNOWN-ISSUES.md` §9.14.11
+  - `docs/Operational/ROADMAP.md`
+  - `docs/Operational/ARTBLOCKS-SPRINT.md`
+  - `docs/Operational/TESTING.md`
+
+### Key Technical Notes
+
+- `FRAME.backGrid.showShapeGroupsDebug(false)` made the crop disappear because
+  visible loft-debug geometry expanded the masked parent SVG's effective painted
+  bounds.
+- Setting those debug paths to `display:none` made the crop return.
+- The keeper still worked with `fill-opacity: 0` and no stroke.
+- This was a masked outer-SVG bbox issue, not a shader-stack or global filter
+  region issue.
+- Do not restart this investigation by broadening `ProtoCut` filter regions,
+  restoring broad `ShapeGroup.boundsRect`, loosening `Grid.visibleBoundsRect`,
+  or changing limited SVG layout helpers.
+
+### Next Session Steps
+
+1. Implement/finalize `Rotation` PostParam handling for ArtBlocks.
+2. Clean up ABFeatures / `window.$features` output around PostParams.
+3. Define the local rarity plan:
+   - final ArtBlocks-facing trait list,
+   - sample size,
+   - report format,
+   - treatment of mutable PostParams such as `Rotation`,
+   - connection between local rarity output and ABFeatures cleanup.
+4. Keep rare shading and geometry/wrapping bugs deferred unless a targeted fix
+   becomes obvious.

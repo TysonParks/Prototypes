@@ -469,6 +469,19 @@ await batchFrameBottomBarRegressionSheet({ include: ['broken', 'golden'] })
 await reportFrameBottomBarSetComparison()
 ```
 
+For the June 2026 frame/backgrid `rIn` side-crop bug, see
+`docs/Operational/FRAME-RIN-CROP-AUDIT.md` and KNOWN-ISSUES §9.14.11. The
+confirmed fix is the scoped `ShapeGroup.createBBoxKeeper()` rect under
+`ShapeGroup.svgElt` for backgrid R combo masks with `outsetShade`.
+
+Regression clue to preserve: `FRAME.backGrid.showShapeGroupsDebug(false)` made
+the crop disappear because visible loft-debug geometry expanded the masked
+parent SVG's effective painted bounds. Setting those debug paths to
+`display:none` made the crop return. If this artifact resurfaces, first verify
+that the `bboxKeeper` is present as a sibling under `ShapeGroup.svgElt`; do not
+start by widening global filter regions or restoring broad `ShapeGroup.boundsRect`
+behavior.
+
 ### 5.2 Batch Tools
 
 | Function | Use |

@@ -93,7 +93,7 @@ because understanding the geometry is prerequisite to knowing which
 | 10b | Add `intershape` test hash to WRAPPER_TEST_CASES | Agent | 10a | ✅ Done | User added `intershape_1/2/3` + `collinear_basic_2` + `broken_07` hashes manually. |
 | 11 | Design inner mask implementation plan against working branch | Ask | 10a | ✅ Done | Mask pipeline audited (KNOWN-ISSUES § 9.13). Re-enablement plan in § 9.13.7. |
 | 12 | Implement inner mask feature incrementally | Agent + verify | 11 | 🟡 In progress | § 9.13.7 Steps 1-2 done: maskShape return-type fix, degenerate-path guard, createMaskGroup re-enabled at drawElement. Steps 3-5 remain. |
-| 12a | **Fix SVG filter/mask cropping** — cascade, r-out, waves+ordinal | Agent + verify | 12 | 🟡 In progress | Cascade cropping (§ 9.14.1) re-opened: the `ShapeGroup.boundsRect` `this.cut -> FRAME.boundsRect` fix is overbroad and should be rolled back, then cascade/J-in cropping should be solved with precise filter/SVG/mask regions. R-profile mask (§ 9.14.2) ✅ fixed. Waves+ordinal (§ 9.14.3) remains. |
+| 12a | **Fix SVG filter/mask cropping** — cascade, r-out, waves+ordinal | Agent + verify | 12 | 🟡 In progress | Cascade cropping (§ 9.14.1) remains historical/revalidation work. R-profile mask (§ 9.14.2) ✅ fixed. Frame/backgrid `rIn` masked SVG bbox crop (§ 9.14.11) ✅ fixed with a scoped `bboxKeeper`, without reopening generic filter/bounds regions. Waves+ordinal (§ 9.14.3) remains deferred unless a high-incidence repro appears. |
 | 12b | **Safari rendering** — percentage vs userSpaceOnUse filter regions | Research + Agent | 12a | ❌ Deferred | KNOWN-ISSUES § 9.14.4-5. Only after B-D stabilize the layout system. |
 | 13 | Add structured corner-tracing debug log to `maximizeCuddles` | Agent | 5 | ❌ Not started | Useful during step 12 and all future debugging. |
 
@@ -110,10 +110,10 @@ because understanding the geometry is prerequisite to knowing which
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
 | 17 | Visual edge-case debugging using image + log workflow | Ask | 13 | 🟡 Ongoing | Using WrapperDebugOverlay + hash-specific debugging. See [TESTING](TESTING.md). |
-| 18 | Frame artifact diagnosis via clean SVG-layout A/Bs | Ask → Agent | 17 | 🟡 In progress | Primary hash `0x3e8a98...251d34`. KNOWN-ISSUES § 9.14.7 now distinguishes a fixed filter-region regression from a still-open vertical/cropping artifact. Next step is `FilterDebugHarness`-driven isolation of filter region, viewport, overflow, and mask behavior before any shader rewrites. |
+| 18 | Frame artifact diagnosis via clean SVG-layout A/Bs | Ask → Agent | 17 | ✅ Current frame `rIn` crop solved | The June 2026 frame/backgrid `rIn` side crop was traced to masked outer-SVG bbox behavior and fixed by `ShapeGroup.createBBoxKeeper()` (§ 9.14.11). Keep `FilterDebugHarness` available for future artifacts, but do not reopen broad filter/bounds regions for this fix. |
 | 19 | Viewport-scale shade calibration audit | Ask → Agent | 17 | ✅ Solved for now | KNOWN-ISSUES § 9.14.10. Removed active `pixToUserUnits` divisions from shade offset/blur construction and retuned current constants. Small-vs-large launch output is now fairly consistent; any remaining delta appears more likely tied to `offsets.slice(start, keep())` stack density than unit conversion. |
-| 20 | Objective Shade retuning pass | Ask → Agent | 19 | 🟡 Before release | Build a visual A/B workflow for `Shade.neuShadeSVGFactory()` across representative hashes, launch sizes, fullscreen, and export targets. Tune `keep()` thresholds, offset ladder shape, blur constants, and luma response with screenshots/contact sheets rather than single-window eyeballing. Consider S-curve shading revival as a feature upgrade during this pass. |
-| 21 | ShapeGroup bounds rollback + region revalidation | Ask → Agent | 17 | 🟡 Before release | Remove the `this.cut` broadening from `ShapeGroup.boundsRect`, then re-test cascade/J-in cropping, mask coverage, Safari first paint, live-light FPS, and Tier 1b per-cut AABB opportunities. Keep `FilterDebugHarness` A/B modes for controlled comparison. |
+| 20 | Objective Shade retuning pass | Ask → Agent | 19 | ♻️ Deferred | Remaining shading issues are very rare/subtle after the `rIn` bbox crop fix and viewport-scale calibration. Keep the A/B retuning plan for post-submission polish unless a new high-incidence artifact appears. |
+| 21 | ShapeGroup bounds rollback + region revalidation | Ask → Agent | 17 | 🟡 Revalidate only if needed | Current `ShapeGroup.boundsRect` is frame-only for frame ShapeGroups; the `rIn` crop fix did not require reopening broad bounds. Re-run cascade/J-in and per-cut AABB checks only if a future repro demands it. |
 
 ### Post-Plan Addition: Unified Wrapper Funnel
 
@@ -161,6 +161,21 @@ baseline (~2.90x). CSS/WAAPI animation of `feOffset` is not expected to avoid
 filter re-rasterization. Progressive frame caches, compressed disk-backed image
 caches, and pre-rendered exhibition videos are documented future avenues, but
 are deferred as too aggressive for the current release phase.
+
+---
+
+### Post-Plan Addition: ArtBlocks PostParams + Local Rarity
+
+> **Context (2026-06-03):** Remaining shading and geometry/wrapping issues are
+> rare/subtle enough to defer for the submission path. The next implementation
+> focus is Rotation via ArtBlocks PostParams, overlapping with ABFeatures cleanup
+> and local rarity planning.
+
+| # | Task | Mode | Depends On | Status | Notes |
+|---|------|------|------------|--------|-------|
+| AB1 | Rotation PostParam finalization | Agent + verify | F1 | 🟡 Next | Confirm final `tokenData.externalAssetDependencies[0]` parsing, accepted values (`Up`, `Right`, `Down`, `Left`), deterministic fallback behavior, and `window.$features.Rotation` output. |
+| AB2 | ABFeatures cleanup | Agent + verify | AB1 | 🟡 Next | Clean feature calculation/output around ArtBlocks-facing traits and PostParams; keep PRNG consumption deterministic. |
+| AB3 | Local rarity plan | Ask → Agent | AB2 | ❌ Needs plan | Define sampling size, output format, final trait set, and whether mutable PostParams such as `Rotation` participate in local rarity or are treated as display state. |
 
 ---
 
