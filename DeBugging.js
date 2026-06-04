@@ -180,6 +180,7 @@ const Debuggable = {
           .attribute('stroke-width', `.125`)
           .attribute('stroke-dasharray', `.5`)
           .attribute('stroke-linecap', `round`)
+
         // .blur(.1)
       })
 
@@ -191,6 +192,7 @@ const Debuggable = {
               .attribute(`d`, svgPath)
               .parent(start ? this.debugStartElt : this.debugEndElt)
               .attribute(`stroke`, start ? 'red' : 'blue')
+          // .attribute('display', `none`)
           return elt
         }
 

@@ -1730,7 +1730,8 @@ class ShapeGroup extends ProtoLayer {
   get cellBounds() { return this.grid.cellBounds({ selection: this.cells, groupID: this.id }) }
   get boundsRect() {
     // if (this.isFrame || this.cut) return FRAME.boundsRect   // § 9.14.1 — broadened for cascade filter coverage
-    if (this.isFrame) return FRAME.boundsRect  // frames should always use the full grid bounds to allow for filter bleed and prevent cropping bugs
+    if (this.isFrame)
+      return FRAME.boundsRect  // frames should always use the full grid bounds to allow for filter bleed and prevent cropping bugs
     return this.cellBounds.boundsRect
   }
   get padding() {
@@ -1799,6 +1800,18 @@ class ShapeGroup extends ProtoLayer {
       .viewBox(this.anchor, this.size, this.padding)
       .layout(this.anchor, this.size, this.padding)
     // .attribute(`fill`, frameColor)
+  }
+  //METH: createBBoxKeeper()
+  createBBoxKeeper() {
+    this.bboxKeeperElt?.remove()
+    const bboxPadding = Vertex.add(this.padding, vert(this.cut?.depth || 0))
+    this.bboxKeeperElt = createSVGElt('rect')
+      .id(`${this.id}-bboxKeeper`)
+      .layout(this.anchor, this.size, bboxPadding)
+      .attribute('fill', 'black')
+      .attribute('fill-opacity', '0')
+      .attribute('pointer-events', 'none')
+      .parent(this.svgElt)
   }
   //METH: createMaskGroup()
   createMaskGroup() {
@@ -1911,6 +1924,8 @@ class ShapeGroup extends ProtoLayer {
 
         // this.maskGroupElt.parent(this.svgGroupElt)   // append the maskGroupElt to the groupElt
         this.maskGroupElt.parent(mask.elt)   // append the maskGroupElt to the groupElt
+
+        if (outsetShade && this.grid?.isBackGrid) this.createBBoxKeeper()
 
         this.svgElt
           .attribute(`mask`, `url(#${maskID})`) // set the mask attribute on the svgElt
@@ -3255,7 +3270,7 @@ class Shape extends ProtoLayer {
       depthScale = this.cutDepthScale,                                              // cut depthScale
       scale = outsetShade ?
         // this.insetScale
-        Vertex.add(this.insetScale, depthScale.mult(0.8))
+        Vertex.add(this.insetScale, depthScale.mult(.8))
         // Vertex.add(this.insetScale, depthScale)                                     // outsetShade scale is insetScale + depthScale
         : Vertex.sub(this.insetScale, depthScale),                                  // insetShade scale is insetScale - depthScale
       // : this.insetScale,                                                          // insetShade scale is insetScale - depthScale

@@ -891,7 +891,7 @@ function gridTests2(features) {
   DeBug.warn(`minInsetScale`, minInsetScale)
   // DeBug.warn(`minInsetAmount`, (1 - minInsetScale) * GRID.minCellWidth)
   DeBug.warn(`minInsetAmount`, mill.minInsetAmount)
-  DeBug.warn(`FRAME Cuts`, GRID.protoParent.backGroup.cuts)
+  console.warn(`FRAME Cuts`, GRID.protoParent.backGroup.cuts)
   DeBug.warn(`BGRID`, BGRID)
   DeBug.warn(`GRID Ratio: ${mill.gridRatio / 2}:1`)
   // DeBug.warn(`gridInsetScale:`, mill.gridInsetScale)
