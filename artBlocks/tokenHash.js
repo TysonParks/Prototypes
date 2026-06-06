@@ -1521,9 +1521,15 @@ const lastHash = [
   '0x7b5ad1f2186f478ad758a36ee825fd677a790b60b3bb7c1c57c393ea7786fa7c',
   '0x9bec1edcee24d6e11a5eb00709138349742afe1765e77aa8ce9c7f0f13c68394',
   '0xc9a7a861aac88e4b9c4b05ef70decf4989e1c28255ce484493b9939bb3f42567',
+  '0x508b062cb1b54f90c9a3ba1fcae9de76d67a2bd507fb5bdbb18a795456172e65', // cascade crop: //FUNC:
+  '0x2d4b2b637069b8f0fd9210fbd309c75bbbfcb7cfcf15374d119e867f376c9f21', // 1515 METH:/ cascade crop: //FUNC:
+  '0x2ea13b06674294bd67d96c5e70a501ac7af524b22cacd632663f20645593ffb2', // Proximal Wrap: //FUNC:
+  '0xf601062047508e6c3ccfa0cdda83180c1d7248c7c429debbbc47c1c7313c234b', // cascade crop: //FUNC:
+  '0x08c672bb15be0069282123b4573985dded9718a95a5bce7639d005cdd247f5f8',
+  '0x9dc995ab1bf1ddc93ebfacc9f627329a2b85cfb6c9e55c784ee33116c76e6bb5',
+
 
 ]
-
 function currentHash() {
   return testingControls.lastHash ? lastHash[testingControls.hashNumber] : random_hash()
 }

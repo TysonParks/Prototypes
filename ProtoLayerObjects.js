@@ -1476,6 +1476,7 @@ class CellGroup extends ProtoLayer {
 
         if (profile) insetScale = profile.hasInsetShade ? cutStart : cutEnd
         else insetScale = grpLayerStart
+        // insetScale = grpLayerStart
 
         DeBug.log(`layerRange`, layerRange)
         DeBug.log(`cutRange`, cutRange)
@@ -1823,6 +1824,7 @@ class ShapeGroup extends ProtoLayer {
 
       this.shapes.forEach(s => {                              // find maskShapes in shapes
         const svg = s.maskSVG                                 // get maskSVG once (avoids double-computing maskShape)
+        // const svg = if ()s.maskSVG
         if (svg) {
           const path = createSVGElt('path')                   // create a path for the maskShape
             .attribute(`d`, svg)
@@ -1915,7 +1917,8 @@ class ShapeGroup extends ProtoLayer {
             .id(maskID)
             .attribute('mask-type', 'luminance')
             .attribute('maskUnits', 'userSpaceOnUse')
-            .layout(this.anchor, this.size, this.padding)
+            // .layout(this.anchor, this.size, this.padding)
+            .layout(-50, -50, 200, 300)
             .parent(defs)
 
         this.finalMaskID = maskID
@@ -1926,6 +1929,7 @@ class ShapeGroup extends ProtoLayer {
         this.maskGroupElt.parent(mask.elt)   // append the maskGroupElt to the groupElt
 
         if (outsetShade && this.grid?.isBackGrid) this.createBBoxKeeper()
+        // this.createBBoxKeeper()
 
         this.svgElt
           .attribute(`mask`, `url(#${maskID})`) // set the mask attribute on the svgElt

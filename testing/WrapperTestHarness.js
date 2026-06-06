@@ -836,6 +836,27 @@ const WRAPPER_TEST_CASES = {
     issues: ['cascade-crop'],
     status: 'broken',
   },
+  cascade_grid_crop_1514: {
+    hash: '0x508b062cb1b54f90c9a3ba1fcae9de76d67a2bd507fb5bdbb18a795456172e65',
+    description: 'Reported cascade/wave crop regression in lastHash pool — verify bounded user-space shade-filter margin (§ 9.14.1)',
+    wrapTypes: [],
+    issues: ['cascade-crop'],
+    status: 'broken',
+  },
+  cascade_grid_crop_1515: {
+    hash: '0x2d4b2b637069b8f0fd9210fbd309c75bbbfcb7cfcf15374d119e867f376c9f21',
+    description: 'Reported cascade/wave crop regression in lastHash pool — verify bounded user-space shade-filter margin (§ 9.14.1)',
+    wrapTypes: [],
+    issues: ['cascade-crop'],
+    status: 'broken',
+  },
+  cascade_grid_crop_1517: {
+    hash: '0xf601062047508e6c3ccfa0cdda83180c1d7248c7c429debbbc47c1c7313c234b',
+    description: 'Reported cascade/wave crop regression in lastHash pool — verify bounded user-space shade-filter margin (§ 9.14.1)',
+    wrapTypes: [],
+    issues: ['cascade-crop'],
+    status: 'broken',
+  },
 
   // MARK: Known Broken
   // Add hashes that currently produce incorrect output

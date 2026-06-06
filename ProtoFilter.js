@@ -216,19 +216,19 @@ class ProtoFilter {
       // .attribute(`primitiveUnits`, `userSpaceOnUse`)
     }
 
-    if (time > 0) {
-      const oldGroup = element.p5Parent
-      if (oldGroup !== newGroup) {
-        crossfadeElements(oldGroup, newGroup, time, () => {
-          element.parent(newGroup)
-          if (oldGroup.childElementCount === 0) oldGroup.remove()
-        })
-      }
-    } else {
-      element.parent(newGroup)
-      const oldGroup = element.p5Parent
-      if (oldGroup.childElementCount === 0) oldGroup.remove()
-    }
+    // if (time > 0) {
+    //   const oldGroup = element.p5Parent
+    //   if (oldGroup !== newGroup) {
+    //     crossfadeElements(oldGroup, newGroup, time, () => {
+    //       element.parent(newGroup)
+    //       if (oldGroup.childElementCount === 0) oldGroup.remove()
+    //     })
+    //   }
+    // } else {
+    element.parent(newGroup)
+    const oldGroup = element.p5Parent
+    if (oldGroup.childElementCount === 0) oldGroup.remove()
+    // }
   }
   //METH: updateOffsets() : null : update the offsets of the filter elements
   updateOffsets(shadVect) {

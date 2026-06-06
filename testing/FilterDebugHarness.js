@@ -7,6 +7,7 @@ class FilterDebugHarness {
   static originals = {}
   static state = {
     filterRegionMode: null,
+    filterMarginMode: null,
     cutBoundsMode: null,
     cutOverflow: null,
     gridBoundsMode: null,
@@ -17,6 +18,7 @@ class FilterDebugHarness {
 
   static install({
     filterRegionMode = null,
+    filterMarginMode = null,
     cutBoundsMode = null,
     cutOverflow = null,
     gridBoundsMode = null,
@@ -28,6 +30,7 @@ class FilterDebugHarness {
 
     this.state = {
       filterRegionMode,
+      filterMarginMode,
       cutBoundsMode,
       cutOverflow,
       gridBoundsMode,
@@ -43,6 +46,7 @@ class FilterDebugHarness {
     }
 
     if (filterRegionMode) this.patchSetLayouts()
+    if (filterMarginMode) this.patchShadeFilterRegionMargin()
     if (cutBoundsMode) this.patchBoundsRect()
     if (cutOverflow) this.patchAssignElement()
     if (gridBoundsMode) this.patchGridBounds()
@@ -64,6 +68,7 @@ class FilterDebugHarness {
 
   static uninstall({ rebuild = false } = {}) {
     if (this.originals.setLayouts) ProtoCut.prototype.setLayouts = this.originals.setLayouts
+    if (this.originals.shadeFilterRegionMarginFor) ProtoCut.shadeFilterRegionMarginFor = this.originals.shadeFilterRegionMarginFor
     if (this.originals.boundsRect) Object.defineProperty(ShapeGroup.prototype, 'boundsRect', this.originals.boundsRect)
     if (this.originals.assignElement) ShapeGroup.prototype.assignElement = this.originals.assignElement
     if (this.originals.gridAnchor) Object.defineProperty(Grid.prototype, 'anchor', this.originals.gridAnchor)
@@ -76,6 +81,7 @@ class FilterDebugHarness {
 
     this.state = {
       filterRegionMode: null,
+      filterMarginMode: null,
       cutBoundsMode: null,
       cutOverflow: null,
       gridBoundsMode: null,
@@ -118,6 +124,36 @@ class FilterDebugHarness {
       }
 
       return FilterDebugHarness.originals.setLayouts.call(this)
+    }
+  }
+
+  static patchShadeFilterRegionMargin() {
+    if (!this.originals.shadeFilterRegionMarginFor) {
+      this.originals.shadeFilterRegionMarginFor = ProtoCut.shadeFilterRegionMarginFor
+    }
+
+    ProtoCut.shadeFilterRegionMarginFor = function (cut, filter) {
+      const mode = FilterDebugHarness.state.filterMarginMode
+      const depth = Math.abs(cut.depth)
+
+      if (mode === 'tight') return filter.type === 'combo' ? depth * 0.25 : 0
+      if (mode === 'fixed50') return 50
+      if (mode === 'fixed24') return 24
+
+      if (typeof mode === 'number') return mode
+
+      if (typeof mode === 'object') {
+        const
+          base = mode.base ?? 0,
+          ratio = mode.ratio ?? 0.25,
+          maxMargin = mode.max ?? 50,
+          comboOnly = mode.comboOnly ?? false
+
+        if (comboOnly && filter.type !== 'combo') return base
+        return Math.min(maxMargin, Math.max(base, depth * ratio))
+      }
+
+      return FilterDebugHarness.originals.shadeFilterRegionMarginFor.call(ProtoCut, cut, filter)
     }
   }
 
@@ -321,6 +357,25 @@ class FilterDebugHarness {
     return rebuild
       ? this.rebuild({ filterRegionMode: 'userSpace' })
       : this.install({ filterRegionMode: 'userSpace' })
+  }
+
+  static useTightShadeFilterMargin(rebuild = true) {
+    return rebuild
+      ? this.rebuild({ filterMarginMode: 'tight' })
+      : this.install({ filterMarginMode: 'tight' })
+  }
+
+  static useFixedShadeFilterMargin(margin = 50, rebuild = true) {
+    return rebuild
+      ? this.rebuild({ filterMarginMode: margin })
+      : this.install({ filterMarginMode: margin })
+  }
+
+  static useDepthShadeFilterMargin({ base = 8, ratio = 0.25, max = 50, comboOnly = false } = {}, rebuild = true) {
+    const filterMarginMode = { base, ratio, max, comboOnly }
+    return rebuild
+      ? this.rebuild({ filterMarginMode })
+      : this.install({ filterMarginMode })
   }
 
   static useMagicalFitFrameGridBounds(rebuild = true) {

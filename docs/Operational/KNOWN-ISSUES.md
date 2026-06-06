@@ -1357,7 +1357,63 @@ the SVG `<mask>` element approach.
 
 ### 9.14.1 Issue 1: Cascade SVG Cropping (Frame & Grid)
 
-**Status:** Re-opened 2026-05-11 — rollback pending for overbroad ShapeGroup bounds
+**Status:** Re-opened 2026-05-11; current repro refined 2026-06-05 to
+frontGrid combo-layer cascade/wave crop, not frame/backgrid and not shared
+shade-filter region sizing.
+
+**June 5 triage correction:** The reported lastHash 1444 / 1514 / 1515 /
+1517 crop pool did **not** respond to restoring a 50-user-unit
+`ProtoCut.setLayouts()` shade-filter margin. Treat the shared shade-filter
+region as low-priority for this specific repro. Manual inspection also narrows
+the active symptom:
+
+- The crop occurs only on **frontGrid** shapes. No current crop is visible in
+  frame/backGrid contexts, even though older `lastHash` cases were tagged
+  `Bad Frame cascade MASKING`.
+- The crop occurs only in the **combo shader layer**. The cast-shadow layer
+  still appears to render correctly.
+- The bug is tied to `amount > 1` inside-cut/cascade/wave generation, not to
+  the old frame/backGrid cascade crop family.
+
+**June 5 intentionally exonerated / deprioritized paths:**
+
+1. **`layoutLimited()` / `viewBoxLimited()` are not a standing crop suspect.**
+  These helpers intentionally clamp SVG layout/viewBox rectangles to the
+  artwork's visible user-unit bounds. The artwork contract is fixed at
+  `(0,0,100,200)`, and no valid shading should exist outside those bounds;
+  `Frame.maskFrame()` later masks pixels outside the backing-plane silhouette
+  (`this.backGroup.shapeGroups[0]`) including the output-specific rounded
+  corners. Current and historical crop bugs being debugged here happen
+  *inside* those frame limits. The limited helpers should only return to the
+  suspect list if there is direct evidence that their limit source has shifted
+  away from the fundamental artwork bounds or their overlap math is broken.
+  Their implementation is a straightforward normalize-rect → resolve-limit →
+  `boundsOverlap()` pipeline in `ProtoFilter.js`.
+2. **`createBBoxKeeper()` as a generic fix did not help.** Removing the guard
+  so `this.createBBoxKeeper()` ran for every `createMaskGroup()` call produced
+  no visual change. The existing keeper remains valid for the separate
+  frame/backGrid `rIn` masked-SVG bbox failure, but this frontGrid combo crop
+  does not appear to be the same effective-painted-bounds bug.
+3. **Grid SVG overflow did not help.** Enabling
+  `this.svgElt.attribute('overflow', 'visible')` in `Grid.assignElement()`
+  produced no visible change for the current repro.
+4. **Cardinal downgrade is not the active cause.** Most failing outputs do not
+  crop within shapes that can downgrade from All to Cardinal. In the one noted
+  downgraded case (`#1517`), the crop appears far outside the point where the
+  downgrade kicks in.
+5. **`createMaskGroup()` R/combo scoping is logically appropriate.** The new
+  evidence is not that R/combo masking is overbroad; rather, the crop being
+  combo-only makes the combo path a useful locator for the bug.
+6. **Mask-region plumbing probes did not affect the current crop.** Manual
+  tests on the June repro showed no visual change from disabling
+  `this.maskGroupElt.blur(maskBlur)`, expanding the final `<mask>` layout to
+  `(0,0,100,200)` or `(-50,-50,200,300)`, expanding the internal `maskRect` to
+  full-frame layout/viewBox, or forcing `ProtoFilter.applyFilterToElement()` to
+  create a fresh filtered group instead of reusing an existing one. Applying
+  the mask to `svgGroupElt` instead of `svgElt` changed the affected shape's
+  shading but not the crop rectangle, likely due to multiple differently sized
+  shapes sharing one ShapeGroup/filter context rather than the mask target
+  being the crop source.
 
 **May 11 correction:** The prior runtime fix broadened `ShapeGroup.boundsRect`
 for every `ShapeGroup` with `this.cut`:
@@ -1387,6 +1443,10 @@ units after the rollback is verified.
 `'Waves'`) show clipped filter effects — the shadow/highlight bleeds are
 cut off at SVG element boundaries. Affects both frame-layer cascades and
 grid-layer cascades across all shade layers (combo, high, shad).
+
+This broad symptom describes the historical §9.14.1 family. The June 2026
+lastHash repro is narrower: frontGrid only, combo layer only, with cast shadow
+still rendering correctly.
 
 **Root cause:** Three independent clipping layers in the SVG hierarchy
 were all contributing to filter crop:
@@ -1476,6 +1536,21 @@ these until the exact post-rollback filter/mask region strategy is chosen.
 **Test hashes:** `cascade_frame_crop_1`, `cascade_grid_crop_1`,
 `cascade_grid_crop_2`, and current J-in cropping repros in WrapperTestHarness.js
 
+**Current active suspect — recursive inside-cut geometry before masking:** The
+strongest open lead is now upstream of mask/filter region plumbing: the
+`CellGroup.cutIslands()` amount loop and recursive `Island.createSubIslands()`
+path that generate the actual per-step shapes later consumed by combo masks.
+The crop rectangle appearing fixed across a stacked cascade, while only one of
+two cascade shapes in the same ShapeGroup visibly crops, suggests a shared
+ShapeGroup/cut context containing shapes whose valid cascade radii differ. Check
+whether the original perimeter-shape grouping (`minRad`, neighbor separation,
+`grpLayerStart/grpLayerEnd`) is reused too broadly for later recursive subcuts,
+or whether `insetScale = profile.hasInsetShade ? cutStart : cutEnd` drives one
+shape past its valid inset/outset geometry before `maskSVG` is generated. The
+key flow is: original `grp.shapes` → loop-local `cutStart/cutEnd/insetScale` →
+`createSubIslands({ islands: grp.shapes.map(sh => sh.island), insetScale })` →
+recursive `Island.createSubIslands()` → `Shape.svg` / `Shape.maskSVG`.
+
 ### 9.14.2 Issue 2: R-Profile Mask Cropping
 
 **Status:** ✅ Fixed — mask bounds fixed; frame/backgrid `rIn` bbox crop handled separately in §9.14.11
@@ -1558,6 +1633,18 @@ wrapper cycle may be related to the grouping issue.
 ---
 
 ### 9.14.3 Issue 3: Waves + Ordinal Connection Mask Mismatch
+
+**June 5 scope note:** `Cyma Recta` is currently a dead feature path because
+the option is commented out in `Features.js` (`insideCutStyle`). It may be
+visually worth reviving before launch, but likely requires a more substantial
+shading refactor to look correct. Do not include `Cyma Recta` in the active
+cascade crop search unless the feature is re-enabled.
+
+For the current frontGrid combo-layer crop, Cardinal downgrade is deprioritized:
+most failing outputs do not crop within ordinal/downgraded shapes, and the one
+known downgraded case crops far outside the downgrade point. Keep this section
+for the separate Waves+ordinal mismatch family, but do not conflate it with the
+current combo-only crop unless new evidence connects them.
 
 **Symptom:** When `insideCutStyle = 'Waves'` and a shape has ordinal
 connections, mask shapes in the cascade stack progressively reduce to

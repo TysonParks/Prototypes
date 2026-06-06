@@ -60,7 +60,7 @@ Sub-steps within that pipeline:
 | 3 | Bug: Safari compatibility (cont.) + shading | B1, B3 | ✅ Completed |
 | 4 | Bug: Wrapping | B2 | ♻️ Deferred |
 | 5 | Feature: InfraGrid InnerCuts re-enable | F2 | ♻️ Deferred |
-| 6 | Bug: Shading  | ?? | ♻️ Deferred |
+| 6 | Bug: Shading  | ?? | 🟡 In Process |
 | 7 | Animation: timing polish | B4 | ✅ Completed |
 | 8 | Animation: performance (cont.) | B4 | ✅ Completed  |
 | 9 | Feature: Rotation implementation (basic) | F1 | ✅ Completed  |
