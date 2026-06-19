@@ -9,7 +9,8 @@
 **Related docs:**
 [ROADMAP](ROADMAP.md) |
 [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-[ARCHITECTURE](ARCHITECTURE.md) |
+[ARCHITECTURE](../Canonical/ARCHITECTURE.md) |
+[FEATURES-AND-DETERMINISM](FEATURES-AND-DETERMINISM.md) |
 [TESTING](TESTING.md)
 
 ---
@@ -65,12 +66,13 @@ Sub-steps within that pipeline:
 | 8 | Animation: performance (cont.) | B4 | ✅ Completed  |
 | 9 | Feature: Rotation implementation (basic) | F1 | ✅ Completed  |
 | 10 | Feature: Rotation research + Post Params | F1 | 🟡 In Process |
-| 11 | AB Features Cleanup | ?? | Not started |
-| 12 | AB Features Local Rarity Implementation | ?? | Not started |
-| 13 | Code cleanup pass | E1 | Not started |
-| 14 | Export Pipeline setup (answer-dependent) | E2 | Planned |
-| 15 | Integration testing against ArtBlocks test bench | E3 | Planned |
-| 16 | Buffer / overflow / final upload | — | Planned |
+| 11 | **Sprint bugs** (saved-seed issues) | B* | 🟡 Next | Fix against frozen `features-calc-v1-submission` baseline — see [FEATURES-AND-DETERMINISM](FEATURES-AND-DETERMINISM.md) |
+| 12 | AB Features cleanup (resume) | F3 | ⏸ Paused | Partial work in `Features.js`; resume after Day 11 bugs |
+| 13 | Batch feature analyzer | F4 | ⏸ Paused | After Features cleanup; feeds internal rarity metrics |
+| 14 | Code cleanup pass | E1 | Not started |
+| 15 | Export Pipeline setup (answer-dependent) | E2 | Planned |
+| 16 | Integration testing against ArtBlocks test bench | E3 | Planned |
+| 17 | Buffer / overflow / final upload | — | Planned |
 
 > Days 13–14 are intentionally light on new work to allow for unexpected
 > integration issues. Do not schedule new features here.
@@ -591,9 +593,40 @@ The remaining productive avenues, in order:
 | ID | Feature | Priority | Est. Time | Open Questions | Status |
 |----|---------|----------|-----------|----------------|--------|
 | F1 | **Prototype object Rotation** — basic rotation for ProtoLayerObjects; Chrome-only interactive rotation implemented and PostParams trait added (`Rotation`, defaults to Up/0°) | P2 | 2–3 days | Q5 (Post Params API) | ✅ Done |
-| F2 | **InfraGrid InnerCuts re-enable** — fix and re-enable the feature that cuts new shapes within a parent shape using only Direction hierarchy 0/1 (the feature whose name is uncertain — likely "InnerCuts" or "InsideCuts" related to infraGrids) | P2 | 1–2 days | — | ❌ Not started |
+| F2 | **InfraGrid InnerCuts re-enable** — fix and re-enable the feature that cuts new shapes within a parent shape using only Direction hierarchy 0/1 (the feature whose name is uncertain — likely "InnerCuts" or "InsideCuts" related to infraGrids) | P2 | 1–2 days | — | ❌ Deferred (post-sprint) |
+| F3 | **AB Features cleanup** — finalize `publicFeatures`, wire `window.$features`, collapse `ABFeaturesScript.js`, resolve `shapeInterpreter` PRNG burn | P1 | 1–2 days | — | 🟡 Paused (partial in `Features.js`) |
+| F4 | **Batch feature analyzer** — dev harness to sample trait distributions and prune-skew vs. nominal weights; supports internal rarity metrics | P2 | 1 day | — | ⏸ After F3 |
 
 ### Feature Notes
+
+**F3 — AB Features cleanup (2026-06-17):**
+
+Work started in `Features.js` then paused: any `#calcFeatures()` change shifts
+PRNG consumption and breaks determinism for `lastHash` saved seeds. Sprint order
+is now **bugs first → Features resume → batch analyzer**.
+
+Partial changes already made (uncommitted):
+
+- `publicFeatures`: `gridWidth`/`gridHeight`, split group counts, `groupDensity`,
+  `insideCuts`/`insideCutStyle`; removed broken `likelyFailures` keys and
+  `shapeInterpreter` from output.
+- Comment placeholders for five **internal rarity metrics** (not marketplace
+  local rarity).
+- Enum comment hygiene (`gridXFlex`/`gridXMagic` marked private).
+
+Still required: `window.$features` assignment, `uniformCutsStyle`/`cutStyleCount`
+public reveal, remove or wire `shapeInterpreter` in calc chain, paste final
+classes into bundle script, git tag `features-calc-v1-submission` before further
+calc changes.
+
+Canonical reference: [FEATURES-AND-DETERMINISM.md](FEATURES-AND-DETERMINISM.md).
+
+**F4 — Batch feature analyzer:**
+
+Features-only loop over N hashes (no SVG build). Outputs marginal/conditional
+trait tables, unreachable-option report, CSV export. Used to validate weighting
+after F3 and to design internal rarity magnitudes — not Art Blocks marketplace
+rarity tiers.
 
 **F1 — Rotation + Post Params:**
 Status: Complete (Chrome-only basic rotation). The interactive 90° rotation feature is now

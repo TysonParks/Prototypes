@@ -8,7 +8,8 @@ update as context is recovered.
 **Related docs:**
 [GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
 [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-[ARCHITECTURE](ARCHITECTURE.md) |
+[ARCHITECTURE](../Canonical/ARCHITECTURE.md) |
+[FEATURES-AND-DETERMINISM](FEATURES-AND-DETERMINISM.md) |
 [TESTING](TESTING.md)
 
 ## What This Document Is Not
@@ -69,7 +70,7 @@ because understanding the geometry is prerequisite to knowing which
 | 4 | Build mutation → invalidation table for memoized properties | Ask | 1 | ❌ Not started | Same graph, reverse traversal. Finds stale-cache bugs. |
 | 7 | Create GLOSSARY.md | Ask → Agent | — | ❌ Not started | Helps share vocabulary precisely. |
 | 8 | Create ARCHITECTURE.md with dependency graph | Ask → Agent | 1, 4 | 🟡 Partial | Now exists as [ARCHITECTURE.md](ARCHITECTURE.md), with content from GEOMETRY-REFERENCE §§ 8, 10, 11. |
-| 9 | Create FEATURES.md (feature calc order + PRNG consumption) | Ask → Agent | — | ❌ Not started | Documents the second most fragile area. |
+| 9 | Create FEATURES.md (feature calc order + PRNG consumption) | Ask → Agent | — | 🟡 Partial | See [FEATURES-AND-DETERMINISM.md](FEATURES-AND-DETERMINISM.md). |
 
 ### PHASE B — Stabilize ProtoSegment
 
@@ -164,18 +165,23 @@ are deferred as too aggressive for the current release phase.
 
 ---
 
-### Post-Plan Addition: ArtBlocks PostParams + Local Rarity
+### Post-Plan Addition: ArtBlocks Features + Determinism
 
-> **Context (2026-06-03):** Remaining shading and geometry/wrapping issues are
-> rare/subtle enough to defer for the submission path. The next implementation
-> focus is Rotation via ArtBlocks PostParams, overlapping with ABFeatures cleanup
-> and local rarity planning.
+> **Context (2026-06-17):** Features cleanup started in `Features.js` but paused
+> because any change to the `#calcFeatures()` chain alters PRNG consumption and
+> invalidates saved seeds in `lastHash`. Bug fixes for those seeds must run
+> against a **frozen feature-calc baseline** first. Full trait wiring and internal
+> rarity metrics resume after sprint bugs. See
+> [FEATURES-AND-DETERMINISM.md](FEATURES-AND-DETERMINISM.md).
 
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
-| AB1 | Rotation PostParam finalization | Agent + verify | F1 | 🟡 Next | Confirm final `tokenData.externalAssetDependencies[0]` parsing, accepted values (`Up`, `Right`, `Down`, `Left`), deterministic fallback behavior, and `window.$features.Rotation` output. |
-| AB2 | ABFeatures cleanup | Agent + verify | AB1 | 🟡 Next | Clean feature calculation/output around ArtBlocks-facing traits and PostParams; keep PRNG consumption deterministic. |
-| AB3 | Local rarity plan | Ask → Agent | AB2 | ❌ Needs plan | Define sampling size, output format, final trait set, and whether mutable PostParams such as `Rotation` participate in local rarity or are treated as display state. |
+| AB0 | **Freeze feature-calc baseline** | Git tag/branch | — | 🟡 Next | Tag commit as `features-calc-v1-submission` before further Features changes. Use for `lastHash` repro during sprint. |
+| AB1 | Rotation PostParam finalization | Agent + verify | F1 | 🟡 In progress | `Rotation` PostParam + `window.$features.Rotation`. Must not insert PRNG draws before hash-derived features. |
+| AB2 | ABFeatures cleanup | Agent + verify | Sprint bugs | 🟡 Paused | Partial: `publicFeatures` schema updates in `Features.js`. Still need `window.$features` wiring, `ABFeaturesScript.js` collapse, remove/wire `shapeInterpreter`. |
+| AB3 | Internal rarity metrics | Ask → Agent | AB4 | ❌ Not started | Five analytical magnitudes/skews (comment placeholders in `publicFeatures`) — **not** marketplace local rarity. |
+| AB4 | Batch feature analyzer | Agent | AB2 | ❌ Not started | Dev harness: sample N hashes, report prune-distorted weights + unreachable options. See FEATURES-AND-DETERMINISM § Phase 3. |
+| AB5 | Pre-release feature-calc v2 | Agent + verify | AB upload | ❌ Post-sprint | After test-bench submission: resume Features changes, re-baseline `lastHash` or maintain v2 list. |
 
 ---
 

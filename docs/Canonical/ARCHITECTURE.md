@@ -38,6 +38,11 @@
   - [13.1 Which Layers Produce SVG](#131-which-layers-produce-svg)
   - [13.2 Inset and Bounds Propagation](#132-inset-and-bounds-propagation)
   - [13.3 Filter Region Implications](#133-filter-region-implications)
+- [14. Feature Calculation and Generation](#14-feature-calculation-and-generation)
+  - [14.1 Entry Points](#141-entry-points)
+  - [14.2 Layer Model vs. Traits](#142-layer-model-vs-traits)
+  - [14.3 Constraint and Relaxation](#143-constraint-and-relaxation)
+  - [14.4 2.5D Rendering Stack](#144-25d-rendering-stack)
 
 > **Note on numbering:** Section numbers 10–11 preserved from the
 > original GEOMETRY-REFERENCE.md for consistency with any existing
@@ -532,5 +537,66 @@ hashes and visual A/B coverage.
 
 ---
 
+## 14. Feature Calculation and Generation
+
+High-level map of the generative pipeline (complements wrapper-focused §§10–13).
+Detail, determinism rules, and sprint sequencing live in
+[FEATURES-AND-DETERMINISM.md](../Operational/FEATURES-AND-DETERMINISM.md).
+
+### 14.1 Entry Points
+
+| Stage | Location | Role |
+|-------|----------|------|
+| Bootstrap | `index.html` script order → `sketch.js` `setup()` | Size frame, install UI hooks |
+| Orchestrator | `ProtoBatch.buildFromHash()` | Teardown-safe rebuild from hash |
+| Features | `calculateFeatures()` → `new FeatureSet(R)` | Hash → trait object + `groups[]` |
+| Generation | `gridTests2()` → `ProtoMill` | Grid seed → nestle → cut → frame → draw |
+| Traits (intended) | `FeatureSet.publicFeatures` → `window.$features` | Art Blocks marketplace metadata |
+| Animation | `AnimationController.batchUpdateFilters()` | Updates `feOffset` on existing filters |
+
+There is **no p5 `draw()` loop** — artwork is built imperatively as SVG DOM, then
+lighting animates by mutating filter offsets.
+
+### 14.2 Layer Model vs. Traits
+
+**Object hierarchy** (`ProtoLayerObjects.js`):
+
+```
+Frame
+├── BackGrid (BGRID) — outer silhouette
+└── Grid (GRID)
+    ├── CellGroup(s) — seeded cell clusters
+    │   └── Island(s) → Shape(s)
+    └── ShapeGroup(s) — render layers per ProtoCut
+```
+
+**Registry:** `Store` / `ProtoStore.js` tracks Frame, Grids, CellGroups,
+ShapeGroups, Islands, Shapes, Cuts, Effects.
+
+Traits in `publicFeatures` describe *parameters*; `groups[]` describes the
+*realized layer recipes* (method, cut style, coverage) consumed by `ProtoMill`.
+
+### 14.3 Constraint and Relaxation
+
+Forms emerge from discrete grid constraints, then geometric relaxation:
+
+1. **Seeding** — `Grid.seed()` claims cells into `CellGroup`s (Noise, Comb, Snake, …).
+2. **Perimeters** — `CellGroup.createPerimiters()` → `Island` + `Shape` segments.
+3. **Initial geometry** — `Shape.createSimpleSubShapes()` → `SegPath` with min corners.
+4. **Relaxation** — `Grid.nestleShapes()` → `maximizeCuddles()` (wrapper/corner negotiation in `Grid.js` + `ProtoSegment` in `drawAsSVG.js`).
+
+Evaluation lives in `ProtoSegment`; aesthetic ordering in `maximizeCuddles()` /
+`fixIssues()` — see §10.
+
+### 14.4 2.5D Rendering Stack
+
+- **Geometry kernel:** `drawAsSVG.js` — `SegPath`, `SVGPath`, segments, insets.
+- **Cuts:** `ProtoCut` + `Profile` (`neuMark_I.js`) — memoized per breed.
+- **Filters:** `ProtoFilter.shade()` — stacked `feOffset` / blur / composite.
+- **Compositing:** `ShapeGroup` → grid shader `<g>` layers (`back`, `combo`, `high`, `shad`, masks).
+- **Layouts:** `ProtoCut.setLayouts()` — filter region in user units (Safari-sensitive).
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-05-15*
+*Last updated: 2026-06-17*

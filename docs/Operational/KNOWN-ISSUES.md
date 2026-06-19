@@ -6,7 +6,8 @@
 >
 > **Related docs:**
 > [GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
-> [ARCHITECTURE](ARCHITECTURE.md) |
+> [ARCHITECTURE](../Canonical/ARCHITECTURE.md) |
+> [FEATURES-AND-DETERMINISM](FEATURES-AND-DETERMINISM.md) |
 > [ROADMAP](ROADMAP.md) |
 > [TESTING](TESTING.md)
 
@@ -65,6 +66,7 @@ Maintenance note:
   - [9.15.6 Safari Perf Investigation Apr 28 2026 (canvas-image-swap path)](#9156-safari-perf-investigation-apr-28-2026-canvas-image-swap-path)
 - [9.16 ProtoBatch Teardown Completeness (Open)](#916-protobatch-teardown-completeness-open)
 - [9.17 Forward-Compat Bets (Anticipated Platform Changes)](#917-forward-compat-bets-anticipated-platform-changes)
+- [9.18 Feature Calculation Determinism](#918-feature-calculation-determinism)
 
 > **Note on numbering:** Section numbers are kept as `9.x` to maintain
 > compatibility with existing code comments that reference
@@ -3045,5 +3047,45 @@ a perf-tuned shortcut that breaks on a future browser is permanent.
 
 ---
 
+## 9.18 Feature Calculation Determinism
+
+*Last audited: 2026-06-17 — sprint sequencing and baseline tag strategy documented.*
+
+### 9.18.1 Problem
+
+`FeatureSet.#calcFeatures()` and all subsequent `R` draws share one PRNG stream
+per hash. The saved seed corpus in `artBlocks/tokenHash.js` (`lastHash`) was
+captured against a specific calculation chain. Reordering, adding, or removing
+feature steps — or drawing `shapeInterpreter` while not using it — changes
+outputs for **every** hash, not just trait labels.
+
+### 9.18.2 Current Risk
+
+Partial AB Features cleanup in `Features.js` (uncommitted) changes
+`publicFeatures` keys only if calc order is unchanged — but planned work
+(wiring `window.$features`, removing `shapeInterpreter` draw, internal rarity
+metrics) **will** alter determinism unless deferred until after sprint bug fixes.
+
+### 9.18.3 Mitigation
+
+1. Tag or branch **`features-calc-v1-submission`** at the last commit matching
+   current saved-seed behavior **before** further calc-chain edits.
+2. Reproduce `lastHash` bugs from that tag; apply generation/rendering fixes on
+   `artBlocksSprint` without touching `#calcFeatures()` during the sprint.
+3. After Art Blocks test-bench upload, resume Features work on a new baseline
+   (`features-calc-v2-pre-release`) and re-baseline or dual-list regression hashes.
+
+Full workflow: [FEATURES-AND-DETERMINISM.md](FEATURES-AND-DETERMINISM.md).
+
+### 9.18.4 Related Gaps (not geometry bugs)
+
+- `window.$features` not populated from `publicFeatures` (only `Rotation` today).
+- `likelyFailures` / `unlikelyFailures` were referenced but undefined — removed
+  from `publicFeatures` in pending cleanup.
+- `uniformLofts` reported but loft path in `#calcGroup` is commented out.
+- Duplicate commented `FeatureSet` in `ABFeaturesScript.js` — bundle debt.
+
+---
+
 *Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-04-29 — § 9.16 ProtoBatch teardown completeness; § 9.17 forward-compat bets table added*
+*Last updated: 2026-06-17 — §9.18 feature calc determinism*
