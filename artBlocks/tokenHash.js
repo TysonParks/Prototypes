@@ -1527,6 +1527,7 @@ const lastHash = [
   '0xf601062047508e6c3ccfa0cdda83180c1d7248c7c429debbbc47c1c7313c234b', // cascade crop: //FUNC:
   '0x08c672bb15be0069282123b4573985dded9718a95a5bce7639d005cdd247f5f8',
   '0x9dc995ab1bf1ddc93ebfacc9f627329a2b85cfb6c9e55c784ee33116c76e6bb5',
+  '0xa6efe5a2ebefcff2df942e3a7ccb491bff95a650647b1eed7852d55f535eeefd', // 1520 METH: // cascade crop: //FUNC:
 
 
 ]
