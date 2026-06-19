@@ -65,8 +65,8 @@ class FeatureSet {
     return {
       // grid features (6)
       gridStyle: this.gridStyle,
-      cellColumns: this.x,
-      cellRows: this.y,
+      gridWidth: this.x,
+      gridHeight: this.y,
       cellAspect: this.cellAspect,
       cellOutset: this.cellOutset,
       cellInset: this.cellInset,
@@ -74,15 +74,17 @@ class FeatureSet {
       // group features (5)
       primarySeedStyle: this.seed1,
       secondarySeedStyle: this.seed2,
-      groupCount: this.groupCount,
-      density: this.density,
-      shapeInterpreter: this.shapeInterpreter,
+      groupCountAdditive: this.groupCount.adds,
+      groupCountSubtractive: this.groupCount.subs,
+      groupDensity: this.density,
 
-      // cut features (4)
+      // cut features (6)
       uniformCuts: this.uniformCuts,
       cutDirections: this.cutDirections,
       uniformLofts: this.uniformLofts,
       linearCuts: this.linearCuts,
+      insideCuts: this.insideCuts,
+      insideCutStyle: this.insideCutStyle,
 
       // frame features (4)
       frameWidth: this.frameWidth,
@@ -90,9 +92,15 @@ class FeatureSet {
       frameSpacing: this.frameSpacing,
       frameCascades: this.frameCascades,
 
-      // fail features (2)
-      likelyFailures: this.likelyFailures,
-      unlikelyFailures: this.unlikelyFailures,
+      // Internal Rarity Metrics (5)
+      // System Metrics (3)
+      // enumerativeRarityMagnitude: this.enumerativeRarityMagnitude,      // Enumerative Rarity Magnitude
+      // programmedRarityMagnitude: this.programmedRarityMagnitude,        // Programmed Rarity Magnitude
+      // spatialPossibilityMagnitude: this.spatialPossibilityMagnitude,    // Spatial Possibility Magnitude
+
+      // Derived Metrics (2)
+      // programmedRaritySkew: this.programmedRaritySkew,                      // Programmed Rarity Skew
+      // totalPossibilitySkew: this.totalPossibilitySkew,                      // Total Possibility Skew
     }
   }
 
@@ -721,7 +729,7 @@ const publicOptions = {
       ['4x Min', .05, 4],           // 15  / 300 (Total)
     ],
   },
-  //Public: grid column amount
+  //Private: grid column amount
   gridXFlex: {
     name: 'Columns',
     options: [
@@ -740,7 +748,7 @@ const publicOptions = {
       // ['30', 0.05],             // 4  / 100 ("Flexible")
     ]
   },
-  //Public: grid column amount
+  //Private: grid column amount
   gridXMagic: {
     name: 'Columns',
     options: [
@@ -764,7 +772,7 @@ const publicOptions = {
 
   // MARK: Shader Dependencies
   // #region Shader Dependencies
-  // Public: uniformCuts
+  //Private: uniformCuts : Publicly revealed as cutStyleCount (1,2,3,4)
   uniformCuts: {
     name: 'Uniform Cuts',
     options: [
@@ -772,7 +780,7 @@ const publicOptions = {
       ['False', 1 / 3],           // 100 / 300 (Total)  
     ]
   },
-  // Public: uniformCuts
+  //Private: uniformCuts : Publicly revealed as cutStyleCount (1,2,3,4)
   uniformCutsStyle: {
     name: 'Uniform Cuts Style',
     options: [
@@ -782,7 +790,7 @@ const publicOptions = {
       ['jOut', 1 / 8],            // 25  / 200 (Uniform)
     ]
   },
-  // Public: cutDirections
+  //Public: cutDirections
   cutDirections: {
     name: 'Cut Directions',
     options: [
@@ -791,7 +799,7 @@ const publicOptions = {
       ['Additive and Subtractive', 0.5],
     ]
   },
-  // Public: uniformLofts
+  //Public: uniformLofts
   uniformLofts: {
     name: 'Uniform Loft Depths',
     options: [
@@ -807,7 +815,7 @@ const publicOptions = {
       ['False', 0.6, false],      // 138 / 230 (Square Aspect) 
     ]
   },
-  // Public: insideCutStyle
+  //Public: insideCutStyle
   insideCutStyle: {
     name: 'Inside Cut Style',
     options: [
@@ -855,7 +863,7 @@ const publicOptions = {
 
   // Public: how densely the grid is filled with shapes
   density: {
-    name: 'Density',
+    name: 'Grid Density',
     options: [
       ['So Lonely', 0.01],            // 3 / 300 (Total)
       ['Some Availability', 0.04],    // 12 / 300 (Total)
@@ -867,7 +875,7 @@ const publicOptions = {
   // #region Group Dependencies
   // Public: style of seed
   seed1: {
-    name: 'Primary Seed Style',
+    name: 'Primary Grid Seed Style',
     options: [
       ['Noise', .075],                 // 23 / 300 (Total)
       ['Random Comb', .075],           // 23 / 300 (Total)
@@ -883,7 +891,7 @@ const publicOptions = {
   },
   // Public: style of seed
   seed2: {
-    name: 'Secondary Seed Style',
+    name: 'Secondary GridSeed Style',
     options: [
       ['Modifier', 0.45],               // 135 / 300 (Total)
       ['Noise', 0.025],                 // 8   / 300 (Total)
@@ -895,15 +903,6 @@ const publicOptions = {
       ['Snake', 0.1],                   // 30  / 300 (Total)
     ]
   },
-  // // Public: cascade group count
-  // cascades: {
-  //   name: 'Group Cascades',
-  //   options: [
-  //     ['None', 0.75],     // 225 / 300 (Total)
-  //     ['One', 0.15],      // 45  / 300 (Total)
-  //     ['Some', 0.1],      // 30  / 300 (Total)
-  //   ]
-  // },
 
   // Private: Instance rectOverlap of rect type seed
   rectOverlap: {
@@ -1149,16 +1148,16 @@ class EnumFeature {
     return this.chosen
   }
   //METH: addOptions()
-  addOptions(options) {                                                                 //UNUSED:
-    // DeBug.log('addOptions called')                                                 //LOGGING:
-    // DeBug.log('options', options)                                                  //LOGGING:
-    // options = OpArray.format(options)
-    // DeBug.log('options', options)                                                  //LOGGING:
-    // const oldOpts = OpArray.format(this.options)
-    const newOpts = [...options, ...this.options]
-    // DeBug.log('newOpts', newOpts)                                                  //LOGGING:
-    if (newOpts) this.replaceOptions(newOpts)
-  }
+  // addOptions(options) {                                                                 //UNUSED:
+  //   // DeBug.log('addOptions called')                                                 //LOGGING:
+  //   // DeBug.log('options', options)                                                  //LOGGING:
+  //   // options = OpArray.format(options)
+  //   // DeBug.log('options', options)                                                  //LOGGING:
+  //   // const oldOpts = OpArray.format(this.options)
+  //   const newOpts = [...options, ...this.options]
+  //   // DeBug.log('newOpts', newOpts)                                                  //LOGGING:
+  //   if (newOpts) this.replaceOptions(newOpts)
+  // }
   //METH: removeOptions()
   removeOptions(options) {
     if (this.options.length < 2) return
@@ -1177,11 +1176,11 @@ class EnumFeature {
     // DeBug.log('last', last)                                                        //LOGGING:
     this.removeOptions(last)
   }
-  //METH: reduceOptions()
-  reduceOptions(toOptions) {
-    const reduced = this.options.filter(opt => toOptions.includes(opt[0]))
-    if (reduced) this.replaceOptions(reduced)
-  }
+  // //METH: reduceOptions()
+  // reduceOptions(toOptions) {
+  //   const reduced = this.options.filter(opt => toOptions.includes(opt[0]))
+  //   if (reduced) this.replaceOptions(reduced)
+  // }
   //METH: replaceOptions()
   replaceOptions(withOptions, all = true) {
     // DeBug.warn(`replaceOptions`)                                                   //LOGGING:
