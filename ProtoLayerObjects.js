@@ -1786,7 +1786,14 @@ class ShapeGroup extends ProtoLayer {
   //METH: assignElement() override
   assignElement() {
     super.assignElement()
-    if (this.cut) this.svgElt.attribute('overflow', 'visible')   // § 9.14.1 — allow filter bleed beyond viewport
+    if (this.cut) {
+      this.svgElt.attribute('overflow', 'visible')   // § 9.14.1 — allow filter bleed beyond viewport
+      // if (this.type === 'ShapeGroup-combo' && this.cut?.profile.isR) {
+      //   this.svgElt
+      //     .layout(FRAME.anchor, FRAME.size)
+      //     .viewBox(FRAME.anchor, FRAME.size)
+      // }
+    }
     this.svgElt.parent(this.shadeElt)
   }
   //METH: createSVGGroup()
@@ -1869,17 +1876,12 @@ class ShapeGroup extends ProtoLayer {
 
         const maskRect = createSVGElt('rect')
           .id(`${this.id}-maskRect`)
-          // .attribute('x', this.anchor.x - this.size.x * 1 / mult)
-          // .attribute('y', this.anchor.y - this.size.y * 1 / mult)
-          // .attribute('width', this.size.x * mult)
-          // .attribute('height', this.size.y * mult)
-          .viewBoxLimited(this.anchor, this.size, this.padding)
-          .layoutLimited(this.anchor, this.size, this.padding)
+          // .viewBoxLimited(this.anchor, this.size, this.padding)
+          // .layoutLimited(this.anchor, this.size, this.padding)
           // .viewBox(this.anchor, this.size, this.padding)
           // .layout(this.anchor, this.size, this.padding)
+          .layout(FRAME.anchor, FRAME.size)
           .attribute('fill', maskRectFill)
-          // .attribute('fill', 'black')
-          // .attribute('fill', randomLCH(0.9))
           .parent(this.maskGroupElt)
         // .attribute('maskUnits', 'userSpaceOnUse')
 
@@ -1918,7 +1920,9 @@ class ShapeGroup extends ProtoLayer {
             .attribute('mask-type', 'luminance')
             .attribute('maskUnits', 'userSpaceOnUse')
             // .layout(this.anchor, this.size, this.padding)
-            .layout(-50, -50, 200, 300)
+            .layout(FRAME.anchor, FRAME.size)
+            // .layout(-50, -50, 200, 300)
+            // .layout(0, 0, 100, 200)
             .parent(defs)
 
         this.finalMaskID = maskID
