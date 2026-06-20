@@ -1355,13 +1355,50 @@ the SVG `<mask>` element approach.
 
 ## 9.14 SVG Filter Layout & Mask Cropping Issues
 
-**Status:** Active — cascade/mask history retained; `rIn` masked SVG bbox crop fixed; ShapeGroup bounds rollback now pending
+**Status:** frontGrid combo cascade crop ✅ fixed (June 2026); `rIn` masked SVG bbox crop ✅ §9.14.11; per-shape mask region sizing deferred post-submission (§9.15)
 
 ### 9.14.1 Issue 1: Cascade SVG Cropping (Frame & Grid)
 
-**Status:** Re-opened 2026-05-11; current repro refined 2026-06-05 to
-frontGrid combo-layer cascade/wave crop, not frame/backgrid and not shared
-shade-filter region sizing.
+**Status:** ✅ Fixed for frontGrid combo-layer cascade/wave crop (June 2026 sprint).
+Historical frame/grid cascade family and J-in repros remain documented below for
+regression reference. **Deferred:** replace artwork-wide mask layouts with
+precise per-ShapeGroup bounds for cascade/wave cuts (Safari perf — §9.15.3).
+
+**June 2026 resolution (frontGrid combo cascade crop):**
+
+The active repro pool (lastHash designators **1444, 1514, 1515, 1517, 1519,
+1520** — combo layer only, `amount > 1` inside-cut cascade/wave, shad layer OK)
+was fixed in `ShapeGroup.createMaskGroup()` by assigning **FRAME artwork bounds**
+to two luminance-mask layout targets (never exceeding `(0,0,100,200)`):
+
+1. **`maskRect`** — white/black luminance backdrop inside the mask group.
+   Was `layoutLimited(this.anchor, this.size, this.padding)` (cell-tight).
+   Now `.layout(FRAME.anchor, FRAME.size)`.
+2. **Final `<mask>` element** — mask coordinate system for `maskUnits="userSpaceOnUse"`.
+   Was per-ShapeGroup cell layout (broken), then interim `(-50,-50,200,300)` (over-extended).
+   Now `.layout(FRAME.anchor, FRAME.size)` (equivalent to `(0,0,100,200)`).
+
+```js
+// ProtoLayerObjects.js createMaskGroup() — submission fix
+maskRect.layout(FRAME.anchor, FRAME.size)
+mask.layout(FRAME.anchor, FRAME.size)   // maskUnits userSpaceOnUse
+```
+
+**Why this worked:** Combo+R cuts apply a luminance mask to the nested
+`svgElt`. When `maskRect` and the `<mask>` element used cell bounds, the
+luminance field was clipped to the shared `cellBounds` rectangle — producing
+the identical axis-aligned crop across all combo layers in a cell while the shad
+layer (separate ShapeGroup, no luminance mask) rendered correctly. Expanding
+only the final `<mask>` element fixed some hashes (#1444, #1515); expanding
+**both** `maskRect` and the `<mask>` to FRAME bounds fixed the remainder.
+
+**Not required for this fix:** broadening nested combo `svgElt` layout/viewBox
+to FRAME (tested, commented out in `assignElement()`). Nested `svgElt` stays
+cell-sized with `overflow: visible`.
+
+**Post-submission follow-up:** compute tight mask regions from cascade/wave
+ShapeGroup geometry + filter bleed instead of artwork-wide FRAME defaults.
+See §9.15.3 Tier 1b and ROADMAP task 12a deferred perf pass.
 
 **June 5 triage correction:** The reported lastHash 1444 / 1514 / 1515 /
 1517 crop pool did **not** respond to restoring a 50-user-unit
@@ -1406,16 +1443,13 @@ the active symptom:
 5. **`createMaskGroup()` R/combo scoping is logically appropriate.** The new
   evidence is not that R/combo masking is overbroad; rather, the crop being
   combo-only makes the combo path a useful locator for the bug.
-6. **Mask-region plumbing probes did not affect the current crop.** Manual
-  tests on the June repro showed no visual change from disabling
-  `this.maskGroupElt.blur(maskBlur)`, expanding the final `<mask>` layout to
-  `(0,0,100,200)` or `(-50,-50,200,300)`, expanding the internal `maskRect` to
-  full-frame layout/viewBox, or forcing `ProtoFilter.applyFilterToElement()` to
-  create a fresh filtered group instead of reusing an existing one. Applying
-  the mask to `svgGroupElt` instead of `svgElt` changed the affected shape's
-  shading but not the crop rectangle, likely due to multiple differently sized
-  shapes sharing one ShapeGroup/filter context rather than the mask target
-  being the crop source.
+6. **Mask-region plumbing — partial June probes inconclusive; full fix confirmed
+   June 2026.** Early manual A/B on the June repro did not isolate a single
+   lever (mask blur off, final mask only, maskRect only, filter target swap).
+   The **submission fix** required **both** `maskRect` and final `<mask>` at
+   `FRAME.anchor/size`. Do not treat the June 5 "no visual change" probes as
+   exoneration of mask sizing — the correct pair of layout changes had not yet
+   been landed together.
 
 **May 11 correction:** The prior runtime fix broadened `ShapeGroup.boundsRect`
 for every `ShapeGroup` with `this.cut`:
@@ -1526,32 +1560,21 @@ beyond cell grid boundaries, making all three clipping layers active.
 pipeline is bypassed by `userSpaceOnUse`. After the bounds rollback, preserve
 these until the exact post-rollback filter/mask region strategy is chosen.
 
-**Key code paths:**
-- `setLayouts()`: neuMark_I L169-180 ← **userSpaceOnUse filter bounds**
-- `ShapeGroup.boundsRect`: ProtoLayerObjects `boundsRect` getter ← **rollback `this.cut` broadening**
-- `ShapeGroup.assignElement()`: ProtoLayerObjects `assignElement()` ← **overflow:visible; revalidate after rollback**
-- `Grid.assignElement()`: Grid.js `assignElement()` ← **overflow:visible is currently commented out**
-- `ProtoCut.padding`: neuMark_I L136 (`depth * 2`)
-- `applyFilterToElement()`: ProtoFilter L190 (filter wrapper `<g>`)
-- `S.Cuts.db...setLayouts()`: sketch.js L765
+**Key code paths (submission fix):**
+- `createMaskGroup()`: ProtoLayerObjects.js `createMaskGroup()` ← **maskRect + final `<mask>` FRAME layout**
+- `ShapeGroup.assignElement()`: overflow visible on cut nested `svgElt` (cell viewport unchanged)
+- `setLayouts()`: neuMark_I.js ← userSpaceOnUse shade-filter regions (exonerated for this repro)
+- `ShapeGroup.boundsRect`: frame-only for `isFrame`; cell bounds for cuts (May 12 rollback — unchanged)
 
-**Test hashes:** `cascade_frame_crop_1`, `cascade_grid_crop_1`,
-`cascade_grid_crop_2`, and current J-in cropping repros in WrapperTestHarness.js
+**Historical key code paths:**
 
-**Current active suspect — recursive inside-cut geometry before masking:** The
-strongest open lead is now upstream of mask/filter region plumbing: the
-`CellGroup.cutIslands()` amount loop and recursive `Island.createSubIslands()`
-path that generate the actual per-step shapes later consumed by combo masks.
-The crop rectangle appearing fixed across a stacked cascade, while only one of
-two cascade shapes in the same ShapeGroup visibly crops, suggests a shared
-ShapeGroup/cut context containing shapes whose valid cascade radii differ. Check
-whether the original perimeter-shape grouping (`minRad`, neighbor separation,
-`grpLayerStart/grpLayerEnd`) is reused too broadly for later recursive subcuts,
-or whether `insetScale = profile.hasInsetShade ? cutStart : cutEnd` drives one
-shape past its valid inset/outset geometry before `maskSVG` is generated. The
-key flow is: original `grp.shapes` → loop-local `cutStart/cutEnd/insetScale` →
-`createSubIslands({ islands: grp.shapes.map(sh => sh.island), insetScale })` →
-recursive `Island.createSubIslands()` → `Shape.svg` / `Shape.maskSVG`.
+**Test hashes:** `cascade_grid_crop_1`, `cascade_grid_crop_1514`,
+`cascade_grid_crop_1515`, `cascade_grid_crop_1517`, `cascade_grid_crop_1519`,
+`cascade_grid_crop_1520` in WrapperTestHarness.js (all **fixed** June 2026).
+Legacy: `cascade_frame_crop_1`, `cascade_grid_crop_2`, J-in cropping repros.
+
+**Historical suspect (June 5, superseded by mask layout fix):** recursive
+inside-cut geometry before masking — retained below for archaeology only.
 
 ### 9.14.2 Issue 2: R-Profile Mask Cropping
 
@@ -2614,7 +2637,17 @@ correctness.
 
 These optimizations don't touch the viewport/filter-region system:
 
-**1a. Per-profile padding precision** (§ 9.14.2 notes this)
+**1b. Combo cascade mask region tightening** (§ 9.14.1 June 2026 submission fix)
+- Current: `maskRect` and final `<mask>` use `FRAME.anchor/size` for all
+  combo+R `createMaskGroup()` calls (artwork-wide `(0,0,100,200)`).
+- Optimized: union of cascade/wave ShapeGroup cell bounds + `cut.depth` bleed
+  (and/or shape-path bbox), capped at FRAME — per-group mask luminance field.
+- Impact: largest Safari win for hashes with many masked cascade layers in one
+  cell; must not reintroduce cell-tight `layoutLimited` crop on `maskRect`.
+- Blocked until: reliable per-cascade bounds helper (likely shares Tier 1b
+  shape-union infrastructure).
+
+**1c. Per-profile padding precision** (§ 9.14.2 notes this)
 - Current: `ProtoCut.padding = depth * 2` for all profiles
 - Optimized: vary by profile type:
   - `hasInsetShade` (rOut, jIn, iIn): `depth * 1` (shade extends inward)

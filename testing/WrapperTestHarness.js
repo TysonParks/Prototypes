@@ -824,10 +824,10 @@ const WRAPPER_TEST_CASES = {
   },
   cascade_grid_crop_1: {
     hash: '0xe2f57b77fd2aa05a6d292faf2b787a05717986b5b63d4683aae4d14401d97c91',
-    description: 'Grid-layer cascade filter effects cropped at ShapeGroup viewport — boundsRect expanded to FRAME.boundsRect (§ 9.14.1). Regressed after Mar 5 rollback.',
+    description: 'lastHash #1444 — frontGrid combo cascade crop. Fixed §9.14.1 (maskRect + final mask FRAME layout).',
     wrapTypes: [],
     issues: ['cascade-crop'],
-    status: 'broken',
+    status: 'fixed',
   },
   cascade_grid_crop_2: {
     hash: '0x409bcf3e22eb3b0acda546873026dd67d6020ca35d03e0a18b469af8c1ae0a72',
@@ -838,24 +838,38 @@ const WRAPPER_TEST_CASES = {
   },
   cascade_grid_crop_1514: {
     hash: '0x508b062cb1b54f90c9a3ba1fcae9de76d67a2bd507fb5bdbb18a795456172e65',
-    description: 'Reported cascade/wave crop regression in lastHash pool — verify bounded user-space shade-filter margin (§ 9.14.1)',
+    description: 'lastHash #1514 — frontGrid combo cascade/wave crop. Fixed §9.14.1 (maskRect + final mask FRAME layout).',
     wrapTypes: [],
     issues: ['cascade-crop'],
-    status: 'broken',
+    status: 'fixed',
   },
   cascade_grid_crop_1515: {
     hash: '0x2d4b2b637069b8f0fd9210fbd309c75bbbfcb7cfcf15374d119e867f376c9f21',
-    description: 'Reported cascade/wave crop regression in lastHash pool — verify bounded user-space shade-filter margin (§ 9.14.1)',
+    description: 'lastHash #1515 — frontGrid combo cascade/wave crop. Fixed §9.14.1 (maskRect + final mask FRAME layout).',
     wrapTypes: [],
     issues: ['cascade-crop'],
-    status: 'broken',
+    status: 'fixed',
   },
   cascade_grid_crop_1517: {
     hash: '0xf601062047508e6c3ccfa0cdda83180c1d7248c7c429debbbc47c1c7313c234b',
-    description: 'Reported cascade/wave crop regression in lastHash pool — verify bounded user-space shade-filter margin (§ 9.14.1)',
+    description: 'lastHash #1517 — frontGrid combo cascade/wave crop. Fixed §9.14.1 (maskRect + final mask FRAME layout).',
     wrapTypes: [],
     issues: ['cascade-crop'],
-    status: 'broken',
+    status: 'fixed',
+  },
+  cascade_grid_crop_1519: {
+    hash: '0x9dc995ab1bf1ddc93ebfacc9f627329a2b85cfb6c9e55c784ee33116c76e6bb5',
+    description: 'lastHash #1519 — frontGrid combo cascade/wave crop. Fixed §9.14.1 (maskRect + final mask FRAME layout).',
+    wrapTypes: [],
+    issues: ['cascade-crop'],
+    status: 'fixed',
+  },
+  cascade_grid_crop_1520: {
+    hash: '0xa6efe5a2ebefcff2df942e3a7ccb491bff95a650647b1eed7852d55f535eeefd',
+    description: 'lastHash #1520 — frontGrid combo cascade/wave crop. Fixed §9.14.1 (maskRect + final mask FRAME layout).',
+    wrapTypes: [],
+    issues: ['cascade-crop'],
+    status: 'fixed',
   },
 
   // MARK: Known Broken

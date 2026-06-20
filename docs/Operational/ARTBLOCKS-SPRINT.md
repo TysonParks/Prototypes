@@ -88,7 +88,7 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 | B1 | **Safari compatibility** — three sub-issues: (1) 10s–1min render delay (WebKit per-shape masker O(N) cost, Bug #172338); (2) missing/incorrect shapes (same root cause + cross-SVG filter ID resolution, §9.14.4b); (3) animation non-functional (software-path RAF, Bug #19118). Primary workaround: no-op `<filter>` on masked groups. | P1 | 2–3 days | — | §9.14.4b, §9.14.6 | 🟡 In progress |
 | B2 | **Remaining wrapping bugs** — adjacent wrapper visual verification still pending; Bug B (opposite-facing collinear) deferred | P2 | 2–3 days | Wrapper audit §1 in ROADMAP | §9.7, §9.12 | 🟡 In progress (audit) |
 | B3 | **Shade retuning before release** — viewport-scale unit bug solved for now; objective A/B retune should happen after the ShapeGroup bounds rollback is revalidated | P2 | 1–2 days | B5 | §9.14.10, §9.14.9, §9.13 | 🟡 Retuning needed |
-| B5 | **ShapeGroup bounds rollback / J-in cropping** — remove overbroad `this.cut -> FRAME.boundsRect`, then re-test cascade/J-in cropping, Safari, animation FPS, and per-cut filter AABBs | P2 | 1 day | — | §9.14.1, §9.15 | 🟡 Before release |
+| B5 | **ShapeGroup bounds rollback / J-in cropping** — remove overbroad `this.cut -> FRAME.boundsRect`, then re-test cascade/J-in cropping, Safari, animation FPS, and per-cut filter AABBs | P2 | 1 day | — | §9.14.1, §9.15 | ✅ Combo crop fixed (mask layout); deferred: tight per-ShapeGroup mask bounds |
 | B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | 🟡 In progress (clock sync implemented) |
 
 ### Bug Notes
@@ -126,13 +126,13 @@ representative hashes and output contexts. Include `keep()` thresholds, offset
 ladder shape, blur constants, and possible S-curve shading revival.
 
 **B5 — ShapeGroup bounds rollback / J-in cropping:**
-The §9.14.1 `ShapeGroup.boundsRect` branch currently returns FRAME for any cut,
-which makes nearly all shaded groups frame-sized. That was too broad for a
-cascade/J-in coverage problem and likely distorted recent shade, Safari, and
-performance diagnostics. Roll it back to frame-only behavior, keep the
-`FilterDebugHarness` `cellBounds`/`frameBounds` A/B modes, and then solve any
-returned cropping with explicit filter, mask, or cascade-specific SVG region
-math in user units.
+The May 2026 `ShapeGroup.boundsRect` rollback (frame-only for `isFrame`, cell
+bounds for cuts) remains in place. **June 2026:** frontGrid combo cascade/wave
+crop (§9.14.1) fixed in `createMaskGroup()` by setting **`maskRect` and final
+`<mask>`** to `FRAME.anchor/size` — not by re-broadening `boundsRect`. **Deferred
+post-submission:** replace artwork-wide mask layouts with per-ShapeGroup tight
+bounds for cascade/wave combo+R cuts (Safari perf — §9.15.3). Re-test J-in and
+per-cut filter AABBs only if a new repro appears.
 
 **B4 — Animation:**
 Timing polish is now centered on a synchronized light clock rather than a

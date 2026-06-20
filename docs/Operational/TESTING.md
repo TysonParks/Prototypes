@@ -437,6 +437,9 @@ harness file.
 | `intershape_3` | coincident, adjacent | untested | Intershape placed inside larger shape (most representative) |
 | `filter_banding_1` | — | broken | Visible stepped banding on `rOut` shade stacks; primary shader quantization diagnosis case |
 | `bottom_bar_1` | — | broken | Bottom frame bar artifact; use same-hash SVG variant sheet before changing runtime layout code |
+| `cascade_grid_crop_1` | cascade-crop | fixed | lastHash #1444 — frontGrid combo cascade (§ 9.14.1) |
+| `cascade_grid_crop_1514` – `1520` | cascade-crop | fixed | lastHash cascade/wave combo crop pool (§ 9.14.1, June 2026) |
+| `cascade_grid_crop_2` | cascade-crop | broken | Legacy grid cascade repro — not in June 2026 fix pool |
 | `broken_01` – `broken_03` | — | broken | Grouping errors (multiple groups contain same cell) |
 | `broken_04` – `broken_06` | proximal | broken | Outer wrapper converging/intersecting inner wrapper |
 | `broken_07` | adjacent | broken | Outer wrapper converging/barely intersecting inner wrapper |
@@ -468,6 +471,12 @@ await batchFrameBottomBarRegressionSheet()
 await batchFrameBottomBarRegressionSheet({ include: ['broken', 'golden'] })
 await reportFrameBottomBarSetComparison()
 ```
+
+For the June 2026 **frontGrid combo cascade/wave crop** (§9.14.1), see
+`cascade_grid_crop_*` cases in `WRAPPER_TEST_CASES`. Fix: `maskRect` and final
+`<mask>` at `FRAME.anchor/size` in `ShapeGroup.createMaskGroup()`. Optional
+headless screenshots: `python3 testing/cascadeCropProbe.py` (use fresh page load
+per hash; allow ≥3s after `buildFromHash` before capture so blur filters resolve).
 
 For the June 2026 frame/backgrid `rIn` side-crop bug, see
 `docs/Operational/FRAME-RIN-CROP-AUDIT.md` and KNOWN-ISSUES §9.14.11. The
