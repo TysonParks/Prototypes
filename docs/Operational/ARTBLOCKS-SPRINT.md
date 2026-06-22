@@ -89,6 +89,7 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 | B2 | **Remaining wrapping bugs** — adjacent wrapper visual verification still pending; Bug B (opposite-facing collinear) deferred | P2 | 2–3 days | Wrapper audit §1 in ROADMAP | §9.7, §9.12 | 🟡 In progress (audit) |
 | B3 | **Shade retuning before release** — viewport-scale unit bug solved for now; objective A/B retune should happen after the ShapeGroup bounds rollback is revalidated | P2 | 1–2 days | B5 | §9.14.10, §9.14.9, §9.13 | 🟡 Retuning needed |
 | B5 | **ShapeGroup bounds rollback / J-in cropping** — remove overbroad `this.cut -> FRAME.boundsRect`, then re-test cascade/J-in cropping, Safari, animation FPS, and per-cut filter AABBs | P2 | 1 day | — | §9.14.1, §9.15 | ✅ Combo crop fixed (mask layout); deferred: tight per-ShapeGroup mask bounds |
+| B6 | **Thin depth outline bug** — rare Flexible outputs showed single dark outline instead of directional shading | P2 | — | — | §9.14.12 | ✅ Fixed (Feature enum limits on `cellOutset` / `frameWidth`) |
 | B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | 🟡 In progress (clock sync implemented) |
 
 ### Bug Notes
@@ -133,6 +134,15 @@ crop (§9.14.1) fixed in `createMaskGroup()` by setting **`maskRect` and final
 post-submission:** replace artwork-wide mask layouts with per-ShapeGroup tight
 bounds for cascade/wave combo+R cuts (Safari perf — §9.15.3). Re-test J-in and
 per-cut filter AABBs only if a new repro appears.
+
+**B6 — Thin depth outline:**
+Three `lastHash` repros (#1494, #1518, #1521) on Flexible grids. **Fixed** with
+simple Feature enum limits: extra `cellOutset` trim for Flexible+Wide at `x > 2`,
+and conditional `frameWidth.removeLastOption()` when `cellOutset > 0.7 / 0.8`
+before the Flexible `frameWidth` draw. An attempted `neuShadeSVGFactory()`
+proportional-ladder branch showed no visual change and was reverted; a complex
+`#estimateFlexMinCellSize()` guard was also rejected as too aggressive. See
+§9.14.12.
 
 **B4 — Animation:**
 Timing polish is now centered on a synchronized light clock rather than a

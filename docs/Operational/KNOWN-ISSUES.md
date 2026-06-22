@@ -57,6 +57,7 @@ Maintenance note:
   - [9.14.9 R-in Shade Layer Not Centered (Open)](#9149-r-in-shade-layer-not-centered-open)
   - [9.14.10 Viewport-Scale Dependent Shade Calibration (Solved for Now)](#91410-viewport-scale-dependent-shade-calibration-solved-for-now)
   - [9.14.11 Frame/Backgrid R-in Masked SVG BBox Crop (Resolved)](#91411-framebackgrid-r-in-masked-svg-bbox-crop-resolved)
+  - [9.14.12 Thin Depth Outline Bug (Resolved)](#91412-thin-depth-outline-bug-resolved)
 - [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
   - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
   - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
@@ -2473,6 +2474,66 @@ all stroke attributes were removed. Approximately 50 manual outputs looked good
 after the fix.
 
 **Related doc:** `docs/Operational/FRAME-RIN-CROP-AUDIT.md`
+
+### 9.14.12 Thin Depth Outline Bug (Resolved)
+
+*Added: 2026-06-17*
+*Resolution updated: 2026-06-17*
+
+**Status:** ✅ Resolved — FeatureSet enum limits (Flexible grids)
+
+**Symptom:** Rare outputs (~3 in 1500+ `lastHash` seeds) showed cut shading as a
+single dark outline ring instead of directional light/dark bands aligned to the
+light vector. All known repros used `gridStyle === 'Flexible'` with `cellInset ===
+'Min'`.
+
+**Repro designators:** #1494, #1518, #1521 (`0x8d31f933…`, `0x08c672bb…`,
+`0x86ba04c8…`).
+
+**Root cause (suspected):** The combination of high `cellOutset`, high column count
+(`x`), and/or wide `frameWidth` on Flexible grids compressed `minCellSize` enough
+that cut depth (`loft * minCellWidth`) fell into a sub-threshold range. At that
+scale, `Shade.neuShadeSVGFactory()`'s fixed offset anchors (`1`, `2`, `4`) mixed
+with depth-derived offsets and `keep()` can produce a stack dominated by a single
+fixed anchor — visually a dark outline rather than directional shading (see
+§9.14.10 for related shade-ladder context).
+
+**Resolution (`Features.js`):** Simple, determinism-safe enum trimming before the
+relevant `feature(r)` draws — no new PRNG calls, no reordering of existing draws:
+
+1. **`#calcX()` — existing + one addition:**
+   - `x > 4` + Flexible: `cellOutset.removeLastOption()` and
+     `frameWidth.removeOptions(['Large'])` (pre-existing)
+   - `x > 3`: progressive `cellOutset.removeLastOption(...)` (pre-existing)
+   - **`x > 2` + Flexible + `cellAspect === 'Wide'`:** additional
+     `cellOutset.removeLastOption()` *(user fix)*
+
+2. **`#calcFrameProps()` — Flexible branch:**
+   - After `cellOutset` is known, before `frameWidth.feature(r)`:
+     - if `cellOutset > 0.7` → `frameWidth.removeLastOption()`
+     - if `cellOutset > 0.8` → `frameWidth.removeLastOption()` again
+   - Prevents high-outset grids from also drawing the widest frame options, which
+     further compresses cell size and pushes cuts into the thin-depth range.
+     *(user fix)*
+
+**Approaches tried and rejected:**
+
+| Approach | Location | Outcome |
+|----------|----------|---------|
+| Proportional shade ladder when `mag < 6` | `neuMark_I.js` `neuShadeSVGFactory()` | No visible difference on repro hashes; reverted |
+| Conservative `#estimateFlexMinCellSize()` + `#trimCellOutsetForThinDepth()` | `Features.js` `#calcX()` | Too aggressive/complex; reverted in favor of simpler limits above |
+
+The rendering-path hypothesis (fixed anchors + `keep()` floor) remains plausible as
+*why* thin depths look wrong, but preventing those depths at feature time was the
+effective fix in practice.
+
+**Diagnostics (optional):** `reportThinDepthShadeHealth()` in
+`testing/WrapperTestHarness.js` flags shallow combo cuts whose offset stacks look
+anchor-dominated; `testing/thinDepthProbe.mjs` for headless `DEBUG_NEUSHADES`
+logging. These describe the suspected rendering failure mode, not the applied fix.
+
+**Baseline tag:** `features-calc-v1-submission` marks the commit before Feature
+calc changes for this bug; post-submission wrap debugging can diff against it.
 
 ## 9.15 Performance Optimization Strategy
 

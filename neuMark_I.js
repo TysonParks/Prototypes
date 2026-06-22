@@ -506,7 +506,7 @@ class Shade {
       mag,          // these first 3
       mag / 2,      // these first 3
       2,            // these fixed magnitudes insure edge remains crisp and poppy at higher resolutions
-      mag * 3 / 4,  //  
+      mag * 3 / 4,  //
       4,            // these fixed magnitudes insure edge remains crisp and poppy at higher resolutions
       mag / 4,      //
       mag / 8,      //

@@ -231,7 +231,9 @@ class FeatureSet {
       this.enums.cellOutset.removeLastOption(Math.min(7, x - 3))
     }
     if (x > 2) {
-
+      if (this.gridStyle === `Flexible` && this.cellAspect === 'Wide') {
+        this.enums.cellOutset.removeLastOption()
+      }
     }
 
     this.cellOutset = this.enums.cellOutset.feature(r)
@@ -283,7 +285,12 @@ class FeatureSet {
       this.frameWidth = w
       this.enums.frameWidth.chosen = w
     }
-    else this.frameWidth = this.enums.frameWidth.feature(r)
+    else {
+      console.log(`cellOutset`, this.enums.cellOutset.value)
+      if (this.enums.cellOutset.value > 0.7) this.enums.frameWidth.removeLastOption()
+      if (this.enums.cellOutset.value > 0.8) this.enums.frameWidth.removeLastOption()
+      this.frameWidth = this.enums.frameWidth.feature(r)
+    }
     DeBug.log(`frameWidth:`, this.frameWidth)                                                     //LOGGING:
     this.#calcGridInset(r)
 

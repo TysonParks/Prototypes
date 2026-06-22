@@ -157,6 +157,7 @@ Notes: Prefer capturing snapshots before/after `fixIssues()` and use `WTH.diffSn
 | `reportResetCoverage()` | Log which volatile keys are NOT in `#resetMemoProps` |
 | `reportSurvivedKeys()` | Log keys that survived mutations without invalidation |
 | `reportFilterBanding()` | Inspect active cuts/filters for sparse offset stacks, duplicate collapse, and shell gap statistics |
+| `reportThinDepthShadeHealth()` | Optional diagnostic: flag shallow combo cuts with anchor-dominated offset stacks (§9.14.12 suspected rendering mode; fix is Feature-side) |
 
 ### 2.4 How to Run
 
@@ -184,6 +185,9 @@ WTH.diffSnapshots(before, after)
 
 // Shader/filter banding diagnostics for the current hash
 runFilterBandingDiagnostics()
+
+// Optional: inspect suspected thin-depth rendering mode (§9.14.12; fix is Feature-side enum limits)
+reportThinDepthShadeHealth('0x8d31f933ba75bbfa9ee9be8e76c7d29c0b7fc87b9f93085ce01d24ef0d565444', true)
 
 // Same hash under common SVG layout variants, exported as one contact sheet
 await batchFilterVariantContactSheet()

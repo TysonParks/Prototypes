@@ -687,6 +687,40 @@ function runFilterBandingDiagnostics(hash = tokenData?.hash, rebuild = false) {
   return report
 }
 
+//FUNC: reportThinDepthShadeHealth(hash, rebuild, maxDepth) : [Object] : diagnostic for anchor-dominated shallow combo stacks (§9.14.12)
+function reportThinDepthShadeHealth(hash = tokenData?.hash, rebuild = false, maxDepth = 3) {
+  if (rebuild && hash) {
+    protoBatch.buildFromHash(hash)
+  }
+
+  const FIXED_ANCHOR_MAG = 0.2
+  const report = []
+
+  S.Cuts.db.forEach(cut => {
+    if (cut.depth <= 0 || cut.depth > maxDepth) return
+    cut.filters.filter(f => f.type === `combo`).forEach(filter => {
+      const absMags = OpArray.from(filter.offsetElts.map(o => roundToDec(abs(o.mag), 4))).numSorted
+      const uniqueMags = absMags.filter((e, i, a) => i === 0 || !equalsRoundedDec(e, a[i - 1], 3))
+      const anchorOnly = uniqueMags.length <= 1
+        || (uniqueMags.length === 2 && equalsRoundedDec(uniqueMags[0], FIXED_ANCHOR_MAG, 2))
+      const healthy = uniqueMags.length >= 2 && !anchorOnly
+      report.push({
+        depth: roundToDec(cut.depth, 4),
+        profile: cut.profile?.type,
+        shadeCount: filter.shades?.length ?? 0,
+        uniqueOffsetMags: uniqueMags,
+        healthy,
+      })
+    })
+  })
+
+  window.WTHThinDepth = report
+  DeBug.log(`WTHThinDepth: shallow combo shade health`, report)
+  return report
+}
+
+window.reportThinDepthShadeHealth = reportThinDepthShadeHealth
+
 //FUNC: runSVGArtifactDiagnostics(hash) : Object : run the standard artifact checks for a hash
 async function runSVGArtifactDiagnostics(hash = tokenData?.hash) {
   if (!hash) {
@@ -869,6 +903,27 @@ const WRAPPER_TEST_CASES = {
     description: 'lastHash #1520 — frontGrid combo cascade/wave crop. Fixed §9.14.1 (maskRect + final mask FRAME layout).',
     wrapTypes: [],
     issues: ['cascade-crop'],
+    status: 'fixed',
+  },
+  thin_depth_1494: {
+    hash: '0x8d31f933ba75bbfa9ee9be8e76c7d29c0b7fc87b9f93085ce01d24ef0d565444',
+    description: 'lastHash #1494 — thin depth outline bug. Fixed §9.14.12 (Flexible cellOutset/frameWidth enum limits).',
+    wrapTypes: [],
+    issues: ['thin-depth'],
+    status: 'fixed',
+  },
+  thin_depth_1518: {
+    hash: '0x08c672bb15be0069282123b4573985dded9718a95a5bce7639d005cdd247f5f8',
+    description: 'lastHash #1518 — thin depth outline bug. Fixed §9.14.12 (Flexible cellOutset/frameWidth enum limits).',
+    wrapTypes: [],
+    issues: ['thin-depth'],
+    status: 'fixed',
+  },
+  thin_depth_1521: {
+    hash: '0x86ba04c820c09eda6009893cc63638b19b6f638e349572e82bf0f40a4ab90833',
+    description: 'lastHash #1521 — thin depth outline bug. Fixed §9.14.12 (Flexible cellOutset/frameWidth enum limits).',
+    wrapTypes: [],
+    issues: ['thin-depth'],
     status: 'fixed',
   },
 
