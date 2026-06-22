@@ -5,6 +5,49 @@
 class ProtoBatch {
   // Track the current hash driving the live artwork
   currentHash = null
+  _lastHashNavInstalled = false
+
+  constructor() {
+    this.installLastHashKeyboardNav()
+  }
+
+  //METH: installLastHashKeyboardNav() — Up/Down arrows step testingControls.hashNumber through lastHash[]
+  installLastHashKeyboardNav() {
+    if (this._lastHashNavInstalled) return
+    this._lastHashNavInstalled = true
+
+    window.addEventListener('keydown', (e) => {
+      if (!testingControls?.lastHash || typeof lastHash === 'undefined') return
+      const t = e.target
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      let delta = 0
+      if (e.key === 'ArrowUp') delta = 1
+      else if (e.key === 'ArrowDown') delta = -1
+      else return
+
+      e.preventDefault()
+      e.stopPropagation()
+      this.stepLastHash(delta)
+    }, true)
+  }
+
+  //METH: stepLastHash(delta) — move hashNumber by delta and rebuild from lastHash[index]
+  stepLastHash(delta = 0) {
+    if (!testingControls?.lastHash || typeof lastHash === 'undefined') return false
+
+    const max = lastHash.length - 1
+    const next = Math.max(0, Math.min(max, testingControls.hashNumber + delta))
+    if (next === testingControls.hashNumber) return false
+
+    testingControls.hashNumber = next
+    const hash = lastHash[next]
+    console.log(`lastHash #${next}: ${hash}`)
+    this.teardown()
+    this.buildFromHash(hash)
+    return true
+  }
 
   // ──────────────────────────────────────────────
   // MARK: Build Pipeline
