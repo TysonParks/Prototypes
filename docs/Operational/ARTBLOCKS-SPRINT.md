@@ -65,10 +65,10 @@ Sub-steps within that pipeline:
 | 7 | Animation: timing polish | B4 | ✅ Completed |
 | 8 | Animation: performance (cont.) | B4 | ✅ Completed  |
 | 9 | Feature: Rotation implementation (basic) | F1 | ✅ Completed  |
-| 10 | Feature: Rotation research + Post Params | F1 | 🟡 In Process |
-| 11 | **Sprint bugs** (saved-seed issues) | B* | ✅ Completed | Fix against frozen `features-calc-v1-submission` baseline — see [FEATURES-AND-DETERMINISM](FEATURES-AND-DETERMINISM.md) |
-| 12 | AB Features cleanup (resume) | F3 | ⏸ Paused | Partial work in `Features.js`; resume after Day 11 bugs |
-| 13 | Batch feature analyzer | F4 | ⏸ Paused | After Features cleanup; feeds internal rarity metrics |
+| 10 | Feature: Rotation research + Post Params | F1 | ✅ Complete | Rotation in `$features`; `Produced` / pairing PostParams post-sprint (P1–P6) |
+| 11 | **Sprint bugs** (saved-seed issues) | B* | ✅ Complete | Submission scope; deferred items in manifest |
+| 12 | AB Features cleanup (resume) | F3 | ✅ Complete | v2 tagged `features-calc-v2-pre-release` |
+| 13 | Batch feature analyzer | F4 | ✅ Complete | `runFeatureBatchAnalyzer({ count: 5000 })` |
 | 14 | Code cleanup pass | E1 | Not started |
 | 15 | Export Pipeline setup (answer-dependent) | E2 | Planned |
 | 16 | Integration testing against ArtBlocks test bench | E3 | Planned |
@@ -85,12 +85,13 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 
 | ID | Bug | Priority | Est. Time | Depends On | KNOWN-ISSUES Ref | Status |
 |----|-----|----------|-----------|------------|-------------------|--------|
-| B1 | **Safari compatibility** — three sub-issues: (1) 10s–1min render delay (WebKit per-shape masker O(N) cost, Bug #172338); (2) missing/incorrect shapes (same root cause + cross-SVG filter ID resolution, §9.14.4b); (3) animation non-functional (software-path RAF, Bug #19118). Primary workaround: no-op `<filter>` on masked groups. | P1 | 2–3 days | — | §9.14.4b, §9.14.6 | 🟡 In progress |
-| B2 | **Remaining wrapping bugs** — adjacent wrapper visual verification still pending; Bug B (opposite-facing collinear) deferred | P2 | 2–3 days | Wrapper audit §1 in ROADMAP | §9.7, §9.12 | 🟡 In progress (audit) |
-| B3 | **Shade retuning before release** — viewport-scale unit bug solved for now; objective A/B retune should happen after the ShapeGroup bounds rollback is revalidated | P2 | 1–2 days | B5 | §9.14.10, §9.14.9, §9.13 | 🟡 Retuning needed |
-| B5 | **ShapeGroup bounds rollback / J-in cropping** — remove overbroad `this.cut -> FRAME.boundsRect`, then re-test cascade/J-in cropping, Safari, animation FPS, and per-cut filter AABBs | P2 | 1 day | — | §9.14.1, §9.15 | ✅ Combo crop fixed (mask layout); deferred: tight per-ShapeGroup mask bounds |
-| B6 | **Thin depth outline bug** — rare Flexible outputs showed single dark outline instead of directional shading | P2 | — | — | §9.14.12 | ✅ Fixed (Feature enum limits on `cellOutset` / `frameWidth`) |
-| B4 | **Animation optimization + timing** — performance re-optimization pass; complete timing/sequencing implementation that was deferred | P3 | 2–3 days | — | §9.15 | 🟡 In progress (clock sync implemented) |
+| B1 | **Safari compatibility** — overlay UX done; further perf tuning deferred post-submission | P1 | — | — | §9.14.4b, §9.15.6 | ♻️ Deferred (post-submission) |
+| B2 | **Remaining wrapping bugs** — e.g. Proximal Wrap #1526; rare incidence | P2 | — | Wrapper audit §1 | §9.7, §9.12 | ♻️ Deferred (post-submission) |
+| B3 | **Shade retuning before release** — viewport-scale unit bug solved for now | P2 | 1–2 days | B5 | §9.14.10 | ♻️ Deferred (post-submission) |
+| B5 | **ShapeGroup bounds / cascade crop** | P2 | — | — | §9.14.1 | ✅ Fixed (mask layout) |
+| B6 | **Thin depth outline bug** (Flexible) | P2 | — | — | §9.14.12 | ✅ Fixed |
+| B7 | **Thin r-Out outline bug** — ~5 hashes, not prevalent | P2 | — | — | §9.14.13 | ♻️ Deferred (post-submission) |
+| B4 | **Animation optimization + timing** | P3 | — | — | §9.15 | ✅ Clock sync done; polish deferred |
 
 ### Bug Notes
 
@@ -604,8 +605,8 @@ The remaining productive avenues, in order:
 |----|---------|----------|-----------|----------------|--------|
 | F1 | **Prototype object Rotation** — basic rotation for ProtoLayerObjects; Chrome-only interactive rotation implemented and PostParams trait added (`Rotation`, defaults to Up/0°) | P2 | 2–3 days | Q5 (Post Params API) | ✅ Done |
 | F2 | **InfraGrid InnerCuts re-enable** — fix and re-enable the feature that cuts new shapes within a parent shape using only Direction hierarchy 0/1 (the feature whose name is uncertain — likely "InnerCuts" or "InsideCuts" related to infraGrids) | P2 | 1–2 days | — | ❌ Deferred (post-sprint) |
-| F3 | **AB Features cleanup** — finalize `publicFeatures`, wire `window.$features`, collapse `ABFeaturesScript.js`, resolve `shapeInterpreter` PRNG burn | P1 | 1–2 days | — | 🟡 Paused (partial in `Features.js`) |
-| F4 | **Batch feature analyzer** — dev harness to sample trait distributions and prune-skew vs. nominal weights; supports internal rarity metrics | P2 | 1 day | — | ⏸ After F3 |
+| F3 | **AB Features cleanup** — finalize `publicFeatures`, wire `window.$features`, collapse `ABFeaturesScript.js`, remove `shapeInterpreter` PRNG burn, internal rarity metrics | P1 | 1–2 days | v1 freeze | ✅ Done |
+| F4 | **Batch feature analyzer** — dev harness; validates weights + rarity magnitudes | P2 | 1 day | F3 | ✅ Done |
 
 ### Feature Notes
 

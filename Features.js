@@ -21,7 +21,6 @@ class FeatureSet {
   density                 // So Lonely / Some Availability / At Capacity
   seed1                   // Noise/ Random Comb / Rectangles / Squares / Simple Pattern / Complex Pattern / Snake
   seed2                   // None, Noise/ Random Comb / Rectangles / Squares / Simple Pattern / Complex Pattern / Snake 
-  shapeInterpreter        // 
   weight                  // Int: 2-10
 
   // cut dependencies
@@ -40,6 +39,13 @@ class FeatureSet {
   frameDivs               // Int: 1-5
   frameSpacing            // Whole / Thirds / Quarters / Fifths / Eighths / Ninths
   frameCascades           // None / One / Some
+
+  // internal rarity metrics (analytical, not marketplace occurrence rarity)
+  enumerativeRarityMagnitude
+  programmedRarityMagnitude
+  spatialPossibilityMagnitude
+  programmedRaritySkew
+  totalPossibilityMagnitude
 
 
 
@@ -78,13 +84,14 @@ class FeatureSet {
       groupCountSubtractive: this.groupCount.subs,
       groupDensity: this.density,
 
-      // cut features (6)
+      // cut features (6–7)
       uniformCuts: this.uniformCuts,
       cutDirections: this.cutDirections,
       uniformLofts: this.uniformLofts,
       linearCuts: this.linearCuts,
       insideCuts: this.insideCuts,
       insideCutStyle: this.insideCutStyle,
+      ...(this.uniformCuts ? { cutStyleCount: this.#cutStyleCount() } : {}),
 
       // frame features (4)
       frameWidth: this.frameWidth,
@@ -92,19 +99,44 @@ class FeatureSet {
       frameSpacing: this.frameSpacing,
       frameCascades: this.frameCascades,
 
-      // Internal Rarity Metrics (5)
-      // System Metrics (3)
-      // enumerativeRarityMagnitude: this.enumerativeRarityMagnitude,      // Enumerative Rarity Magnitude
-      // programmedRarityMagnitude: this.programmedRarityMagnitude,        // Programmed Rarity Magnitude
-      // spatialPossibilityMagnitude: this.spatialPossibilityMagnitude,    // Spatial Possibility Magnitude
-
-      // Derived Metrics (2)
-      // programmedRaritySkew: this.programmedRaritySkew,                      // Programmed Rarity Skew
-      // totalPossibilitySkew: this.totalPossibilitySkew,                      // Total Possibility Skew
+      // Internal Rarity Metrics (5) — system structure, not occurrence rarity
+      'Enumerative Rarity Magnitude': this.enumerativeRarityMagnitude,
+      'Programmed Rarity Magnitude': this.programmedRarityMagnitude,
+      'Spatial Possibility Magnitude': this.spatialPossibilityMagnitude,
+      'Programmed Rarity Skew': this.programmedRaritySkew,
+      'Total Possibility Magnitude': this.totalPossibilityMagnitude,
     }
   }
 
   get groupWeight() { return this.groupCount.adds + this.groupCount.subs }
+
+  //METH: #cutStyleCount() : Number : map uniformCutsStyle to public cutStyleCount 1–4
+  #cutStyleCount() {
+    const map = { rOut: 1, jIn: 2, rIn: 3, jOut: 4 }
+    return map[this.uniformCutsStyle] ?? null
+  }
+
+  //METH: #calcRarityMetrics() : null : aggregate internal rarity magnitudes from usageStore
+  #calcRarityMetrics() {
+    const records = this.usageStore.filter(r => r.contributesToRarity)
+    let enumSum = 0
+    let progSum = 0
+    records.forEach(rec => {
+      if (rec.modifiedOptionCount > 0) enumSum += Math.log10(rec.modifiedOptionCount)
+      if (rec.selectedWeight > 0 && rec.modifiedWeightSum > 0) {
+        const p = rec.selectedWeight / rec.modifiedWeightSum
+        progSum += Math.log10(1 / p)
+      }
+    })
+    this.enumerativeRarityMagnitude = Math.floor(enumSum)
+    this.programmedRarityMagnitude = Math.floor(progSum)
+    const cellCount = this.x * this.y
+    const groupCount = this.groupCount.adds + this.groupCount.subs
+    this.spatialPossibilityMagnitude = Math.floor(cellCount * Math.log10(groupCount + 1))
+    this.programmedRaritySkew = this.programmedRarityMagnitude - this.enumerativeRarityMagnitude
+    this.totalPossibilityMagnitude = this.programmedRarityMagnitude + this.spatialPossibilityMagnitude
+  }
+
   get emptyWeight() { return this.weight - this.groupWeight }
   get minCellSize() { return Math.min(this.cellSize.x, this.cellSize.y) }
   get gridInsetSize() { return 100 * this.gridInsetScale.x }
@@ -152,8 +184,7 @@ class FeatureSet {
     this.seed2 = this.enums.seed2.feature(r)
     this.#calcGroups(r)
 
-    // shape dependencies
-    this.shapeInterpreter = this.enums.shapeInterpreter.feature(r)            //FIXME: DEPRECATE, calling R unnecessarily
+    this.#calcRarityMetrics()
 
     DeBug.groupEnd()                                                        //LOGGING:
   }
@@ -286,7 +317,7 @@ class FeatureSet {
       this.enums.frameWidth.chosen = w
     }
     else {
-      console.log(`cellOutset`, this.enums.cellOutset.value)
+      DeBug.log(`cellOutset`, this.enums.cellOutset.value)
       if (this.enums.cellOutset.value > 0.7) this.enums.frameWidth.removeLastOption()
       if (this.enums.cellOutset.value > 0.8) this.enums.frameWidth.removeLastOption()
       this.frameWidth = this.enums.frameWidth.feature(r)
@@ -490,7 +521,21 @@ class FeatureSet {
 
       this.enums.frameWidth.chosen = name
       this.frameWidth = name
+      this.#recordMagicalFrameWidthRarity()
     }
+  }
+  //METH: #recordMagicalFrameWidthRarity() : null : synthetic rarity record for derived Magical frameWidth
+  #recordMagicalFrameWidthRarity() {
+    this.usageStore.push({
+      name: 'frameWidth',
+      chosen: this.frameWidth,
+      originalOptionCount: this.enums.frameWidth.ogOptions.length,
+      modifiedOptionCount: 1,
+      originalWeightSum: 1,
+      modifiedWeightSum: 1,
+      selectedWeight: 1,
+      contributesToRarity: true,
+    })
   }
   //METH: calcGroupCounts(r) : null : calculate groupCount and groupWeight
   #calcGroupCounts(r) {
@@ -674,7 +719,8 @@ class FeatureSet {
       const
         option = this.#options[optionKey],
         { name: name, options: options } = option,
-        enumFeature = new EnumFeature(name, options, this.usageStore)
+        enumFeature = new EnumFeature(optionKey, name, options, this.usageStore)
+      enumFeature.rarityEligible = RARITY_ENUM_KEYS.has(optionKey)
       enums[optionKey] = enumFeature
     })
     this.enums = enums
@@ -686,6 +732,13 @@ class FeatureSet {
 //MARK: Feature Options
 // SIZE: 439 lines
 // #region Feature Options
+const RARITY_ENUM_KEYS = new Set([
+  'gridStyle', 'cellAspect', 'gridXMagic', 'gridXFlex', 'cellOutset', 'frameWidth',
+  'frameDivs', 'frameSpacing', 'frameCascades', 'cellInset', 'uniformCuts',
+  'uniformCutsStyle', 'cutDirections', 'insideCuts', 'insideCutStyle', 'extraGroups',
+  'linearCuts', 'uniformLofts', 'density', 'seed1', 'seed2',
+])
+
 const publicOptions = {
   // MARK: Grid Dependencies
   // #region Grid Dependencies
@@ -1026,19 +1079,6 @@ const publicOptions = {
   //   ]
   // },
   // #endregion
-  // MARK: Shape Dependencies
-  // #region Shape Dependencies
-  // Public: shape interpretor version
-  shapeInterpreter: {
-    name: 'Shape Interpreter',
-    options: [
-      ['v0', 0.025],
-      ['v1', 0.275],
-      ['v2', 0.7],
-    ]
-  },
-
-  // #endregion
   // MARK: Private INSTANCE USE ENUMS
   // #region Private INSTANCE USE ENUMS
   // Private: direction that traversal functions
@@ -1124,15 +1164,18 @@ const publicOptions = {
 // SIZE: 133 lines
 class EnumFeature {
   // FIXME: make options and weightedOptions private after fully tested 
+  optionKey
   name
   ogOptions
   modOptions
   weightedOptions
   usageStore
+  rarityEligible = false
 
   chosen
 
-  constructor(name, options = [], usageStore) {
+  constructor(optionKey, name, options = [], usageStore) {
+    this.optionKey = optionKey
     this.name = name
     this.options = options
     this.usageStore = usageStore
@@ -1151,7 +1194,22 @@ class EnumFeature {
   // #region Public Methods
   //METH:
   feature(r) {
-    this.chosen = this.#getFeature(this.#getFeatureIndex(r.random_dec()))
+    const index = this.#getFeatureIndex(r.random_dec())
+    this.chosen = this.#getFeature(index)
+    if (this.rarityEligible) {
+      const modifiedWeightSum = this.#totalWeight()
+      const originalWeightSum = this.ogOptions.reduce((sum, opt) => sum + opt[1], 0)
+      this.usageStore.push({
+        name: this.optionKey,
+        chosen: this.chosen,
+        originalOptionCount: this.ogOptions.length,
+        modifiedOptionCount: this.options.length,
+        originalWeightSum,
+        modifiedWeightSum,
+        selectedWeight: this.options[index][1],
+        contributesToRarity: true,
+      })
+    }
     return this.chosen
   }
   //METH: addOptions()

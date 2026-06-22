@@ -176,12 +176,12 @@ are deferred as too aggressive for the current release phase.
 
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
-| AB0 | **Freeze feature-calc baseline** | Git tag/branch | — | 🟡 Next | Tag commit as `features-calc-v1-submission` before further Features changes. Use for `lastHash` repro during sprint. |
-| AB1 | Rotation PostParam finalization | Agent + verify | F1 | 🟡 In progress | `Rotation` PostParam + `window.$features.Rotation`. Must not insert PRNG draws before hash-derived features. |
-| AB2 | ABFeatures cleanup | Agent + verify | Sprint bugs | 🟡 Paused | Partial: `publicFeatures` schema updates in `Features.js`. Still need `window.$features` wiring, `ABFeaturesScript.js` collapse, remove/wire `shapeInterpreter`. |
-| AB3 | Internal rarity metrics | Ask → Agent | AB4 | ❌ Not started | Five analytical magnitudes/skews (comment placeholders in `publicFeatures`) — **not** marketplace local rarity. |
-| AB4 | Batch feature analyzer | Agent | AB2 | ❌ Not started | Dev harness: sample N hashes, report prune-distorted weights + unreachable options. See FEATURES-AND-DETERMINISM § Phase 3. |
-| AB5 | Pre-release feature-calc v2 | Agent + verify | AB upload | ❌ Post-sprint | After test-bench submission: resume Features changes, re-baseline `lastHash` or maintain v2 list. |
+| AB0 | **Freeze feature-calc baseline** | Git tag/branch | — | ✅ Done | `features-calc-v1-submission` @ `a67f45c` — see [LASTHASH-V1-REPRO-MANIFEST](LASTHASH-V1-REPRO-MANIFEST.md) |
+| AB1 | Rotation PostParam finalization | Agent + verify | F1 | ✅ Done | Full `publicFeatures` + `Rotation` in `$features` |
+| AB2 | ABFeatures cleanup | Agent + verify | AB0 | ✅ Done | `$features` wired; `shapeInterpreter` PRNG removed |
+| AB3 | Internal rarity metrics | Agent | AB2 | ✅ Done | Five magnitudes in `publicFeatures` |
+| AB4 | Batch feature analyzer | Agent | AB2 | ✅ Done | `testing/FeatureBatchAnalyzer.js` |
+| AB5 | Pre-release feature-calc v2 | Agent + verify | AB2 | ✅ Done | Tag `features-calc-v2-pre-release` after F3 PRNG change |
 
 ---
 

@@ -58,6 +58,7 @@ Maintenance note:
   - [9.14.10 Viewport-Scale Dependent Shade Calibration (Solved for Now)](#91410-viewport-scale-dependent-shade-calibration-solved-for-now)
   - [9.14.11 Frame/Backgrid R-in Masked SVG BBox Crop (Resolved)](#91411-framebackgrid-r-in-masked-svg-bbox-crop-resolved)
   - [9.14.12 Thin Depth Outline Bug (Resolved)](#91412-thin-depth-outline-bug-resolved)
+  - [9.14.13 Thin r-Out Outline Bug (Deferred)](#91413-thin-r-out-outline-bug-deferred)
 - [9.15 Performance Optimization Strategy](#915-performance-optimization-strategy)
   - [9.15.1 What Was Sacrificed](#9151-what-was-sacrificed)
   - [9.15.2 Why These Sacrifices Were Necessary](#9152-why-these-sacrifices-were-necessary)
@@ -2534,6 +2535,23 @@ logging. These describe the suspected rendering failure mode, not the applied fi
 
 **Baseline tag:** `features-calc-v1-submission` marks the commit before Feature
 calc changes for this bug; post-submission wrap debugging can diff against it.
+
+### 9.14.13 Thin r-Out Outline Bug (Deferred)
+
+*Added: 2026-06-17*
+
+**Status:** ♻️ Deferred post-submission — not prevalent enough to block test-bench upload
+
+**Symptom:** Rare outputs show r-Out cut shading as a thin dark outline rather than
+full directional light/dark bands (similar family to §9.14.12 thin depth, but on
+r-Out profiles).
+
+**Repro designators (v1 FeatureSet required):** #1490, #1491, #1521, #1522, #1532
+(`0xd900f863…`, `0x1d3b6e65…`, `0x7b5ad1f2…`, `0x9bec1edc…`, `0x9928c9c3…`).
+
+**Notes:** Audited in lastHash band 1480–1522 (June 2026). Fix deferred until after
+Art Blocks submission; repro requires `features-calc-v1-submission` checkout — see
+[LASTHASH-V1-REPRO-MANIFEST.md](LASTHASH-V1-REPRO-MANIFEST.md).
 
 ## 9.15 Performance Optimization Strategy
 

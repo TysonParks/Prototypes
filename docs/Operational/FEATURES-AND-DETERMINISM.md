@@ -139,17 +139,29 @@ entire corpus.
 
 1. **Freeze baseline before further Features work**
    ```bash
-   # From the commit that matches your current saved-seed behavior:
-   git tag -a features-calc-v1-submission -m "Feature calc frozen for AB sprint seeds"
-   git branch features-calc-v1-submission   # optional long-lived branch at same commit
+   git tag -f -a features-calc-v1-submission -m "FeatureSet frozen: lastHash repro baseline pre-F3/v2"
+   git branch -f features-calc-v1-submission features-calc-v1-submission
    ```
-   Tag the commit **before** any Features.js changes that alter PRNG order, or
-   tag immediately after submission upload if the uploaded script must match
-   evaluators exactly.
+   Re-point tag at the commit that includes lastHash labels **1480–1522** before
+   any `#calcFeatures()` PRNG changes.
 
-2. **`artBlocksSprint`** — active sprint: bug fixes, shading, submission prep.
-   Bug work should run against **`features-calc-v1-submission`** (tag/branch)
-   when reproducing `lastHash` issues.
+   **Current v1 anchor (2026-06-17):**
+
+   | Ref | Value |
+   |-----|-------|
+   | Tag | `features-calc-v1-submission` |
+   | Branch | `features-calc-v1-submission` |
+   | Commit | `a67f45c` |
+   | Notes | lastHash 1480–1522 labels; `shapeInterpreter` still draws |
+
+   Repro manifest: [LASTHASH-V1-REPRO-MANIFEST.md](LASTHASH-V1-REPRO-MANIFEST.md)
+
+   **v2 pre-release anchor** — tag `features-calc-v2-pre-release` at the commit
+   that removes `shapeInterpreter` PRNG burn, wires `$features`, and adds internal
+   rarity metrics. Geometry for saved hashes may differ from v1; use v1 branch for
+   deferred bug repro (see manifest).
+
+2. **`artBlocksSprint`** — active sprint: export prep (E1–E3) after F3/F4 complete.
 
 3. **Post-submission / pre-release** — resume Features cleanup and batch
    analyzer on `artBlocksSprint` (or `main`). Re-baseline `lastHash` entries

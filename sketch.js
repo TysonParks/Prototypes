@@ -56,8 +56,6 @@ function setup() {
   installArtworkRotationHooks()
   installArtworkRotationControls()
   installArtworkFullscreenControls()
-  // Apply PostParams rotation (if present) before initial build so saved rotation applies
-  if (typeof applyPostParamRotation === 'function') applyPostParamRotation(tokenData)
   protoBatch = new ProtoBatch()
   protoBatch.buildFromHash(tokenData.hash)
   // protoBatch.batchAnimationExport()
@@ -104,7 +102,9 @@ function setupPrefs() {
 // FUNC: setupFeatures()
 function setupFeatures() {
   const features = calculateFeatures(tokenData)
+  if (typeof applyPostParamRotation === 'function') applyPostParamRotation(tokenData)
   DeBug.log('FeatureSet', features)
+  DeBug.log('$features', window.$features)
   DeBug.log('groups', features.groups)
   return features
 }
