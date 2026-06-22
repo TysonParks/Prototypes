@@ -156,10 +156,15 @@ entire corpus.
 
    Repro manifest: [LASTHASH-V1-REPRO-MANIFEST.md](LASTHASH-V1-REPRO-MANIFEST.md)
 
-   **v2 pre-release anchor** — tag `features-calc-v2-pre-release` at the commit
-   that removes `shapeInterpreter` PRNG burn, wires `$features`, and adds internal
-   rarity metrics. Geometry for saved hashes may differ from v1; use v1 branch for
-   deferred bug repro (see manifest).
+   **v2 pre-release anchor (2026-06-17):**
+
+   | Ref | Value |
+   |-----|-------|
+   | Tag | `features-calc-v2-pre-release` |
+   | Commit | `00001d7` |
+   | Notes | `shapeInterpreter` PRNG removed; `$features` + rarity metrics; `ABFeaturesScript` collapsed |
+
+   Geometry for saved hashes may differ from v1; use v1 branch for deferred bug repro (see manifest).
 
 2. **`artBlocksSprint`** — active sprint: export prep (E1–E3) after F3/F4 complete.
 
