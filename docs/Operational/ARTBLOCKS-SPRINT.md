@@ -61,12 +61,12 @@ Sub-steps within that pipeline:
 | 3 | Bug: Safari compatibility (cont.) + shading | B1, B3 | ✅ Completed |
 | 4 | Bug: Wrapping | B2 | ♻️ Deferred |
 | 5 | Feature: InfraGrid InnerCuts re-enable | F2 | ♻️ Deferred |
-| 6 | Bug: Shading  | ?? | 🟡 In Process |
+| 6 | Bug: Shading  | ?? | ♻️ Deferred |
 | 7 | Animation: timing polish | B4 | ✅ Completed |
 | 8 | Animation: performance (cont.) | B4 | ✅ Completed  |
 | 9 | Feature: Rotation implementation (basic) | F1 | ✅ Completed  |
 | 10 | Feature: Rotation research + Post Params | F1 | 🟡 In Process |
-| 11 | **Sprint bugs** (saved-seed issues) | B* | 🟡 Next | Fix against frozen `features-calc-v1-submission` baseline — see [FEATURES-AND-DETERMINISM](FEATURES-AND-DETERMINISM.md) |
+| 11 | **Sprint bugs** (saved-seed issues) | B* | ✅ Completed | Fix against frozen `features-calc-v1-submission` baseline — see [FEATURES-AND-DETERMINISM](FEATURES-AND-DETERMINISM.md) |
 | 12 | AB Features cleanup (resume) | F3 | ⏸ Paused | Partial work in `Features.js`; resume after Day 11 bugs |
 | 13 | Batch feature analyzer | F4 | ⏸ Paused | After Features cleanup; feeds internal rarity metrics |
 | 14 | Code cleanup pass | E1 | Not started |

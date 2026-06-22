@@ -1481,46 +1481,46 @@ const lastHash = [
   '0xe516703e501a1cc136d17d6a6c19579ca4889b1192fe5a185dcb29d415a1ff1f', // POOR RADIANT WRAP!!! :  //FUNC:
   '0xd20b4956b0e2609e91207953554ae5a375b399bcfce1fcd5a22cc3b72f69766b', // Bad rIn mismatched shadow //FUNC:
   '0xf801594ab79cb5af130e566ebff59fa68ee7ebe91c83ca0abd2260adb6d22031',
-  '0xea53b39b4092f664339a84cc3d5187317178149655799c872f173c2b4969b5d1', // Bad rIn mismatched shadow //FUNC:
-  '0x5143fa74838bd1d5112eaa41b6f0f459349e964e69dafa194d5c2db135237a98', // 1475 METH: // Bad rIn MASKING //FUNC:
+  '0xea53b39b4092f664339a84cc3d5187317178149655799c872f173c2b4969b5d1', // Bad rIn mismatched shadow !!!FIXED!!!
+  '0x5143fa74838bd1d5112eaa41b6f0f459349e964e69dafa194d5c2db135237a98', // 1475 METH: // Bad rIn MASKING !!!FIXED!!!
   '0xd8b017a8291a0c36cb71305f7e4220c6f8b55e8adb3c0e262287b8a8dc05973e', // BAD PROXIMAL WRAP!!! : : //FUNC:
-  '0x46e11060c82041548dade5ee225a6cb5762d5941ebde5b4eed424dacda7ef86b', // Bad rIn MASKING //FUNC:
-  '0x497083d26a14de8aed2e7e7ba4ee2eac3a3d9ab04a726cfb5eec7511ac4fc772', // BAD/LOOSE ADJ WRAP!!! :  //FUNC: 
+  '0x46e11060c82041548dade5ee225a6cb5762d5941ebde5b4eed424dacda7ef86b', // Bad rIn MASKING !!!FIXED!!!
+  '0x497083d26a14de8aed2e7e7ba4ee2eac3a3d9ab04a726cfb5eec7511ac4fc772', // BAD/LOOSE ADJ WRAP!!! :  !!!FIXED!!!
   '0xe7e418450155575cfedcaa32343d80ec8e0b4fc7aa229e00d5bee348f6af4695',
-  '0xdaa915768e54111c233935e8e660b0a7225031ba38ae0f690e66a210e4e013ed', // 1480 METH:
+  '0xdaa915768e54111c233935e8e660b0a7225031ba38ae0f690e66a210e4e013ed', // 1480 METH: // ??? !!!FIXED!!!
   '0x3f81c13fd6cfd2c38d603067cb273df497c0654690fb8b1768ef416cf0163346', // BAD PROXIMAL WRAP!!! : : //FUNC:
-  '0x2ad187c84ac49ff94591fa7748cc1ac68a384802e73fb562972612898fac5839',
-  '0xbf4e629d063d89ff2191f0f1a2064aa3f0fd0fcb6f70367fa47043e1d54aec75',
-  '0xf3e38bb0c0c5fdaa4560280b3af0ed7775c02321eddf66674bc2e0bbcbd1b5a2',
-  '0x694aefad5614fe7f7416a8c4a962b6dd965a23d460bc4c572515249f642fc246', // 1485 METH:
-  '0x2aeef140e23dde30a8c6ba880ab7e4e176feb40371fee56e89b141950b31b175',
-  '0xc5070222a3cd6518ea72890cca2513388b4339e2cd1c2f22bbf7bc9712e6bad5',
-  '0x5a83d7cdaec8bcc20bbe9fb96fbbd23a4cc575676f51000c3c58fe18321b5685',
-  '0x679878d571b69a5f272bde75a8d56c096dc48c3035d1a1b1700ab74dcf74817d',
-  '0xd900f863572937905a3039c6f1c31d63e00cdade81f955568c1031ad323e20fb', // 1490 METH:
-  '0x1d3b6e6519ed53ba6600f8f478d0ef33125861485afa9b1d637b2d7d78019332',
-  '0xe13999f286ea8c5cf2715761c46a81987e9a15edd014bf9c97c5a54541e3b672',
-  '0x4b205d325b56b4dd35ad4c3ae0b52050f3321df25909ecdef5a6646af80c7f11',
+  '0x2ad187c84ac49ff94591fa7748cc1ac68a384802e73fb562972612898fac5839', // ??? !!!FIXED!!!
+  '0xbf4e629d063d89ff2191f0f1a2064aa3f0fd0fcb6f70367fa47043e1d54aec75', // BAD PROXIMAL WRAP!!! : : //FUNC:
+  '0xf3e38bb0c0c5fdaa4560280b3af0ed7775c02321eddf66674bc2e0bbcbd1b5a2', // ??? !!!FIXED!!!
+  '0x694aefad5614fe7f7416a8c4a962b6dd965a23d460bc4c572515249f642fc246', // 1485 METH: // ??? !!!FIXED!!!
+  '0x2aeef140e23dde30a8c6ba880ab7e4e176feb40371fee56e89b141950b31b175', // ??? !!!FIXED!!!
+  '0xc5070222a3cd6518ea72890cca2513388b4339e2cd1c2f22bbf7bc9712e6bad5', // ??? !!!FIXED!!!
+  '0x5a83d7cdaec8bcc20bbe9fb96fbbd23a4cc575676f51000c3c58fe18321b5685', // ??? !!!FIXED!!!
+  '0x679878d571b69a5f272bde75a8d56c096dc48c3035d1a1b1700ab74dcf74817d', // ??? !!!FIXED!!!
+  '0xd900f863572937905a3039c6f1c31d63e00cdade81f955568c1031ad323e20fb', // 1490 METH:  // thin r-Out outline bug: //FUNC:
+  '0x1d3b6e6519ed53ba6600f8f478d0ef33125861485afa9b1d637b2d7d78019332', // thin r-Out outline bug: //FUNC:
+  '0xe13999f286ea8c5cf2715761c46a81987e9a15edd014bf9c97c5a54541e3b672', // ??? !!!FIXED!!!
+  '0x4b205d325b56b4dd35ad4c3ae0b52050f3321df25909ecdef5a6646af80c7f11', // ??? !!!FIXED!!!
   '0x8d31f933ba75bbfa9ee9be8e76c7d29c0b7fc87b9f93085ce01d24ef0d565444', // thin depth bug: !!!FIXED!!!
   '0xa062fb40a5f0c3f09d69756204cd1c60644d5802033c8060de2d30f3c642327d', // 1495 METH: SLOW SAFARI: //FUNC:
-  '0xa062fb40a5f0c3f09d69756204cd1c60644d5802033c8060de2d30f3c642327d', // bad flush wrap: //FUNC:
-  '0x702a094eb8acf6270938f369b4dfdfece6c653ef65d26546153a8152f9f564a9',
-  '0x6231ff3eb5715d2e8d9f10f4c615da6f1691e1b7aa0610a780d2e7be4e645b54', // New Shade Bug: //FUNC:
-  '0x59c7de58423e8107a7b0a2b5fc3588f14980285002420d39b8fbfe9c403930ac', // New Shade Bug: //FUNC:
-  '0xd15f223cf3b3f94d80b0ff9ec0f7da16195a6690709d3f079488483631da8743', // 1500 METH: // New Shade Bug: //FUNC:
-  '0xc0ddf4bca32945b624ac4e24c65f843e766a1807a3f756e4802154d7210bda61', // New Shade Bug: //FUNC:
-  '0x5e7427454fee3956017aa5865d53584b134c6930807e5e5fbdeccf4396878c38', // j-in crop bug: //FUNC:
-  '0xedd6bf2cc7a0e86c80f6fa9a2d4bb43c1d24814c0ed4bc4da597228bcc92fdcf', // j-in crop bug: //FUNC:
-  '0x5af25078d040d7fa0e74d08c863bfd670abdf94639346e2ab237dc9140ce824f', // j-in crop bug: //FUNC:
-  '0x93504d08225af8aedb9a688b67a252300ffa5b39ea0ad130cb13b29bd35ccfb1', // 1505 METH: // j-in crop bug: //FUNC:
-  '0x13435cd7fed7397faaeda425344206c46c2d221b7a3f33eebb5d6e467a2f54e4', // j-in crop bug: NOT!? //FUNC:
+  '0xa062fb40a5f0c3f09d69756204cd1c60644d5802033c8060de2d30f3c642327d', // ??? !!!FIXED!!!
+  '0x702a094eb8acf6270938f369b4dfdfece6c653ef65d26546153a8152f9f564a9', // ??? !!!FIXED!!!
+  '0x6231ff3eb5715d2e8d9f10f4c615da6f1691e1b7aa0610a780d2e7be4e645b54', // New Shade Bug:  !!!FIXED!!!
+  '0x59c7de58423e8107a7b0a2b5fc3588f14980285002420d39b8fbfe9c403930ac', // New Shade Bug:  !!!FIXED!!!
+  '0xd15f223cf3b3f94d80b0ff9ec0f7da16195a6690709d3f079488483631da8743', // 1500 METH: // New Shade Bug:  !!!FIXED!!!
+  '0xc0ddf4bca32945b624ac4e24c65f843e766a1807a3f756e4802154d7210bda61', // New Shade Bug:  !!!FIXED!!!
+  '0x5e7427454fee3956017aa5865d53584b134c6930807e5e5fbdeccf4396878c38', // j-in crop bug:  !!!FIXED!!!
+  '0xedd6bf2cc7a0e86c80f6fa9a2d4bb43c1d24814c0ed4bc4da597228bcc92fdcf', // j-in crop bug:  !!!FIXED!!!
+  '0x5af25078d040d7fa0e74d08c863bfd670abdf94639346e2ab237dc9140ce824f', // j-in crop bug:  !!!FIXED!!!
+  '0x93504d08225af8aedb9a688b67a252300ffa5b39ea0ad130cb13b29bd35ccfb1', // 1505 METH: // j-in crop bug:  !!!FIXED!!!
+  '0x13435cd7fed7397faaeda425344206c46c2d221b7a3f33eebb5d6e467a2f54e4', // j-in crop bug: NOT!?  !!!FIXED!!!
   '0x2fbfb4b9aa98f4fa9fcbcfa3ad9923c4ea7724e66efcba029adac4883f5802da', // shapeMask Testing
   '0x18e07eb6a985fb17b73134dafed3261014e7c483fb66f4b703bbe4341f850a44', // shapeMask Testing
   '0x6d701d5e06b01f9b5248991a132e67d8e9298f49a985a446294019e6050db14d', // shapeMask Testing
   '0x0f18eba8ab701f08543f803f6a1c846e638701b8de2d491145b3bdcc8431d8a0', // 1510 METH: // shapeMask Testing
-  '0x7b5ad1f2186f478ad758a36ee825fd677a790b60b3bb7c1c57c393ea7786fa7c',
-  '0x9bec1edcee24d6e11a5eb00709138349742afe1765e77aa8ce9c7f0f13c68394',
-  '0xc9a7a861aac88e4b9c4b05ef70decf4989e1c28255ce484493b9939bb3f42567',
+  '0x7b5ad1f2186f478ad758a36ee825fd677a790b60b3bb7c1c57c393ea7786fa7c', // thin r-Out outline bug: //FUNC:
+  '0x9bec1edcee24d6e11a5eb00709138349742afe1765e77aa8ce9c7f0f13c68394', // thin r-Out outline bug: //FUNC:
+  '0xc9a7a861aac88e4b9c4b05ef70decf4989e1c28255ce484493b9939bb3f42567', // ??? !!!FIXED!!!
   '0x508b062cb1b54f90c9a3ba1fcae9de76d67a2bd507fb5bdbb18a795456172e65', // cascade crop: !!!FIXED!!!
   '0x2d4b2b637069b8f0fd9210fbd309c75bbbfcb7cfcf15374d119e867f376c9f21', // 1515 METH:/ cascade crop: !!!FIXED!!!
   '0x2ea13b06674294bd67d96c5e70a501ac7af524b22cacd632663f20645593ffb2', // Proximal Wrap: //FUNC:
@@ -1530,7 +1530,7 @@ const lastHash = [
   '0xa6efe5a2ebefcff2df942e3a7ccb491bff95a650647b1eed7852d55f535eeefd', // 1520 METH: // cascade crop: !!!FIXED!!!
   '0x86ba04c820c09eda6009893cc63638b19b6f638e349572e82bf0f40a4ab90833', // thin depth bug: !!!FIXED!!!
   '0x9928c9c3fb4eaec7358d95b8c8cab36f93fa4f9e4ead29f503c5b4a6f768b779', // thin r-Out outline bug: //FUNC:
-  '0x1904d6709a19c206092c18c2714120c3a04251418b214515370898012262470c', // thin r-Out outline bug: //FUNC:
+
 
 
 
