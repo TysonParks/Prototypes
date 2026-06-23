@@ -11,8 +11,8 @@
 //   E3 "Loading" text — WebKit-class loading copy shown during the
 //                       synchronous build window.
 //   E4 Dummy backing — solid color rect that morphs to mirror the
-//                      current artwork's outer shape (read from
-//                      Grid.frameShapeMetrics on the BackGrid).
+//                      current artwork's outer shape (measured from the
+//                      mask path DOM rect after build; default pill before).
 //                      Carries ALL animated properties: width/height,
 //                      per-corner border-radius, scale, blur. Default
 //                      hidden state is the 100×200uu pill.
@@ -1161,13 +1161,9 @@
   }
 
   //FUNC: getCurrentFrameMetrics() : { width, height, cornerRadii }
-  // Read the current BackGrid's outer-shape metrics in user units.
-  // Falls back to defaults during cold-load / between builds when no
-  // BackGrid exists yet.
+  // Default pill metrics for cold-load / between builds. After build,
+  // updateLayoutVars() measures the mask path DOM rect for revealed geometry.
   function getCurrentFrameMetrics() {
-    if (typeof BGRID !== 'undefined' && BGRID && BGRID.frameShapeMetrics) {
-      return BGRID.frameShapeMetrics
-    }
     return defaultFrameMetrics
   }
 

@@ -94,63 +94,12 @@ class Grid extends ProtoLayer {
   get isBackGrid() { return this.type === `BackGrid` }
   get isFrontGrid() { return this.type === `Grid` }
 
-  //GETT: frameShapeMetrics : { width, height, cornerRadii: { tl, tr, br, bl } } in user units
-  // Exposes the visible artwork's outer shape (BackGrid's perimeter)
-  // for downstream consumers that need to mirror that shape outside
-  // the SVG \u2014 e.g. safariImageSwap.js dummy backing morph.
-  // Width/height come from `boundsRect` (`size`). Corner radii are
-  // sourced from the four `allSimpleOutsideCorners` of the BackGrid's
-  // perimeter, classified TL/TR/BR/BL by each segment's `.start`
-  // position relative to the bounds center.
-  // Falls back to default pill metrics (100\u00d7200, all 50uu) when
-  // perimeter shapes haven\u2019t been built yet (cold-load) or when this
-  // grid isn\u2019t a BackGrid \u2014 so callers can read the getter at any
-  // time without null-checks.
-  get frameShapeMetrics() {
-    const defaultMetrics = {
-      width: 100,
-      height: 200,
-      cornerRadii: { tl: 50, tr: 50, br: 50, bl: 50 },
-    }
-    if (!this.isBackGrid) return defaultMetrics
-    const bounds = this.boundsRect
-    if (!bounds) return defaultMetrics
-    const corners = this.allSimpleOutsideCorners
-    if (!corners || corners.length < 4) {
-      return {
-        width: bounds.width,
-        height: bounds.height,
-        cornerRadii: { tl: 50, tr: 50, br: 50, bl: 50 },
-      }
-    }
-    // Shapes flow CLOCKWISE; arcRadius lives at each segment's END
-    // (the corner connecting to the NEXT segment). For a rectangular
-    // BackGrid perimeter the four sides come in this order:
-    //   seg[0] = top    → end corner is top-RIGHT    → tr
-    //   seg[1] = right  → end corner is bottom-RIGHT → br
-    //   seg[2] = bottom → end corner is bottom-LEFT  → bl
-    //   seg[3] = left   → end corner is top-LEFT     → tl
-    const cornerRadii = {
-      tr: corners[0].arcRadius || 0,
-      br: corners[1].arcRadius || 0,
-      bl: corners[2].arcRadius || 0,
-      tl: corners[3].arcRadius || 0,
-    }
-    return {
-      width: bounds.width,
-      height: bounds.height,
-      cornerRadii,
-    }
-  }
-
   get gridCellBounds() {
     return memoize(() => {
       return this.cellBounds()
     }, `gridCellBounds`).call(this)
   }
-  get gridBounds() { return this.gridCellBounds.bounds }
   get takenCellBounds() { return this.cellBounds({ selection: this.takenCells }) }
-  get takenBounds() { return this.takenCellBounds.bounds }
   get columnCount() { return this.gridCellBounds.columnCount }
   get rowCount() { return this.gridCellBounds.rowCount }
   get cellCount() { return this.gridCellBounds.cellBoundsCount }
@@ -180,11 +129,6 @@ class Grid extends ProtoLayer {
       return this.cellRows.flat()
     }, `cells`).call(this)
   }
-  get cellPoints() {
-    return memoize(() => {
-      return this.gridCellBounds.cellPoints
-    }, `cellPoints`).call(this)
-  }
   get cellColumns() {
     return memoize(() => {
       return this.cellRowsFlipped()
@@ -193,16 +137,9 @@ class Grid extends ProtoLayer {
 
   get availableCells() { return this.cells.filter(cell => cell.isAvailable) }
   get takenCells() { return this.cells.filter(cell => cell.isTaken) }
-  // get cellsInAnIsland() { return this.cells.filter(cell => cell.isInAnIsland) }                         //UNUSED:
   get isFull() { return this.availableCells.length === 0 }
   get groupCount() { return this.groups.length }
   get lastGroup() { return this.groups.last }
-  // get biggestGroup() {                                                                                  //UNUSED:
-  //   return this.groups.reduce((max, grp) => {
-  //   if (grp.cells.length > max.cells.length) { return grp }
-  //   else { return max }
-  // })
-  // }
   //NOTE: perimeters must be created for every group!
   get perimeterIslands() { return this.groups.map(g => g.perimeterIslands).flat() }
   get islands() { return this.groups.map(g => g.islands).flat() }
@@ -223,12 +160,6 @@ class Grid extends ProtoLayer {
         .gridVertSorted
     }, `allSimpleSubShapesSegs`).call(this)
   }
-  get allSimpleSubShapesSegsCounterSorted() {
-    return memoize(() => {
-      return this.allSimpleSubShapesSegs
-        .counterGridVertSorted
-    }, `allSimpleSubShapesSegsCounterSorted`).call(this)
-  }
   get allSimpleSegPaths() {
     return memoize(() => {
       return this.perimeterShapes.map(sh => sh.simpleSegPaths)
@@ -241,30 +172,10 @@ class Grid extends ProtoLayer {
         .map(s => s.simpleSubShapes).flat()          // map to simpleSubShapes 
     }, `allSingleSimpleSubShapes`).call(this)
   }
-  get allInternalSimpleSubShapes() {               // Internal subshapes run counter-clockwise
-    return memoize(() => {
-      return this.perimeterShapes
-        .filter(s => !s.isSingleShape)               // filter shapes for not singles!
-        .map(s => s.simpleSubShapes.slice(1)).flat()   // map to simpleSubShapes minus their outer shape
-    }, `allInternalSimpleSubShapes`).call(this)
-  }
   get allSimpleOutsideCorners() {
     return memoize(() => {
       return this.allSimpleSubShapesSegs.filter(s => s.isOutsideCorner)
     }, `allSimpleOutsideCorners`).call(this)
-  }
-  get allSimpleInsideCorners() {
-    return memoize(() => {
-      return this.allSimpleSubShapesSegs.filter(s => !s.isOutsideCorner)
-    }, `allSimpleInsideCorners`).call(this)
-  }
-
-  get availableRows() { return this.cellRows.filter(row => row.every(c => c.isAvailable)) }
-  get availableColumns() { return this.cellColumns.filter(col => col.every(c => c.isAvailable)) }
-
-  get gridCornerSegs() {
-    return this.allSimpleSubShapesSegs.cornerElements
-      .map(s => s.startNeighbor)
   }
   // #endregion
   // MARK: Grid Geometry Methods
@@ -292,10 +203,6 @@ class Grid extends ProtoLayer {
   cellAt(cellIndex) { return this.cells.find(e => e.index === cellIndex) }
   //METH: cellsWithinBounds()
   cellsWithinBounds(bounds) { return this.cells.filter(c => vertIsWithinBounds(c.center, bounds)) }
-  //METH: cellIsInAnIsland() : BOOL : if cell is in an island
-  // cellIsInAnIsland(cellIndex) {                                                                         //UNUSED: (caller)
-  //   return this.allIslands.some(isle => isle.cells.some(cell => cell.index === cellIndex))
-  // }
   //METH: cellSegmentBetween()  : [Cell] : find cells between two indices
   cellSegmentBetween(indexA, indexB) {
     const
@@ -341,13 +248,6 @@ class Grid extends ProtoLayer {
   }
   //METH: cellSpanBetween() : [Cell] : find cells between two indices
   cellSpanBetween(indexA, indexB) { return this.cellSpanRowsBetween(indexA, indexB).flat() }
-  //METH: cellSpanBounds()  
-  cellSpanBounds(indexA = this.cells.first, indexB = this.cells.last) {
-    const
-      topLeft = this.cellAt(indexA).anchor,
-      botRight = this.cellAt(indexB).corners.downLeft
-    return findBounds(topLeft, botRight)
-  }
   //METH: directionToNeighbor() : Direction : find direction to neighbor cell
   directionToNeighbor(cell, neighbor) { return cell.coords.directionTo(neighbor.coords) }
   //METH: neighbor() : Cell : find neighbor cell by direction
@@ -371,8 +271,6 @@ class Grid extends ProtoLayer {
   neighborIsAvailable(cellIndex, direction) {
     return this.#neighborIs({ cellIndex: cellIndex, direction: direction })
   }
-  //METH: neighborIsTaken() : BOOL : if certain neighbor is taken
-  neighborIsTaken(cellIndex, direction) { return !this.neighborIsAvailable(cellIndex, direction) }
   //METH: neighborIsInIsland() : BOOL : if certain neighbor is in certain Island
   neighborIsInIsland(cellIndex, direction, islandID) {
     return this.#neighborIs({ cellIndex: cellIndex, direction: direction, islandID: islandID })
@@ -406,14 +304,6 @@ class Grid extends ProtoLayer {
   }
   //METH: neighbors() : [Cell]  : find all neighbors of a cell
   neighbors(cellIndex) { return Direction.All.directions.map(dir => this.neighbor(cellIndex, dir)) }
-  //METH: availableNeighbors() : [Cell] : find available neighbors of a cell
-  availableNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.isAvailable) }       //UNUSED:
-  //METH: takenNeighbors() : [Cell] : find taken neighbors of a cell
-  takenNeighbors(cellIndex) { return this.neighbors(cellIndex).filter(cell => cell.isTaken) }               //UNUSED:
-  //METH: ordinalNeighbors() : [Cell] : find ordinal neighbors of a cell 
-  ordinalNeighbors(cellIndex) {                                                                             //UNUSED:
-    return Direction.Ordinal.directions.map(dir => this.neighbor(cellIndex, dir))
-  }
 
   // #endregion
   // MARK: Grid Selection Methods
@@ -436,36 +326,6 @@ class Grid extends ProtoLayer {
       rows.get(y).push(cell)
     }
     return OpArray.from(rows.values())
-  }
-  //METH: transformedCellRows() : [ [Cell] ] : transforms a 1D or 2D selection array into a 2D CellRows array given a start corner and direction
-  transformedCellRows({ selection = this.cellRows, start = Corner.TopLeft, direction = Direction.Horizontal } = {}) {
-    if (!selection.is2D) selection = this.toCellRows(selection)
-    if (start instanceof Corner) start = start.value
-
-    let isVertical
-
-    if (direction instanceof Direction) isVertical = direction.isVertical
-    if (direction instanceof String) isVertical = direction === 'vertical'
-    if (Number.isFinite(direction)) isVertical = direction === 0
-
-    switch (start) { // horizontal direction
-      case 0: //upLeft -> no change
-      case 1: //upRight
-        selection = selection.flipped2D(Direction.Horizontal)
-      case 2: //downRight
-        selection = selection.rotated2D(180)
-      case 3: //downLeft
-        selection = selection.flipped2D(Direction.Vertical)
-    }
-
-    if (isVertical) { //vertical direction
-      if (start % 2 === 0) { // upLeft &  downRight
-        selection = selection.flipped2D(Direction.NegOrdinal)
-      } else { //upRight &  downLeft
-        selection = selection.flipped2D(Direction.PosOrdinal)
-      }
-    }
-    return selection
   }
   //METH: validNeighbors() : [Cell] : find valid neighbors of a selection of cells
   validNeighbors({ selection = this.cells, bounds = this.gridCellBounds, direction = Direction.All,
@@ -1310,228 +1170,6 @@ class Grid extends ProtoLayer {
       fixBadFlushWraps()
     }
 
-    //MARK: QUAD SHAPES
-    //FIXME: incomplete and unused!
-    //ARROW: createQuadShapes(mode) : process 4-sided (square/rect) shapes first with multiple modes
-    //TODO: need to add an ABFeature to select these!!!
-    const createQuadShapes = (mode, onlySingles = true) => {
-      const sumSides = (sides) => sides.reduce((a, b) => a + b)
-
-      // DeBug.log(`allSimpleSubShapes`, this.allSimpleSubShapes)
-      //FIXME: need to filter out outer subShapes that wrap/outline an inner subShape
-      let quads = onlySingles ? this.allSingleSimpleSubShapes : this.allSimpleSubShapes
-        .filter(sub => sub.length === 4)// filter for 4-sided shapes
-        .filter(sub => sub.some(seg => seg.isUTurnOut)) // filter for Outside shapes only (UTurnOut)
-        .sort((a, b) => sumSides(b) - sumSides(a)) // sort smallest to largest
-      // .copy
-      // DeBug.log(`this.allSimpleSubShapes`, this.allSimpleSubShapes)
-      // DeBug.log('quads', quads)
-      // DeBug.log(`quad parts`, quads.map(quad => quad.map(seg => seg.part.value)))
-
-      let processor
-      switch (mode) {
-        case 0: // Max curvature, equal radii
-          processor = (quad) => {
-            const radius = min(quad.map(seg => seg.length)) / 2
-            return Array(4).fill(radius)
-          }
-          break
-        case 1: // Min curvature, equal radii
-          processor = (quad) => Array(4).fill(this.cellRadius)
-          // processor = (quad) => [cellRadius, cellRadius, cellRadius, cellRadius]
-          break
-
-        case 2: // Horizontal Symmetry
-        // quads must be horizontal rectangles! utilize Easter Egg logic but add maxLength?
-        // might be worth combining symmtry into single mode, 
-        case 3: // Vertical Symmetry
-        // quads must be vertical rectangles! utilize Easter Egg logic but add maxLength?
-        // might be worth combining symmtry into single mode, 
-
-        case 4: // Easter Eggs / Eyeballs : max curvature with diagonal symmetry
-          processor = (quad) => {
-            // DeBug.error(`hi`)
-            let cornerMap
-            const minLength = min(quad.map(seg => seg.length)) // min side length
-            if (equalsRoundedDec(minLength, this.minCellWidth, 2)) { // quad is single cell width or height
-              cornerMap = Array(4).fill(this.cellRadius)
-            } else {
-              const maxRadius = minLength - this.cellRadius // maxRadius given cellRadius is minRadius
-              // build options from cellRadius steps from 0->minLength, removing 3 steps (0, minLength/2, and minLength)
-              const steps = (round(maxRadius / this.cellRadius) - 1) / 2 // totalSteps = 2 * steps + 1
-              let options = range(-steps, steps)
-                .array() // totalSteps array minus 1st and last (0 and minLength)
-                // .filter(s => !(s === 0)) // remove middle (minLength/2) step
-                .map(s => s + steps + 1) // add back steps like converting -0.5 to 0.5 range to 0-1 range
-              const radius1 = minLength - (R.random_choice(options) * this.cellRadius)
-              const radius2 = minLength - radius1
-              cornerMap = [radius1, radius2, radius1, radius2,]
-              DeBug.log(`minLength`, minLength)
-              DeBug.log(`cellRadius`, this.cellRadius)
-              DeBug.log(`maxRadius`, maxRadius)
-              DeBug.log(`steps`, steps)
-              DeBug.log(`options`, options)
-            }
-            return cornerMap
-          }
-          break
-
-        case 5: // Single Big Radius Corner
-        // use Easter Egg processor but add another mode and Random call that selects a single corner for largest radius
-        // a [max, min, middle, min] radius scenario would match OG prototype shape used for 3D water renders
-        case 6: // Random radii per corner
-        // low priority for implementation: this might be too janky!
-        case 7: // Mix : change mode for each subShape
-        // this option should probably be outside of the switch?
-        default:
-      }
-
-      //ARROW: assignQuad() : null : assign cubic verts using radii from cornerMap
-      const assignQuad = (quad, cornerMap) => cornerMap.forEach((cMap, i) => quad[i].addDistancedStartCornerVerts(cMap))
-
-      quads.forEach((quad, i) => {
-        const cornerMap = processor(quad)
-        // DeBug.log(`cornerMap`, cornerMap)
-        assignQuad(quad, cornerMap)
-
-        if (quad.every(seg =>
-          roundToDec(seg.availableStartLength) <= roundToDec(this.cellRadius)
-          && roundToDec(seg.availableEndLength) <= roundToDec(this.cellRadius)
-        )) {
-          // quad.forEach(s => s.flushWrap())
-          DeBug.log(`NOT using radiant outWrap`)
-          // this.outWrapOutsideCorners(quad)
-          // this.recursiveOutWrapOutsideCorners(quad)
-        } else {
-          DeBug.log(`using radiant outWrap!!`)
-          // this.outWrapOutsideCorners(quad)
-          // this.recursiveOutWrapOutsideCorners(quad, true)
-        }
-        DeBug.log(``)
-        DeBug.log(`    QUAD`, i, quad[0].parentID)
-      })
-      // this.recursiveOutWrapOutsideCorners(quads.flat(), true)
-    }
-
-    //MARK: roundQuads()
-    //ARROW: roundQuads()
-    const roundQuads = (mode = 0, preserveQuads = true, wrap = true) => {
-
-      let testPool = this.allSingleSimpleSubShapes
-        .map(p => new SegPath(p))
-        .filter(p => p.isOutsideQuad                        // filter for outside Quad shapes
-          && !p.hasMinRadii                          // filter out minRadius shapes
-        )
-        // .sort((a, b) => a.perimeter - b.perimeter)        // sort largest to smallest
-        .sort((a, b) => b.perimeter - a.perimeter)        // sort smallest to largest
-
-      DeBug.log(`quads`, testPool.map(p => p.shape.id))
-      // return
-
-      testPool.forEach(segPath => {
-        DeBug.error(`current segPath start`, segPath.path[0].id)
-        DeBug.log(`current segPath`, segPath.shape.id)
-        // const segPath = new SegPath(p)
-        // DeBug.log(`isComplete`, segPath.isComplete)
-        // DeBug.log(`isQuad`, segPath.isQuad)
-        // DeBug.log(`isOutsideShape`, segPath.isOutsideShape)
-        // DeBug.log(`hasLoosies`, segPath.hasLoosies)
-        // DeBug.log(`perimeter`, segPath.perimeter)
-        if (preserveQuads && !segPath.hasAllMiddleArcs) { segPath.makeCurves() }
-        else { DeBug.log(`segPath.hasAllMiddleArcs`) }
-
-      })
-
-      const changed = testPool.flat()
-        .map(s => s.outWrappers).flat().compacted
-      DeBug.warn(`changed`, changed)
-
-      //NOTE: using only these two fixes: #431
-      DeBug.warn(`roundQuads fixIssues()`)
-      fixBadFlushWraps()
-      fixLoosies()
-    }
-
-    //MARK: maximizeOuterCorners()
-    //FIXME: incomplete and unused!
-    //ARROW: maximizeOuterCorners() : null : maximize curve on outer corners that border on the frame
-    const maximizeOuterCorners = (mode = 0, preserveQuads = true, wrap = true) => {
-      let testPool = Object.values(this.gridCornerSegs)
-      DeBug.log(`testPool`, testPool)
-      testPool.forEach(corner => {
-
-        if (corner.couldCurveMoreMoreAtEnd) {
-          if (corner.radiantInWrappers) {
-            DeBug.warn(`curving radiant:`, corner)
-            const innerMost = corner.innerMostRadiantWrapper
-            DeBug.log(`innerMost`, innerMost)
-            DeBug.log(`innerMost viableRadOutWrappersOriginBounds`, innerMost.viableRadOutWrappersOriginBounds)
-            DeBug.log(`innerMost viableRadiantOrigins`, innerMost.viableRadiantOrigins)
-            const maxViable = innerMost.viableRadiantOrigins.last
-
-            innerMost.startNeighbor.cubicVerts.end = undefined
-            innerMost.endNeighbor.cubicVerts.start = undefined
-            innerMost.replaceEndRadiantOutWrapsOrigin(maxViable)
-          } else {
-            DeBug.log(`curving:`, corner)
-            const maxViable = corner.maxArcOrigin
-            corner.startNeighbor.cubicVerts.end = undefined
-            corner.endNeighbor.cubicVerts.start = undefined
-            corner.replaceEndCurveOrigin(maxViable)
-          }
-        }
-      })
-      this.completeEnds(defaultPool)
-    }
-
-    //TODO: DELETE WHEN DONE: only kept as ref to safeArrayWhile() and 'changed' implementations
-    //ARROW: fixLooseCorners()                                                                          //UNUSED:
-    // const fixLooseCorners = (testPool = this.allLooseCorners()) => {
-    //   DeBug.warn(`allLooseCorners`, testPool.map(s => s.id))
-
-    //   const conditionFunc = () => { return testPool }
-    //   const action = () => {
-    //     DeBug.log(``)
-    //     DeBug.log(`loosie count`, testPool.length)
-    //     let loosie = testPool.pop()
-    //     DeBug.log(`loosie in loop`, loosie)
-
-    //     let changed
-    //     let flat = roundToDec(loosie.flatAmount, 1)
-    //     const localWrap = () => {
-    //       loosie.removeEndCornerVerts()
-    //       changed = this.createCubicCorners({ subShapes: [loosie], outWrap: true, radiant: true, replace: true })
-    //     }
-    //     if (loosie.inWrappers) {
-    //       const innerMost = loosie.innerMostWrapper
-    //       DeBug.log(`attempting outWrap on ${innerMost.id}`)
-    //       DeBug.log(`innerMost`, innerMost)
-    //       innerMost.removeEndCornerVerts()
-    //       changed =
-    //         this.createCubicCorners({ subShapes: [innerMost], outWrap: true, radiant: true, replace: true })
-    //     } else {
-    //       localWrap()
-    //     }
-    //     loosie.matchEndCorner()
-    //     // DeBug.log(`loosie`, loosie)
-    //     // DeBug.log(`flat: ${flat}, new flatAmount: ${loosie.flatAmount}`)
-    //     // if (loosie.hasLooseCorner) {
-    //     //   DeBug.log(`attempting localWrap()`)
-    //     //   localWrap()
-    //     // }
-
-    //     DeBug.log(`changed loosies`, changed)
-    //     this.completeEnds(defaultPool)
-
-    //     testPool = testPool
-    //       .union(changed.outside, [`id`])
-    //       .union(changed.inside, [`id`])
-    //       .unique([`id`])
-    //     testPool = this.allLooseCorners(testPool)
-    //   }
-    //   safeArrayWhile(conditionFunc, action)
-    // }
-
     //MARK: fixIssues()
     //ARROW: fixIssuess() : null : performs all wrapping of corners and fixes issues
     const fixIssues = (mode = nestleMode) => {
@@ -1553,9 +1191,6 @@ class Grid extends ProtoLayer {
       fixBadFlushWraps()
       DeBug.warn(`fixLoosies`)                                           //LOGGING:
       fixLoosies()
-
-      DeBug.warn(`roundQuads`)                                           //LOGGING:
-      // roundQuads()
     }
 
     DeBug.error(`FIX Issues`)                                            //LOGGING:
@@ -1571,10 +1206,6 @@ class Grid extends ProtoLayer {
     this.createSimpleSubShapes()                                        // createSimpleSubShapes 
     DeBug.groupEnd()
 
-    // DeBug.groupCollapsed(`createQuadShapes`)
-    // // createQuadShapes(quadMode)                                                 // createQuadShapes
-    // DeBug.groupEnd()
-
     DeBug.group(`maximizeCuddles`)
     // DeBug.groupCollapsed(`maximizeCuddles`)
     this.maximizeCuddles()
@@ -1587,8 +1218,6 @@ class Grid extends ProtoLayer {
   // #endregion
   // MARK: Grid Creation Methods
   // #region Setup Methods
-  //METH: cellRowsRotated() : [ [Cell] ] : rotate the cell rows by a given degree (0, 90, 180, 270)
-  cellRowsRotated(degree = 90, selection = this.cellRows) { return selection.rotated2D(normalizeDegree(degree)) }
   //METH: cellRowsFlipped() : [ [Cell] ] : flip the cell rows by a given direction (posOrdinal, negOrdinal)
   cellRowsFlipped(direction = "negOrdinal", selection = this.cellRows) { return selection.flipped2D(direction) }
   //METH: createRowsArray() : [ [Cell] ] : create the rows of cells in the grid
@@ -1612,30 +1241,6 @@ class Grid extends ProtoLayer {
     }
     return OpArray.from(rows)
   }
-  //METH: setFrameRadii() : null : set the frame radii for the grid                                   //UNUSED:
-  // setFrameRadii() { FRAME.setCornerRadii(this.gridCellBounds.cornerCellCenters, this.padSize) }
-  //METH: setInsetScale() : null : set the inset scale for the grid
-  // setInsetScale(scale) {
-  //   // DeBug.log('Grid setInsetScale', scale)
-  //   super.setInsetScale(scale)
-  //   // DeBug.log('Grid insetScale', this.insetScale)
-  //   // this.setFrameRadii()
-  //   this.updateCells()
-  // }
-  //METH: insetCells() : null : set the inset scale for the cells in the grid                         //UNUSED:
-  // insetCells(scale, groupID) {
-  //   let cells
-  //   if (groupID) {
-  //     const group = this.groupNamed(groupID)
-  //     if (group) {
-  //       cells = group.cells
-  //     } else {
-  //       // DeBug.error(`no group named ${groupID}`)
-  //       // DeBug.log(`current groups:`, this.groups)
-  //     }
-  //   } else { cells = this.cells }
-  //   cells.forEach(e => e.setInsetScale(scale))
-  // }
   // #endregion
   // MARK: Grid Grammar Generators
   // #region Grammar Generators
@@ -2000,14 +1605,6 @@ class Grid extends ProtoLayer {
     }
     return group
   }
-  //METH: outlineGroup() : Group : outline a group and assign
-  outlineGroup({ groupID, direction = Direction.All, amount = 1, newGroup = true } = {}) {
-    return this.outline({ groupID, direction, amount, newGroup })
-  }
-  //METH: outlineTaken() : Group : outline all taken cells and assign
-  outlineTaken({ direction = Direction.All, amount = 1, newGroup = true } = {}) {
-    return this.outline({ selection: this.takenCells, direction: direction, amount: amount, newGroup: newGroup })
-  }
   //METH: tempOutlineSelection() : [Cell] : grab an outline of a selection without assignment
   tempOutlineSelection(selection, amount = 1, direction = Direction.All, sort = true) {
     // DeBug.log(`tempOutlineSelection selection`, selection)
@@ -2068,132 +1665,6 @@ class Grid extends ProtoLayer {
     return selection.intersect(inline, 'index')
   }
 
-  //METH: symmetrize() : null : symmetrize the grid by reflecting or rotating a selection
-  //FIXME: somehow it's drawing multiple cell configs as it reassigns
-  //TODO: feature: flip a single quad once only
-  symmetrize({
-    selection = this.cellRows,
-    direction, // Horizontal/Vertical = HALF, Cardinal = QUAD
-    reflection, // BOOL: reflection or rotation
-    useAssigned = true,
-    useAvailable = true,
-    groupIDs,
-  } = {}) {
-    if (!direction.allAreCardinal && direction.vals.length % 2 !== 0) DeBug.error('only Hor, Vert, and Cardinal allowed')
-    const isQuad = direction.equals(Direction.Cardinal)             // Horizontal/Vertical = HALF, Cardinal = QUAD
-    DeBug.log('isQuad', isQuad)
-    if (!selection.is2D) selection = this.toCellRows(selection)
-    const bounds = this.cellBounds({ selection: selection })        // get cellBounds of selection
-    DeBug.log('bounds', bounds)
-
-    //ARROW: assignSym() : null : assign the transformed cells to the destination cells
-    const assignSym = (transformed, destination) => {
-      transformed = transformed.flat()                              // flatten half for operations
-      destination = destination.flat()                              // flatten half for operations
-      DeBug.log('transformed', transformed.map(e => e.id))
-      DeBug.log('transformed isAvailable', transformed.map(e => e.isAvailable))
-      DeBug.log('destination flattened', destination.map(e => e.id))
-      DeBug.log('destination isAvailable', destination.map(e => e.isAvailable))
-      if (transformed.length !== destination.length) {              // ensure halves are equal
-        DeBug.error('expected selections to have same length')
-      }
-
-      destination.forEach((destCell, i) => {
-        const transformCell = transformed[i]
-        if (useAssigned) {                                          // useAssigned changes assigned cells' groupIDs
-          if (groupIDs && !groupIDs?.some(id => id === transformCell.groupID)) {
-            DeBug.log('HIT THIS HIT THIS HIT THIS HIT THIS')
-          } else {
-            if (transformCell.groupID !== -1) {
-              DeBug.log('newGroupID', transformCell.groupID)
-              destCell.groupID = transformCell.groupID
-            }
-          }
-        }
-        if (useAvailable && transformCell.isAvailable === true) {   // useAvailable changes isAvailable cells  
-          const currentGroup = this.groupNamed(destCell.groupID)
-          if (currentGroup) {                                       // remove cell from currentGroup
-            currentGroup.cells = currentGroup.cells.filter(cell => cell.id !== destCell.id)
-          }
-          destCell.groupID = -1                                     // groupID to -1
-          destCell.isAvailable = true                               // isAvailable to true
-        }
-      })
-      DeBug.log('destination transformed isAvailable', destination.map(e => e.isAvailable))
-      DeBug.log('destination transformed groupID', destination.map(e => e.groupID))
-
-      if (groupIDs) {                                               //filter destination by groupIDs
-        destination = destination.filter(destCell => groupIDs.some(id => destCell.groupID === id))
-      } else groupIDs = this.groups.map(group => group.id)          // get all groupIDs
-
-      DeBug.log('destination groupID filtered', destination.map(e => e.id))
-      DeBug.log('groupIDs', groupIDs)
-
-      const groupSelections = groupIDs.map(id => {                  // group destCells by groupID
-        DeBug.log('process id', id)
-        return destination.filter(destCell => destCell.groupID === id)
-      })
-      DeBug.log('groupID Selections', groupSelections)
-
-      let emptySelections = destination
-        .filter(cell => cell.isAvailable === true)                  // filter for only isAvailable cells
-      DeBug.log('emptySelections 1', emptySelections)
-
-      emptySelections = emptySelections
-        .exclude(groupSelections.flat(), 'id')                      // exclude cells that will be isTaken
-      DeBug.log('emptySelections 2', emptySelections.map(e => e.id))
-
-      groupSelections.forEach((selection, i) => {
-        const groupID = groupIDs[i]
-        const group = this.groupNamed(groupID)
-        this.assignCells(selection, groupID)
-        //FIXME: need to remove old cells from group
-      })
-      this.setGridAvailability(emptySelections, true)
-    }
-
-    //NOTE:
-    // half/quad transformation can be simplified similarly to half/quad selection
-    // any quad can be reflected/rotated by reflecting/rotating a half TWICE
-
-    // q reflection: (selected quad + next) half reflect, assign, then (selected quad + previous) half reflect, assign
-    // q rotation: (selected quad + next) half rotate(90), assign, then (selected quad + next) half rotate(180), assign
-    // h reflection: half reflect, assign
-    // h rotation:  half rotate(180), assign
-
-    let sourceDir = direction.random()                                // pick a random direction from available directions
-    DeBug.log('sourceDir', sourceDir)
-    let source, transformed, destination
-    if (isQuad) {                                                     //quad
-      source = bounds.half(sourceDir)                                 // get picked half
-      DeBug.log('quad source', source)
-      destination = bounds.half(sourceDir.opposites)                  // get other half
-      if (reflection) {
-        direction = sourceDir.andOpposites                            // get flip direction
-        transformed = source.flipped2D(direction)                     // flip source
-        sourceDir = sourceDir.toLeft                                  // set next source half to -90deg
-        DeBug.log('quad direction', direction)
-        direction = direction.equals(Direction.Horizontal) ? Direction.Vertical : Direction.Horizontal // rotate flip direction -90deg
-        DeBug.log('after quad direction', direction)
-      } else {
-        transformed = source.rotated2D(90)                            // rotate source 90deg
-      }
-      assignSym(transformed, destination)
-    }
-    // half symmetrize
-    source = bounds.half(sourceDir)                                   // get picked half
-    DeBug.log('half bounds', bounds)
-    DeBug.log('half source', source)
-    DeBug.log('half source flattened', source.flat().map(e => e.id))
-    destination = bounds.half(sourceDir.opposites)                    // get other half
-    if (reflection) {
-      DeBug.log('reflection direction', direction)
-      transformed = source.flipped2D(direction)                       // flip source
-    } else {
-      transformed = source.rotated2D(180)                             // rotate source 180deg
-    }
-    assignSym(transformed, destination)
-  }
   // #endregion
   // MARK: Grid Grammar Enum Methods
   // #region Grammar Enum Methods
@@ -2363,22 +1834,6 @@ class Grid extends ProtoLayer {
   setAvailability(selection = this.cells, isAvailable = false) {
     selection.forEach(cell => cell.isAvailable = isAvailable)
   }
-  //METH: setGridAvailability() : null : set the availability of a selection of cells
-  setGridAvailability(selection = this.cells, isAvailable = false) {
-    if (selection.isEmpty) { return }
-    selection.forEach(cell => {
-      const
-        thisCell = this.cells[cell.index],
-        thisGroup = this.groupNamed(thisCell.groupID)
-      // DeBug.log('thisCell id', thisCell.id)
-      // DeBug.log('thisCell groupID', thisCell.groupID)
-      // DeBug.log('thisCell isAvailable', thisCell.isAvailable)
-      // DeBug.log('thisGroup', thisGroup)
-      if (thisGroup) thisGroup.cells = thisGroup.cells.filter(cell => cell.id !== thisCell.id)
-      thisCell.groupID = -1
-      thisCell.isAvailable = isAvailable
-    })
-  }
   // #endregion
   //MARK: Setup Overrides
   //METH: assignElement() : null : create and assign SVG elements to the grid
@@ -2511,228 +1966,4 @@ class Grid extends ProtoLayer {
     })
     DeBug.groupEnd()
   }
-}
-
-//MARK: SegPool CLASS
-class SegPool {
-  constructor(segments, shape) {
-    this.segments = segments.flat(Infinity)
-    this.shape = shape
-  }
-
-  //METH: unitRefined() : SegPath : take a unit inset/outset path and remove collinear and zero length segments
-  unitRefined() {
-    DeBug.groupCollapsed(`unitRefined`)
-    DeBug.error(`unitRefined()`, this.segments)
-    let
-      pathCopy = this.segments.copy,
-      zeroSegs = pathCopy.filter(s => s.isVert),
-      newPath = new OpArray,
-      overlaps = new OpArray,
-      removed = new OpArray,
-      length = pathCopy.length
-
-    pathCopy = pathCopy.exclude(zeroSegs, `id`)                     // exclude zero segs from pathCopy
-
-    //ARROW: remove() : null : remove seg from neighbors' neighbors
-    const remove = (seg) => {
-      seg.removeBothNeighbors()
-    }
-
-    while (length > 0) {
-      DeBug.warn(`pathCopy start`, pathCopy)
-      const seg = pathCopy.shift()                                  // remove first seg
-      DeBug.log(`current seg`, seg)
-
-      // if (!seg.isVert) {
-      let overlap = pathCopy.filter(s =>
-        s.isOverlappingWith({ seg: seg, includeEnds: true, includeEndToEnd: false, accuracy: 0 })
-        && !s.isEndToEnd(seg)
-      ) // find overlaps
-      DeBug.log(`overlap`, overlap)
-      if (!overlap.isEmpty) {
-        if (overlap.length === 1) {                                         // single overlap
-          DeBug.error(`single overlap`, overlap)
-          overlaps.push(seg)
-          const
-            singleSeg = overlap[0],                                         // single overlap seg
-            intersection = seg.intersectionWith(singleSeg),                 // intersection of seg and singleSeg
-            isPartialXOfThis = !intersection.equals(seg, 3, true),          // intersection only partially covers this seg
-            isPartialXOfOverlap = !intersection.equals(singleSeg, 3, true)  // intersection only partially covers singleSeg
-          DeBug.log(`singleSeg`, singleSeg)
-          DeBug.log(`intersection`, intersection)
-
-          if (isPartialXOfThis) {
-            DeBug.error(`isPartialXOfThis`, isPartialXOfThis)
-            const newSegs = seg.exclude(intersection)                       // exclude intersection seg from seg
-            newPath = newPath.union(newSegs, `id`)                          // add new segs to newPath
-            DeBug.log(`newSegs`, newSegs)
-          }
-          if (isPartialXOfOverlap) {
-            DeBug.error(`isPartialXOfOverlap`, isPartialXOfOverlap)
-            const newSegs = singleSeg.exclude(intersection)                 // exclude intersection seg from singleSeg
-            newPath = newPath.union(newSegs, `id`)                          // add new segs to newPath
-            DeBug.log(`newSegs`, newSegs)
-          }
-          overlaps.push(singleSeg)
-          pathCopy = pathCopy.exclude(singleSeg, `id`)                      // exclude overlap seg from pathCopy
-        }
-
-        if (overlap.length > 1) {                                           // multiple overlaps
-          DeBug.error(`Multiple overlaps!!!`, overlap)
-          //FIXME: sort overlaps by closest distance to seg end
-          //FIXME: make single overlap processing above into arrowFung then handle each one at a time
-          //FIXME: in each loop, push the first newSeg (closest to seg end) to newPath
-          //FIXME: then replace seg with the second newSeg and restart the loop
-
-        }
-
-      } else {
-        DeBug.error(`no overlap`, seg)
-        newPath.push(seg)
-      }
-      // } else {
-      //   DeBug.error(`zero length seg`, seg)
-      //   zeroSegs.push(seg)
-      // }
-
-      length = pathCopy.length
-      DeBug.warn(`pathCopy end`, pathCopy)
-    }
-    DeBug.log(`newPath`, newPath)
-    DeBug.log(`overlaps`, overlaps)
-    DeBug.log(`removed`, removed)
-    DeBug.log(`zeroSegs`, zeroSegs)
-    DeBug.log(``)
-    DeBug.groupEnd()
-    DeBug.log(``)
-    if (!newPath.isEmpty) {
-      removed.forEach(seg => remove(seg))                           // remove zero segs from neighbors  
-      overlaps.forEach(seg => remove(seg))                          // remove overlaps from neighbors
-      DeBug.warn(`Shape ${this.shape.id} has a new path1`, newPath)
-      DeBug.log(``)
-      return new SegPath(newPath, this.shape)
-    }
-    else {
-      DeBug.error(`NO ZERO PATH!, Shape ${this.shape.id} has max thickness of 1!!!`)
-      DeBug.log(``)
-    }
-
-
-
-    // this.path.forEach((seg, i) => {
-    //   // DeBug.log(`current Seg`, seg)
-    //   if (roundToDec(seg.length) > 0) {
-    //     const
-    //       pathNoSeg = this.path.exclude(seg, `id`)                     // exclude current seg
-    //     // DeBug.log(`pathNoSeg`, pathNoSeg)
-    //     const
-    //       overlaps = pathNoSeg.filter(s => s.isOverlappingWith({ seg: seg, includeEnds: false }))    // find overlaps
-    //     DeBug.log(`overlaps`, overlaps)
-    //     let removed = new OpArray, newSeg
-
-    //     if (!overlaps.isEmpty) {
-    //       overlaps.forEach(overlap => {
-    //         const remove = seg.intersectionWith(overlap)
-    //         if (remove && remove instanceof Segment) {
-    //           DeBug.log(`remove`, remove)
-    //         }
-    //       })
-    //     }
-
-    //   } else {
-    //     DeBug.error(`zero length seg`, seg)
-    //   }
-    // })
-  }
-
-  //   //METH: assembleShapes() : [SegPath] : assemble the segments into connected shape paths
-  //   assembleShapes() {
-  //     let
-  //       segments = OpArray.format(this.segments),
-  //       subShapes = new OpArray,
-  //       shapeIter = 0,
-  //       subShapeIter = 0
-
-  //     DeBug.log(`createShape for ${this.id}, insetScale`, insetScale)
-  //     DeBug.log(`createShape`, this)
-  //     DeBug.log(`segments`, segments)
-
-  //     //ARROW: findShape(seg) : find each shape within an island
-  //     const findShape = () => {
-  //       let subShape
-  //       while (segments.length > 0) {
-  //         shapeIter += 1
-  //         let
-  //           segment = segments[0],
-  //           fillstack = []
-  //         subShape = new OpArray
-
-  //         //ARROW: findSubShape(seg) : find each subShape within a shape
-  //         const findSubShape = (seg) => {
-  //           fillstack.push(seg)
-
-  //           while (fillstack.length > 0) {
-  //             subShapeIter += 1
-  //             //find next segments (could be 2 if allowing ordinal island connections)
-  //             let
-  //               thisSeg = fillstack.pop(), nextSeg,
-  //               next = segments
-  //                 .filter(s => thisSeg.end.equals(s.start, 4))
-  //                 .compacted
-
-  //             if (next.length === 0) {
-  //               if (thisSeg.end.equals(subShape[0].start, 4)) {
-  //                 thisSeg.assignNeighbors({ end: subShape[0] })
-  //                 subShape[0].assignNeighbors({ start: thisSeg })
-  //                 subShape.push(thisSeg)
-  //                 return
-  //               } else {
-  //                 DeBug.log('thisSeg.end', thisSeg.end)
-  //                 DeBug.log('subShape[0].start', subShape[0].start)
-  //                 DeBug.error('cannot continue segmentShape')
-  //               }
-  //             }
-  //             if (next.length === 1) nextSeg = next[0]
-  //             if (next.length === 2) {
-  //               DeBug.error('next has 2 segments')
-  //               let nextDirection
-
-  //               if (this.direction.someAreOrdinal) nextDirection = thisSeg.direction.previous(2)
-  //               else nextDirection = thisSeg.direction.next(2)
-
-  //               nextSeg = next.find(e => e.direction.equals(nextDirection))
-  //               // DeBug.log(`thisSeg here`, thisSeg)
-  //               // DeBug.log(`nextSeg here`, nextSeg)
-  //               if (!nextSeg) DeBug.error('unexpected 2nd segment')
-  //             }
-  //             // DeBug.log(``)
-  //             // DeBug.log(this.grid.groups)
-  //             // DeBug.log(this.id)
-  //             // DeBug.group(`testgroup`)
-  //             // DeBug.log(`subShape ${this.id} iter ${subShapeIter}`, segments)
-  //             // DeBug.log(`thisSeg`, thisSeg)
-  //             // DeBug.log(`nextSeg`, nextSeg)
-  //             // DeBug.groupEnd()
-  //             thisSeg.assignNeighbors({ end: nextSeg })
-  //             nextSeg.assignNeighbors({ start: thisSeg })
-  //             fillstack.push(nextSeg)
-  //             subShape.push(thisSeg)
-  //             segments = segments.exclude(subShape, ['id'])
-  //           }
-  //         }
-
-  //         findSubShape(segment)
-  //         segments = segments.exclude(subShape, ['id'])
-  //         subShapes.push(subShape)
-  //         if (subShapes.length === 1) {                 // re-sort inner subshapes for counter-clockwise processing
-  //           segments = segments.counterGridVertSorted
-  //         }
-  //       }
-  //     }
-
-  //     findShape(this.direction)
-
-  //   }
-
 }
