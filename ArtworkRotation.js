@@ -157,24 +157,20 @@ function handleArtworkRotationKey(event) {
   const direction = key === 'ArrowRight' ? 1
     : (key === 'ArrowLeft' || lowerKey === 'l') ? -1
       : 0
-  if (!direction || isWebKitRotationClass()) return
+  if (!direction || window.RevealAnim?.isWebKitClass) return
   event.preventDefault()
   rotateArtworkBy(direction)
 }
 
-function isWebKitRotationClass() {
-  const ua = navigator.userAgent
-  const isIOS = /iPhone|iPad|iPod/i.test(ua)
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  const isDesktopSafari = /Safari/i.test(ua)
-    && !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|Android/i.test(ua)
-  return isDesktopSafari || isIOS
+function syncRevealLayoutAfterArtworkRotation() {
+  if (artworkRotationState.animating) return
+  window.RevealAnim?.syncRevealLayoutToArtwork?.()
 }
 
 async function rotateArtworkBy(direction) {
   if (artworkRotationState.animating || !FRAME?.bleed?.elt) return
   if (artworkRotationState.screenLightAngle === null) {
-    artworkRotationState.screenLightAngle = normalizeDegree(globalControls?.shadAngle ?? 90)
+    artworkRotationState.screenLightAngle = readScreenSpaceLightAngle()
   }
 
   const startAngle = artworkRotationState.angle
@@ -317,26 +313,39 @@ function setArtworkBackingScale(
   applyArtworkRotationTransform(visualAngle, visualScale)
 }
 
-function syncRevealLayoutAfterArtworkRotation() {
-  if (artworkRotationState.animating) return
-  window.SafariCompatUX?.syncRevealLayoutToArtwork?.()
+function resolveArtworkVisualAngle(visualAngle) {
+  if (Number.isFinite(visualAngle)) return visualAngle
+  if (Number.isFinite(artworkRotationState.visualAngle)) return artworkRotationState.visualAngle
+  return artworkRotationState.angle ?? 0
+}
+
+function readScreenSpaceLightAngle() {
+  if (artworkRotationState.screenLightAngle !== null) {
+    return normalizeDegree(artworkRotationState.screenLightAngle)
+  }
+  const localAngle = normalizeDegree(globalControls?.shadAngle ?? 90)
+  const rotationAngle = normalizeDegree(artworkRotationState.angle ?? 0)
+  return normalizeDegree(localAngle + rotationAngle)
 }
 
 function updateArtworkRotationLight(visualAngle) {
   if (!globalControls || !S?.offsetElts || typeof Shade === 'undefined') return
-  const screenAngle = artworkRotationState.screenLightAngle ?? normalizeDegree(globalControls.shadAngle ?? 90)
+  const screenAngle = readScreenSpaceLightAngle()
   const compensatedAngle = artworkLocalLightAngleFor(screenAngle, visualAngle)
   globalControls.shadAngle = compensatedAngle
   const shadVect = Shade.shadVect(compensatedAngle)
+  if (typeof animationController !== 'undefined' && animationController?.batchUpdateFilters) {
+    animationController.batchUpdateFilters(shadVect.x, shadVect.y)
+    return
+  }
   S.offsetElts.forEach(({ elt, mag }) => {
     elt.attribute('dx', shadVect.x * mag)
     elt.attribute('dy', shadVect.y * mag)
   })
 }
 
-function artworkLocalLightAngleFor(screenAngle, visualAngle = artworkRotationState.angle) {
-  const currentVisualAngle = artworkRotationState.visualAngle ?? visualAngle
-  return normalizeDegree(screenAngle - currentVisualAngle)
+function artworkLocalLightAngleFor(screenAngle, visualAngle) {
+  return normalizeDegree(screenAngle - resolveArtworkVisualAngle(visualAngle))
 }
 
 function noteArtworkScreenLightAngle(screenAngle) {
@@ -408,6 +417,9 @@ function easeInOutCubic(t) {
 }
 
 window.artworkRotationSnapshot = artworkRotationSnapshot
+window.resolveArtworkVisualAngle = resolveArtworkVisualAngle
+window.readScreenSpaceLightAngle = readScreenSpaceLightAngle
+window.updateArtworkRotationLight = updateArtworkRotationLight
 window.syncArtworkRotationToViewport = syncArtworkRotationToViewport
 window.artworkLocalLightAngleFor = artworkLocalLightAngleFor
 window.noteArtworkScreenLightAngle = noteArtworkScreenLightAngle

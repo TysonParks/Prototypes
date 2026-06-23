@@ -25,6 +25,7 @@
 | `archive/*` | Legacy experiments ([Arecibo.js](../../archive/Arecibo.js), [Unused.js](../../archive/Unused.js)) |
 | `libraries/dat.gui.min.js` | Dev GUI |
 | [guiDev.js](../../guiDev.js) | Export keys, seed nav, wrapper debug |
+| [RevealAnimationDev.js](../../RevealAnimationDev.js) | Dynamic `'n'` regen, `hideNow()`, rotation-reload morph |
 | `lastHash[]`, `currentHash()` dev branch | ~1600 lines; AB injects `tokenData.hash` |
 | `values64x4bit`, `sliceHash`, `primes16` in tokenHash | Used only by testMess |
 | `functionTestPrint()` | Ad-hoc tests |
@@ -49,7 +50,7 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 11. [ProtoUtility.js](../../ProtoUtility.js) · [ProtoLayerObjects.js](../../ProtoLayerObjects.js) · [Grid.js](../../Grid.js)
 12. [ProtoFilter.js](../../ProtoFilter.js) · [oklch2rgb.js](../../oklch2rgb.js) · [neuMark_I.js](../../neuMark_I.js) · [squircle.js](../../squircle.js)
 13. [ProtoBatch.js](../../ProtoBatch.js) — core build/teardown only
-14. [safariImageSwap.js](../../safariImageSwap.js)
+14. [RevealAnimation.js](../../RevealAnimation.js)
 15. [ArtworkRotation.js](../../ArtworkRotation.js)
 16. [sketch.js](../../sketch.js)
 

@@ -2,7 +2,7 @@
 //
 // Initial attempt to expose BackGrid outer shape metrics in user units for
 // safariImageSwap.js dummy morph (width, height, per-corner radii). Superseded
-// by DOM measurement of the mask path in safariImageSwap.js updateLayoutVars().
+// by DOM measurement of the mask path in RevealAnimation.js updateLayoutVars().
 //
 // Revive: paste getter onto Grid.prototype (or re-wire getCurrentFrameMetrics in
 // safariImageSwap.js if model-space metrics are preferred over DOM rects).

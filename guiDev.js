@@ -165,9 +165,9 @@ function keyPressed() {
     }
   }
   if (key === 'n') {
-    // Chrome regen is owned by safariImageSwap.js (hide → build). Calling
+    // Chrome regen is owned by RevealAnimationDev.js (hide → build). Calling
     // buildFromNewSeed() here skips the hide animation and resets rotation layout.
-    if (typeof SafariCompatUX !== 'undefined' && SafariCompatUX && !SafariCompatUX.isWebKitClass) return
+    if (typeof RevealAnim !== 'undefined' && RevealAnim && !RevealAnim.isWebKitClass) return
     if (typeof protoBatch !== 'undefined' && protoBatch) {
       protoBatch.buildFromNewSeed()
     }

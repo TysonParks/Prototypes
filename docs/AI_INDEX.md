@@ -70,8 +70,8 @@ Read:
 - GEOMETRY-REFERENCE.md defines terminology
 - KNOWN-ISSUES.md records historical failed attempts; do not repeat them
 - ROADMAP.md is intent, not proof of implementation
-- `safariImageSwap.js` Chrome reveal/hide behavior is reference-locked
- - `safariImageSwap.js` Chrome and Safari reveal/hide behaviors are reference-locked and approved for ArtBlocks submission
+- `RevealAnimation.js` Chrome and Safari reveal behaviors are reference-locked and approved for ArtBlocks submission
+- Dev dynamic regen: `RevealAnimationDev.js` (excluded from submission bundle)
    as of 2026-05-05; Safari work must not alter Chrome behavior unless explicitly requested.
 
 ## What This Document Is Not

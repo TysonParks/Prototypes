@@ -125,7 +125,22 @@ class AnimationController {
     }
     this.frameStartTime = 0
     this.syncTransition = null
-    if (resetLight) this.applyScreenLightAngle(screenAngle)
+    if (resetLight) {
+      this.applyScreenLightAngle(screenAngle)
+      return
+    }
+    // Re-anchor screen-space light and refresh shader-local compensation so
+    // artwork rotation keeps tracking after the animation loop stops updating.
+    if (typeof noteArtworkScreenLightAngle === 'function') {
+      noteArtworkScreenLightAngle(this.currentScreenAngle)
+    }
+    if (typeof window.updateArtworkRotationLight === 'function') {
+      const visual = typeof window.resolveArtworkVisualAngle === 'function'
+        ? window.resolveArtworkVisualAngle()
+        : 0
+      window.updateArtworkRotationLight(visual)
+    }
+    this.lastAppliedScreenAngle = null
   }
 
   startClockSync({ userInitiated = false } = {}) {
@@ -266,7 +281,12 @@ class AnimationController {
     this.lastAppliedScreenAngle = angle
     if (typeof noteArtworkScreenLightAngle === 'function') noteArtworkScreenLightAngle(angle)
     const localAngle = typeof artworkLocalLightAngleFor === 'function'
-      ? artworkLocalLightAngleFor(angle)
+      ? artworkLocalLightAngleFor(
+        angle,
+        typeof window.resolveArtworkVisualAngle === 'function'
+          ? window.resolveArtworkVisualAngle()
+          : undefined,
+      )
       : angle
     globalControls.shadAngle = localAngle
     const radians = localAngle * Math.PI / 180

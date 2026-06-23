@@ -1,69 +1,7 @@
-// safariImageSwap.js
-// ---------------------------------------------------------------------------
-// Reveal Animation + Safari/WebKit UX module.
-//
-// Filename retained from earlier canvas-image-swap experiment to avoid
-// index.html churn. Module's actual role is the "reveal animation"
-// system described in ROADMAP.md § "Reveal Animation Tuning":
-//
-//   E2 Spinner   — currently disabled; the old canvas/transform ring was
-//                  more compositor-friendly than dummy border-radius motion.
-//   E3 "Loading" text — WebKit-class loading copy shown during the
-//                       synchronous build window.
-//   E4 Dummy backing — solid color rect that morphs to mirror the
-//                      current artwork's outer shape (measured from the
-//                      mask path DOM rect after build; default pill before).
-//                      Carries ALL animated properties: width/height,
-//                      per-corner border-radius, scale, blur. Default
-//                      hidden state is the 100×200uu pill.
-//   E1 Artwork (BG.elt) — Chrome two-phase reference path animates opacity.
-//                         Chrome single-phase animates artwork scale and uses
-//                         one shared wrapper blur for artwork + dummy.
-//                         Safari keeps BG.elt opacity-only so WebKit never
-//                         rasterizes the complex SVG at hidden scale.
-//
-// Chrome reference choreography (per user spec table 2026-04-30 v4):
-//
-//   Hidden state:    dummy { opacity 1, blur blurUU, scale hiddenScale, shape pill }
-//                    artwork { opacity 0 }
-//   Revealed state:  dummy { opacity 0, blur 0, scale 1, shape art }
-//                    artwork { opacity 1 }
-//
-//   REVEAL phase 1 (0→halfDur):   dummy opacity 1→0, dummy scale
-//                                 hiddenScale→1, artwork opacity 0→1
-//   REVEAL phase 2 (halfDur→full): dummy blur blurUU→0, dummy shape
-//                                 pill→art
-//   HIDE   phase 1 (0→halfDur):   dummy opacity 0→1, artwork opacity 1→0
-//   HIDE   phase 2 (halfDur→full): dummy blur 0→blurUU, dummy scale
-//                                 1→hiddenScale, dummy shape art→pill
-//
-// Per-property delays:
-//   dummy opacity      — always 0 (cross-fade with artwork)
-//   dummy scale        — reveal 0, hide halfDur            (`--dummy-scale-delay`)
-//   dummy blur         — always halfDur                    (constant)
-//   dummy border-radius— always halfDur                    (constant)
-//   artwork opacity    — always 0
-//
-// CSS-only transitions (per AI_INDEX immutability axiom + RA3): JS
-// adds/removes class names + writes CSS variables; CSS owns the
-// timing. Sequence is achieved entirely through transition-delay.
-// Safari ArtBlocks submission path uses only the first page load:
-// persistent hidden dummy + loading overlay during WebKit's slow build,
-// followed by a single reveal. Safari dynamic 'n' rebuilds are disabled.
-//
-// Engine detection (KNOWN-ISSUES § 9.17 FC2): UA-detects Safari + any
-// iOS browser as "WebKit-class" since pre-EU-DMA iOS forces all
-// browsers onto WebKit anyway.
-//
-// Public API (window.SafariCompatUX):
-//   .isSafari            true if UA-detected WebKit-class
-//   .isWebKitClass       alias of isSafari
-//   .chromeTransitionVariant current Chrome reveal variant
-//   .setChromeTransitionVariant('two-phase' | 'single-phase')
-//   .revealNow()         force-trigger reveal (debug)
-//   .hideNow()           force-trigger hide (debug; Chrome only)
-//   .resetForRebuild()   re-prep the dummy + artwork (called automatically)
-// ---------------------------------------------------------------------------
+// RevealAnimation.js — dummy-backed cold-load reveal + WebKit loading overlay.
+// Chrome: single-phase morph (dummy + shared blur layer + artwork scale).
+// Safari: separate #safari-dummy + loading text during sync SVG build.
+// Public API: window.RevealAnim (see end of file). Dev regen: RevealAnimationDev.js.
 
 (function () {
   'use strict'
@@ -108,39 +46,11 @@
     hiddenScale: 0.5,
   })
 
-  const CHROME_TRANSITION_VARIANTS = Object.freeze({
-    TWO_PHASE: 'two-phase',
-    SINGLE_PHASE: 'single-phase',
-  })
-  const ROTATION_RELOAD_MODES = Object.freeze({
-    NEUTRAL_RESET: 'neutral-reset',
-    PRE_ROTATE_DUMMY: 'pre-rotate-dummy',
-    HORIZONTAL_MORPH_RESET: 'horizontal-morph-reset',
-  })
-  const DEFAULT_CHROME_TRANSITION_VARIANT = CHROME_TRANSITION_VARIANTS.SINGLE_PHASE
-  let chromeTransitionVariant = DEFAULT_CHROME_TRANSITION_VARIANT
-  let rotationReloadMode = ROTATION_RELOAD_MODES.NEUTRAL_RESET
-
-  //SECT: Chrome shared variables
-  const blurUserUnits = CHROME_REFERENCE_PRESET.blurUserUnits // dummy hidden-state blur in uu
-  const revealDurationMs = CHROME_REFERENCE_PRESET.revealDurationMs // forward TOTAL duration
-  const hideDurationMs = CHROME_REFERENCE_PRESET.hideDurationMs // reverse TOTAL duration
-  // phaseOffset ∈ [0, 1]: fraction of total duration spent on the
-  // blur/scale/shape phase. Opacity phase gets (1 − phaseOffset).
-  //   REVEAL: phase 1 = blur/scale/shape (duration phaseOffset*t),
-  //           phase 2 = opacity         (duration (1−phaseOffset)*t)
-  //   HIDE:   phase 1 = opacity         (duration (1−phaseOffset)*t),
-  //           phase 2 = blur/scale/shape (duration phaseOffset*t)
-  // Instantaneous artwork-opacity flip lands at the phase boundary:
-  //   reveal: phaseOffset*revealDurationMs
-  //   hide:   (1−phaseOffset)*hideDurationMs
-  // 0.5 → even split. Higher → more blur/scale time, less opacity time.
-  const phaseOffset = CHROME_REFERENCE_PRESET.phaseOffset
-
-  //SECT: Chrome two-phase reference variables
-  const hiddenScale = CHROME_REFERENCE_PRESET.hiddenScale // dummy hidden-state scale (focus-pull / DOF feel)
-
-  //SECT: Chrome single-phase variant variables
+  const blurUserUnits = CHROME_REFERENCE_PRESET.blurUserUnits
+  const revealDurationMs = CHROME_REFERENCE_PRESET.revealDurationMs
+  const hideDurationMs = CHROME_REFERENCE_PRESET.hideDurationMs
+  const hiddenScale = CHROME_REFERENCE_PRESET.hiddenScale
+  const safariBlurUserUnits = 30
   let chromeArtworkHiddenScale = 0.4  // smaller than dummy so artwork stays behind rounded dummy corners
   let chromeDummyPulseAmount = 0.05    // absolute scale +/- around hiddenScale while Chrome is hidden
   let chromeDummyPulseMs = 4000        // full hidden dummy pulse loop duration (ms)
@@ -157,15 +67,8 @@
   //SECT: Safari-only variables
   // Safari uses its own isolated choreography. Do not route these
   // through CHROME_REFERENCE_PRESET; Chrome is locked as reference.
-  const safariTransitionMs = 1000       // single-phase hide/reveal duration (ms)
-  const safariBlurUserUnits = 30        // Safari hidden-state dummy blur in uu
-  // Overlay values — initial values; all also exposed as CSS vars (--safari-*)
-  // so they can be adjusted live in DevTools without reload.
-  const safariBlurPx = 20               // legacy/API var; Rev 4 blur is --reveal-blur
-  const safariDimBrightness = 0.5       // legacy/API var; no backdrop dim layer in Rev 4
-  const safariDimFadeMs = 200           // legacy/API var retained for DevTools compatibility
-  const safariBlurRevealMs = 800        // legacy/API var retained for DevTools compatibility
-  const safariOverlayFadeMs = 1000      // fade duration for loading text (ms)
+  const safariTransitionMs = 1000
+  const safariOverlayFadeMs = 1000
   const safariArtworkPrepaintOpacity = 0.001 // force normal-size paint before scale reveal
   let safariDummyPulseAmount = 0.05     // absolute scale +/- around hiddenScale while loading
   let safariDummyPulseMs = 2000         // hidden dummy scale pulse duration (ms)
@@ -197,13 +100,9 @@
   let _chromeBlurLayer = null                     // Chrome single-phase shared blur wrapper
   let _frameElt = null                           // current BG.elt ref
   let _buildToken = 0                            // bumped on each build; cancels stale timers/transitions
-  // Chrome 'n'-keypress debounce — true from the moment a build starts until
-  // its reveal animation has fully completed. Safari ignores 'n' entirely;
-  // it only uses this during cold-load reveal bookkeeping.
-  let _rebuildInFlight = true
-  let _reloadRotationSnapshot = null
-  let _neutralHorizontalHiddenPill = null
-  let _currentMetrics = defaultFrameMetrics      // last applied frame metrics (used as hide-stage-2 START shape)
+  let _currentMetrics = defaultFrameMetrics
+  let _devHooks = null
+  let _updateLayoutVars = null
   // Safari persistent overlay — created once at init(), NEVER destroyed.
   // Survives every ProtoBatch teardown/rebuild cycle (BG.elt does not).
   // Safari loading text uses .building; hidden pulse lives on #safari-dummy-core.
@@ -229,20 +128,10 @@
     style.textContent = `
       :root {
         --hidden-scale: ${hiddenScale};
-        /* Per-phase durations + delays (set by setDirectionTiming).
-           Two phases per spec table 2026-04-30 v3:
-             SHAPE phase — dummy blur, scale, border-radius, bounds.
-               REVEAL: duration phaseOffset*t,        delay 0
-               HIDE:   duration phaseOffset*t,        delay (1−phaseOffset)*t
-             OPACITY phase — dummy opacity (artwork opacity is an
-               instantaneous flip handled by JS, not transitioned).
-               REVEAL: duration (1−phaseOffset)*t,    delay phaseOffset*t
-               HIDE:   duration (1−phaseOffset)*t,    delay 0
-           Total wall-clock = t regardless of phaseOffset. */
         --phase-shape-duration: 750ms;
         --phase-shape-delay: 0ms;
         --phase-opacity-duration: 750ms;
-        --phase-opacity-delay: 750ms;
+        --phase-opacity-delay: 0ms;
         --reveal-blur: 0px;
 
         /* DEFAULT PILL bounds — centered in viewport, frameSize-based.
@@ -276,12 +165,6 @@
           --dummy-safari-hidden-scale-x: 1;
           --dummy-safari-hidden-scale-y: 1;
 
-        /* Safari overlay values — initial values set from JS constants above.
-           All adjustable live in DevTools (change on :root) without reload. */
-        --safari-blur-px: ${safariBlurPx}px;
-        --safari-dim-brightness: ${safariDimBrightness};
-        --safari-dim-fade-ms: ${safariDimFadeMs}ms;
-        --safari-blur-reveal-ms: ${safariBlurRevealMs}ms;
         --safari-transition-ms: ${safariTransitionMs}ms;
         --safari-overlay-fade-ms: ${safariOverlayFadeMs}ms;
         --safari-dummy-pulse-ms: ${safariDummyPulseMs}ms;
@@ -341,8 +224,8 @@
         opacity: 1;
         transform-origin: center center;
         transform: translateZ(0) rotate(var(--dummy-rotation)) scale(var(--hidden-scale));
-        filter: blur(var(--reveal-blur));
-        -webkit-filter: blur(var(--reveal-blur));
+        filter: none;
+        -webkit-filter: none;
         transition:
           opacity        var(--phase-opacity-duration) var(--chrome-dummy-opacity-easing) var(--phase-opacity-delay),
           transform      var(--phase-shape-duration)   linear var(--phase-shape-delay),
@@ -383,11 +266,6 @@
           var(--dummy-art-radius-br) var(--dummy-art-radius-bl);
         transform: translateZ(0) rotate(var(--dummy-rotation)) scale(1);
         opacity: 0;
-        filter: blur(0);
-        -webkit-filter: blur(0);
-      }
-      :root[data-chrome-reveal-variant="single-phase"] #reveal-dummy,
-      :root[data-chrome-reveal-variant="single-phase"] #reveal-dummy.revealed {
         filter: none;
         -webkit-filter: none;
       }
@@ -642,135 +520,6 @@
     }
   }
 
-  function rotationReloadSnapshot() {
-    if (_reloadRotationSnapshot) return _reloadRotationSnapshot
-    if (typeof artworkRotationSnapshot !== 'function') {
-      return { angle: 0, rawAngle: 0, scale: 1, isSideways: false }
-    }
-    return artworkRotationSnapshot()
-  }
-
-  function latchReloadRotationSnapshot() {
-    _reloadRotationSnapshot = typeof artworkRotationSnapshot === 'function'
-      ? artworkRotationSnapshot()
-      : null
-  }
-
-  function clearReloadRotationSnapshot() {
-    _reloadRotationSnapshot = null
-    _neutralHorizontalHiddenPill = null
-  }
-
-  function isNeutralHorizontalReloadActive() {
-    const snap = rotationReloadSnapshot()
-    return !isWebKitClass
-      && rotationReloadMode === ROTATION_RELOAD_MODES.NEUTRAL_RESET
-      && snap.isSideways
-  }
-
-  function captureNeutralHorizontalHiddenPill() {
-    if (!isNeutralHorizontalReloadActive()) return
-    const style = getComputedStyle(document.documentElement)
-    const width = parseFloat(style.getPropertyValue('--dummy-pill-width'))
-    const height = parseFloat(style.getPropertyValue('--dummy-pill-height'))
-    if (!Number.isFinite(width) || !Number.isFinite(height)) return
-    _neutralHorizontalHiddenPill = { width, height }
-  }
-
-  function isUpsideDownReloadRotation() {
-    return normalizeReloadAngle(rotationReloadSnapshot().angle) === 180
-  }
-
-  function normalizeReloadAngle(angle) {
-    const n = Number(angle)
-    if (!Number.isFinite(n)) return 0
-    return ((Math.round(n / 90) * 90) % 360 + 360) % 360
-  }
-
-  function isPreRotatedReloadActive() {
-    const snap = rotationReloadSnapshot()
-    return !isWebKitClass
-      && rotationReloadMode === ROTATION_RELOAD_MODES.PRE_ROTATE_DUMMY
-      && snap.isSideways
-  }
-
-  function setRotationReloadMode(value) {
-    const next = String(value || '').toLowerCase()
-    const allowed = Object.values(ROTATION_RELOAD_MODES)
-    if (!allowed.includes(next)) {
-      console.warn('[RevealAnim] unknown rotation reload mode:', value,
-        'expected one of:', allowed.join(', '))
-      return rotationReloadMode
-    }
-    rotationReloadMode = next
-    updateLayoutVars(_currentMetrics)
-    console.log('[RevealAnim] rotation reload mode =', next)
-    return rotationReloadMode
-  }
-
-  function rotatedRectBaseFromVisual(left, top, width, height) {
-    const cx = left + width / 2
-    const cy = top + height / 2
-    return {
-      left: cx - height / 2,
-      top: cy - width / 2,
-      width: height,
-      height: width,
-    }
-  }
-
-  function rotateCornerRadii(radii, angle) {
-    const deg = ((Math.round(angle / 90) * 90) % 360 + 360) % 360
-    if (deg === 90) {
-      return { tl: radii.bl, tr: radii.tl, br: radii.tr, bl: radii.br }
-    }
-    if (deg === 180) {
-      return { tl: radii.br, tr: radii.bl, br: radii.tl, bl: radii.tr }
-    }
-    if (deg === 270) {
-      return { tl: radii.tr, tr: radii.br, br: radii.bl, bl: radii.tl }
-    }
-    return radii
-  }
-
-  function shouldResetRotationAfterHorizontalReload() {
-    const snap = rotationReloadSnapshot()
-    return !isWebKitClass
-      && rotationReloadMode === ROTATION_RELOAD_MODES.HORIZONTAL_MORPH_RESET
-      && snap.isSideways
-  }
-
-  function shouldPreserveNeutralHorizontalHiddenPill() {
-    return isNeutralHorizontalReloadActive()
-      && _dummy
-      && !_dummy.classList.contains('revealed')
-  }
-
-  function prepRotationForReloadBuild() {
-    if (rotationReloadMode === ROTATION_RELOAD_MODES.NEUTRAL_RESET) {
-      if (isUpsideDownReloadRotation()
-        && typeof resetArtworkRotationToDefault === 'function') {
-        resetArtworkRotationToDefault()
-        clearReloadRotationSnapshot()
-        updateLayoutVarsWithoutDummyTransition(defaultFrameMetrics)
-      }
-      return
-    }
-    if (!shouldResetRotationAfterHorizontalReload()) return
-    if (typeof resetArtworkRotationToDefault === 'function') resetArtworkRotationToDefault()
-    clearReloadRotationSnapshot()
-    updateLayoutVarsWithoutDummyTransition(defaultFrameMetrics)
-  }
-
-  function syncArtworkRotationBeforeRevealLayout() {
-    const shouldSync = isPreRotatedReloadActive()
-      || (!isWebKitClass
-        && rotationReloadMode === ROTATION_RELOAD_MODES.NEUTRAL_RESET
-        && rotationReloadSnapshot().isSideways)
-    if (!shouldSync) return
-    if (typeof syncArtworkRotationToViewport === 'function') syncArtworkRotationToViewport()
-  }
-
   function updateLayoutVarsWithoutDummyTransition(metrics = _currentMetrics) {
     if (!_dummy) return updateLayoutVars(metrics)
     const oldTransition = _dummy.style.transition
@@ -802,18 +551,8 @@
   // in the viewport sized from frameSize; the next build will
   // overwrite this with measured values. The `metrics` arg is only
   // consulted in fallback mode (for default proportions).
-  function updateLayoutVars(metrics = _currentMetrics) {
+  function updateLayoutVarsBase(metrics = _currentMetrics) {
     const root = document.documentElement.style
-    const rotationSnap = rotationReloadSnapshot()
-    const usePreRotatedDummy = !isWebKitClass
-      && rotationReloadMode === ROTATION_RELOAD_MODES.PRE_ROTATE_DUMMY
-      && rotationSnap.isSideways
-    const useNeutralHorizontalDummy = !isWebKitClass
-      && rotationReloadMode === ROTATION_RELOAD_MODES.NEUTRAL_RESET
-      && rotationSnap.isSideways
-    const useHorizontalMorphReset = !isWebKitClass
-      && rotationReloadMode === ROTATION_RELOAD_MODES.HORIZONTAL_MORPH_RESET
-      && rotationSnap.isSideways
 
     // ---- ARTWORK bounds + radii (measured DOM, when available) ----
     let artLeft, artTop, artW, artH
@@ -853,35 +592,11 @@
       ? frameSize : computeFrameSize()
     let pillW = Math.min(fs.x * (9 / 11), window.innerWidth * 0.9)
     let pillH = pillW * (defaultFrameMetrics.height / defaultFrameMetrics.width)
-    if (usePreRotatedDummy) {
-      const visualW = Math.min(fs.y * (rotationSnap.scale || 1), window.innerWidth * 0.98)
-      pillH = visualW
-      pillW = visualW * (defaultFrameMetrics.width / defaultFrameMetrics.height)
-    }
-    if (useNeutralHorizontalDummy) {
-      const visualW = Math.min(pillH, window.innerWidth * 0.98)
-      pillW = visualW
-      pillH = visualW * (defaultFrameMetrics.width / defaultFrameMetrics.height)
-    } else if (useHorizontalMorphReset) {
-      const baseW = pillW
-      pillW = pillH
-      pillH = baseW
-    }
-    let uuToPxPill = pillW / ((useNeutralHorizontalDummy || useHorizontalMorphReset)
-      ? defaultFrameMetrics.height : defaultFrameMetrics.width)
+    let uuToPxPill = pillW / defaultFrameMetrics.width
     let pillLeft = (window.innerWidth - pillW) / 2
     let pillTop = (window.innerHeight - pillH) / 2
     let pillCx = pillLeft + pillW / 2
     let pillCy = pillTop + pillH / 2
-
-    function syncPillPlacement() {
-      uuToPxPill = pillW / ((useNeutralHorizontalDummy || useHorizontalMorphReset)
-        ? defaultFrameMetrics.height : defaultFrameMetrics.width)
-      pillLeft = (window.innerWidth - pillW) / 2
-      pillTop = (window.innerHeight - pillH) / 2
-      pillCx = pillLeft + pillW / 2
-      pillCy = pillTop + pillH / 2
-    }
 
     if (artW == null && typeof BG !== 'undefined' && BG && BG.elt) {
       const bgRect = BG.elt.getBoundingClientRect && BG.elt.getBoundingClientRect()
@@ -909,32 +624,8 @@
       }
     }
 
-    if (usePreRotatedDummy && artW != null) {
-      const baseRect = rotatedRectBaseFromVisual(artLeft, artTop, artW, artH)
-      artLeft = baseRect.left
-      artTop = baseRect.top
-      artW = baseRect.width
-      artH = baseRect.height
-    } else if ((useNeutralHorizontalDummy || useHorizontalMorphReset) && artRadiiPx) {
-      artRadiiPx = rotateCornerRadii(artRadiiPx, rotationSnap.angle)
-    }
-
-    if (useNeutralHorizontalDummy && artW != null && artW > pillW) {
-      pillW = Math.min(artW, window.innerWidth * 0.98)
-      pillH = pillW * (defaultFrameMetrics.width / defaultFrameMetrics.height)
-      syncPillPlacement()
-    }
-
-    if (useNeutralHorizontalDummy
-      && shouldPreserveNeutralHorizontalHiddenPill()
-      && _neutralHorizontalHiddenPill) {
-      pillW = Math.min(_neutralHorizontalHiddenPill.width, window.innerWidth * 0.98)
-      pillH = _neutralHorizontalHiddenPill.height
-      syncPillPlacement()
-    }
-
     // ---- Write CSS vars ----
-    root.setProperty('--dummy-rotation', `${usePreRotatedDummy ? rotationSnap.angle : 0}deg`)
+    root.setProperty('--dummy-rotation', '0deg')
     root.setProperty('--dummy-pill-left', `${pillLeft}px`)
     root.setProperty('--dummy-pill-top', `${pillTop}px`)
     root.setProperty('--dummy-pill-width', `${pillW}px`)
@@ -979,77 +670,26 @@
       `${loadingTextShadowBlurUserUnits * uuToPxPill}px`)
   }
 
-  function setChromeTransitionVariant(value) {
-    const next = String(value || '').toLowerCase()
-    const allowed = Object.values(CHROME_TRANSITION_VARIANTS)
-    if (!allowed.includes(next)) {
-      console.warn('[RevealAnim] unknown Chrome transition variant:', value,
-        'expected one of:', allowed.join(', '))
-      return chromeTransitionVariant
-    }
-    chromeTransitionVariant = next
-    if (document && document.documentElement) {
-      document.documentElement.setAttribute('data-chrome-reveal-variant', next)
-    }
-    if (next === CHROME_TRANSITION_VARIANTS.SINGLE_PHASE) {
-      updateChromeDummyPulseVars()
-      if (_dummy && !_dummy.classList.contains('revealed')) startChromeHiddenPulse()
-    } else {
-      stopChromeHiddenPulse()
-    }
-    console.log('[RevealAnim] Chrome transition variant =', next)
-    return chromeTransitionVariant
+  function updateLayoutVars(metrics = _currentMetrics) {
+    const fn = _updateLayoutVars || updateLayoutVarsBase
+    fn(metrics)
   }
 
-  function isChromeSinglePhase() {
-    return !isWebKitClass && chromeTransitionVariant === CHROME_TRANSITION_VARIANTS.SINGLE_PHASE
-  }
-
-  //FUNC: setDirectionTiming(totalMs, isReveal) : void
-  // Set per-phase duration + delay vars per CORRECTED spec table
-  // 2026-04-30 v3 + phaseOffset:
-  //   shapeDur   = phaseOffset * totalMs       (blur/scale/border-radius/bounds)
-  //   opacityDur = (1−phaseOffset) * totalMs   (dummy opacity)
-  //   REVEAL: shape phase first (delay 0),       opacity phase after (delay shapeDur)
-  //   HIDE:   opacity phase first (delay 0),     shape phase after   (delay opacityDur)
-  // Chrome two-phase artwork opacity is an instantaneous flip scheduled by
-  // JS at the phase boundary — NOT animated through CSS transitions.
   function setDirectionTiming(totalMs, isReveal) {
     const root = document.documentElement.style
     root.setProperty('--chrome-dummy-opacity-easing',
       isReveal ? chromeDummyOpacityRevealEasing : chromeDummyOpacityHideEasing)
-
-    if (isChromeSinglePhase()) {
-      root.setProperty('--phase-shape-duration', `${totalMs}ms`)
-      root.setProperty('--phase-opacity-duration', `${totalMs}ms`)
-      root.setProperty('--phase-shape-delay', `0ms`)
-      root.setProperty('--phase-opacity-delay', `0ms`)
-      return
-    }
-
-    const shapeDur = phaseOffset * totalMs
-    const opacityDur = (1 - phaseOffset) * totalMs
-    root.setProperty('--phase-shape-duration', `${shapeDur}ms`)
-    root.setProperty('--phase-opacity-duration', `${opacityDur}ms`)
-    if (isReveal) {
-      root.setProperty('--phase-shape-delay', `0ms`)
-      root.setProperty('--phase-opacity-delay', `${shapeDur}ms`)
-    } else {
-      root.setProperty('--phase-opacity-delay', `0ms`)
-      root.setProperty('--phase-shape-delay', `${opacityDur}ms`)
-    }
-  }
-
-  function getChromeArtworkHiddenFilter() {
-    return 'blur(var(--reveal-blur))'
+    root.setProperty('--phase-shape-duration', `${totalMs}ms`)
+    root.setProperty('--phase-opacity-duration', `${totalMs}ms`)
+    root.setProperty('--phase-shape-delay', `0ms`)
+    root.setProperty('--phase-opacity-delay', `0ms`)
   }
 
   function getChromeArtworkTransition(totalMs, revealed) {
     const scaleEasing = revealed
       ? chromeArtworkScaleRevealEasing
       : chromeArtworkScaleHideEasing
-    if (isChromeSinglePhase()) return `transform ${totalMs}ms ${scaleEasing}`
-    return `transform ${totalMs}ms ${scaleEasing}, filter ${totalMs}ms linear, -webkit-filter ${totalMs}ms linear`
+    return `transform ${totalMs}ms ${scaleEasing}`
   }
 
   function setChromeArtworkState(revealed, totalMs, withTransition) {
@@ -1064,12 +704,12 @@
     s.opacity = '1'
     if (revealed) {
       s.transform = 'translateZ(0) scale(1)'
-      s.filter = isChromeSinglePhase() ? 'none' : 'blur(0)'
-      s.webkitFilter = isChromeSinglePhase() ? 'none' : 'blur(0)'
+      s.filter = 'none'
+      s.webkitFilter = 'none'
     } else {
       s.transform = `translateZ(0) scale(${chromeArtworkHiddenScale})`
-      s.filter = isChromeSinglePhase() ? 'none' : getChromeArtworkHiddenFilter()
-      s.webkitFilter = isChromeSinglePhase() ? 'none' : getChromeArtworkHiddenFilter()
+      s.filter = 'none'
+      s.webkitFilter = 'none'
     }
   }
 
@@ -1086,7 +726,6 @@
   }
 
   function parentChromeRevealLayers() {
-    if (!isChromeSinglePhase()) return
     const layer = ensureChromeBlurLayer()
     if (!layer) return
     if (typeof BG !== 'undefined' && BG && BG.elt && BG.elt.parentNode !== layer) {
@@ -1097,7 +736,7 @@
   }
 
   function setChromeSharedBlurState(revealed, withTransition) {
-    if (!isChromeSinglePhase()) return
+    if (isWebKitClass) return
     const layer = ensureChromeBlurLayer()
     if (!layer) return
     parentChromeRevealLayers()
@@ -1118,7 +757,7 @@
   }
 
   function startChromeHiddenPulse() {
-    if (isWebKitClass || !isChromeSinglePhase()) return
+    if (isWebKitClass) return
     updateChromeDummyPulseVars()
     if (_dummy) {
       const core = _dummy.querySelector('#reveal-dummy-core')
@@ -1188,7 +827,7 @@
       _dummy.id = 'reveal-dummy'
     }
     ensureDummyCore()
-    const parent = isChromeSinglePhase() ? ensureChromeBlurLayer() : document.body
+    const parent = ensureChromeBlurLayer()
     parent.appendChild(_dummy)
   }
 
@@ -1312,21 +951,9 @@
     if (typeof BG === 'undefined' || !BG || !BG.elt) return
     _frameElt = BG.elt
     if (isWebKitClass) return
-    const s = _frameElt.style
-    if (isChromeSinglePhase()) {
-      parentChromeRevealLayers()
-      setChromeSharedBlurState(false, false)
-      setChromeArtworkState(false, revealDurationMs, false)
-      void _frameElt.offsetWidth
-      return
-    }
-    s.transition = 'none'
-    s.webkitTransition = 'none'
-    s.willChange = 'opacity'
-    s.transform = 'none'
-    s.filter = 'none'
-    s.webkitFilter = 'none'
-    s.opacity = '0'
+    parentChromeRevealLayers()
+    setChromeSharedBlurState(false, false)
+    setChromeArtworkState(false, revealDurationMs, false)
     void _frameElt.offsetWidth
   }
 
@@ -1358,19 +985,6 @@
     document.body.appendChild(_safariOverlay)
   }
 
-  //FUNC: armLoadingText() : void
-  // No-op in new arch — overlay timing is CSS-driven via .building class.
-  // Kept for API compatibility (called from legacy code paths during transition).
-  function armLoadingText() { }
-
-  //FUNC: disarmLoadingText() : void
-  // No-op for Safari. Still called from the Chrome revealNow() path;
-  // must remain safe to call on both engines.
-  function disarmLoadingText() { }
-
-  //FUNC: revealNowSafari() : void
-  // Safari-only cold-load reveal choreography. ArtBlocks tokens load once,
-  // so this path intentionally does not support a reverse/hide phase.
   function revealNowSafari() {
     ensureSafariDummy()
     _currentMetrics = getCurrentFrameMetrics()
@@ -1407,33 +1021,15 @@
       cleanupSafariArtworkRasterState(myToken)
       if (_safariOverlay) _safariOverlay.classList.remove('building')
       setTimeout(() => {
-        if (myToken === _buildToken) _rebuildInFlight = false
+        if (myToken === _buildToken) _devHooks?.onRevealComplete?.()
       }, safariTransitionMs)
-      console.log('[RevealAnim] revealNowSafari: Safari cold-load reveal started')
     })
   }
 
-  //FUNC: revealNow() : void
-  // Forward direction. Chrome has two switchable variants:
-  //   single-phase: dummy morph/scale/opacity, artwork scale, and shared
-  //                 wrapper blur transition together; artwork opacity stays 1.
-  //   two-phase:    preserved reference path using CSS transition-delay
-  //                 plus the original artwork opacity flip.
-  //
-  // Reads the *new* frame metrics from BGRID and writes them into
-  // CSS vars before flipping the .revealed class — so the morph
-  // tween targets the new shape.
   function revealNow() {
     if (isWebKitClass) return revealNowSafari()
-    disarmLoadingText()
     _currentMetrics = getCurrentFrameMetrics()
-    if (!isChromeSinglePhase()) updateLayoutVars(_currentMetrics)
     setDirectionTiming(revealDurationMs, true)
-    // Force a style recalc on the dummy BEFORE flipping .revealed so
-    // Safari has the up-to-date --phase-* transition durations cached
-    // against the element. Without this, Safari sometimes processes
-    // the class flip with stale (or zero) transition durations and
-    // snaps directly to the .revealed end-state.
     if (_dummy) {
       handoffChromePulseToReveal()
       void _dummy.offsetWidth
@@ -1445,119 +1041,24 @@
       }
     }
 
-    if (isChromeSinglePhase()) {
-      setChromeSharedBlurState(true, true)
-      if (_frameElt) {
-        const s = _frameElt.style
-        s.willChange = 'transform, filter'
-        s.transition = getChromeArtworkTransition(revealDurationMs, true)
-        s.webkitTransition = s.transition
-        void _frameElt.offsetWidth
-        void getComputedStyle(_frameElt).transform
-        void getComputedStyle(_frameElt).filter
-      }
-      if (_dummy) _dummy.classList.add('revealed')
-      setChromeArtworkState(true, revealDurationMs, true)
-      const myToken = _buildToken
-      setTimeout(() => {
-        if (myToken === _buildToken) {
-          _rebuildInFlight = false
-          clearReloadRotationSnapshot()
-        }
-      }, revealDurationMs)
-      return
-    }
-
-    if (_dummy) _dummy.classList.add('revealed')
-    if (_dummy) {
-      const cs = getComputedStyle(document.documentElement)
-      const dcs = getComputedStyle(_dummy)
-      console.log('[RevealAnim] revealNow phase vars',
-        'shape-dur=', cs.getPropertyValue('--phase-shape-duration').trim(),
-        'shape-delay=', cs.getPropertyValue('--phase-shape-delay').trim(),
-        'opacity-dur=', cs.getPropertyValue('--phase-opacity-duration').trim(),
-        'opacity-delay=', cs.getPropertyValue('--phase-opacity-delay').trim(),
-        'transition=', dcs.transition,
-      )
-    }
-    const myToken = _buildToken
-    const flipAt = phaseOffset * revealDurationMs
-    setTimeout(() => {
-      if (myToken !== _buildToken) return
-      if (!_frameElt) return
+    setChromeSharedBlurState(true, true)
+    if (_frameElt) {
       const s = _frameElt.style
-      s.transition = 'none'
-      s.webkitTransition = 'none'
-      s.opacity = '1'
-    }, flipAt)
+      s.willChange = 'transform, filter'
+      s.transition = getChromeArtworkTransition(revealDurationMs, true)
+      s.webkitTransition = s.transition
+      void _frameElt.offsetWidth
+      void getComputedStyle(_frameElt).transform
+      void getComputedStyle(_frameElt).filter
+    }
+    if (_dummy) _dummy.classList.add('revealed')
+    setChromeArtworkState(true, revealDurationMs, true)
+    const myToken = _buildToken
     setTimeout(() => {
-      if (myToken === _buildToken) {
-        _rebuildInFlight = false
-        clearReloadRotationSnapshot()
-      }
+      if (myToken === _buildToken) _devHooks?.onRevealComplete?.()
     }, revealDurationMs)
   }
 
-  //FUNC: hideNow() : void
-  // Reverse direction. The single-phase Chrome variant keeps artwork opacity
-  // at 1 while the dummy fades/morphs back to the hidden pill; the two-phase
-  // variant preserves the previous staged hide choreography.
-  // Chrome-only dynamic generator path. Safari ignores 'n' for the
-  // ArtBlocks submission build and never enters this reverse phase.
-  //
-  // Captures the CURRENT (about-to-be-replaced) frame metrics so the
-  // dummy's stage-2 morph starts from the shape of the artwork that
-  // was just displayed (not the next one).
-  function hideNow() {
-    if (isWebKitClass) return
-    latchReloadRotationSnapshot()
-    if (typeof BG !== 'undefined' && BG && BG.elt) _frameElt = BG.elt
-    _currentMetrics = getCurrentFrameMetrics()
-    if (isPreRotatedReloadActive()) updateLayoutVarsWithoutDummyTransition(_currentMetrics)
-    else updateLayoutVars(_currentMetrics)
-    captureNeutralHorizontalHiddenPill()
-    setDirectionTiming(hideDurationMs, false)
-    if (_dummy) {
-      void _dummy.offsetWidth
-      void getComputedStyle(_dummy).transition
-    }
-    const myToken = _buildToken
-
-    if (isChromeSinglePhase()) {
-      setChromeSharedBlurState(false, true)
-      if (_frameElt) {
-        const s = _frameElt.style
-        s.willChange = 'transform, filter'
-        s.transition = getChromeArtworkTransition(hideDurationMs, false)
-        s.webkitTransition = s.transition
-        void _frameElt.offsetWidth
-        void getComputedStyle(_frameElt).transform
-        void getComputedStyle(_frameElt).filter
-      }
-      if (_dummy) _dummy.classList.remove('revealed')
-      setChromeArtworkState(false, hideDurationMs, true)
-      setTimeout(() => {
-        if (myToken === _buildToken) startChromeHiddenPulse()
-      }, hideDurationMs)
-      return
-    }
-
-    if (_dummy) _dummy.classList.remove('revealed')
-    const flipAt = (1 - phaseOffset) * hideDurationMs
-    setTimeout(() => {
-      if (myToken !== _buildToken) return
-      if (!_frameElt) return
-      const s = _frameElt.style
-      s.transition = 'none'
-      s.webkitTransition = 'none'
-      s.opacity = '0'
-    }, flipAt)
-  }
-
-  //FUNC: resetForRebuild() : void
-  // Bumps the build token. Called from the patched teardown() hook.
-  // The .building class stays on throughout Safari cold-load build;
-  // revealNowSafari() removes it after the build settles.
   function resetForRebuild() {
     _buildToken++
     _frameElt = null
@@ -1566,6 +1067,8 @@
   //SECT: Hook ProtoBatch + p5 lifecycle
   function installHooks() {
     if (typeof ProtoBatch === 'undefined') return false
+    if (window._revealHooksInstalled) return true
+    window._revealHooksInstalled = true
 
     const origBuild = ProtoBatch.prototype.buildFromHash
     const origTeardown = ProtoBatch.prototype.teardown
@@ -1576,7 +1079,7 @@
       // Chrome only: reset dummy to pill geometry before build.
       // Safari keeps its own path isolated for now.
       if (!isWebKitClass) {
-        if (!shouldPreserveNeutralHorizontalHiddenPill()) updateLayoutVars(defaultFrameMetrics)
+        if (!_devHooks?.shouldPreserveHiddenPill?.()) updateLayoutVars(defaultFrameMetrics)
         setChromeSharedBlurState(false, false)
         startChromeHiddenPulse()
       }
@@ -1584,21 +1087,12 @@
       const runBuild = () => {
         const result = origBuild.apply(this, arguments)
 
-        // Stop animation on Safari — bitmap-quality matters more than
-        // motion when each frame costs 10s.
         if (isWebKitClass && typeof globalControls !== 'undefined' && globalControls) {
           globalControls.animated = false
         }
 
-        // Re-sync layout vars from the freshly-built BackGrid so the
-        // dummy's revealed-state geometry matches the new artwork. This must
-        // happen before Chrome single-phase hides BG.elt with transform scale,
-        // otherwise DOM rect measurements read the deliberately scaled state.
-        syncArtworkRotationBeforeRevealLayout()
+        _devHooks?.beforeRevealLayoutSync?.()
         updateLayoutVars(getCurrentFrameMetrics())
-        // Prep artwork synchronously so the live SVG never reaches the
-        // screen sharp/visible on Chrome. Safari prepares its artwork
-        // inside revealNowSafari() for the cold-load reveal.
         prepArtwork()
 
         if (isWebKitClass) {
@@ -1641,17 +1135,13 @@
         return undefined
       }
 
-      if (isChromeSinglePhase()) {
-        const scheduledToken = _buildToken
-        const startBuild = () => {
-          if (scheduledToken !== _buildToken) return
-          runBuild()
-        }
-        requestAnimationFrame(() => requestAnimationFrame(startBuild))
-        return undefined
+      const scheduledToken = _buildToken
+      const startBuild = () => {
+        if (scheduledToken !== _buildToken) return
+        runBuild()
       }
-
-      return runBuild()
+      requestAnimationFrame(() => requestAnimationFrame(startBuild))
+      return undefined
     }
 
     ProtoBatch.prototype.teardown = function () {
@@ -1659,63 +1149,14 @@
       return origTeardown.apply(this, arguments)
     }
 
-    console.log(
-      '[RevealAnim] hooks installed; isWebKitClass =', isWebKitClass,
-    )
-
-    // Backup keydown handler at the window level. p5's keyPressed() can
-    // miss keys on Safari when focus drifts during a long synchronous
-    // SVG paint or when key events queue up during the ~10s rasterization.
-    // Listening on window directly bypasses focus quirks entirely.
-    //
-    // Uses CAPTURE phase so this handler runs BEFORE p5's document-level
-    // keydown listener — we can stopImmediatePropagation() to prevent
-    // double-firing through gui.js's keyPressed().
-    if (!window._revealKeyHookInstalled) {
-      window._revealKeyHookInstalled = true
-      window.addEventListener('keydown', (e) => {
-        const t = e.target
-        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-        if (e.metaKey || e.ctrlKey || e.altKey) return
-        if (e.key === 'n' || e.key === 'N') {
-          if (isWebKitClass) {
-            e.preventDefault()
-            e.stopImmediatePropagation()
-            return
-          }
-          if (typeof protoBatch !== 'undefined' && protoBatch) {
-            // Debounce check FIRST — before blocking any other handlers.
-            // The original bug was calling stopImmediatePropagation() before
-            // this check: when stuck true, it silently ate every 'n' press.
-            if (_rebuildInFlight) {
-              e.preventDefault()
-              e.stopImmediatePropagation()
-              return
-            }
-            _rebuildInFlight = true
-            e.preventDefault()
-            e.stopImmediatePropagation()
-
-            hideNow()
-            setTimeout(() => {
-              if (typeof protoBatch !== 'undefined' && protoBatch) {
-                prepRotationForReloadBuild()
-                protoBatch.buildFromNewSeed()
-              }
-            }, hideDurationMs + (isChromeSinglePhase() ? chromeHiddenPulseHoldMs : 0))
-          }
-        }
-      }, true)
-    }
+    _devHooks?.installRegenKeyHandler?.()
 
     return true
   }
 
-  //SECT: Initialization
   function init() {
     ensureStyles()
     ensureDummy()
-    if (!isWebKitClass) setChromeTransitionVariant(chromeTransitionVariant)
     updateLayoutVars(defaultFrameMetrics)
     if (!isWebKitClass) {
       setChromeSharedBlurState(false, false)
@@ -1729,11 +1170,54 @@
     window.addEventListener('resize', () => {
       updateLayoutVars(_currentMetrics)
     })
-    if (!installHooks()) {
-      // ProtoBatch not yet defined — defer.
-      const retry = () => { if (installHooks()) document.removeEventListener('DOMContentLoaded', retry) }
-      document.addEventListener('DOMContentLoaded', retry)
+    setTimeout(() => {
+      if (!installHooks()) {
+        const retry = () => { if (installHooks()) document.removeEventListener('DOMContentLoaded', retry) }
+        document.addEventListener('DOMContentLoaded', retry)
+      }
+    }, 0)
+  }
+
+  function buildDevCore() {
+    return {
+      isWebKitClass,
+      hideDurationMs,
+      chromeHiddenPulseHoldMs,
+      revealDurationMs,
+      hiddenScale,
+      defaultFrameMetrics,
+      blurUserUnits,
+      safariBlurUserUnits,
+      loadingTextSizeUserUnits: 3.1,
+      loadingTextShadowOffsetUserUnits: 0.4,
+      loadingTextShadowBlurUserUnits: 0.8,
+      getBuildToken: () => _buildToken,
+      getDummy: () => _dummy,
+      getFrameElt: () => _frameElt,
+      setFrameElt: (elt) => { _frameElt = elt },
+      getCurrentMetrics: () => _currentMetrics,
+      setCurrentMetrics: (m) => { _currentMetrics = m },
+      getMaskShapeElts,
+      measureCornerRadiiUu,
+      computeFrameSize,
+      updateLayoutVarsBase,
+      setUpdateLayoutVars: (fn) => { _updateLayoutVars = fn },
+      updateLayoutVars,
+      updateLayoutVarsWithoutDummyTransition,
+      setDirectionTiming,
+      setChromeSharedBlurState,
+      getChromeArtworkTransition,
+      setChromeArtworkState,
+      startChromeHiddenPulse,
+      getCurrentFrameMetrics,
+      setDevHooks: (hooks) => { _devHooks = hooks },
+      exposeDevApi: (api) => { Object.assign(window.RevealAnim, api) },
     }
+  }
+
+  function _installDevRegen(installer) {
+    if (typeof installer !== 'function') return
+    installer(buildDevCore())
   }
 
   if (document.readyState === 'loading') {
@@ -1742,20 +1226,13 @@
     init()
   }
 
-  //SECT: Public API
-  window.SafariCompatUX = {
+  window.RevealAnim = {
     isSafari,
     isWebKitClass,
-    chromeReferencePreset: CHROME_REFERENCE_PRESET,
-    chromeTransitionVariants: CHROME_TRANSITION_VARIANTS,
-    rotationReloadModes: ROTATION_RELOAD_MODES,
-    get chromeTransitionVariant() { return chromeTransitionVariant },
-    get rotationReloadMode() { return rotationReloadMode },
-    setChromeTransitionVariant,
-    setRotationReloadMode,
     syncRevealLayoutToArtwork,
     revealNow,
-    hideNow,
     resetForRebuild,
+    _installDevRegen,
   }
+  window.SafariCompatUX = window.RevealAnim
 })()

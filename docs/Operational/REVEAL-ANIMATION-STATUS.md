@@ -1,7 +1,7 @@
 # Reveal Animation Status Report
 *Last updated: 2026-05-05 (rev 8 - Chrome single-phase variant added)*
 
-> Handoff document for future work on `safariImageSwap.js`. The current
+> Handoff document for future work on `RevealAnimation.js` (formerly `safariImageSwap.js`). The current
 > priority is no longer a fully dynamic Safari generator. For Art Blocks,
 > token artworks load once from an immutable hash, so Safari work is now
 > scoped to the first page load only.
@@ -14,7 +14,7 @@
 
 ### Chrome
 
-Chrome now has two reveal variants in `safariImageSwap.js`:
+Chrome uses a single-phase reveal in `RevealAnimation.js` (two-phase variant archived in `archive/RevealAnimation-two-phase.js`):
 
 - `single-phase` (current default): dummy scale, opacity, bounds, and corner
   morph all transition together while artwork scale transitions at the same
@@ -32,7 +32,7 @@ Chrome now has two reveal variants in `safariImageSwap.js`:
 - `two-phase`: the previous Chrome reference choreography, preserved behind
   the switch for comparison and rollback.
 
-The recovery snapshot is `CHROME_REFERENCE_PRESET` in `safariImageSwap.js`,
+The recovery snapshot is `CHROME_REFERENCE_PRESET` in `RevealAnimation.js`,
 and the active variant is controlled by
 `window.SafariCompatUX.setChromeTransitionVariant('single-phase')` or
 `window.SafariCompatUX.setChromeTransitionVariant('two-phase')`. Safari work
@@ -137,9 +137,8 @@ Cold-load sequence:
 
 Current Safari key behavior:
 
-- `n`: swallowed by the capture-phase handler in `safariImageSwap.js`; no hide,
-  no teardown, no new hash.
-- `s`: not intercepted by `safariImageSwap.js`; `guiDev.js` handles PNG export.
+- `n`: Chrome — `RevealAnimationDev.js` capture handler (hide → regen). Safari — blocked (no teardown, no new hash).
+- `s`: not intercepted by reveal modules; `guiDev.js` handles PNG export.
 
 ---
 
@@ -245,7 +244,7 @@ Chrome still reads from `CHROME_REFERENCE_PRESET`; do not use Safari variables
 as a shared timing surface.
 
 Chrome single-phase variables live near the other Chrome values at the top of
-`safariImageSwap.js`:
+`RevealAnimation.js`:
 
 - `hiddenScale`: current dummy hidden scale, sourced from the preserved Chrome
   preset and used by both Chrome variants.

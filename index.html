@@ -53,13 +53,13 @@
   <script src="guiDev.js"></script>
   <!-- /DEV-ONLY -->
   <script src="ProtoBatch.js"></script>
-  <!-- DEV-ONLY: ProtoBatch extensions (after ProtoBatch.js) -->
+  <!-- DEV-ONLY: ProtoBatch + reveal extensions (exclude from submission bundle) -->
   <script src="testing/ProtoBatchDev.js"></script>
-
-  <!-- Safari/WebKit canvas-image-swap fallback. Must load AFTER ProtoBatch
-       (which it monkey-patches) and BEFORE sketch.js (whose setup() calls
-       buildFromHash). KNOWN-ISSUES § 9.15.6 / ROADMAP S1–S5. -->
-  <script src="safariImageSwap.js"></script>
+  <!-- /DEV-ONLY -->
+  <script src="RevealAnimation.js"></script>
+  <!-- DEV-ONLY -->
+  <script src="RevealAnimationDev.js"></script>
+  <!-- /DEV-ONLY -->
 
   <script src="ArtworkRotation.js"></script>
   <script src="sketch.js"></script>
