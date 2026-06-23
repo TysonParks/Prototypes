@@ -34,6 +34,13 @@ Split from monolithic `safariImageSwap.js`:
 - **Production:** [RevealAnimation.js](../RevealAnimation.js) — cold-load reveal, Safari loading overlay, `window.RevealAnim`
 - **Dev-only:** [RevealAnimationDev.js](../RevealAnimationDev.js) — `'n'` regen, `hideNow()`, rotation-reload modes
 
+## ProtoLayerObjects.js removals (2026-06)
+
+| File | Removed from | Status | Intent | Revive when |
+|------|--------------|--------|--------|-------------|
+| [ProtoLayer-unused.js](ProtoLayer-unused.js) | `ProtoLayer` | Unused | `_filterLoft`, `filterLoft`/`loft` getters, `padSize` getter | Filter loft experiments |
+| [ProtoLayer-interGrid.js](ProtoLayer-interGrid.js) | `ProtoLayer` + `Island` | Incomplete | `insetAmountToScale`, `createInterGrid` | Post-submission InterGrid work (`interCells` / `canHaveInterGrid` remain in production) |
+
 ### Symbols in `Grid-unused-api.js`
 
 - **Getters:** `gridBounds`, `takenBounds`, `cellPoints`, `cellsInAnIsland`, `biggestGroup`, `allSimpleSubShapesSegsCounterSorted`, `allInternalSimpleSubShapes`, `allSimpleInsideCorners`, `availableRows`, `availableColumns`, `gridCornerSegs`
