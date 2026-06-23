@@ -1530,6 +1530,18 @@ const lastHash = [
   '0xa6efe5a2ebefcff2df942e3a7ccb491bff95a650647b1eed7852d55f535eeefd', // 1520 METH: // cascade crop: !!!FIXED!!!
   '0x86ba04c820c09eda6009893cc63638b19b6f638e349572e82bf0f40a4ab90833', // thin depth bug: !!!FIXED!!!
   '0x9928c9c3fb4eaec7358d95b8c8cab36f93fa4f9e4ead29f503c5b4a6f768b779', // thin r-Out outline bug: //FUNC:
+  //------------------------------------------
+  //
+  //
+  //
+  // new deterministic hashes // METH:
+  //
+  //
+  //
+  //
+  //------------------------------------------
+  '0x171732f4287174394dca2a3d384d7a25e311da9cc87018cc62508f0b75008b8d', // thin depth bug: //FUNC:
+  '0xad319a2b58f3866122b0000fc462f591bf942a6bd37f4f80fc9472ba9eef7e4d', // thin r-Out outline bug: //FUNC:
 
 
 
