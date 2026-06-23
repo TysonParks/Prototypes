@@ -40,6 +40,15 @@ Split from monolithic `safariImageSwap.js`:
 |------|--------------|--------|--------|-------------|
 | [ProtoLayer-unused.js](ProtoLayer-unused.js) | `ProtoLayer` | Unused | `_filterLoft`, `filterLoft`/`loft` getters, `padSize` getter | Filter loft experiments |
 | [ProtoLayer-interGrid.js](ProtoLayer-interGrid.js) | `ProtoLayer` + `Island` | Incomplete | `insetAmountToScale`, `createInterGrid` | Post-submission InterGrid work (`interCells` / `canHaveInterGrid` remain in production) |
+| [ProtoLayer-material-experiments.js](ProtoLayer-material-experiments.js) | `Frame`, `ShapeGroup`, `neuMark_I` | Experimental | FAIL/EXP fill/stroke/palette swaps for alternate material looks | Paste snippets into cited draw methods |
+| [Frame-innerMask-cutout.js](Frame-innerMask-cutout.js) | `Frame.setBackGridGroup()` | Incomplete | Inner cut at `scaled(0)` + SVG mask on combo cuts (mode 0 full backing) | Complex outer frame wrapping internal grid |
+| [StairsToDiagonals.js](StairsToDiagonals.js) | `SegPath` + `VertPath` + `Frame` | Incomplete | Convert rectilinear stair corners to diagonal segments | Post-Prototypes launch |
+
+## drawAsSVG.js removals (2026-06)
+
+| File | Removed from | Status | Intent | Revive when |
+|------|--------------|--------|--------|-------------|
+| [StairsToDiagonals.js](StairsToDiagonals.js) | `SegPath` + `VertPath` | Incomplete | `diagonalsPath`, `stairs`, `stairSets`, `withDiagonals()`, `convertToDiagonals()` | Post-Prototypes launch (live `ProtoSegment.isStair` unchanged) |
 
 ### Symbols in `Grid-unused-api.js`
 

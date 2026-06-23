@@ -392,18 +392,8 @@ class Frame extends ProtoLayer {
 
     const segPaths = shapes
       .map(s => s.simpleSegPaths).flat()
-    // .map(p => p.stairs).flat()
     DeBug.log(`backGroup segPaths`, segPaths)
     DeBug.log(`backGroup segPaths parts`, segPaths[0].path.map(s => s.part))
-
-    // const diagPaths = segPaths.map(p => p.withDiagonals())
-    // DeBug.log(`segPaths`, segPaths[0].path.map(s => [s.id, s.start.string, s.end.string]))
-    // DeBug.log(`segPaths`, segPaths[0].diagonalsPath.map(s => [s.id, s.start.string, s.end.string]))
-    // DeBug.log(`diagPaths`, diagPaths[0])
-    // DeBug.log(`diagPaths cubicVerts`, diagPaths[0].map(s => [s.start.string, s.cubicVerts.start?.string, s.cubicVerts.end?.string, s.end.string]))
-
-    // shapes.forEach((s, i) => s.simpleSubShapes = diagPaths)
-    // backGrid.maximizeCuddles()
 
     //NOTE: calculate padWidth
     DeBug.log(``)
@@ -430,28 +420,6 @@ class Frame extends ProtoLayer {
       loftScale: 1 / 1,
       addBacking: false,
     })
-    //NOTE: this should be used as the inner mask of the frame
-    // this.backGroup.cutIslands({
-    //   // profile: Profile.jIn,        // no profile creates flat backing
-    //   isFrame: true,
-    //   layerStart: scaled(0),
-    //   amount: 1,
-    //   loftScale: 1 / 1,
-    //   addBacking: false,
-    // })
-
-    // const
-    //   innerMaskDefs = createSVGElt(`defs`).parent(this.svgElt),                  // create <defs> element  
-    //   innerMaskID = `${this.id}-innerMask`,                       // ID for mask
-    //   innerMask = createSVGElt(`mask`)                  // create <mask> element
-    //     .id(innerMaskID)
-    //     .parent(innerMaskDefs),
-
-    //   gridClone = this.backGroup.shapeGroups[1].svgGroupElt.elt.cloneNode(true),
-    //   paths = gridClone.querySelectorAll('path')
-
-    // paths.forEach(p => p.setAttribute(`fill`, `black`))
-    // innerMask.elt.appendChild(gridClone)
 
     //NOTE: make real cuts
     cuts.forEach(cut => {
@@ -463,27 +431,9 @@ class Frame extends ProtoLayer {
         amount: cut.amount,
         loftScale: 1 / 1,
       })
-      // const thisGroup = this.backGroup.shapeGroups.last
-      // if (thisGroup.type === 'ShapeGroup-combo')
-      //   thisGroup.svgGroupElt.attribute(`mask`, `url(#${innerMaskID})`)
     })
 
     DeBug.log(`backGroup`, this.backGroup)
-
-    //NOTE: FAIL/EXP USAGE
-    // this.backGroup.shapeGroups.forEach(sg => {
-    //   // DeBug.log(`svgGroupElt`, sg.svgGroupElt)
-
-    //   sg.svgGroupElt
-    //   // .attribute(`fill`, frameColor)
-    //   // .attribute('fill', protoColor(130))
-    //   // .attribute('fill', `green`)
-    //   // .attribute('opacity', .5)
-    //   // sg.drawElement()
-    //   // .attribute('opacity', 0)
-    //   // .attribute('stroke', 'white')
-    //   // .attribute('stroke-width', `.0625`)
-    // })
 
     if (this.mask) this.maskFrame()
   }
@@ -1794,7 +1744,6 @@ class ShapeGroup extends ProtoLayer {
       // .attribute('fill-rule', 'evenodd')
       .viewBox(this.anchor, this.size, this.padding)
       .layout(this.anchor, this.size, this.padding)
-    // .attribute(`fill`, frameColor)
   }
   //METH: createBBoxKeeper()
   createBBoxKeeper() {
@@ -1830,13 +1779,6 @@ class ShapeGroup extends ProtoLayer {
 
       if (!this.masks.isEmpty) {                              // if there are masks, create a mask group
         const outsetShade = this.cut.profile.hasOutsetShade   //  outsetShade determines mask fill style
-
-        // const mult = 1
-        // const randomLCH = (l) => {
-        //   const hue = R.random_num(0, 360)
-        //   const chroma = R.random_num(.125, .125)
-        //   return `oklch(${l} ${chroma} ${hue})`
-        // }
 
         this.maskGroupElt = createElementNS(xmlns, 'g')
           .id(`${this.id}-maskGroup`)
@@ -1977,134 +1919,8 @@ class ShapeGroup extends ProtoLayer {
     }
 
     this.svgGroupElt
-      // .viewBox(this.insetAnchor, this.insetSize, this.padding)
-      // .layout(this.insetAnchor, this.insetSize, this.padding)
-      // .viewBox(this.anchor, this.size, this.padding)
-      // .layout(this.anchor, this.size, this.padding)
       .attribute(`fill`, frameColor)
-    // .attribute('overflow', 'visible')
-    // .attribute(`filterUnits`, `userSpaceOnUse`)
-    // .attribute(`primitiveUnits`, `userSpaceOnUse`)
-    // .attribute('fill', protoColor(230))
-    // .attribute('fill', lchcol02)
-    // .attribute('fill', achromic(0.9))
-    // .attribute('fill', 'red')
-    // .attribute(`pathLength`, 12)
-    // .attribute('stroke', `blue`)
-    // .attribute(`stroke-dasharray`, `0 1 `)
-    // .attribute(`stroke-linecap`, `round`)
-
-    // .attribute('fill-opacity', 1)
-    // .attribute('fill-opacity', 0)
-    // .attribute('stroke-width', this.grid.cellRadius * 1.4)
-    // .attribute('stroke-opacity', 1)
-    // .attribute('stroke-width', this.grid.cellRadius * .125)
-
-    // .attribute('stroke-width', this.cellGroup.isBackGroup ? 0 : this.grid.cellRadius * .25)
-    // .attribute('stroke-opacity', this.cellGroup.isBackGroup ? 0 : 1)
-    // .attribute('fill-opacity', this.cellGroup.isBackGroup ? 1 : 0)
-    // DeBug.warn(`ShapeGroup`, this.id)
-    // DeBug.warn(`this.padding`, this.padding)
-    // DeBug.warn(`this.cut`, this.cut)
-
-
-    const vintage = [
-      [221, 179, 101],
-      [124, 82, 134],
-      [237, 124, 75],
-      [28, 142, 184],
-      [57, 144, 159],
-      [191, 45, 54],
-      [73, 184, 232],
-    ]
-    const sunset = [
-      [215, 19, 39],
-      [250, 146, 49],
-      [131, 203, 223],
-      [30, 21, 55],
-      [238, 204, 112],
-      [246, 114, 43],
-    ]
-    const sunset2 = [
-      [222, 19, 39],
-      [254, 206, 88],
-      [252, 154, 49],
-      [235, 99, 39],
-      [245, 189, 39],
-    ]
-    const london = [
-      [242, 54, 74],
-      [199, 186, 176],
-      [6, 83, 182],
-      [86, 202, 250]
-    ]
-    const blues = [
-      [30, 86, 185],
-      [7, 59, 144],
-      // [5, 114, 212],
-      // [59, 183, 250],
-      [15, 30, 55],
-    ]
-    const vapor = [
-      [32, 154, 144],
-      [132, 22, 119],
-      [117, 27, 99],
-      [55, 120, 103],
-      [32, 14, 38]
-    ]
-    const grays = [
-      [30, 30, 34],
-      [50, 59, 52],
-      // [96, 101, 102],
-      [59, 62, 69],
-      [15, 20, 23],
-    ]
-    const bw = [[0, 0, 0], [255, 255, 255]]
-    const randomTransit = (palette) => {
-      //  const val =R.random_choice(['#f22', '#48f', '#dd0', '#0'])
-      const val = R.random_choice(palette)
-      return protoColor(...val)
-    }
-    const randomTransit2 = () => {
-      return R.random_choice(['#f26', '#22e', '#ff0', '#0'])
-    }
-
-    const randomLCH = (l) => {
-      const hue = R.random_num(0, 360)
-      const chroma = R.random_num(.125, .125)
-      return `oklch(${l} ${chroma} ${hue})`
-    }
-    if (this.isFrame) {
-
-      this.svgGroupElt
-      // .attribute('fill', 'white')
-      // .attribute('fill', 'black')
-      // .attribute('fill', R.random_choice(['white', 'black']))
-      // .attribute('fill', achromic(.3))
-      // .attribute('fill', randomLCH(.9))
-      // .attribute('fill', randomTransit(vintage))
-      // .style(`background`, `linear-gradient(45deg, blue, red)`)
-      // .attribute(`overflow`, `visible`)
-      // .blur(R.random_choice([0, R.random_num(1, 2)]))
-    } else {
-      this.svgGroupElt
-      // .attribute('fill', achromic(1))
-      // .attribute('fill', randomLCH(.9))
-      // .attribute('fill', 'white')
-      // .attribute('fill', R.random_choice(['white', 'black']))
-      // .attribute('fill-opacity', .5)
-      // .attribute('fill', randomTransit(sunset))
-      // .blur(R.random_num(0, 1))
-      // .attribute('stroke', randomTransit(bw))
-      // .attribute(`stroke-dasharray`, `2 2`)
-      // .attribute(`stroke-linecap`, `round`)
-      // .attribute('stroke-width', R.random_num(.25, 1))
-      // .style('mix-blend-mode', `difference`)
-      // .blur(R.random_choice([0, R.random_num(0, 1)]))
-      // .attribute(`overflow`, `visible`)
-    }
-
-    this.svgGroupElt.applyFilter(this.filter)
+      .applyFilter(this.filter)
     this.createMaskGroup()                       // § 9.13.7 Step 2: re-enabled
   }
 }
