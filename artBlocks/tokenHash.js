@@ -1542,6 +1542,8 @@ const lastHash = [
   //------------------------------------------
   '0x171732f4287174394dca2a3d384d7a25e311da9cc87018cc62508f0b75008b8d', // thin depth bug: //FUNC:
   '0xad319a2b58f3866122b0000fc462f591bf942a6bd37f4f80fc9472ba9eef7e4d', // thin r-Out outline bug: //FUNC:
+  '0xe13dfb481b1099ab606f3a95bf324c7929df54b4151db62168d554e47ea6c7f7', // Proximal Wrap: //FUNC:
+  '0x329f10f0906785095b9301809c607575994c6009cc52ef73652ad1e51ea5ecfd', // Proximal Wrap: //FUNC:
 
 
 
