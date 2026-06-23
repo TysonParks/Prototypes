@@ -29,13 +29,16 @@
 
 ## 1. Deployment Exclusion
 
-The `testing/` folder and `docs/` folder are **development-only**.
-When building for production (Art Blocks or minified standalone),
-exclude:
+The `testing/` folder, `docs/` folder, `guiDev.js`, `archive/`, and dat.GUI are **development-only**.
+When building for production (Art Blocks or minified standalone), see
+[SUBMISSION-MANIFEST.md](SUBMISSION-MANIFEST.md) for the full include/exclude list.
 
 ```
 testing/              ← all files
-docs/                 ← all files
+docs/                 ← all files (except bundled comments stripped at E2)
+archive/              ← legacy experiments (Arecibo, Unused)
+guiDev.js             ← dev GUI + export shortcuts
+libraries/dat.gui.min.js
 ```
 
 In `index.html`, testing scripts are loaded inside a `<!-- DEV-ONLY -->`
@@ -46,9 +49,12 @@ Current dev-only scripts:
 
 ```text
 testing/WrapperTestHarness.js
+testing/FeatureBatchAnalyzer.js
 testing/FilterDebugHarness.js
 testing/WrapperDebugOverlay.js
+testing/ProtoBatchDev.js
 testing/testMess.js
+guiDev.js
 ```
 
 ---

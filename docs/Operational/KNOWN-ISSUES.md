@@ -3079,9 +3079,10 @@ baseline, no regret debt.
 
 ## 9.16 ProtoBatch Teardown Completeness (Open)
 
-**Status:** Open. Low priority for ArtBlocks (full page reload per
-token), high priority for the public generator (long-lived sessions
-with many `n` keypresses).
+**Status:** Possibly mitigated (2026-06). Not reproduced in ~1 month of active
+dev. Triage rule unchanged — treat as leading suspect if `n`-key degradation
+returns. Low priority for ArtBlocks (full page reload per token); monitor for
+public generator (long-lived sessions).
 
 **Symptom.** After one or more `n` (new seed) keypresses, the build
 occasionally lands in a degraded state:

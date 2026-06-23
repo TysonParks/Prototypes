@@ -69,7 +69,7 @@ Sub-steps within that pipeline:
 | 11 | **Sprint bugs** (saved-seed issues) | B* | ✅ Complete | Submission scope; deferred items in manifest |
 | 12 | AB Features cleanup (resume) | F3 | ✅ Complete | v2 tagged `features-calc-v2-pre-release` |
 | 13 | Batch feature analyzer | F4 | ✅ Complete | `runFeatureBatchAnalyzer({ count: 5000 })` |
-| 14 | Code cleanup pass | E1 | Not started |
+| 14 | Code cleanup pass | E1 | ✅ Complete | GUI split, submission manifest, ProtoBatch dev isolation |
 | 15 | Export Pipeline setup (answer-dependent) | E2 | Planned |
 | 16 | Integration testing against ArtBlocks test bench | E3 | Planned |
 | 17 | Buffer / overflow / final upload | — | Planned |
@@ -610,27 +610,13 @@ The remaining productive avenues, in order:
 
 ### Feature Notes
 
-**F3 — AB Features cleanup (2026-06-17):**
+**F3 — AB Features cleanup (2026-06-17):** ✅ Complete at `features-calc-v2-pre-release`.
+`window.$features` wired, internal rarity metrics live, `shapeInterpreter` PRNG
+removed, `ABFeaturesScript.js` collapsed. See [FEATURES-AND-DETERMINISM.md](FEATURES-AND-DETERMINISM.md).
 
-Work started in `Features.js` then paused: any `#calcFeatures()` change shifts
-PRNG consumption and breaks determinism for `lastHash` saved seeds. Sprint order
-is now **bugs first → Features resume → batch analyzer**.
-
-Partial changes already made (uncommitted):
-
-- `publicFeatures`: `gridWidth`/`gridHeight`, split group counts, `groupDensity`,
-  `insideCuts`/`insideCutStyle`; removed broken `likelyFailures` keys and
-  `shapeInterpreter` from output.
-- Comment placeholders for five **internal rarity metrics** (not marketplace
-  local rarity).
-- Enum comment hygiene (`gridXFlex`/`gridXMagic` marked private).
-
-Still required: `window.$features` assignment, `uniformCutsStyle`/`cutStyleCount`
-public reveal, remove or wire `shapeInterpreter` in calc chain, paste final
-classes into bundle script, git tag `features-calc-v1-submission` before further
-calc changes.
-
-Canonical reference: [FEATURES-AND-DETERMINISM.md](FEATURES-AND-DETERMINISM.md).
+**E1 — Code cleanup (2026-06):** GUI split (`appControls.js` / `guiDev.js`),
+[SUBMISSION-MANIFEST.md](SUBMISSION-MANIFEST.md), `ArtworkRotation.js` extract,
+`ProtoBatchDev.js`, submission `tokenHash` profile. See manifest for E2 bundle input.
 
 **F4 — Batch feature analyzer:**
 
@@ -706,7 +692,7 @@ predictable for evaluation without requiring a full nested-grid system.
 
 | ID | Task | Priority | Est. Time | Depends On | Status |
 |----|------|----------|-----------|------------|--------|
-| E1 | **Code cleanup pass** — remove dead code, orphaned comments, disabled debug blocks; verify all `DeBug.*` calls are guarded or removable | P1 | 1 day | — | ❌ Not started |
+| E1 | **Code cleanup pass** — remove dead code, orphaned comments, disabled debug blocks; verify all `DeBug.*` calls are guarded or removable | P1 | 1 day | — | ✅ Done |
 | E2 | **Bundle script** — script or Makefile target that concatenates source files in load order into a single output file | P1 | 0.5–1 day | Q1, Q4, Q6, Q7 | ❌ Not started |
 | E3 | **Minification step** (answer-dependent) — add minification (whitespace/comment strip only, no obfuscation) as an optional pipeline step | P2 | 0.5 day | Q2, Q3, E2 | ❌ Not started |
 | E4 | **Visual parity validation** — run the bundled/minified output against 3–5 known hashes and confirm renders match dev output | P1 | 0.5–1 day | E2, E3 | ❌ Not started |

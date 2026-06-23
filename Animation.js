@@ -58,6 +58,8 @@ class AnimationController {
       maxChaseSpeedRatio: clockOptions.maxChaseSpeedRatio ?? 2,
       catchUpCoastRatio: clockOptions.catchUpCoastRatio ?? 0.25,
       syncToleranceDeg: clockOptions.syncToleranceDeg ?? 0.15,
+      userTapMinTravelDeg: clockOptions.userTapMinTravelDeg ?? 12,
+      userTapStartSlopeRatio: clockOptions.userTapStartSlopeRatio ?? 0.4,
     }
   }
 
@@ -126,11 +128,13 @@ class AnimationController {
     if (resetLight) this.applyScreenLightAngle(screenAngle)
   }
 
-  startClockSync() {
+  startClockSync({ userInitiated = false } = {}) {
     const now = this.clockNowMs()
     this.resetLightUpdateFPS()
     this.currentScreenAngle = this.readRenderedScreenAngle()
-    this.syncTransition = this.planClockSync(this.currentScreenAngle, now)
+    this.syncTransition = userInitiated
+      ? this.planUserInitiatedClockSync(this.currentScreenAngle, now)
+      : this.planClockSync(this.currentScreenAngle, now)
     this.applyScreenLightAngle(this.currentScreenAngle)
     this.frameStartTime = performance.now()
   }
@@ -139,6 +143,33 @@ class AnimationController {
     this.lightUpdateFPS = 0
     this.lightUpdateFrameCount = 0
     this.lightUpdateSampleStart = performance.now()
+  }
+
+  // Tap/touch start: always chase forward with visible initial motion (no coast/hold dead zones).
+  planUserInitiatedClockSync(currentAngle, startMs) {
+    const
+      clockSpeed = this.clockDegreesPerMs(),
+      startAngle = this.normalizeDegree(currentAngle),
+      minTravel = this.clock.userTapMinTravelDeg ?? 12,
+      durationMs = this.clamp(
+        this.clock.minChaseMs * 1.2,
+        this.clock.minChaseMs,
+        this.clock.maxChaseMs * 0.65,
+      ),
+      endMs = startMs + durationMs,
+      targetPosition = this.normalizeDegree(this.globalClockPosition(endMs))
+    let travelDeg = this.forwardDelta(startAngle, targetPosition)
+    if (travelDeg < minTravel) travelDeg = minTravel
+    return {
+      mode: 'chase',
+      userInitiated: true,
+      startMs,
+      endMs,
+      durationMs,
+      startAngle,
+      travelDeg,
+      endVelocityDegPerMs: clockSpeed,
+    }
   }
 
   planClockSync(currentAngle, startMs) {
@@ -207,10 +238,13 @@ class AnimationController {
 
   chaseAngleAt(nowMs, transition) {
     const t = this.clamp((nowMs - transition.startMs) / transition.durationMs, 0, 1)
+    const startSlope = transition.userInitiated
+      ? transition.travelDeg * (this.clock.userTapStartSlopeRatio ?? 0.4)
+      : 0
     const distance = this.hermiteDistance(
       t,
       transition.travelDeg,
-      0,
+      startSlope,
       transition.endVelocityDegPerMs * transition.durationMs,
     )
     return this.normalizeDegree(transition.startAngle + distance)

@@ -46,7 +46,7 @@ Safari is now scoped to:
 2. Loading text appears consistently during WebKit's slow SVG build.
 3. The built artwork transitions consistently to the revealed state.
 4. The `n` key is ignored completely on Safari.
-5. The `s` key remains available for capture/debug output through `gui.js`.
+5. The `s` key remains available for capture/debug output through `guiDev.js`.
 
 The Safari transition, loading text, hidden-state pulse, and final raster
 quality are user-approved and should be treated as complete for the Art Blocks
@@ -69,8 +69,9 @@ The final Safari implementation solved four requirements simultaneously:
 Note: A separate Chrome-only rotation feature has been implemented and
 integrated with the reveal/build choreography. The generator now supports an
 initial `Rotation` PostParam (defaults to `Up` / 0°) and interactive keyboard
-rotation in Chrome; rotating light timing still needs fine-tuning and should be
-validated against rotated states during final QA.
+rotation in Chrome. Rotational **light** animation is tap/touch-to-start only
+(no auto-start); tap uses forward chase with immediate visible motion
+(`Animation.js` `userInitiated` path, 2026-06).
 
 The key architectural decisions that made this stable were:
 
@@ -138,7 +139,7 @@ Current Safari key behavior:
 
 - `n`: swallowed by the capture-phase handler in `safariImageSwap.js`; no hide,
   no teardown, no new hash.
-- `s`: not intercepted by `safariImageSwap.js`; `gui.js` handles PNG export.
+- `s`: not intercepted by `safariImageSwap.js`; `guiDev.js` handles PNG export.
 
 ---
 

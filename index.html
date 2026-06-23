@@ -21,7 +21,7 @@
 </head>
 
 <body>
-  <script src="gui.js"></script>
+  <script src="appControls.js"></script>
   <!-- ArtBlocks Extensions-->
   <script src="RandomExtended.js"></script>
   <script src="Features.js"></script>
@@ -44,24 +44,25 @@
   <script src="oklch2rgb.js"></script>
   <script src="neuMark_I.js"></script>
   <script src="squircle.js"></script>
-  <!-- DEV-ONLY: Testing/debug tools — exclude from production builds (see docs/TESTING.md § 1) -->
+  <!-- DEV-ONLY: Testing/debug tools — exclude from production builds (see docs/Operational/SUBMISSION-MANIFEST.md) -->
   <script src="testing/WrapperTestHarness.js"></script>
   <script src="testing/FeatureBatchAnalyzer.js"></script>
   <script src="testing/FilterDebugHarness.js"></script>
   <script src="testing/WrapperDebugOverlay.js"></script>
+  <script src="testing/testMess.js"></script>
+  <script src="guiDev.js"></script>
   <!-- /DEV-ONLY -->
   <script src="ProtoBatch.js"></script>
+  <!-- DEV-ONLY: ProtoBatch extensions (after ProtoBatch.js) -->
+  <script src="testing/ProtoBatchDev.js"></script>
 
   <!-- Safari/WebKit canvas-image-swap fallback. Must load AFTER ProtoBatch
        (which it monkey-patches) and BEFORE sketch.js (whose setup() calls
        buildFromHash). KNOWN-ISSUES § 9.15.6 / ROADMAP S1–S5. -->
   <script src="safariImageSwap.js"></script>
 
+  <script src="ArtworkRotation.js"></script>
   <script src="sketch.js"></script>
-
-  <!-- DEV-ONLY: Ad-hoc tests — exclude from production builds -->
-  <script src="testing/testMess.js"></script>
-  <!-- /DEV-ONLY -->
 </body>
 
 </html>

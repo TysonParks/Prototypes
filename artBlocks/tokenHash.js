@@ -1550,7 +1550,13 @@ const lastHash = [
 
 ]
 function currentHash() {
-  return testingControls.lastHash ? lastHash[testingControls.hashNumber] : random_hash()
+  if (typeof testingControls !== 'undefined'
+    && testingControls.lastHash
+    && typeof lastHash !== 'undefined') {
+    const index = Math.max(0, Math.min(lastHash.length - 1, testingControls.hashNumber))
+    return lastHash[index]
+  }
+  return random_hash()
 }
 
 // MARK: Hash Generation from https://github.com/ArtBlocks/artblocks-docs

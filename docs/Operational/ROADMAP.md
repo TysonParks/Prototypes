@@ -204,7 +204,7 @@ are deferred as too aggressive for the current release phase.
 | S4 | Replace live SVG with rasterized `<img>` after first paint | Agent + verify | S3 | ✅ Superseded | Implemented + tested. No measurable speedup. Reverted to live-SVG path with overlay during render. |
 | S5 | Loading-overlay + Safari notice UX | Agent | S4 | ✅ Done | `safariImageSwap.js` (filename retained) now exposes `window.SafariCompatUX` — fullscreen spinner overlay shown during every build, animation disabled on Safari, persistent footer notice on Safari. |
 | S6 | Fine-tune blur radii, animation timings, loading copy + icon | Agent + design | S5 | ❌ Not started | Polish pass on overlay visuals + Safari notice text. Tunable blur amount, fade timings, copy. Cross-engine review. |
-| S7 | Fine-tune Chrome rotational light animation | Agent + design | S6 | ❌ Not started | Once Safari UX is finalized, focus on the Chrome-only animation feel: rotation speed, easing, dwell, idle behavior. |
+| S7 | Fine-tune Chrome rotational light animation | Agent + design | S5 | ✅ Done | Tap-to-start forward chase (`userInitiated`); no coast/hold dead zones on tap |
 
 ---
 
@@ -219,13 +219,13 @@ are deferred as too aggressive for the current release phase.
 
 | # | Task | Mode | Depends On | Status | Notes |
 |---|------|------|------------|--------|-------|
-| T1 | Reproduce + characterize the bad state | Research | — | ❌ Not started | Identify hash sequences that trigger it. Capture `S.allLayers`, filter defs count, and Random useage before/after. |
-| T2 | Audit `ProtoBatch.teardown()` against full setup() pipeline | Research | T1 | ❌ Not started | Walk every global / module-level cache touched during build; verify each is cleared or replaced. |
-| T3 | Audit ProtoStore (`S`) lifecycle | Research | T2 | ❌ Not started | Cross-reference what setup() writes vs what teardown() nulls. Anything written during build but never explicitly cleared = candidate. |
-| T4 | Audit filter `<defs>` accumulation | Research | T2 | ❌ Not started | Confirm BG removal cascades all filter defs out of the DOM (it should — they live inside FRAME.bleed.elt). Also check any module-level filter ID registries. |
-| T5 | Implement state-monitor harness | Agent | T1 | ❌ Not started | Dev-only diagnostic that snapshots key counts (layers, filters, listeners, RAF handles) pre/post teardown to surface leaks. |
-| T6 | Fix identified leaks | Agent | T2–T5 | ❌ Not started | Likely additional nulls in teardown(), explicit `S` reset, possibly explicit cache clears. |
-| T7 | Stress test: 100× rebuild loop | Verify | T6 | ❌ Not started | Ensure no progressive degradation, no console errors, no missing layers. |
+| T1 | Reproduce + characterize the bad state | Research | — | ♻️ Monitor | Not reproduced since ~2026-05; defer unless `n`-key bug returns |
+| T2 | Audit `ProtoBatch.teardown()` against full setup() pipeline | Research | T1 | ♻️ Monitor | — |
+| T3 | Audit ProtoStore (`S`) lifecycle | Research | T2 | ♻️ Monitor | — |
+| T4 | Audit filter `<defs>` accumulation | Research | T2 | ♻️ Monitor | — |
+| T5 | Implement state-monitor harness | Agent | T1 | ♻️ Monitor | Dev-only diagnostic |
+| T6 | Fix identified leaks | Agent | T2–T5 | ♻️ Monitor | — |
+| T7 | Stress test: 100× rebuild loop | Verify | T6 | ♻️ Monitor | — |
 
 **Possible-culprit flag:** Until this is resolved, any future bug report
 that surfaces missing shading layers, broken inset/outset, or stale

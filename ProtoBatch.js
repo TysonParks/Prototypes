@@ -1,66 +1,20 @@
 // CLASS: ProtoBatch
 // Orchestrates single and batch builds for different hashes.
-// Manages teardown → rebuild cycle and batch animation export.
+// Manages teardown → rebuild cycle.
 
 class ProtoBatch {
-  // Track the current hash driving the live artwork
   currentHash = null
   _lastHashNavInstalled = false
 
   constructor() {
-    this.installLastHashKeyboardNav()
+    if (typeof installProtoBatchDevNav === 'function') installProtoBatchDevNav(this)
   }
 
-  //METH: installLastHashKeyboardNav() — Up/Down arrows step testingControls.hashNumber through lastHash[]
-  installLastHashKeyboardNav() {
-    if (this._lastHashNavInstalled) return
-    this._lastHashNavInstalled = true
-
-    window.addEventListener('keydown', (e) => {
-      if (!testingControls?.lastHash || typeof lastHash === 'undefined') return
-      const t = e.target
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-
-      let delta = 0
-      if (e.key === 'ArrowUp') delta = 1
-      else if (e.key === 'ArrowDown') delta = -1
-      else return
-
-      e.preventDefault()
-      e.stopPropagation()
-      this.stepLastHash(delta)
-    }, true)
-  }
-
-  //METH: stepLastHash(delta) — move hashNumber by delta and rebuild from lastHash[index]
-  stepLastHash(delta = 0) {
-    if (!testingControls?.lastHash || typeof lastHash === 'undefined') return false
-
-    const max = lastHash.length - 1
-    const next = Math.max(0, Math.min(max, testingControls.hashNumber + delta))
-    if (next === testingControls.hashNumber) return false
-
-    testingControls.hashNumber = next
-    const hash = lastHash[next]
-    console.log(`lastHash #${next}: ${hash}`)
-    this.teardown()
-    this.buildFromHash(hash)
-    return true
-  }
-
-  // ──────────────────────────────────────────────
-  // MARK: Build Pipeline
-  // ──────────────────────────────────────────────
-
-  //METH: buildFromHash(hash) — full deterministic build from a given hash
   buildFromHash(hash) {
-    // 1. Seed tokenData so Random picks it up
     tokenData.hash = hash
     this.currentHash = hash
 
-    // 2. Run the same sequence as setup(), minus sizeFrame/noCanvas (already done)
-    setupPrefs()        // R, S, RuID, animationController re-created from new hash
+    setupPrefs()
     setupColors()
     setupBackground()
 
@@ -72,22 +26,13 @@ class ProtoBatch {
 
     gridTests2(features)
 
-    // Wrapper memoization integrity test
-    // runWrapperTests(GRID)  // disabled — causes hang on some hashes (e.g. 0x96659ca...)
-
     DeBug.log('random R useage', R.useage)
     DeBug.log('random RuID useage', RuID.useage)
 
     if (typeof positionRegenBtn === 'function') positionRegenBtn()
   }
 
-  // ──────────────────────────────────────────────
-  // MARK: Teardown
-  // ──────────────────────────────────────────────
-
-  //METH: teardown() — remove SVG DOM and null globals so a fresh build can run
   teardown() {
-    // Stop any running light animation and reset to the default screen angle.
     if (typeof stopAnimationLoopAndResetLight === 'function') {
       stopAnimationLoopAndResetLight()
     } else {
@@ -95,18 +40,12 @@ class ProtoBatch {
       globalControls.shadAngle = 90
     }
 
-    // Reset lighting to its default angle so each rebuild starts from a
-    // known state. Without this, animation can leave shadAngle wherever
-    // the last frame stopped, and that bleeds into the next build's
-    // first paint. Default matches the initial value in gui.js.
     globalControls.shadAngle = 90
 
-    // Remove the BG div (contains FRAME and all SVG content)
     if (BG && BG.elt && BG.elt.parentNode) {
       BG.elt.parentNode.removeChild(BG.elt)
     }
 
-    // Null out globals so nothing references stale objects
     BG = null
     FRAME = null
     BGRID = null
@@ -117,124 +56,16 @@ class ProtoBatch {
     animationController = null
   }
 
-  // ──────────────────────────────────────────────
-  // MARK: Rebuild / New Seed
-  // ──────────────────────────────────────────────
-
-  //METH: rebuild() — teardown + rebuild with the same hash
   rebuild() {
     const hash = this.currentHash
     this.teardown()
     this.buildFromHash(hash)
   }
 
-  //METH: buildFromNewSeed() — generate a random hash, teardown, and rebuild
   buildFromNewSeed() {
-    const newHash = random_hash()       // from tokenHash.js
+    const newHash = random_hash()
     console.log(`New seed: ${newHash}`)
     this.teardown()
     this.buildFromHash(newHash)
-  }
-
-  // ──────────────────────────────────────────────
-  // MARK: Batch Animation Export
-  // ──────────────────────────────────────────────
-
-  //METH: batchAnimationExport({hashes, animationSettings})
-  // Renders a full animation sequence for every hash in the array.
-  // A single directory picker prompt covers all hashes.
-  async batchAnimationExport({
-    hashes = batchHashes01,
-    size = vert(1066, 1920),
-    totalFrames = 180,
-    //  totalFrames = 1885,
-    scale = 1,
-    startAngle = 90,
-  } = {}) {
-    if (hashes.length === 0) {
-      console.warn(`ProtoBatch: no hashes provided`)
-      return
-    }
-
-    // One directory picker for the entire batch
-    let dirHandle = null
-    if (window.showDirectoryPicker) {
-      try {
-        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
-      } catch (e) {
-        console.warn(`Directory picker cancelled — aborting batch export`)
-        return
-      }
-    }
-
-    const batchStart = performance.now()
-    console.log(`\n=== BATCH EXPORT: ${hashes.length} hashes × ${totalFrames} frames ===\n`)
-
-    for (let h = 0; h < hashes.length; h++) {
-      const hash = hashes[h]
-      const trimmedHash = `${hash.slice(0, 6)}…${hash.slice(-4)}`
-      console.log(`\n--- [${h + 1}/${hashes.length}] ${trimmedHash} ---`)
-
-      // Teardown previous artwork and rebuild from this hash
-      this.teardown()
-      this.buildFromHash(hash)
-
-      // Let the browser paint the new artwork once before exporting
-      await new Promise(r => requestAnimationFrame(r))
-
-      // Export frames for this hash, passing the shared dirHandle
-      await Export.exportFrames({
-        size,
-        totalFrames,
-        scale,
-        startAngle,
-        useDirectoryPicker: false,    // we manage the handle ourselves
-        _dirHandle: dirHandle,        // pass the shared handle
-        _hashPrefix: trimmedHash,     // prefix for filename grouping
-      })
-    }
-
-    // Restore the last hash's artwork at rest
-    const shadVect = Shade.shadVect(startAngle)
-    S.offsetElts.forEach(({ elt, mag }) => {
-      elt.attribute('dx', shadVect.x * mag)
-      elt.attribute('dy', shadVect.y * mag)
-    })
-
-    const totalTime = ((performance.now() - batchStart) / 1000).toFixed(1)
-    console.log(`\n=== BATCH COMPLETE: ${hashes.length} hashes in ${totalTime}s ===\n`)
-  }
-
-  // ──────────────────────────────────────────────
-  // MARK: Batch Seed Capture (stub for future use)
-  // ──────────────────────────────────────────────
-
-  //METH: batchSeedCapture() — placeholder for rendering single frames from many random seeds
-  async batchSeedCapture({ count = 100 } = {}) {
-    console.log(`batchSeedCapture is a stub — not yet implemented`)
-    // Future: generate N random hashes, build each, export a single PNG
-  }
-
-  // ──────────────────────────────────────────────
-  // MARK: Wrapper Test Batch
-  // ──────────────────────────────────────────────
-
-  //METH: testContactSheet({cols, cellSize}) — renders all WRAPPER_TEST_CASES into a contact sheet
-  async testContactSheet({ cols = 4, cellSize = { x: 400, y: 720 } } = {}) {
-    await batchContactSheet({ cols, cellSize, label: `wrapper-test-contact-sheet` })
-  }
-
-  //METH: testSnapshots({size}) — renders each WRAPPER_TEST_CASES hash as individual PNG
-  async testSnapshots({ size = { x: 800, y: 1440 } } = {}) {
-    await batchSnapshotExport({ size })
-  }
-
-  //METH: quickContactSheet(hashes, cols) — renders arbitrary hashes into a contact sheet
-  async quickContactSheet(hashes, cols = 4) {
-    await batchContactSheet({
-      hashes: hashes.map((h, i) => ({ hash: h, name: `#${i}`, status: `untested` })),
-      cols,
-      label: `quick-contact-sheet`,
-    })
   }
 }
