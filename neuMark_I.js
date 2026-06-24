@@ -343,10 +343,18 @@ Object.assign(ProtoCut.prototype, IdentifiableStored)
 
 
 // CLASS: Shade
-// SIZE: 379 lines
+// SIZE: 425 lines
 class Shade {
   //METH: shadVect( ): null : create vector from Angle + Offset
   static shadVect(angle = globalControls.shadAngle) { return createVector(1, 0).rotate(radians(angle)) }
+  //METH: cleanRotate() : p5.Vector : rotate in degrees, roundToDec for cleaner filter dx/dy
+  static cleanRotate(v, deg, decimal = 5) {
+    const initial = v.copy().rotate(radians(deg))
+    const x = roundToDec(initial.x, decimal)
+    const y = roundToDec(initial.y, decimal)
+    const z = roundToDec(initial.z, decimal)
+    return new p5.Vector(x, y, z)
+  }
 
   //METH: dropShadeSVG() : dropShade Object : create drop shade object for SVG
   static dropShadeSVG({ lighten = true, invert = false, vector, mag, blurRad = 0, col = frameColor, inset = false } = {}) {
@@ -421,7 +429,7 @@ class Shade {
     count = 3,                              // used to calculate 'multiAlpha' type layer density/alpha, always 3
     sort = false,                           // end sorts all highlights over shadows (or opposite), always false
   } = {}) {
-    vector = Vertex.cleanRotate(vector, 0)
+    vector = Shade.cleanRotate(vector, 0)
     if (!mag) { mag = vector.mag() }
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
@@ -580,7 +588,7 @@ class Shade {
             DeBug.log(`mag`, mag)
             DeBug.log(`vector`, vector)
             DeBug.log(`rotOffset`, rotOffset)
-            const shadeVector = Vertex.cleanRotate(vector, radians(rotOffset)).setMag(mag)
+            const shadeVector = Shade.cleanRotate(vector, rotOffset).setMag(mag)
 
             // DeBug.log(`angleMode`, _angleMode)
             // DeBug.log(`shadeVector`, shadeVector)
@@ -690,7 +698,7 @@ class Shade {
             const
               highCol = achromic(highColLuma),
               shadCol = achromic(shadColLuma),
-              shadeVector = Vertex.cleanRotate(vector, rotOffset).setMag(mag)
+              shadeVector = Shade.cleanRotate(vector, rotOffset).setMag(mag)
 
             // DeBug.log(`vector`, vector)
             // DeBug.log(`vectorX: ${vector.x}, vectorY: ${vector.y}, vectorZ: ${vector.z}`)

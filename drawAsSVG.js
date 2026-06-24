@@ -284,7 +284,7 @@ class SegPath {
 // MARK: Proto Geometry Classes
 
 // MARK: Vertex CLASS
-// SIZE: 122 lines
+// SIZE: 108 lines
 function vert(x = 0, y = 0) {
   if (x instanceof Array) return new Vertex(x[0], x[1])
   if (x instanceof Object || x instanceof p5.Vector) return new Vertex(x.x, x.y)
@@ -304,28 +304,28 @@ class Vertex extends p5.Vector {
   get array() { return [this.x || 0, this.y || 0] }
 
   get aspect() { return Aspect.fromRatio((roundToDec(this.x) / roundToDec(this.y))) }
-  get quadrantDirection() {
-    if (this.x > 0) {
-      if (this.y > 0) return Direction.UpRight
-      if (this.y < 0) return Direction.DownRight
-      if (this.y === 0) return Direction.Right
-    }
-    if (this.x < 0) {
-      if (this.y > 0) return Direction.UpLeft
-      if (this.y < 0) return Direction.DownLeft
-      if (this.y === 0) return Direction.Left
-    }
-    if (this.x === 0) {
-      if (this.y > 0) return Direction.Up
-      if (this.y < 0) return Direction.Down
-      if (this.y === 0) return Direction.None
-    }
-  }
+  // get quadrantDirection() {
+  //   if (this.x > 0) {
+  //     if (this.y > 0) return Direction.UpRight
+  //     if (this.y < 0) return Direction.DownRight
+  //     if (this.y === 0) return Direction.Right
+  //   }
+  //   if (this.x < 0) {
+  //     if (this.y > 0) return Direction.UpLeft
+  //     if (this.y < 0) return Direction.DownLeft
+  //     if (this.y === 0) return Direction.Left
+  //   }
+  //   if (this.x === 0) {
+  //     if (this.y > 0) return Direction.Up
+  //     if (this.y < 0) return Direction.Down
+  //     if (this.y === 0) return Direction.None
+  //   }
+  // }
 
   get abs() { return vert(abs(this.x), abs(this.y)) }
 
   //METH: roundedMag() : Number : rounded magnitude of vector
-  roundedMag(decimal = 4) { return roundToDec(this.mag(), decimal) }
+  // roundedMag(decimal = 4) { return roundToDec(this.mag(), decimal) }
   //METH: widthTo() : Number : distance to another vertex in x direction
   widthTo(vert) { return abs(this.x - vert.x) }
   //METH: heightTo() : Number : distance to another vertex in y direction
@@ -347,25 +347,17 @@ class Vertex extends p5.Vector {
   //   return -1 // not Cardinal or Ordinal
   // }
   //METH: roundToDec() : null : roundToDec x and y values
-  roundCoordsToDec(dec = 4) {
-    this.x = roundToDec(this.x, dec)
-    this.y = roundToDec(this.y, dec)
-  }
+  // roundCoordsToDec(dec = 4) {
+  //   this.x = roundToDec(this.x, dec)
+  //   this.y = roundToDec(this.y, dec)
+  // }
   //METH: equals() : Bool : check if two vertices are equal
   equals(vert, accuracy = 3, deviation = 0) {
     let ax, ay, bx, by
-    // if (arguments.length > 1) {
     ax = roundToDec(this.x, accuracy)
     ay = roundToDec(this.y, accuracy)
     bx = roundToDec(vert.x, accuracy)
     by = roundToDec(vert.y, accuracy)
-    // } else {
-    //   ax = this.x
-    //   ay = this.y
-    //   bx = vert.x
-    //   by = vert.y
-    // }
-    // if (equalsRoundedDec(ax, 44.11764)) DeBug.log(`equals`, ax, ay, bx, by)
     return deviation > 0 ? abs(ax - bx) < deviation && abs(ay - by) < deviation : ax === bx && ay === by
   }
 
@@ -380,14 +372,6 @@ class Vertex extends p5.Vector {
   static max(verts) { return verts.gridVertSorted.last }
   //METH: rotate() : Vertex : rotate a vertex by a given angle in degrees
   static rotate(v, deg) { return v.copy().rotate(radians(deg)) }
-  //METH: cleanRotate() : Vertex : rotate that uses roundToDec to create a "cleaner" resulting rotation
-  static cleanRotate(v, deg, decimal = 5) {
-    const initial = Vertex.rotate(v, deg)
-    const x = roundToDec(initial.x, decimal)
-    const y = roundToDec(initial.y, decimal)
-    const z = roundToDec(initial.z, decimal)
-    return initial instanceof Vertex ? vert(x, y) : new p5.Vector(x, y, z)
-  }
   //METH: add() : Vertex : add two vertices together
   static add(a, b) { return vert(p5.Vector.add(a, b)) }
   //METH: sub() : Vertex : subtract two vertices
@@ -772,10 +756,10 @@ class Segment {
     }
   }
   // //METH: roundToDec() : null : roundToDec start and end verts
-  roundVertsToDec(dec = 4) {
-    this.start.roundCoordsToDec(dec)
-    this.end.roundCoordsToDec(dec)
-  }
+  // roundVertsToDec(dec = 4) {
+  //   this.start.roundCoordsToDec(dec)
+  //   this.end.roundCoordsToDec(dec)
+  // }
   //METH: equals() : Bool : check if two segments are equal
   equals(segment, accuracy = 3, biDirectional = false) {
     const
