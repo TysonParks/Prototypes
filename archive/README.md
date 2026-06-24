@@ -58,6 +58,8 @@ Split from monolithic `safariImageSwap.js`:
 | [SegPath-unitRefined.js](SegPath-unitRefined.js) | `SegPath.unitRefined()` + `sketch.js` test | Incomplete | Cut overlapping segments on 1-unit shrink for accurate mask shapes | InterGrid work (pairs with [Grid-SegPool.js](Grid-SegPool.js), [ProtoLayer-interGrid.js](ProtoLayer-interGrid.js)) |
 | [Vertex-unused.js](Vertex-unused.js) | `Vertex` + `Segment` rounding | Unused | `isZero`, `quadrantDirection`, `roundedMag`, `biDirectionTo`, coord rounding, instance arithmetic | Symmetry/quadrant work (pairs with [SelectionBounds-experiments.js](SelectionBounds-experiments.js), [Grid-symmetrize.js](Grid-symmetrize.js)) |
 | [Segment-unused.js](Segment-unused.js) | `Segment` getters/methods | Unused | `isOrdinal`, `angleInDegrees`, `normalDirection`, `width`/`height`, `boundsCorners`, lerp points, `#assignVerts` | Revive with [Unused.js](Unused.js) bez experiments, [StairsToDiagonals.js](StairsToDiagonals.js) |
+| [ProtoSegment-part-getters.js](ProtoSegment-part-getters.js) | `ProtoSegment` | Unused | Part delegates: `isUTurn*`, `isStairOut`, `isFlat`, `isCorner` | Revive for shape classification (pairs with [ProtoSegment-unused.js](ProtoSegment-unused.js), `Part` in ProtoUtility.js) |
+| [ProtoSegment-unused.js](ProtoSegment-unused.js) | `ProtoSegment` getters/methods | Unused / incomplete | Cubic/corner helpers, edge geometry, wrap experiments, neighbor removal | Wrapper/InterGrid work (pairs with [SegPath-unitRefined.js](SegPath-unitRefined.js), KNOWN-ISSUES §9.7.7) |
 
 ### Symbols in `Grid-unused-api.js`
 

@@ -700,7 +700,7 @@ class Segment {
 }
 
 //MARK: ProtoSegment CLASS
-// SIZE: 1623 lines
+// SIZE: 1650 lines
 function protoSegment({ start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, insetScale, shape, _direction } = {}) {
   return new ProtoSegment(start, end, parentID, id, islandIDs, cells, points, sideDir, cubicVerts, neighbors, grid, insetScale, shape, _direction)
 }
@@ -742,20 +742,11 @@ class ProtoSegment extends Segment {
   get cellRadius() { return this.grid.cellRadius }
   get cellSize() { return this.grid.cellSize }
   get isMinCorner() { return !this.shape.maxCorners }
-  get isMinLength() {
-    const minLength = this.isHorizontal ? this.cellSize.x : this.cellSize.y
-    return equalsRoundedDec(this.length, minLength, 0)
-  }
   get isEdgeOfQuad() { return this.segPath.length === 4 }
 
   get direction() {
     if (!this.isVert) return super.direction
     else return this._direction || super.direction
-  }
-  get outsideCells() {
-    return memoize(() => {
-      return this.grid.tempOutlineSelection(this.cells, 1, this.direction.toLeft)
-    }, `outsideCells`).call(this)
   }
 
   get turns() {
@@ -801,16 +792,8 @@ class ProtoSegment extends Segment {
     }, `part`).call(this)
   }
 
-  get isUTurn() { return this.part?.isUTurn }
-  get isUTurnIn() { return this.part?.isUTurnIn }   // LL
-  get isUTurnOut() { return this.part?.isUTurnOut } // RR
-
   get isStair() { return this.part?.isStair }
   get isStairIn() { return this.part?.isStairIn }   // RL
-  get isStairOut() { return this.part?.isStairOut } // LR
-
-  get isFlat() { return this.part?.isFlat }
-  get isCorner() { return this.part?.isCorner }
 
   get isOutsideCorner() {
     return memoize(() => {
@@ -859,7 +842,6 @@ class ProtoSegment extends Segment {
       }
     }, `corners`).call(this)
   }
-  get startCorner() { return this.corners.start }
   get endCorner() { return this.corners.end }
 
   //MARK: Cubic Verts
@@ -868,13 +850,6 @@ class ProtoSegment extends Segment {
   get hasCubicEndVert() { return !!this.cubicVerts.end }
   get hasSomeCubicVerts() { return this.hasCubicStartVert || this.hasCubicEndVert }
   get hasNoCubicVerts() { return !this.hasSomeCubicVerts }
-  get hasOnlyOneCubicVert() { return (this.hasCubicStartVert || this.hasCubicEndVert) && !(this.hasBothCubicVerts) }
-  get hasBothCubicVerts() { return this.hasCubicStartVert && this.hasCubicEndVert }
-  get cubicVertCount() {
-    if (this.hasBothCubicVerts) return 2
-    if (this.hasOnlyOneCubicVert) return 1
-    if (!this.hasSomeCubicVerts) return 0
-  }
 
   get finalCubicStartVert() {
     const finalLength = min(this.availableStartLength, this.startNeighbor.availableEndLength)
@@ -940,7 +915,6 @@ class ProtoSegment extends Segment {
   get availableEndLength() { return this.#availableLength(false) }
   get maxAvailableStartLength() { return this.#availableLength(true, true) }
   get maxAvailableEndLength() { return this.#availableLength(false, true) }
-  get minCubicLength() { return min(this.availableStartLength, this.availableEndLength) }
 
   //MARK: Cubic Vert methods
   //METH: canCurveTo() : Bool : check if a cubic vert can curve to a new origin
@@ -982,11 +956,6 @@ class ProtoSegment extends Segment {
   addDistancedEndCornerVerts(distance, replace = false) {
     this.addDistancedCubicEndVert(distance, replace)
     this.neighbors.end.addDistancedCubicStartVert(distance, replace)
-  }
-  //METH: addBothDistancedCornerVerts() : null : add both corner verts at the same distance from the start and end points
-  addBothDistancedCornerVerts(distance, replace = false) {
-    this.addDistancedStartCornerVerts(distance, replace)
-    this.addDistancedEndCornerVerts(distance, replace)
   }
   //METH: matchEndCorner() : null : match the end corner to the end neighbor's start
   matchEndCorner() {
@@ -1142,12 +1111,6 @@ class ProtoSegment extends Segment {
   get maxCubicLength() { return this.length - this.cellRadius * this.insetScale }
   get hasArc() { return this.hasCubicEndVert && this.endNeighbor?.hasCubicStartVert }
 
-  get hasCompleteStartCorner() {
-    return memoize(() => {
-      return this.startNeighbor.hasCubicEndVert && this.hasCubicStartVert
-        && equalsRoundedDec(this.startNeighbor.availableEndLength, this.availableStartLength)
-    }, `hasCompleteStartCorner`).call(this)
-  }
   get hasCompleteEndCorner() {
     return memoize(() => {
       return this.hasCubicEndVert && this.endNeighbor.hasCubicStartVert
@@ -1155,7 +1118,6 @@ class ProtoSegment extends Segment {
         && roundToDec(this.availableEndLength, 1) >= roundToDec(this.cellRadius, 1)
     }, `hasCompleteEndCorner`).call(this)
   }
-  get hasBothCompleteCorners() { return this.hasCompleteStartCorner && this.hasCompleteEndCorner }
 
   // #endregion
   //MARK: Flatness
@@ -1309,12 +1271,6 @@ class ProtoSegment extends Segment {
       return this.maxArcBoundsSeg.bounds
     }, `maxArcBounds`).call(this)
   }
-  get maxArcCells() {                                                                             //UNUSED:
-    return memoize(() => {
-      return this.grid.cellSpanBetween(this.cells[0].index, this.endNeighbor.cells.last.index)
-      // .intersect(this.shape.cells, `id`)
-    }, `maxArcCells`).call(this)
-  }
   get minArcRadius() {
     return memoize(() => {
       return approxToDec(min(this.cellRadius), 4, 1)
@@ -1408,66 +1364,15 @@ class ProtoSegment extends Segment {
   }
 
   //MARK: Edges
-  get adjStartShapeBoundsEdge() {
-    if (!this.hasArc) return
-    const
-      dir = this.normals.cubic,
-      arcDir = this.startNeighbor.isOutsideCorner ? dir : dir.opposites
-    return this.shape.sides[arcDir.name]
-  }
-  get adjEndShapeBoundsEdge() {
-    if (!this.hasArc) return
-    const
-      dir = this.normals.cubic,
-      arcDir = this.isOutsideCorner ? dir : dir.opposites
-    return this.shape.sides[arcDir.name]
-  }
-  get arcStartToShapeBoundsEdgeSeg() {
-    if (!this.hasArc) return
-    const edgeIntersect = this.arcOriginToStart.intersectionWith(this.adjEndShapeBoundsEdge, true)
-    return segment(this.arcStartCorner, edgeIntersect)
-  }
-  get arcEndToShapeBoundsEdgeSeg() {
-    if (!this.hasArc) return
-    const edgeIntersect = this.arcOriginToEnd.intersectionWith(this.endNeighbor.adjStartShapeBoundsEdge, true)
-    return segment(this.arcEndCorner, edgeIntersect)
-  }
   get insideAdjGridEdge() { return this.grid.sides[this.sideDir.opposites.name] }
-  get outsideAdjGridEdge() { return this.grid.sides[this.sideDir.name] }
-  get insideBoundsEdgeSeg() {
-    const
-      startNormal = segment(this.start, Vertex.add(this.start, this.sideDir.lineVector)),
-      startIntersect = startNormal.intersectionWith(this.insideAdjGridEdge, true)
-    return segment(this.end, startIntersect)
-  }
 
   //MARK: Corner Orientations
-  get inShapeSameFacingCorners() {
-    return memoize(() => {
-      if (!this.shape) { DeBug.log(this) }
-      return this.shape.simpleSubShapes.flat().exclude(this, 'id')
-        .filter(s => this.hasSameFacingCorner(s))
-    }, `inShapeSameFacingCorners`).call(this)
-  }
   get andNeighborSameFacingCorners() {
     return memoize(() => {
       return this.shape.andNeighborSimples.exclude(this, 'id')
         .filter(s => this.hasSameFacingCorner(s))
     }, `andNeighborSameFacingCorners`).call(this)
   }
-
-  // get diagonalCornersInShape() {                                                                        //UNUSED:
-  //   return memoize(() => {
-  //     return this.shape.simpleSubShapes.flat().exclude(this, 'id')
-  //       .filter(s => this.hasDiagonalCorner(s))
-  //   }, `inShapeDiagonalCorners`).call(this)
-  // }
-  // get diagonalCornersInNeighborShapes() {                                                                        //UNUSED:
-  //   return memoize(() => {
-  //     return this.shape.andNeighborSimples.exclude(this, 'id')
-  //       .filter(s => this.hasDiagonalCorner(s))
-  //   }, `neighborDiagonalCorners`).call(this)
-  // }
 
   //METH: minArcIsWithinThatMaxArc() : BOOL : test if this minArcBounds is within that maxArcBounds
   minArcIsWithinThatMaxArc(thatSeg) { return boundsIsWithinTestBounds(this.minArcBounds, thatSeg.maxArcBounds) }
@@ -1649,29 +1554,12 @@ class ProtoSegment extends Segment {
     // }, `collinearWrapper`).call(this)
   }
 
-  //METH: oppFacingCollinearSegs : [ProtoSegment] : opposite-facing collinear segments that are wrappable (not mirrored)
-  //       Bypasses viableOutWrappers entirely — uses overlapSegs pool (no same-facing gate).
-  //       Filters: opposite-facing + collinear + NOT mirrored (end-to-end).
-  //       See docs/KNOWN-ISSUES § 9.7.7
-  get oppFacingCollinearSegs() {
-    return memoize(() => {
-      return this.overlapSegs
-        .filter(s =>
-          this.hasOppositeFacingCorner(s)
-          && this.hasCollinearCorner(s)
-          && !this.isMirroredCorner(s)
-        )
-    }, `oppFacingCollinearSegs`).call(this)
-  }
-
   get flushIsInWrapper() { if (this.flushWrapper) return this.couldHaveInWrapper(this.flushWrapper) }
   get flushOutWrapper() { if (!this.flushIsInWrapper) return this.flushWrapper }
   get flushInWrapper() { if (this.flushIsInWrapper) return this.flushWrapper }
 
   get coinOutWrapper() { if (this.isOutsideCorner) return this.coincidentWrapper }
   get coinInWrapper() { if (!this.isOutsideCorner) return this.coincidentWrapper }
-  get colOutWrapper() { if (this.isOutsideCorner) return this.collinearWrapper }
-  get colInWrapper() { if (!this.isOutsideCorner) return this.collinearWrapper }
 
   //MARK: ADJACENT WRAPPING
   //METH: minAdjWrapperDistanceObj() : [Object] : find the closest adjacent wrappers to the start and end corners
@@ -1822,9 +1710,6 @@ class ProtoSegment extends Segment {
     return candidate
     // }, `adjacentWrapper`).call(this)
   }
-
-  get radiantWrapper() { }        //TODO: complete impltmentation         //UNUSED:
-  get proximalWrapper() { }       //TODO: complete impltmentation         //UNUSED:
 
   get adjOutWrapper() { if (!this.isOutsideCorner) return this.adjacentWrapper }
   get adjInWrapper() { if (this.isOutsideCorner) return this.adjacentWrapper }
@@ -1982,7 +1867,6 @@ class ProtoSegment extends Segment {
   get inWrapperIsRadiant() { if (this.inWrapper) return this.canRadiateTo(this.inWrapper) }
   get outWrapperIsRadiant() { if (this.outWrapper) return this.canRadiateTo(this.outWrapper) }
 
-  get hasWrappers() { return !!this.inWrappers || !!this.outWrappers }
   get isInnerMostWrapper() {
     return memoize(() => {
       return !!this.outWrappers && !this.inWrappers
@@ -1999,18 +1883,12 @@ class ProtoSegment extends Segment {
     else if (this.radiantOutWrappers) return this
   }
 
-  get isOuterMostWrapper() { return !!this.inWrappers && !this.outWrappers }
+  // get isOuterMostWrapper() { return !!this.inWrappers && !this.outWrappers }
   get isOuterMostRadiantWrapper() { return !!this.radiantInWrappers && !this.radiantOutWrappers }
-  get outerMostWrapper() { if (this.outWrappers) return this.outWrappers.filter(s => s.isOuterMostWrapper)[0] }
+  // get outerMostWrapper() { if (this.outWrappers) return this.outWrappers.filter(s => s.isOuterMostWrapper)[0] }
   get outerMostRadiantWrapper() {
     if (this.radiantOutWrappers) return this.radiantOutWrappers.last
     else if (this.radiantInWrappers) return this
-  }
-
-  get viableOutWrapOriginBounds() {
-    return memoize(() => {
-      if (this.outWrapper) return boundsOverlap({ geo: [this.viableArcOriginsSeg, this.outWrapper.viableArcOriginsSeg] })
-    }, `viableOutWrapOriginBounds`).call(this)
   }
 
   get viableCoinWrapOriginBounds() {
@@ -2183,8 +2061,6 @@ class ProtoSegment extends Segment {
   }
 
   get isCoinInWrapper() { return !!this.coinOutWrapper }
-  get isFlushInWrapper() { return !!this.flushOutWrapper }
-  get isAdjInWrapper() { return !!this.adjOutWrapper } flush
   get isCoinOutWrapper() { return !!this.coinInWrapper }
   get isFlushOutWrapper() { return !!this.flushInWrapper }
   get isAdjOutWrapper() { return !!this.adjInWrapper }
@@ -2220,7 +2096,6 @@ class ProtoSegment extends Segment {
   get flushWrapIsDiverging() { return this.flushWrapState === 1 }
   get flushWrapIsConverging() { return this.flushWrapState === 2 }
   get flushWrapIsNonEquidistant() { return this.flushWrapIsDiverging || this.flushWrapIsConverging }
-  get adjWrapisEquidistant() { return this.adjWrapState === 0 }
   get adjWrapIsDiverging() { return this.adjWrapState === 1 }
   get adjWrapIsConverging() { return this.adjWrapState === 2 }
   get adjWrapIsNonEquidistant() { return this.adjWrapIsDiverging || this.adjWrapIsConverging }
@@ -2249,7 +2124,6 @@ class ProtoSegment extends Segment {
     return this.radiantInWrappers?.filter(w => this.isRadiantWrapped(w)).length > min
   }
 
-  get isOutWrapped() { return this.#isWrapped(true) }
   get isInWrapped() { return this.#isWrapped(false) }
 
   //METH: #isWrapped() : Bool : check if this corner is wrapped
@@ -2442,23 +2316,6 @@ class ProtoSegment extends Segment {
         .filter(s => this.isOverlappingWith({ seg: s }))
     }, `overlapSegs`).call(this)
   }
-  // get overlapInsideSegs() {                                                                       //UNUSED:
-  //   return memoize(() => {
-  //     return this.shape.andNeighborSimples
-  //       .exclude(this, `id`)
-  //       .filter(s => this.isOverlappingWith({ seg: s, includeEnds: false, mode: 0 }))
-  //   }, `overlapInsideSegs`).call(this)
-  // }
-  get hasCompletePath() { return !!this.segPath }
-  get isSmallBean() {
-    return memoize(() => {
-      const
-        min = 5 * this.cellRadius,
-        path = this.segPath
-      if (path.length === 6) return path.every(s => s.length < min)
-      return false
-    }, `isSmallBean`).call(this)
-  }
   get segPath() {
     if (!this.hasBothNeighbors) {
       DeBug.error(`Error: segment is missing neighbors, segPath cannot be calculated!`)
@@ -2492,25 +2349,6 @@ class ProtoSegment extends Segment {
       }
       this.neighbors.end = end
     }
-  }
-  //METH: removeStartNeighbor() : null : remove the start neighbor
-  removeStartNeighbor() {
-    if (this.startNeighbor) {
-      this.startNeighbor.neighbors.end = undefined
-      this.neighbors.start = undefined
-    }
-  }
-  //METH: removeEndNeighbor() : null : remove the end neighbor    
-  removeEndNeighbor() {
-    if (this.endNeighbor) {
-      this.endNeighbor.neighbors.start = undefined
-      this.neighbors.end = undefined
-    }
-  }
-  //METH: removeBothNeighbors() : null : remove both neighbors
-  removeBothNeighbors() {
-    this.removeStartNeighbor()
-    this.removeEndNeighbor()
   }
   // #endregion
 }

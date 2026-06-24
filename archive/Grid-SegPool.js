@@ -1,7 +1,7 @@
 // Archived from Grid.js (2026-06). Not loaded by index.html — see archive/README.md.
 //
 // Island inset segment pooling — never instantiated in production.
-// Pair with SegPath-unitRefined.js (SegPath.unitRefined() + sketch.js test harness).
+// Pair with ProtoSegment-unused.js (removeBothNeighbors + overlap cutting).
 // Revive for InterGrid / mask-shape work (ProtoLayer-interGrid.js, Island-unused.js).
 //MARK: SegPool CLASS
 class SegPool {

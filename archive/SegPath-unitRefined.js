@@ -6,7 +6,7 @@
 // and related future structures.
 //
 // Related archives:
-//   - Grid-SegPool.js — pool-level unitRefined() over flattened insetSubShapes
+//   - ProtoSegment-unused.js — removeBothNeighbors() for overlap cleanup
 //   - ProtoLayer-interGrid.js, Island-unused.js, Cell-unused.js — InterGrid foundation
 //   - Grid-maximizeCuddles-experiments.js — quad/cuddle pipeline that fed this work
 
