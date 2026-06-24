@@ -56,6 +56,8 @@ Split from monolithic `safariImageSwap.js`:
 | [StairsToDiagonals.js](StairsToDiagonals.js) | `SegPath` + `VertPath` | Incomplete | `diagonalsPath`, `stairs`, `stairSets`, `withDiagonals()`, `convertToDiagonals()` | Post-Prototypes launch (live `ProtoSegment.isStair` unchanged) |
 | [SegPath-unused.js](SegPath-unused.js) | `SegPath` getters/methods | Unused | `hasMinRadii`, `isOutsideQuad`, `perimeter`, `hasLoosies`, `makeCurves()` | Revive with [Grid-maximizeCuddles-experiments.js](Grid-maximizeCuddles-experiments.js) |
 | [SegPath-unitRefined.js](SegPath-unitRefined.js) | `SegPath.unitRefined()` + `sketch.js` test | Incomplete | Cut overlapping segments on 1-unit shrink for accurate mask shapes | InterGrid work (pairs with [Grid-SegPool.js](Grid-SegPool.js), [ProtoLayer-interGrid.js](ProtoLayer-interGrid.js)) |
+| [Vertex-unused.js](Vertex-unused.js) | `Vertex` + `Segment` rounding | Unused | `isZero`, `quadrantDirection`, `roundedMag`, `biDirectionTo`, coord rounding, instance arithmetic | Symmetry/quadrant work (pairs with [SelectionBounds-experiments.js](SelectionBounds-experiments.js), [Grid-symmetrize.js](Grid-symmetrize.js)) |
+| [Segment-unused.js](Segment-unused.js) | `Segment` getters/methods | Unused | `isOrdinal`, `angleInDegrees`, `normalDirection`, `width`/`height`, `boundsCorners`, lerp points, `#assignVerts` | Revive with [Unused.js](Unused.js) bez experiments, [StairsToDiagonals.js](StairsToDiagonals.js) |
 
 ### Symbols in `Grid-unused-api.js`
 

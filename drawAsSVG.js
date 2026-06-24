@@ -284,7 +284,7 @@ class SegPath {
 // MARK: Proto Geometry Classes
 
 // MARK: Vertex CLASS
-// SIZE: 108 lines
+// SIZE: 66 lines
 function vert(x = 0, y = 0) {
   if (x instanceof Array) return new Vertex(x[0], x[1])
   if (x instanceof Object || x instanceof p5.Vector) return new Vertex(x.x, x.y)
@@ -299,33 +299,13 @@ class Vertex extends p5.Vector {
 
   get id() { return `${this.x.toFixed(1)}, ${this.y.toFixed(1)}` }
 
-  // get isZero() { return this.x === 0 && this.y === 0 }
   get string() { return `${roundToDec(this.x, 3)}, ${roundToDec(this.y, 3)}` }
   get array() { return [this.x || 0, this.y || 0] }
 
   get aspect() { return Aspect.fromRatio((roundToDec(this.x) / roundToDec(this.y))) }
-  // get quadrantDirection() {
-  //   if (this.x > 0) {
-  //     if (this.y > 0) return Direction.UpRight
-  //     if (this.y < 0) return Direction.DownRight
-  //     if (this.y === 0) return Direction.Right
-  //   }
-  //   if (this.x < 0) {
-  //     if (this.y > 0) return Direction.UpLeft
-  //     if (this.y < 0) return Direction.DownLeft
-  //     if (this.y === 0) return Direction.Left
-  //   }
-  //   if (this.x === 0) {
-  //     if (this.y > 0) return Direction.Up
-  //     if (this.y < 0) return Direction.Down
-  //     if (this.y === 0) return Direction.None
-  //   }
-  // }
 
   get abs() { return vert(abs(this.x), abs(this.y)) }
 
-  //METH: roundedMag() : Number : rounded magnitude of vector
-  // roundedMag(decimal = 4) { return roundToDec(this.mag(), decimal) }
   //METH: widthTo() : Number : distance to another vertex in x direction
   widthTo(vert) { return abs(this.x - vert.x) }
   //METH: heightTo() : Number : distance to another vertex in y direction
@@ -334,23 +314,6 @@ class Vertex extends p5.Vector {
   slopeTo(vert) { return (this.y - vert.y) / (this.x - vert.x) }
   //METH: directionTo() : Direction : direction to another vertex
   directionTo(vert) { return segment(this, vert).direction }
-  //METH: biDirectionTo() : Direction : direction to another vertex
-  // biDirectionTo(vert) {                                                   //DEPRECATED: previously only used in Grid.cellSegmentBetween()
-  //   if (this.y === vert.y) return Direction.Horizontal
-  //   if (this.x === vert.x) return Direction.Vertical
-
-  //   const slope = this.slopeTo(vert)
-  //   DeBug.log('slope', slope)
-
-  //   if (this.slopeTo(vert) === -1) return Direction.PosOrdinal
-  //   if (this.slopeTo(vert) === 1) return Direction.NegOrdinal
-  //   return -1 // not Cardinal or Ordinal
-  // }
-  //METH: roundToDec() : null : roundToDec x and y values
-  // roundCoordsToDec(dec = 4) {
-  //   this.x = roundToDec(this.x, dec)
-  //   this.y = roundToDec(this.y, dec)
-  // }
   //METH: equals() : Bool : check if two vertices are equal
   equals(vert, accuracy = 3, deviation = 0) {
     let ax, ay, bx, by
@@ -361,11 +324,6 @@ class Vertex extends p5.Vector {
     return deviation > 0 ? abs(ax - bx) < deviation && abs(ay - by) < deviation : ax === bx && ay === by
   }
 
-  //TODO: If we run into Vertex arithemtic errors, test this
-  // add(vert) { return Vertex.add(this, vert) }
-  // sub(vert) { return Vertex.sub(this, vert) }
-  // mult(vert) { return Vertex.mult(this, vert) }
-  // div(vert) { return Vertex.div(this, vert) }
   //METH: min() : Vertex : return the minimum vertex from a set of vertices
   static min(verts) { return verts.gridVertSorted[0] }
   //METH: max() : Vertex : return the maximum vertex from a set of vertices
@@ -395,7 +353,7 @@ class Vertex extends p5.Vector {
 }
 
 //MARK: Segment CLASS 
-// SIZE: 353 lines
+// SIZE: 344 lines
 function segment(start, end) {
   return new Segment(start, end)
 }
@@ -406,7 +364,6 @@ class Segment {
   constructor(start, end) {
     this.start = start
     this.end = end
-    // this.#assignVerts(start, end, arguments)
   }
 
   //MARK: computed
@@ -450,30 +407,15 @@ class Segment {
       return this.direction.allAreCardinal
     }, `isCardinal`).call(this)
   }
-  get isOrdinal() {
-    return memoize(() => {
-      return this.direction.allAreOrdinal
-    }, `isOrdinal`).call(this)
-  }
   get angle() {                                        // in RADIANS
     return memoize(() => {
       return this.lineVector.heading()
     }, `angle`).call(this)
   }
-  get angleInDegrees() {                               // in DEGREES
-    return memoize(() => {
-      return degrees(this.angle)
-    }, `angleInDegrees`).call(this)
-  }
   get direction() {
     return memoize(() => {
       return Direction.atAngle(this.angle)
     }, `direction`).call(this)
-  }
-  get normalDirection() {
-    return memoize(() => {
-      return this.direction.toLeft
-    }, `normal`).call(this)
   }
   get slope() {
     return memoize(() => {
@@ -490,32 +432,11 @@ class Segment {
       return findBounds(this)
     }, `bounds`).call(this)
   }
-  get width() {
-    return memoize(() => {
-      return this.start.widthTo(this.end)
-    }, `width`).call(this)
-  }
-  get height() {
-    return memoize(() => {
-      return this.start.heightTo(this.end)
-    }, `height`).call(this)
-  }
 
   get xMin() { return min(this.start.x, this.end.x) }
   get xMax() { return max(this.start.x, this.end.x) }
   get yMin() { return min(this.start.y, this.end.y) }
   get yMax() { return max(this.start.y, this.end.y) }
-
-  get boundsCorners() {
-    return memoize(() => {
-      return {
-        upLeft: vert(this.xMin, this.yMin),
-        upRight: vert(this.xMax, this.yMin),
-        downRight: vert(this.xMax, this.yMax),
-        downLeft: vert(this.xMin, this.yMax),
-      }
-    }, `boundsCorners`).call(this)
-  }
 
   //MARK: methods
   //METH: vertIsInBounds() : Bool : check if a vertex is within the bounds of the segment
@@ -755,11 +676,6 @@ class Segment {
       if (!newSegs.isEmpty) return newSegs
     }
   }
-  // //METH: roundToDec() : null : roundToDec start and end verts
-  // roundVertsToDec(dec = 4) {
-  //   this.start.roundCoordsToDec(dec)
-  //   this.end.roundCoordsToDec(dec)
-  // }
   //METH: equals() : Bool : check if two segments are equal
   equals(segment, accuracy = 3, biDirectional = false) {
     const
@@ -776,47 +692,11 @@ class Segment {
       startVec = createVector(this.start.x, this.start.y)
     return Vertex.add(startVec, newVec)
   }
-  //METH: scaledStartPoint() : Vertex : get point on segment given lerp from mid to start
-  scaledStartPoint(lerp, mid = 0.5) {
-    return this.pointOnsegment(mid - lerp * mid)
-  }
-  //METH: scaledEndPoint() : Vertex : get point on segment given lerp from mid to end
-  scaledEndPoint(lerp, mid = 0.5) {
-    return this.pointOnsegment(mid + lerp * (1 - mid))
-  }
   //METH: distancedStartPoint() : Vertex : get point on segment given distance from start
   distancedStartPoint(distance) { return this.pointOnsegment(distance / this.length) }
   //METH: distancedEndPoint() : Vertex : get point on segment given distance from end
   distancedEndPoint(distance) { return this.pointOnsegment(1 - distance / this.length) }
 
-  //TODO: I might be able to revert to this
-  //METH: assignVerts() : null : assign start and end verts
-  // #assignVerts(start, end, args) {
-  //   if (args.length === 1) {
-  //     if (start instanceof Array) {
-  //       if (start[0] instanceof Vertex) {
-  //         this.verts = { start: start[0], end: start[1] }
-  //       }
-  //       else if (start[0] instanceof Object || start[0] instanceof Array) {
-  //         this.verts = { start: vert(start[0]), end: vert(start[1]) }
-  //       }
-  //     }
-  //     else if (start instanceof Object) {
-  //       if (start.start instanceof Vertex) {
-  //         this.verts = { start: start.start, end: start.end }
-  //       }
-  //       else if (start.start instanceof Object || start[0] instanceof Array) {
-  //         this.verts = { start: vert(start.start), end: vert(start.end) }
-  //       }
-  //     }
-  //   }
-  //   else if (start instanceof Vertex) {
-  //     this.verts = { start: start, end: end }
-  //   }
-  //   else if (start instanceof Object) {
-  //     this.verts = { start: vert(start), end: vert(end) }
-  //   }
-  // }
 }
 
 //MARK: ProtoSegment CLASS
