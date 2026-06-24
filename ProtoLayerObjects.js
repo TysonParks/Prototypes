@@ -2450,7 +2450,7 @@ class Island extends ProtoLayer {
 }
 
 //MARK: SHAPE CLASS
-// SIZE: 337 lines
+// SIZE: 349 lines
 // NOTE: drawSVG = false    // the SVG path gets passed back up to ShapeGroup for rendering
 // NOTE: drawRect = false
 class Shape extends ProtoLayer {
@@ -2499,11 +2499,8 @@ class Shape extends ProtoLayer {
   get cellBounds() { return this.island.cellBounds }
   get boundsRect() { return this.cellBounds.boundsRect }
   // get insetAnchor() { return this.anchor }
-  // get insetSize() { return this.size }
   get padding() { return vert(this.cellRadius) }
 
-  get group() { return this.grid.groupNamed(this.groupID) }
-  get groupID() { return this.island.groupID }
   get grid() { return this.island.grid }
 
   get cut() { return this.island.cut }
@@ -2548,10 +2545,8 @@ class Shape extends ProtoLayer {
     }, `andNeighborSimples`).call(this)
   }
 
-  get isPerimeterShape() { return this.type === `PerimeterShape` }
   get isSingleShape() { return this.simpleSubShapes.length === 1 }
 
-  get isLine() { return this.island.isLine }
   get isQuad() { return this.island.isRectangle }
   get isSquare() { return this.island.isSquare }
   get isRoundedSquare() {
@@ -2584,18 +2579,11 @@ class Shape extends ProtoLayer {
       && this.allCornerRadii.filter(r => equalsRoundedDec(r, this.minCornerRadius)).length === 3
   }
 
-  get hasSubShapes() { return this.subShapes.length > 1 }
-  get hasUTurns() { return this.allSimpleSegs.some(s => s.isUTurn) }
-  get shapeCorners() { return this.allSegments.map(s => s.cornerVerts).flat().unique(['x', 'y']) }
   get allSegments() { return this.subShapes.flat() }
   get allSimpleSegs() { return this.simpleSubShapes.flat() }
   get allInsideCorners() { return this.allSimpleSegs.filter(s => !s.isOutsideCorner) }
   get allOutsideCorners() { return this.allSimpleSegs.filter(s => s.isOutsideCorner) }
   get allCornerRadii() { return this.allSimpleSegs.map(s => s.arcRadius) }
-  get assignedVerts() {
-    return this.subShapes.map(sub => sub.map(s => s.assignedVerts).flat().unique(['x', 'y']))
-    // .flat()
-  }
 
   get hasSingleWidth() { return this.cells.some(c => c.hasOppositeCardinalGroupNeighbors) }
   get hasOrdinalConnections() { return this.island.hasOrdinalConnections }
@@ -2650,14 +2638,6 @@ class Shape extends ProtoLayer {
       return min([horRadius, vertRadius, ...this.allOutsideCorners.map(s => s.arcRadius)])
     }
   }
-  get minInsetCornerRadius() { return this.minCornerRadius + (this.insetScale.x - 1) * this.cellRadius }
-  get maxInsetCornerRadius() { return this.maxCornerRadius + (this.insetScale.x - 1) * this.cellRadius }
-
-  get minSquareCornerRadius() {
-    if (!this.isSquare) return
-    if (this.isCircle) return this.minCornerRadius
-    if (this.isLemon) return this.lemonLoftRadius
-  }
   get lemonLoftRadius() {
     if (this.isLemon) {
       const arcCenter = this.allSimpleSegs.find(s => s.arcRadius === this.maxCornerRadius).arcCenterVert
@@ -2685,28 +2665,6 @@ class Shape extends ProtoLayer {
       return vert(this.cut.depth / this.cellRadius / 2) // convert cut depth to cell scale
     }
   }
-
-  get segPathsCutStart() { return this.terminalSegPaths(true) }
-  get segPathsCutEnd() { return this.terminalSegPaths(false) }
-
-  //METH: terminalSegPaths(start) : one line at exact shape, the other at offset based on shade direction
-  terminalSegPaths(start) {
-    if (this.simpleSegPaths.isEmpty || !this.cut) return                    // must have simpleSegPaths
-    const hasOutsetShade = this.cut?.profile?.hasOutsetShade                // hasOutsetShade
-    if (!this.cutDepthScale) return this.simpleInsetSegPaths               // no depth scale → return plain inset
-    if (hasOutsetShade !== start) return this.simpleInsetSegPaths           // exact shape line
-    const scale = hasOutsetShade                                           // offset line: direction matches shade type
-      ? Vertex.add(this.insetScale, this.cutDepthScale)                    // hasOutsetShade (rIn, jOut) → outset
-      : Vertex.sub(this.insetScale, this.cutDepthScale)                    // hasInsetShade (rOut, jIn) → inset
-    return this.scaledSegPaths(scale)
-  }
-  //METH: scaledSegPaths(insetScale) : return simpleSegPaths inset by insetScale
-  scaledSegPaths(insetScale) {
-    if (this.insetScale === insetScale) return this.simpleSegPaths                    // no change
-    return this.simpleSegPaths.map(sub => sub.inset(insetScale))                      // inset by insetScale
-  }
-
-  get outerMaskSize() { return this.cutDepthScale?.x * this.cellRadius } // convert cutDepthScale to cell size
 
   get maskShape() {
     const
@@ -2755,12 +2713,6 @@ class Shape extends ProtoLayer {
       return paths                                                                  // return array of SegPaths
     // return paths
   }
-
-  // get minMaskShape() {
-  //   const baseMask = this.maskShape
-  //   if (!baseMask) return
-
-  // }
 
   //MARK: SVG Paths
   get svg() {

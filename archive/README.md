@@ -47,6 +47,7 @@ Split from monolithic `safariImageSwap.js`:
 | [CellGroup-unused.js](CellGroup-unused.js) | `CellGroup` | Unused | Commented neighbor/island getters, migrated geometry wrappers | Revive with sketch.js outset/reDirect paths if needed |
 | [Cell-unused.js](Cell-unused.js) | `Cell` + `ShapeGroup.cells` | Unused | Neighbor/segment getters, `createInterCopy` InterGrid foundation | Post-submission InterGrid work (pairs with [ProtoLayer-interGrid.js](ProtoLayer-interGrid.js)) |
 | [Island-unused.js](Island-unused.js) | `Island` | Unused | Classification getters, exposed wrappers, InterGrid getters | Post-submission InterGrid work (pairs with [ProtoLayer-interGrid.js](ProtoLayer-interGrid.js)) |
+| [Shape-unused.js](Shape-unused.js) | `Shape` | Unused | Classification getters, cut-depth seg paths, inset corner radii | Revive with DeBugging.js cut-line overlays if needed |
 
 ## drawAsSVG.js removals (2026-06)
 
