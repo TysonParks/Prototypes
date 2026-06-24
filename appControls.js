@@ -7,7 +7,7 @@ const globalControls = {
 // Dev seed navigation defaults — must exist before artBlocks/tokenHash.js loads.
 // Submission bundle uses tokenHash.submission.js (no testingControls reference).
 const testingControls = {
-  hashNumber: 1520,
+  hashNumber: 1511,
   lastHash: true,
   blackMode: false,
 }

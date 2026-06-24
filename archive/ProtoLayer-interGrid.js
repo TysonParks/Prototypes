@@ -2,8 +2,7 @@
 //
 // InterGrid tooling — incomplete; planned post-submission. Paste onto ProtoLayer / Island to revive.
 //
-// Production Island still exposes:
-//   interCells, canHaveInterGrid, interGridClosure
+// Island getters (interCells, canHaveInterGrid, interGridClosure): archive/Island-unused.js
 
 // ProtoLayer — insetAmountToScale
 insetAmountToScale(amount) {

@@ -1364,7 +1364,7 @@ class CellGroup extends ProtoLayer {
 }
 
 //MARK: SHAPEGROUP CLASS
-// SIZE: 299 lines
+// SIZE: 304 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
 class ShapeGroup extends ProtoLayer {
@@ -1442,9 +1442,6 @@ class ShapeGroup extends ProtoLayer {
     }
   }
 
-
-
-  get cells() { return this.islands.map(i => i.cells).flat().gridVertSorted }
   get shapes() { return this.islands.map(i => i.shape) }
 
   get shadeElt() {
@@ -1613,7 +1610,6 @@ class ShapeGroup extends ProtoLayer {
         this.maskGroupElt.parent(mask.elt)   // append the maskGroupElt to the groupElt
 
         if (outsetShade && this.grid?.isBackGrid) this.createBBoxKeeper()
-        // this.createBBoxKeeper()
 
         this.svgElt
           .attribute(`mask`, `url(#${maskID})`) // set the mask attribute on the svgElt
@@ -1677,7 +1673,7 @@ class ShapeGroup extends ProtoLayer {
 }
 
 //MARK: CELL CLASS
-// SIZE: 259 lines
+// SIZE: 207 lines
 // NOTE: drawSVG = false
 // NOTE: drawRect = false
 class Cell extends ProtoLayer {
@@ -1711,16 +1707,6 @@ class Cell extends ProtoLayer {
 
   // MARK: Cell Computed Properties
   // #region Computed Properties
-  get cellBounds() {
-    return memoize(() => {
-      return this.grid.cellBounds({ selection: OpArray.from([this]) })
-    }, `cellBounds`).call(this)
-  }
-  get boundsRect() {
-    return memoize(() => {
-      this.cellBounds.boundsRect
-    }, `boundsRect`).call(this)
-  }
   get anchor() {
     return memoize(() => {
       return this.grid.cellAnchor(this.coords.x, this.coords.y)
@@ -1770,18 +1756,10 @@ class Cell extends ProtoLayer {
   get x() { return this.coords.x }
   get y() { return this.coords.y }
   get isTaken() { return !this.isAvailable }
-  get hasAUTurn() { return this.segments.some(seg => seg.isUTurn) }
-  get hasAStair() { return this.segments.some(seg => seg.isStair) }
-  get hasACorner() { return this.segments.some(seg => seg.isCorner) }
-  get hasAFlat() { return this.segments.some(seg => seg.isFlat) }
 
   get cardinalNeighborCoords() { return this.allNeighborsCoords(Direction.Cardinal) }
   get ordinalNeighborCoords() { return this.allNeighborsCoords(Direction.Ordinal) }
 
-  get neighborSegments() {
-    const cell = this.grid.neighbor(this.index, Direction.Right)
-    return cell?.segments
-  }
   get sideNeighbors() { return new Sides(this.cardinalNeighborCoords.map(co => this.grid.cellAtCoords(co.x, co.y))) }
   get cornerNeighbors() { return new Corners(this.ordinalNeighborCoords.map(co => this.grid.cellAtCoords(co.x, co.y))) }
 
@@ -1801,28 +1779,12 @@ class Cell extends ProtoLayer {
     }, `ordinalNeighbors`).call(this)
   }
 
-
-  get availableCardinalNeighbors() { return this.cardinalNeighbors.filter(c => c.isAvailable) }
-  get takenCardinalNeighbors() { return this.cardinalNeighbors.filter(c => !c.isAvailable) }
-  get hasTwoCardinalNeighbors() { return this.takenCardinalNeighbors.length === 2 }
   get hasOppositeNeighborsTaken() {
     const n = this.sideNeighbors
     return (n.horizontals.every(c => c?.isTaken) || n.verticals.every(c => c?.isTaken))
   }
 
-  get groupNeighbors() { return this.neighbors.filter(c => c.groupID === this.groupID) }
   get cardinalGroupNeighbors() { return this.cardinalNeighbors.filter(c => c?.groupID === this.groupID) }
-  get ordinalGroupNeighbors() { return this.ordinalNeighbors.filter(c => c?.groupID === this.groupID) }
-
-  get neighborDirections() {
-    const dirsMap = Directions.Direction.values.map(dir => {
-      let bool = false
-      const cell = this.grid.neighbor(this.index, dir)
-      if (cell) bool = true
-      return [bool, dir]
-    })
-    return new Directions(dirsMap)
-  }
 
   get groupNeighborsDirection() {
     const vals = this.validNeighborsDirections(Direction.All)
@@ -1906,37 +1868,7 @@ class Cell extends ProtoLayer {
       .filter(val => selection.some(sel => val.id === sel.id))
       .map(v => Direction.fromMoveCoord(Vertex.sub(v.coords, this.coords)))
   }
-  //METH: neighborSegment()
-  neighborSegment(direction) {
-    const cell = this.grid.neighbor(this.index, direction)
-    const side = cell.sides[direction.opposites.names]
-    return cell.segments.filter(seg => seg.equals(side))
-  }
   // #endregion
-  // MARK: InterCell  Methods
-  //METH: createInterCopy()
-  createInterCopy(grid = this.grid.interGrid) {
-    if (this.interCell) {
-      DeBug.error(`interCell already existed!`)
-      return
-    }
-    if (this.grid.validNeighbors({ selection: [this], direction: Direction.DownRight }).isEmpty) {
-      DeBug.error(`No possible interCell: out of bounds.`)
-      return
-    }
-    const
-      interIndex = this.index + .5,
-      interCoords = Vertex.add(this.coords, vert(0.5)),
-      interCell = new Cell({
-        protoParent: grid,
-        svgParent: grid.svgElt,
-        grid: grid,
-        index: interIndex,
-        coords: interCoords,
-      })
-    this.interCell = interCell
-  }
-
   // MARK: Cell Setup Methods
   //METH:
   drawElement() {
@@ -1953,7 +1885,7 @@ class Cell extends ProtoLayer {
 }
 
 //MARK: ISLAND CLASS
-// SIZE: 611 lines
+// SIZE: 560 lines
 // NOTE: drawSVG = false
 // NOTE: drawRect = false
 class Island extends ProtoLayer {
@@ -2033,7 +1965,6 @@ class Island extends ProtoLayer {
   get boundsRect() { return this.cellBounds.boundsRect }
 
   get cellCount() { return this.cells.length }
-  get minCornerRadius() { return this.shape.minCornerRadius }
 
   get ordinalConnections() { return this.cells.filter(c => !c.ordinalOnlyNeighbors.isEmpty) }
   get hasOrdinalConnections() { return !this.ordinalConnections.isEmpty }
@@ -2044,8 +1975,6 @@ class Island extends ProtoLayer {
   get isCardinalSingle() {
     return this.cellCount === 1 && this.cells.every(e => this.cellIsIsolated(e.index))
   }
-  get isPill() { return this.cellCount === 2 && this.isCardinal }
-  get isOrdinalCapsule() { return this.cellCount === 2 && this.isOrdinal }
 
   get isHorizontal() {
     return !this.isSingleCell && this.cells.every(e => this.cellIsIsolated(e.index, Direction.Vertical))
@@ -2067,7 +1996,6 @@ class Island extends ProtoLayer {
 
   get offsetConnectionCells() { return this.cells.filter(c => c.hasOffsetConnection) }
   get hasOffsetConnections() { return !this.offsetConnectionCells.isEmpty }             // squares connected with a common row/column, bad stair creation
-  get offsetConnections() { return this.cells.filter(c => c.hasOffsetConnection) }
 
   get directionHierarchy() { return this.direction.hierarchy }
 
@@ -2083,9 +2011,6 @@ class Island extends ProtoLayer {
     return memoize(() => {
       return this.grid.allExposedSides({ selection: this.cells, islandID: this.id })
     }, `exposedSegments`).call(this)
-  }
-  get exposedCorners() {
-    return this.grid.allExposedCorners({ selection: this.cells, islandID: this.id })
   }
 
   get neighborIslands() {
@@ -2115,8 +2040,6 @@ class Island extends ProtoLayer {
   cellIsIsolated(cellIndex, direction = Direction.Cardinal) {
     return this.grid.cellIsIsolated({ cellIndex: cellIndex, islandID: this.id, direction: direction })
   }
-  //METH: exposedSides()
-  exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, islandID: this.id }) }
   // #endregion
   // MARK: Island Special Methods
   // #region Island Special Methods
@@ -2523,16 +2446,6 @@ class Island extends ProtoLayer {
     this.shape.createSimpleSubShapes()
     DeBug.groupEnd()
   }
-  // #endregion
-
-  // MARK: Island TODO Methods
-  // #region TODO Methods
-  get interCells() { return this.grid.shrunkSelection(this.cells) }
-
-  //TODO: Finish Intergrids after submission
-  interGridClosure = (cell) => { this.grid.validNeighbors({ selection: [cell], bounds: this.cellBounds, direction: Direction.Cartesian }).length === 3 }
-  get canHaveInterGrid() { return this.grid.shrunkSelection(this.cells).length > 0 }
-
   // #endregion
 }
 
