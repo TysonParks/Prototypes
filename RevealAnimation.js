@@ -1154,6 +1154,13 @@
     return true
   }
 
+  function recoverSafariRevealIfStuck() {
+    if (!isWebKitClass || !_safariOverlay?.classList.contains('building')) return
+    if (typeof BG === 'undefined' || !BG?.elt) return
+    prepSafariArtworkPrepaint()
+    revealNowSafari()
+  }
+
   function init() {
     ensureStyles()
     ensureDummy()
@@ -1170,12 +1177,12 @@
     window.addEventListener('resize', () => {
       updateLayoutVars(_currentMetrics)
     })
-    setTimeout(() => {
-      if (!installHooks()) {
-        const retry = () => { if (installHooks()) document.removeEventListener('DOMContentLoaded', retry) }
-        document.addEventListener('DOMContentLoaded', retry)
-      }
-    }, 0)
+    if (!installHooks()) {
+      const retry = () => { if (installHooks()) document.removeEventListener('DOMContentLoaded', retry) }
+      document.addEventListener('DOMContentLoaded', retry)
+    }
+    recoverSafariRevealIfStuck()
+    window.addEventListener('load', recoverSafariRevealIfStuck, { once: true })
   }
 
   function buildDevCore() {
@@ -1219,6 +1226,10 @@
     if (typeof installer !== 'function') return
     installer(buildDevCore())
   }
+
+  // ProtoBatch.js loads before this file — patch immediately so p5 setup()
+  // cannot run buildFromHash() on the main thread before hooks are installed.
+  installHooks()
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init)
