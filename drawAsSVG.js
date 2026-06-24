@@ -116,7 +116,7 @@ class SVGPath {
 }
 
 //MARK: SegPath CLASS
-// SIZE: 512 lines
+// SIZE: 163 lines
 class SegPath {
   path
   shape
@@ -141,21 +141,6 @@ class SegPath {
       return this.path.every(s => s.isUsingMiddleOrigin)
     }, `hasAllMiddleArcs`).call(this)
   }
-  get hasMinRadii() {
-    return memoize(() => {
-      return this.path.every(s => s.hasMinArcRadius)
-    }, `hasMinRadii`).call(this)
-  }
-  get isOutsideQuad() {
-    return memoize(() => {
-      return this.isQuad && this.path.every(s => s.isUTurnOut)
-    }, `isOutsideQuad`).call(this)
-  }
-  get perimeter() {
-    return memoize(() => {
-      return this.path.map(s => s.length).reduce((a, b) => a + b)
-    }, `perimeter`).call(this)
-  }
   get grid() {
     return memoize(() => {
       return this.shape.grid
@@ -177,8 +162,6 @@ class SegPath {
     // }, `cells`).call(this)
   }
 
-  get hasLoosies() { return this.path.some(s => s.canCurveMoreAtEnd) }
-
   //METH: isCongruent() : Bool : Congruence = same shape, same scale, same rotation, different position. Used for determining svg instancing
   isCongruent(otherPath) {
     const length = this.path.length
@@ -192,31 +175,6 @@ class SegPath {
       ) return false
     }
     return true
-  }
-
-  //MARK: Quad Methods
-  //METH: makeCurves() : null : convert all segments to curves
-  makeCurves(equal = true, max = true, outWrap = true) {
-    DeBug.log(this.path)
-    const sorted = this.path
-
-    sorted.forEach(s => {
-      DeBug.log(s.id)
-      if (equal && max) s.replaceEndCurveOrigin(s.middleArcOrigin)
-    })
-
-    sorted.forEach(s => {
-      // DeBug.log(s.id)
-      if (outWrap) {
-        if (s.outWrapper?.canCurveToMiddleOrigin) {
-          // DeBug.log(`CAN curve!`)
-          // DeBug.log(s)
-          s.replaceEndRadiantOutWrapsOrigin()
-        } else {
-          // DeBug.log(`can't curve!`)
-        }
-      } else s.flushWrap(true)
-    })
   }
 
   //MARK: REFINE Methods
@@ -320,121 +278,6 @@ class SegPath {
     })
     return newPath
   }
-
-  //METH: unitRefined() : SegPath : take a unit inset/outset path and remove collinear and zero length segments
-  unitRefined() {
-    DeBug.error(`unitRefined()`, this.path)
-    let
-      pathCopy = this.path.copy,
-      zeroSegs = pathCopy.filter(s => s.isVert),
-      newPath = new OpArray,
-      overlaps = new OpArray,
-      removed = new OpArray,
-      length = pathCopy.length
-
-    pathCopy = pathCopy.exclude(zeroSegs, `id`)                     // exclude zero segs from pathCopy
-
-    //ARROW: remove() : null : remove seg from neighbors' neighbors
-    const remove = (seg) => {
-      seg.removeBothNeighbors()
-    }
-
-    while (length > 0) {
-      DeBug.warn(`pathCopy start`, pathCopy.map(s => s.id))
-      const seg = pathCopy.shift()                                  // remove first seg
-      DeBug.log(`current seg`, seg)
-
-      if (seg.length > 0) {
-        let overlap = pathCopy.filter(s => s.isOverlappingWith({ seg: seg, includeEnds: true }))
-        DeBug.log(`overlap`, overlap)
-        if (!overlap.isEmpty) {
-          // DeBug.log(`overlap`, overlap)
-
-          if (overlap.length === 1) {                               // single overlap
-            DeBug.error(`single overlap`, overlap)
-            overlaps.push(seg)
-            const
-              singleSeg = overlap[0],                               // single overlap seg
-              intersection = seg.intersectionWith(singleSeg),       // intersection of seg and singleSeg
-              isPartialXOfThis = !intersection.equals(seg),         // intersection only partially covers this seg
-              isPartialXOfOverlap = !intersection.equals(singleSeg) // intersection only partially covers singleSeg
-
-            if (isPartialXOfThis) {
-              DeBug.error(`isPartialXOfThis`, isPartialXOfThis)
-              const newSegs = seg.exclude(intersection)             // exclude intersection seg from seg
-              DeBug.log(`newSegs`, newSegs)
-            }
-            if (isPartialXOfOverlap) {
-              DeBug.error(`isPartialXOfOverlap`, isPartialXOfOverlap)
-              const newSegs = singleSeg.exclude(intersection)       // exclude intersection seg from singleSeg
-              DeBug.log(`newSegs`, newSegs)
-            }
-            overlaps.push(singleSeg)
-            pathCopy = pathCopy.exclude(singleSeg, `id`)            // exclude overlap seg from pathCopy
-          }
-
-          if (overlap.length > 1) {                                 // multiple overlaps
-            DeBug.error(`Multiple overlaps!!!`, overlap)
-
-
-          }
-
-        } else {
-          DeBug.error(`no overlap`, seg)
-          newPath.push(seg)
-        }
-      }
-      else {
-        DeBug.error(`zero length seg`, seg)
-        removed.push(seg)
-      }
-      length = pathCopy.length
-      DeBug.warn(`pathCopy end`, pathCopy.map(s => s.id))
-    }
-    DeBug.log(`newPath`, newPath)
-    DeBug.log(`overlaps`, overlaps)
-    DeBug.log(`removed`, removed)
-    DeBug.log(`zeroSegs`, zeroSegs)
-    DeBug.log(``)
-
-    if (!newPath.isEmpty) {
-      removed.forEach(seg => remove(seg))                           // remove zero segs from neighbors  
-      overlaps.forEach(seg => remove(seg))                          // remove overlaps from neighbors
-      return new SegPath(newPath, this.shape)
-    }
-    else {
-      DeBug.error(`NO ZERO PATH!, Shape ${this.shape.parentID} has max thickness of 1!!!`)
-      DeBug.log(``)
-    }
-
-
-    // this.path.forEach((seg, i) => {
-    //   // DeBug.log(`current Seg`, seg)
-    //   if (roundToDec(seg.length) > 0) {
-    //     const
-    //       pathNoSeg = this.path.exclude(seg, `id`)                     // exclude current seg
-    //     // DeBug.log(`pathNoSeg`, pathNoSeg)
-    //     const
-    //       overlaps = pathNoSeg.filter(s => s.isOverlappingWith({ seg: seg, includeEnds: false }))    // find overlaps
-    //     DeBug.log(`overlaps`, overlaps)
-    //     let removed = new OpArray, newSeg
-
-    //     if (!overlaps.isEmpty) {
-    //       overlaps.forEach(overlap => {
-    //         const remove = seg.intersectionWith(overlap)
-    //         if (remove && remove instanceof Segment) {
-    //           DeBug.log(`remove`, remove)
-    //         }
-    //       })
-    //     }
-
-    //   } else {
-    //     DeBug.error(`zero length seg`, seg)
-    //   }
-    // })
-  }
-
-
 
 }
 

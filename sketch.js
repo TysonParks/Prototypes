@@ -821,40 +821,7 @@ function gridTests2(features) {
   // GRID.showFinalMasksDebug()
   // GRID.showFrameRate(animationController)
   // GRID.showSizeGrid(4)
-
-  // DeBug.error(`UnitRefined Test`)
-  // DeBug.groupCollapsed(`UnitRefined Test`)
-  // GRID.groups.forEach((g, i) => {
-  //   DeBug.warn(`group`, g.id, g)
-  //   g.perimeterIslands.forEach((i, j) => {
-  //     DeBug.warn(`island`, i.id, i)
-  //     const zeroScaled = i.shape.copy({ insetScale: 0, protoParent: i.grid, island: i })
-  //     DeBug.log(`zeroScaled`, zeroScaled)
-  //     DeBug.log(`zeroScaled paths`, zeroScaled.insetSubShapes)
-
-  //     let newShapes
-  //     if (i.cellBounds.isFull) {
-  //       if (i.cellBounds.minCellThickness > 1) {
-  //         DeBug.warn(`NEW SHAPES! is Rect with minThickness:`, i.cellBounds.minCellThickness)
-  //         newShapes = zeroScaled.insetSubShapes
-  //         DeBug.log(``)
-  //       } else {
-  //         DeBug.error(`NO ZERO PATH! is Rect with minThickness 1`)
-  //         newShapes = []
-  //         DeBug.log(``)
-  //       }
-  //     } else {
-  //       newShapes = new SegPool(zeroScaled.insetSubShapes, i.shape)
-  //         .unitRefined()
-  //     }
-
-  //     // const newShapes = zeroScaled.simpleInsetSegPaths.map((p, i) => p.unitRefined())
-  //     DeBug.log(`newShapes`, newShapes)
-  //     // DeBug.log(`newPool`, newPool)
-  //   })
-  // })
-  // DeBug.groupEnd()
-
+  // UnitRefined test harness → archive/SegPath-unitRefined.js
 
   // DeBug.log(`  ######################   `)
   // DeBug.error(`GRID`, GRID.shapeGroups)

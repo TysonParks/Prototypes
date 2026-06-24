@@ -22,7 +22,7 @@ See [SUBMISSION-MANIFEST.md](../docs/Operational/SUBMISSION-MANIFEST.md).
 | [Grid-outline-convenience.js](Grid-outline-convenience.js) | `Grid` methods | Unused | `outlineGroup`, `outlineTaken` wrappers | Dev `testMess.js` still references these — use `outline()` directly |
 | [Grid-symmetrize.js](Grid-symmetrize.js) | `Grid.symmetrize()` | Incomplete | Reflect/rotate cell selections to mirror groups | Fix reassignment bugs before revive |
 | [Grid-setGridAvailability.js](Grid-setGridAvailability.js) | `Grid` method | Unused | Group-aware availability reset (vs simple `setAvailability`) | Used only by archived `symmetrize()` |
-| [Grid-SegPool.js](Grid-SegPool.js) | standalone class | Unused | Segment overlap refinement for island inset paths | Island cut experiments (`sketch.js` ref commented) |
+| [Grid-SegPool.js](Grid-SegPool.js) | standalone class | Incomplete | Pool-level `unitRefined()` over flattened inset segments | InterGrid / mask shapes (pairs with [SegPath-unitRefined.js](SegPath-unitRefined.js)) |
 
 ## Reveal animation removals (2026-06)
 
@@ -54,6 +54,8 @@ Split from monolithic `safariImageSwap.js`:
 | File | Removed from | Status | Intent | Revive when |
 |------|--------------|--------|--------|-------------|
 | [StairsToDiagonals.js](StairsToDiagonals.js) | `SegPath` + `VertPath` | Incomplete | `diagonalsPath`, `stairs`, `stairSets`, `withDiagonals()`, `convertToDiagonals()` | Post-Prototypes launch (live `ProtoSegment.isStair` unchanged) |
+| [SegPath-unused.js](SegPath-unused.js) | `SegPath` getters/methods | Unused | `hasMinRadii`, `isOutsideQuad`, `perimeter`, `hasLoosies`, `makeCurves()` | Revive with [Grid-maximizeCuddles-experiments.js](Grid-maximizeCuddles-experiments.js) |
+| [SegPath-unitRefined.js](SegPath-unitRefined.js) | `SegPath.unitRefined()` + `sketch.js` test | Incomplete | Cut overlapping segments on 1-unit shrink for accurate mask shapes | InterGrid work (pairs with [Grid-SegPool.js](Grid-SegPool.js), [ProtoLayer-interGrid.js](ProtoLayer-interGrid.js)) |
 
 ### Symbols in `Grid-unused-api.js`
 
