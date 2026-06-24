@@ -95,3 +95,74 @@
 //
 //   return bounds.half(dir[1])
 // }
+
+// ── Maximum square / rectangle — classic max-square-in-selection algo (incomplete) ─
+// Post-Prototypes: finish maxSquareWidth bugs (uses undefined `i` vs groupIndex) and maxRect.
+
+// get maxSquareWidth() {
+//   DeBug.warn(`maxSquareWidth called`)
+//   if (this.isFull) {
+//     DeBug.error(`maxSquareWidth isFull`)
+//     return this.minCellThickness
+//   }
+//   const maxGroupLength = (strip) => max(strip.groups.map(g => g.length))
+//   const maxHor = this.maxHorCellThickness, maxVert = this.maxVertCellThickness
+//   let scanRows = maxHor > maxVert, lowestMax = 1,
+//     maxWidth = min(this.maxCellThickness, this.rowCount, this.columnCount),
+//     selStrips = scanRows ? this.selectionRowsGrouped : this.selectionColumnsGrouped
+//   selStrips = selStrips.slice(0, 1)  // TESTING: take only the first strip
+//   const testRange = (group) => range(1, group.length - lowestMax).array()
+//   const hasSquare = (group, index) => {
+//     const cell = group[index - 1], amount = lowestMax,
+//       outline = this.grid.tempOutlineSelection([cell], amount, Direction.Cartesian)
+//     return outline.every(cell => this.selection.some(s => s.id === cell.id))
+//   }
+//   while (lowestMax < maxWidth) {
+//     selStrips = selStrips.filter(strip => maxGroupLength(strip) >= lowestMax)
+//     selStrips.forEach(strip => {
+//       strip.groups = strip.groups.filter(g => g.length >= lowestMax)
+//       let groupIndex = 0
+//       while (groupIndex < strip.groups.length) {
+//         const group = strip.groups[i], squareRange = testRange(group)
+//         let cellIndex = 0
+//         while (cellIndex < squareRange.length) {
+//           const square = squareRange[cellIndex], hasSquare = hasSquare(group, square)
+//           if (hasSquare) { lowestMax = max(lowestMax, square); break }
+//           cellIndex++
+//         }
+//         i++
+//       }
+//     })
+//   }
+//   DeBug.log(`selStrips`, selStrips)
+//   selStrips.forEach((strip) => {
+//     if (maxGroupLength(strip) >= maxWidth) {
+//       const groupIndex = strip.groups.findIndex(g => g.length === maxWidth),
+//         group = strip.groups[groupIndex]
+//       let squareWidth = maxWidth - 1, squares, squaresGroup = new OpArray
+//       while (squareWidth > 1) {
+//         squares = range(1, group.length - squareWidth).array()
+//           .map(sq => {
+//             const cell = group[sq - 1], amount = squareWidth
+//             return this.grid.tempOutlineSelection([cell], amount, Direction.Cartesian).union([cell], ['id']).gridVertSorted
+//           })
+//           .filter(sq => sq.every(cell => this.selection.some(s => s.id === cell.id)))
+//           .map(sq => this.grid.cellBounds({ selection: sq }).minCellThickness)
+//         squaresGroup.push(squares)
+//         squareWidth--
+//       }
+//       DeBug.log(`squaresGroup`, squaresGroup)
+//     }
+//   })
+//   return selStrips
+// }
+//
+// get maxRect() {
+//   if (this.isFull) return this.selection
+// }
+//
+// #checkCellRectThickness() {
+//   const maxHor = this.maxHorCellThickness, maxVer = this.maxVertCellThickness,
+//     minHor = this.minHorCellThickness, minVer = this.minVertCellThickness
+//   let rects = new OpArray
+// }

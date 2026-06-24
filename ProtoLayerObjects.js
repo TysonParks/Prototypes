@@ -511,7 +511,7 @@ class Frame extends ProtoLayer {
 }
 
 //MARK: SelectionBounds CLASS
-// SIZE: 401 lines
+// SIZE: 283 lines
 // NOTE: SelectionBounds is not a ProtoLayer subClass 
 class SelectionBounds {
   selection
@@ -720,121 +720,6 @@ class SelectionBounds {
     return minMax
   }
 
-  get maxSquareWidth() {
-    DeBug.warn(`maxSquareWidth called`)
-    if (this.isFull) {                      // if selection is full, means it's a rectangle or square
-      DeBug.error(`maxSquareWidth isFull`)
-      return this.minCellThickness          // return minCellThickness
-    }
-
-    //ARROW: maxGroupLength() : get max length of group in strip
-    const maxGroupLength = (strip) => max(strip.groups.map(g => g.length))
-
-    const
-      maxHor = this.maxHorCellThickness,
-      maxVert = this.maxVertCellThickness
-    let
-      scanRows = maxHor > maxVert,                                                    // scan rows with max thickness
-      lowestMax = 1,                                                                  // lowest calculated max thickness
-      maxWidth = min(this.maxCellThickness, this.rowCount, this.columnCount),         // maxWidth is maximum possible width
-      selStrips = scanRows ? this.selectionRowsGrouped : this.selectionColumnsGrouped // get selection strips based on scanRows
-    // .sort((a, b) => maxGroupLength(b) - maxGroupLength(a))
-
-    selStrips = selStrips.slice(0, 1)                                                 // TESTING: take only the first strip
-
-    //ARROW: testRange() : get array of squares from 1 to maxWidth - lowestMax
-    const testRange = (group) => range(1, group.length - lowestMax).array()
-
-    //ARROW: hasSquare() : BOOL : check if group has square the size of lowestMax
-    const hasSquare = (group, index) => {
-      const
-        cell = group[index - 1],
-        amount = lowestMax,
-        outline = this.grid.tempOutlineSelection([cell], amount, Direction.Cartesian)
-      return outline.every(cell => this.selection.some(s => s.id === cell.id))
-    }
-
-
-    while (lowestMax < maxWidth) {                                                    // once lowestMax is less than maxWidth, we've hit the max
-      selStrips = selStrips.filter(strip => maxGroupLength(strip) >= lowestMax)       // filter out strips where maxGroupLength is less than lowestMax
-      selStrips.forEach(strip => {
-        strip.groups = strip.groups.filter(g => g.length >= lowestMax)                // filter out groups where length is less than lowestMax
-        let groupIndex = 0
-        while (groupIndex < strip.groups.length) {
-          const
-            group = strip.groups[i],
-            squareRange = testRange(group)
-          let cellIndex = 0
-          while (cellIndex < squareRange.length) {
-            const
-              square = squareRange[cellIndex],
-              hasSquare = hasSquare(group, square)
-            if (hasSquare) {
-              lowestMax = max(lowestMax, square)                                  // set lowestMax to max of lowestMax and square
-              break
-            }
-            cellIndex++
-          }
-
-
-
-          i++
-
-        }
-
-      })
-    }
-
-
-    DeBug.log(`selStrips`, selStrips)
-    selStrips.forEach((strip) => {
-      if (maxGroupLength(strip) >= maxWidth) {
-        const
-          groupIndex = strip.groups.findIndex(g => g.length === maxWidth),
-          group = strip.groups[groupIndex]
-        let
-          squareWidth = maxWidth - 1,
-          squares, squaresGroup = new OpArray
-
-        while (squareWidth > 1) {
-          squares = range(1, group.length - squareWidth).array()
-            .map(sq => {
-              const cell = group[sq - 1],
-                amount = squareWidth
-              return this.grid.tempOutlineSelection([cell], amount, Direction.Cartesian).union([cell], ['id']).gridVertSorted
-            })
-            .filter(sq => sq.every(cell => this.selection.some(s => s.id === cell.id)))
-            .map(sq => this.grid.cellBounds({ selection: sq }).minCellThickness)
-
-          squaresGroup.push(squares)
-          squareWidth--
-        }
-        DeBug.log(`squaresGroup`, squaresGroup)
-      }
-    })
-
-    return selStrips
-  }
-
-  get maxRect() {
-    if (this.isFull) return this.selection
-
-  }
-
-  //METH: checkCellRectThickness()
-  #checkCellRectThickness() {
-    const
-      maxHor = this.maxHorCellThickness,
-      maxVer = this.maxVertCellThickness,
-      minHor = this.minHorCellThickness,
-      minVer = this.minVerCellThickness
-    let rects = new OpArray
-
-
-
-
-  }
-
   get anchor() { return Vertex.mult(this.cornerCellVerts.upLeft, this.cellSize) }
   get size() { return Vertex.mult(this.cellBoundsSize, this.cellSize) }
   get aspect() { return this.size.aspect }
@@ -913,7 +798,7 @@ class SelectionBounds {
 }
 
 //MARK: CELLGROUP CLASS
-// SIZE: 616 lines
+// SIZE: 561 lines
 // NOTE: drawSVG = true
 // NOTE: drawRect = false
 class CellGroup extends ProtoLayer {
@@ -963,11 +848,6 @@ class CellGroup extends ProtoLayer {
       return this.grid.validNeighbors({ selection: this.cells })
     }, `validNeighbors`).call(this)
   }
-  get validCardinalNeighbors() {
-    return memoize(() => {
-      return this.grid.validNeighbors({ selection: this.cells, direction: Direction.Cardinal })
-    }, `validCardinalNeighbors`).call(this)
-  }
 
   get ordinalConnections() { return this.cells.filter(c => !c.ordinalOnlyNeighbors.isEmpty) }
   get hasOrdinalConnections() { return !this.ordinalConnections.isEmpty }
@@ -978,52 +858,15 @@ class CellGroup extends ProtoLayer {
   get neighborIslands() {
     return this.perimeterIslands.map(i => i.neighborIslands).flat().exclude(this.perimeterIslands, `id`)
   }
-  get neighborGroups() {
-    return this.neighborIslands.map(i => i.groupID).unique().map(gID => this.grid.groupNamed(gID))
-  }
-  get nonNeighborIslands() {
-    const isles = this.grid.perimeterIslands.copy
-      .exclude(this.perimeterIslands, `id`)
-      .exclude(this.neighborIslands, `id`)
-    if (!isles.isEmpty) { return isles }
-  }
-  get hasOnlySingles() { return this.perimeterIslands.every(i => i.isSingleCell) }
-  get hasOnlyCardSingles() { return this.perimeterIslands.every(i => i.isCardinalSingle) }
-  get hasOnlyVertLines() { return this.perimeterIslands.every(i => i.isVertical || i.isCardinalSingle) }
-  get hasOnlyHorLines() { return this.perimeterIslands.every(i => i.isHorizontal || i.isCardinalSingle) }
-  // #endregion
-  // MARK: CellGroup Geometry Methods
-  // #region Geometry Methods
-  //TODO: migrate these methods to cell, grid, or maybe even ProtoLayer???
-  //METH:
-  exposedDirections(cellIndex) { return this.grid.exposedDirections({ cellIndex: cellIndex, groupID: this.id }) }
-  //METH:
-  exposedSides(cellIndex) { return this.grid.exposedSides({ cellIndex: cellIndex, groupID: this.id }) }
-  //METH:
-  exposedCorners(cellIndex) { return this.grid.exposedCorners({ cellIndex: cellIndex, groupID: this.id }) }
-  //METH:
-  cellIsIsolated(cellIndex, direction = Direction.Cardinal) {
-    this.grid.cellIsIsolated({ cellIndex: cellIndex, groupID: this.id, direction: direction })
-  }
   // #endregion
   // MARK: CellGroup Creation Methods
   // #region Setup Methods
   //METH: createPerimiters() : 
-  //FIXME: reimplement for proper minCorners functionality that works with both omni and cardinal
-  //FIXME: so "omni-min", "omni-max", "cardinal-min", "cardinal-max"
   createPerimiters(direction = Direction.Cardinal, maxCorners = true) {
     // DeBug.log(`createPerimiters this.id`, this.id)
     this.maxCorners = maxCorners
     this.direction = direction
-    // switch (maxCorners) {
-    //   case 'maxCorners':
-    //     break
-    //   case 'minCorners':
-    //     break
-    //   default:
-    //     this.maxCorners = undefined
-    //     DeBug.error(`${maxCorners} is invalid Perimeter Type`)
-    // }
+
     const groupID = this.id
     DeBug.warn(`createPerimiters for:`, groupID)
     DeBug.groupCollapsed(`grid.createIslands`)
@@ -1038,7 +881,6 @@ class CellGroup extends ProtoLayer {
     DeBug.log(``)
   }
   //METH: createSimpleSubShapes() : 
-  //FIXME: finish implementation to make createPerimiters work with min-corners
   createSimpleSubShapes() {
     DeBug.group(`${this.id}.createSimpleSubShapes called!!!`)
     this.perimeterIslands.forEach(pIsles => pIsles.createSimpleSubShapes())
@@ -1462,9 +1304,7 @@ class CellGroup extends ProtoLayer {
     return newIslands
   }
   //METH: assignToShapeGroups()
-  islandsToShapeGroups(islands, cut, direction, isFrame = false
-    // , insetScale
-  ) {
+  islandsToShapeGroups(islands, cut, direction, isFrame = false) {
     DeBug.log(`islandsToShapeGroups`)
     DeBug.log(`islands`, islands)
     DeBug.log(`cut`, cut)

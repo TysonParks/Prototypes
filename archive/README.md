@@ -43,7 +43,8 @@ Split from monolithic `safariImageSwap.js`:
 | [ProtoLayer-material-experiments.js](ProtoLayer-material-experiments.js) | `Frame`, `ShapeGroup`, `neuMark_I` | Experimental | FAIL/EXP fill/stroke/palette swaps for alternate material looks | Paste snippets into cited draw methods |
 | [Frame-innerMask-cutout.js](Frame-innerMask-cutout.js) | `Frame.setBackGridGroup()` | Incomplete | Inner cut at `scaled(0)` + SVG mask on combo cuts (mode 0 full backing) | Complex outer frame wrapping internal grid |
 | [StairsToDiagonals.js](StairsToDiagonals.js) | `SegPath` + `VertPath` + `Frame` | Incomplete | Convert rectilinear stair corners to diagonal segments | Post-Prototypes launch |
-| [SelectionBounds-experiments.js](SelectionBounds-experiments.js) | `SelectionBounds` | Incomplete | Guide points, centroid getters, `half()` / `quadrant()` for symmetry | Post-Prototypes symmetrize work (pairs with [Grid-symmetrize.js](Grid-symmetrize.js)) |
+| [SelectionBounds-experiments.js](SelectionBounds-experiments.js) | `SelectionBounds` | Incomplete | Guide points, centroid, `half()` / `quadrant()`, max square/rect | Post-Prototypes symmetrize + layout work (pairs with [Grid-symmetrize.js](Grid-symmetrize.js)) |
+| [CellGroup-unused.js](CellGroup-unused.js) | `CellGroup` | Unused | Commented neighbor/island getters, migrated geometry wrappers | Revive with sketch.js outset/reDirect paths if needed |
 
 ## drawAsSVG.js removals (2026-06)
 
