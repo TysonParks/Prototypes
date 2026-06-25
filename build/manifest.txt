@@ -1,0 +1,29 @@
+# Art Blocks submission JS bundle — load order.
+# Source of truth companion: docs/Operational/SUBMISSION-MANIFEST.md
+# Lines starting with # are ignored. Paths are relative to repo root.
+
+safariCompat.js
+appControls.js
+RandomExtended.js
+Features.js
+artBlocks/ABFeaturesScript.js
+artBlocks/tokenHash.submission.js
+artBlocks/Random.js
+OpArray.js
+color.js
+drawAsSVG.js
+Export.js
+ProtoStore.js
+DeBugging.js
+Animation.js
+ProtoUtility.js
+ProtoLayerObjects.js
+Grid.js
+ProtoFilter.js
+oklch2rgb.js
+neuMark_I.js
+squircle.js
+ProtoBatch.js
+RevealAnimation.js
+ArtworkRotation.js
+sketch.js

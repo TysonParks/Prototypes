@@ -64,9 +64,22 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 
 ## E2 bundle checklist
 
-- [ ] Replace `tokenHash.js` with submission profile
-- [ ] Remove DEV-ONLY `<script>` tags
-- [ ] Remove dat.GUI
-- [ ] Concatenate in order above
-- [ ] Optional minify (E3)
-- [ ] Visual parity on 3–5 hashes (E4)
+- [x] `build.sh` — concatenates [build/manifest.txt](../../build/manifest.txt) → `dist/submission/prototypes.js`
+- [x] Replace `tokenHash.js` with submission profile *(manifest uses `tokenHash.submission.js`)*
+- [x] Remove DEV-ONLY `<script>` tags *(manifest omits dev files)*
+- [x] Remove dat.GUI *(not in manifest)*
+- [x] Concatenate in order above
+- [ ] Optional minify (E3): `./build.sh --minify`
+- [ ] Visual parity on 3–5 hashes (E4): serve `dist/preview/index.html`
+
+### build.sh usage
+
+```bash
+./build.sh              # dist/submission/prototypes.js + dist/preview/
+./build.sh --minify     # comment/whitespace strip (terser or safe fallback)
+./build.sh --verify     # manifest paths only
+./build.sh --with-p5    # include p5 in bundle (local standalone; not for AB upload)
+```
+
+**Upload:** `dist/submission/prototypes.js` only (Art Blocks injects p5).  
+**Local E4:** serve `dist/preview/` and compare hashes to dev `index.html`.
