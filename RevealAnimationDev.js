@@ -302,8 +302,7 @@
       core.setCurrentMetrics(metrics)
     })
 
-    function hideNow() {
-      if (core.isWebKitClass) return
+    function prepareHideLayout() {
       latchReloadRotationSnapshot()
       if (typeof BG !== 'undefined' && BG && BG.elt) core.setFrameElt(BG.elt)
       core.setCurrentMetrics(core.getCurrentFrameMetrics())
@@ -312,31 +311,14 @@
       } else {
         core.updateLayoutVars(core.getCurrentMetrics())
       }
-      captureNeutralHorizontalHiddenPill()
-      core.setDirectionTiming(core.hideDurationMs, false)
-      const dummy = core.getDummy()
-      if (dummy) {
-        void dummy.offsetWidth
-        void getComputedStyle(dummy).transition
-      }
-      const myToken = core.getBuildToken()
+    }
 
-      core.setChromeSharedBlurState(false, true)
-      const frameElt = core.getFrameElt()
-      if (frameElt) {
-        const s = frameElt.style
-        s.willChange = 'transform, filter'
-        s.transition = core.getChromeArtworkTransition(core.hideDurationMs, false)
-        s.webkitTransition = s.transition
-        void frameElt.offsetWidth
-        void getComputedStyle(frameElt).transform
-        void getComputedStyle(frameElt).filter
-      }
-      if (dummy) dummy.classList.remove('revealed')
-      core.setChromeArtworkState(false, core.hideDurationMs, true)
-      setTimeout(() => {
-        if (myToken === core.getBuildToken()) core.startChromeHiddenPulse()
-      }, core.hideDurationMs)
+    const baseHideNow = RevealAnim.hideNow
+
+    function hideNow() {
+      if (core.isWebKitClass) return
+      prepareHideLayout()
+      baseHideNow()
     }
 
     function installRegenKeyHandler() {
@@ -361,18 +343,20 @@
         _rebuildInFlight = true
         e.preventDefault()
         e.stopImmediatePropagation()
-        hideNow()
-        setTimeout(() => {
+        const started = RevealAnim.transitionToHash?.(() => {
           if (typeof protoBatch !== 'undefined' && protoBatch) {
             prepRotationForReloadBuild()
             protoBatch.buildFromNewSeed()
           }
-        }, core.hideDurationMs + core.chromeHiddenPulseHoldMs)
+        })
+        if (!started) _rebuildInFlight = false
       }, true)
     }
 
     core.setDevHooks({
       shouldPreserveHiddenPill: shouldPreserveNeutralHorizontalHiddenPill,
+      prepareHideLayout,
+      captureHiddenPill: captureNeutralHorizontalHiddenPill,
       beforeRevealLayoutSync: syncArtworkRotationBeforeRevealLayout,
       onRevealComplete: () => {
         _rebuildInFlight = false

@@ -1354,3 +1354,79 @@ function between(x, range = [0, 1]) { return x >= range[0] && x <= range[1] }
 function convertRange(value, r1, r2) { return (value - r1[0]) * (r2[1] - r2[0]) / (r1[1] - r1[0]) + r2[0] }
 function normalize(value, range) { return convertRange(value, range, [0, 1]) }
 function normalizeSubRange(subrange, range) { return [normalize(subrange[0], range), normalize(subrange[1], range)] }
+
+// MARK: HashHorizon — bounded hash-space navigation (Chrome only at runtime)
+// Each token's local horizon is a single hex digit at a locus derived from the
+// mint hash tail: round(parseInt(lastTwoHex, 16) / 4), clamped 0–63.
+class HashHorizon {
+  static HEX = '0123456789abcdef'
+
+  static normalizeHash(hash) {
+    if (typeof hash !== 'string') return null
+    let h = hash.trim().toLowerCase()
+    if (h.startsWith('0x')) h = h.slice(2)
+    if (h.length !== 64 || !/^[0-9a-f]+$/.test(h)) return null
+    return `0x${h}`
+  }
+
+  static bodyFromHash(hash) {
+    const norm = HashHorizon.normalizeHash(hash)
+    return norm ? norm.slice(2) : null
+  }
+
+  static locusIndex(body) {
+    const tail = parseInt(body.slice(-2), 16)
+    return Math.max(0, Math.min(63, Math.round(tail / 4)))
+  }
+
+  static precomputeHashes(body, index) {
+    const chars = body.split('')
+    const out = []
+    for (let d = 0; d < 16; d++) {
+      chars[index] = HashHorizon.HEX[d]
+      out.push(`0x${chars.join('')}`)
+    }
+    return out
+  }
+
+  constructor(originHash) {
+    const body = HashHorizon.bodyFromHash(originHash)
+    if (!body) {
+      this.valid = false
+      this.originHash = originHash
+      this.currentDigit = 0
+      this.locus = 0
+      this.variants = []
+      return
+    }
+    this.valid = true
+    this.originHash = HashHorizon.normalizeHash(originHash)
+    this.locus = HashHorizon.locusIndex(body)
+    this.originDigit = parseInt(body[this.locus], 16)
+    this.currentDigit = this.originDigit
+    this.variants = HashHorizon.precomputeHashes(body, this.locus)
+  }
+
+  get currentHash() {
+    if (!this.valid) return this.originHash
+    return this.variants[this.currentDigit]
+  }
+
+  step(delta) {
+    if (!this.valid || !delta) return null
+    const next = this.currentDigit + delta
+    if (next < 0 || next > 15) return null
+    this.currentDigit = next
+    return this.currentHash
+  }
+
+  reset() {
+    if (!this.valid) return this.originHash
+    this.currentDigit = this.originDigit
+    return this.originHash
+  }
+
+  isAtOrigin() {
+    return this.currentDigit === this.originDigit
+  }
+}

@@ -29,7 +29,7 @@
 | `lastHash[]`, `currentHash()` dev branch | ~1600 lines; AB injects `tokenData.hash` |
 | `values64x4bit`, `sliceHash`, `primes16` in tokenHash | Used only by testMess |
 | `functionTestPrint()` | Ad-hoc tests |
-| ProtoBatch dev methods | `stepLastHash`, `batchAnimationExport`, `testContactSheet`, etc. (in ProtoBatchDev) |
+| ProtoBatch dev methods | `batchAnimationExport`, `testContactSheet`, etc. (in ProtoBatchDev) |
 
 ---
 
@@ -59,6 +59,7 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 - `DeBug.enableLogging = false` in DeBugging.js — logging stripped at source in production builds optional.
 - Light animation: tap/touch to start only; no auto-start ([Animation.js](../../Animation.js) `userInitiated` chase).
 - PostParam `Rotation`: read in [ArtworkRotation.js](../../ArtworkRotation.js) `applyPostParamRotation()`; defaults `Up`.
+- **HashHorizon** ([Features.js](../../Features.js)): Chrome-only bounded hash navigation. `↑`/`↓` step one hex digit at a locus derived from the mint hash; `0` returns to origin. Disabled on Safari/WebKit. Dev mode `testingControls.mode`: `0` = `lastHash` corpus, `1` = HashHorizon (production default).
 
 ---
 
@@ -69,14 +70,15 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 - [x] Remove DEV-ONLY `<script>` tags *(manifest omits dev files)*
 - [x] Remove dat.GUI *(not in manifest)*
 - [x] Concatenate in order above
-- [ ] Optional minify (E3): `./build.sh --minify`
+- [x] Optional minify (E3): `./build.sh --minify` (compact) or `./build.sh --strip` (readable) — comments + `DeBug.*` via terser
 - [ ] Visual parity on 3–5 hashes (E4): serve `dist/preview/index.html`
 
 ### build.sh usage
 
 ```bash
 ./build.sh              # dist/submission/prototypes.js + dist/preview/
-./build.sh --minify     # comment/whitespace strip (terser or safe fallback)
+./build.sh --minify     # compact: strip comments + DeBug.*, single-line output
+./build.sh --strip      # readable: strip comments + DeBug.*, keep indentation
 ./build.sh --verify     # manifest paths only
 ./build.sh --with-p5    # include p5 in bundle (local standalone; not for AB upload)
 ```

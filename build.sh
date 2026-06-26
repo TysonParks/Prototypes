@@ -12,6 +12,7 @@ BUNDLE_NAME="prototypes.js"
 P5_VERSION="1.11.11"
 
 MINIFY=0
+STRIP=0
 WITH_P5=0
 WITH_MARKERS=0
 PREVIEW=1
@@ -25,7 +26,8 @@ Build the Art Blocks submission JavaScript bundle from build/manifest.txt
 (SUBMISSION-MANIFEST load order). Excludes testing/, guiDev.js, archive/, etc.
 
 Options:
-  --minify       Strip comments/whitespace (terser if installed, else safe fallback)
+  --minify       Full minify: strip comments + DeBug.*, compress to one line (terser/npx)
+  --strip        Readable strip: remove comments + DeBug.*, keep indentation (terser beautify)
   --with-p5      Prepend libraries/p5.min.js (standalone bundle; AB injects p5 for upload)
   --markers      Insert // === file:path === boundaries between sources (debug builds)
   --no-preview   Skip dist/preview/index.html + style.css copy
@@ -49,6 +51,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --minify) MINIFY=1 ;;
+    --strip) STRIP=1 ;;
     --with-p5) WITH_P5=1 ;;
     --markers) WITH_MARKERS=1 ;;
     --no-preview) PREVIEW=0 ;;
@@ -71,6 +74,11 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+if [[ $MINIFY -eq 1 && $STRIP -eq 1 ]]; then
+  echo "Use --minify or --strip, not both." >&2
+  exit 1
+fi
 
 if [[ ! -f "$MANIFEST" ]]; then
   echo "Missing manifest: $MANIFEST" >&2
@@ -135,8 +143,8 @@ build_bundle() {
     printf '\n' >> "$tmp"
   done
 
-  if [[ $MINIFY -eq 1 ]]; then
-    minify_file "$tmp" "$dest"
+  if [[ $MINIFY -eq 1 || $STRIP -eq 1 ]]; then
+    minify_file "$tmp" "$dest" "$([[ $STRIP -eq 1 ]] && echo strip || echo minify)"
     rm -f "$tmp"
   else
     mv "$tmp" "$dest"
@@ -146,14 +154,31 @@ build_bundle() {
 minify_file() {
   local src="$1"
   local dest="$2"
+  local mode="${3:-minify}"
+  # Strip all comments; remove DeBug.* call sites (no name mangling)
+  local pure_funcs='pure_funcs=["DeBug.log","DeBug.warn","DeBug.error","DeBug.group","DeBug.groupCollapsed","DeBug.groupEnd"]'
+  local terser_compress="$pure_funcs"
+  local terser_format="comments=false"
+
+  if [[ "$mode" == "strip" ]]; then
+    terser_format="beautify=true,indent_level=2,comments=false"
+    # Disable size-oriented transforms; keep only side-effect removal (DeBug calls)
+    terser_compress="${pure_funcs},sequences=false,join_vars=false,collapse_vars=false,reduce_vars=false,unused=false,dead_code=false,conditionals=false,comparisons=false,evaluate=false,loops=false,hoist_props=false,inline=false,if_return=false,switches=false,properties=false,reduce_funcs=false"
+  fi
+
+  run_terser() {
+    "$@" "$src" -o "$dest" --format "$terser_format" -c "$terser_compress"
+  }
+
   if command -v terser >/dev/null 2>&1; then
-    terser "$src" --compress false --mangle false --comments false -o "$dest"
+    run_terser terser
     return
   fi
   if command -v npx >/dev/null 2>&1; then
-    npx --yes terser "$src" --compress false --mangle false --comments false -o "$dest"
+    run_terser npx --yes terser
     return
   fi
+  echo "Warning: terser not found — Python fallback strips full-line // comments only (no DeBug removal)" >&2
   # Safe fallback: drop full-line // comments and excess blank lines (E3 light pass)
   python3 - "$src" "$dest" <<'PY'
 import re, sys
@@ -177,7 +202,13 @@ write_report() {
     echo "BoredUI submission build"
     echo "Built: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
     echo "Bundle: $(basename "$bundle")"
-    echo "Minify: $([[ $MINIFY -eq 1 ]] && echo yes || echo no)"
+    if [[ $MINIFY -eq 1 ]]; then
+      echo "Minify: full — comments + DeBug.* stripped, compressed"
+    elif [[ $STRIP -eq 1 ]]; then
+      echo "Minify: strip — comments + DeBug.* stripped, readable layout"
+    else
+      echo "Minify: no"
+    fi
     echo "With p5: $([[ $WITH_P5 -eq 1 ]] && echo yes || echo no)"
     echo ""
     echo "Per-file contributions (raw bytes):"

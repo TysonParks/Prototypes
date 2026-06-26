@@ -40,8 +40,8 @@
   // object first and only then resume Safari experimentation.
   const CHROME_REFERENCE_PRESET = Object.freeze({
     blurUserUnits: 20,
-    revealDurationMs: 200,
-    hideDurationMs: 200,
+    revealDurationMs: 500,
+    hideDurationMs: 500,
     phaseOffset: 0.5,
     hiddenScale: 0.5,
   })
@@ -103,6 +103,7 @@
   let _currentMetrics = defaultFrameMetrics
   let _devHooks = null
   let _updateLayoutVars = null
+  let _navInFlight = false
   // Safari persistent overlay — created once at init(), NEVER destroyed.
   // Survives every ProtoBatch teardown/rebuild cycle (BG.elt does not).
   // Safari loading text uses .building; hidden pulse lives on #safari-dummy-core.
@@ -713,6 +714,22 @@
     }
   }
 
+  function hideChromeArtwork(totalMs) {
+    if (!_frameElt) return
+    parentChromeRevealLayers()
+    const s = _frameElt.style
+    s.transformOrigin = 'center center'
+    s.willChange = 'transform, filter'
+    s.opacity = '1'
+    s.transition = getChromeArtworkTransition(totalMs, false)
+    s.webkitTransition = s.transition
+    void _frameElt.offsetWidth
+    void getComputedStyle(_frameElt).transform
+    s.transform = `translateZ(0) scale(${chromeArtworkHiddenScale})`
+    s.filter = 'none'
+    s.webkitFilter = 'none'
+  }
+
   function ensureChromeBlurLayer() {
     if (isWebKitClass || !document.body) return null
     if (_chromeBlurLayer && _chromeBlurLayer.parentNode) return _chromeBlurLayer
@@ -1021,7 +1038,7 @@
       cleanupSafariArtworkRasterState(myToken)
       if (_safariOverlay) _safariOverlay.classList.remove('building')
       setTimeout(() => {
-        if (myToken === _buildToken) _devHooks?.onRevealComplete?.()
+        if (myToken === _buildToken) notifyRevealComplete()
       }, safariTransitionMs)
     })
   }
@@ -1055,8 +1072,60 @@
     setChromeArtworkState(true, revealDurationMs, true)
     const myToken = _buildToken
     setTimeout(() => {
-      if (myToken === _buildToken) _devHooks?.onRevealComplete?.()
+      if (myToken === _buildToken) notifyRevealComplete()
     }, revealDurationMs)
+  }
+
+  function notifyRevealComplete() {
+    _navInFlight = false
+    _devHooks?.onRevealComplete?.()
+  }
+
+  function hideNow() {
+    if (isWebKitClass) return
+    parentChromeRevealLayers()
+    stopChromeHiddenPulse()
+    if (typeof BG !== 'undefined' && BG && BG.elt) _frameElt = BG.elt
+    _currentMetrics = getCurrentFrameMetrics()
+    if (_devHooks?.prepareHideLayout) {
+      _devHooks.prepareHideLayout()
+    } else {
+      updateLayoutVars(_currentMetrics)
+    }
+    _devHooks?.captureHiddenPill?.()
+    setDirectionTiming(hideDurationMs, false)
+    const dummy = _dummy
+    if (dummy) {
+      void dummy.offsetWidth
+      void getComputedStyle(dummy).transition
+    }
+    const myToken = _buildToken
+
+    setChromeSharedBlurState(false, true)
+    hideChromeArtwork(hideDurationMs)
+    if (dummy) {
+      void dummy.offsetWidth
+      void getComputedStyle(dummy).width
+      dummy.classList.remove('revealed')
+    }
+    setTimeout(() => {
+      if (myToken === _buildToken) startChromeHiddenPulse()
+    }, hideDurationMs)
+  }
+
+  function transitionToHash(buildFn) {
+    if (isWebKitClass) return false
+    if (_navInFlight) return false
+    if (typeof buildFn !== 'function') return false
+    _navInFlight = true
+    hideNow()
+    const waitMs = hideDurationMs + chromeHiddenPulseHoldMs
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      setTimeout(() => {
+        buildFn()
+      }, waitMs)
+    }))
+    return true
   }
 
   function resetForRebuild() {
@@ -1079,9 +1148,11 @@
       // Chrome only: reset dummy to pill geometry before build.
       // Safari keeps its own path isolated for now.
       if (!isWebKitClass) {
-        if (!_devHooks?.shouldPreserveHiddenPill?.()) updateLayoutVars(defaultFrameMetrics)
+        const preserveHiddenPill = _navInFlight || _devHooks?.shouldPreserveHiddenPill?.()
+        if (!preserveHiddenPill) updateLayoutVars(defaultFrameMetrics)
         setChromeSharedBlurState(false, false)
-        startChromeHiddenPulse()
+        if (!preserveHiddenPill) startChromeHiddenPulse()
+        else if (_dummy && !_dummy.classList.contains('revealed')) startChromeHiddenPulse()
       }
 
       const runBuild = () => {
@@ -1242,6 +1313,8 @@
     isWebKitClass,
     syncRevealLayoutToArtwork,
     revealNow,
+    hideNow,
+    transitionToHash,
     resetForRebuild,
     _installDevRegen,
   }

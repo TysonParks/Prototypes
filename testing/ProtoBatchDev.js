@@ -1,43 +1,8 @@
-// DEV-ONLY: ProtoBatch extensions — lastHash nav, batch export, wrapper test batches.
+// DEV-ONLY: ProtoBatch extensions — batch export, wrapper test batches.
+// Hash navigation lives in ProtoBatch.js (installHashNav).
 // Load after ProtoBatch.js; excluded from Art Blocks submission bundle.
 
-function installProtoBatchDevNav(batch) {
-  if (batch._lastHashNavInstalled) return
-  batch._lastHashNavInstalled = true
-
-  window.addEventListener('keydown', (e) => {
-    if (!testingControls?.lastHash || typeof lastHash === 'undefined') return
-    const t = e.target
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-    if (e.metaKey || e.ctrlKey || e.altKey) return
-
-    let delta = 0
-    if (e.key === 'ArrowUp') delta = 1
-    else if (e.key === 'ArrowDown') delta = -1
-    else return
-
-    e.preventDefault()
-    e.stopPropagation()
-    batch.stepLastHash(delta)
-  }, true)
-}
-
 Object.assign(ProtoBatch.prototype, {
-  stepLastHash(delta = 0) {
-    if (!testingControls?.lastHash || typeof lastHash === 'undefined') return false
-
-    const max = lastHash.length - 1
-    const next = Math.max(0, Math.min(max, testingControls.hashNumber + delta))
-    if (next === testingControls.hashNumber) return false
-
-    testingControls.hashNumber = next
-    const hash = lastHash[next]
-    console.log(`lastHash #${next}: ${hash}`)
-    this.teardown()
-    this.buildFromHash(hash)
-    return true
-  },
-
   async batchAnimationExport({
     hashes = [],
     size = vert(1066, 1920),

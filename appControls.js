@@ -9,5 +9,6 @@ const globalControls = {
 const testingControls = {
   hashNumber: 1511,
   lastHash: true,
+  mode: 1, // 0 = lastHash corpus (dev), 1 = HashHorizon (production)
   blackMode: false,
 }

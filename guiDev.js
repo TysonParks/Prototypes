@@ -9,6 +9,7 @@ function createGUI() {
   let testingGUI = gui.addFolder('Testing')
   testingGUI.open()
   testingGUI.add(testingControls, 'hashNumber', 0, lastHash.length - 1, 1).onChange(redrawAll).listen()
+  testingGUI.add(testingControls, 'mode', { lastHash: 0, HashHorizon: 1 })
   testingGUI.add(testingControls, 'lastHash').onChange(redrawAll)
   testingGUI.add(testingControls, 'blackMode').onChange(redrawAll)
 
