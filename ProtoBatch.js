@@ -3,7 +3,7 @@
 // Manages teardown → rebuild cycle.
 
 function hashNavMode() {
-  if (typeof testingControls !== 'undefined' && testingControls.mode === 0) return 0
+  if (typeof isDevHashNavMode === 'function' && isDevHashNavMode()) return 0
   return 1
 }
 

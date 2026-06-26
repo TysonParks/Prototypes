@@ -5,10 +5,15 @@ const globalControls = {
 }
 
 // Dev seed navigation defaults — must exist before artBlocks/tokenHash.js loads.
-// Submission bundle uses tokenHash.submission.js (no testingControls reference).
+// mode 0 = dev (lastHash corpus, 'n' random regen enabled)
+// mode 1 = production (HashHorizon ↑↓/0 only; 'n' regen disabled)
 const testingControls = {
   hashNumber: 1511,
   lastHash: true,
-  mode: 1, // 0 = lastHash corpus (dev), 1 = HashHorizon (production)
+  mode: 1,
   blackMode: false,
+}
+
+function isDevHashNavMode() {
+  return typeof testingControls !== 'undefined' && testingControls.mode === 0
 }

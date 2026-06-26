@@ -168,6 +168,7 @@ function keyPressed() {
   if (key === 'n') {
     // Chrome regen is owned by RevealAnimationDev.js (hide → build). Calling
     // buildFromNewSeed() here skips the hide animation and resets rotation layout.
+    if (typeof isDevHashNavMode === 'function' && !isDevHashNavMode()) return
     if (typeof RevealAnim !== 'undefined' && RevealAnim && !RevealAnim.isWebKitClass) return
     if (typeof protoBatch !== 'undefined' && protoBatch) {
       protoBatch.buildFromNewSeed()

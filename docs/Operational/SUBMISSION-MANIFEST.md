@@ -25,7 +25,7 @@
 | `archive/*` | Legacy experiments ([Arecibo.js](../../archive/Arecibo.js), [Unused.js](../../archive/Unused.js)) |
 | `libraries/dat.gui.min.js` | Dev GUI |
 | [guiDev.js](../../guiDev.js) | Export keys, seed nav, wrapper debug |
-| [RevealAnimationDev.js](../../RevealAnimationDev.js) | Dynamic `'n'` regen, `hideNow()`, rotation-reload morph |
+| [RevealAnimationDev.js](../../RevealAnimationDev.js) | Dynamic `'n'` regen (dev `mode: 0` only), rotation-reload morph |
 | `lastHash[]`, `currentHash()` dev branch | ~1600 lines; AB injects `tokenData.hash` |
 | `values64x4bit`, `sliceHash`, `primes16` in tokenHash | Used only by testMess |
 | `functionTestPrint()` | Ad-hoc tests |
@@ -59,7 +59,7 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 - `DeBug.enableLogging = false` in DeBugging.js — logging stripped at source in production builds optional.
 - Light animation: tap/touch to start only; no auto-start ([Animation.js](../../Animation.js) `userInitiated` chase).
 - PostParam `Rotation`: read in [ArtworkRotation.js](../../ArtworkRotation.js) `applyPostParamRotation()`; defaults `Up`.
-- **HashHorizon** ([Features.js](../../Features.js)): Chrome-only bounded hash navigation. `↑`/`↓` step one hex digit at a locus derived from the mint hash; `0` returns to origin. Disabled on Safari/WebKit. Dev mode `testingControls.mode`: `0` = `lastHash` corpus, `1` = HashHorizon (production default).
+- **HashHorizon** — see [HASH-HORIZON.md](HASH-HORIZON.md). Chrome-only bounded hash navigation (`↑`/`↓`/`0`). `'n'` random regen disabled in production (`mode: 1`); enabled in dev (`mode: 0`). Disabled on Safari/WebKit.
 
 ---
 
