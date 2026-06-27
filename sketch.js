@@ -25,8 +25,7 @@ let
   ROT, frameRate, lightClock, arcSecond, // Rotation, Frame Rate, Synced Light Clock
   R, S, RuID,               // Random, Store, Random UID
   animationController,       // Animation Controller
-  protoBatch,                // Batch Renderer
-  hashHorizon                // Bounded hash-space navigation
+  protoBatch                 // Batch Renderer
 
 
 // MARK: setup
@@ -41,10 +40,10 @@ function setup() {
   installArtworkRotationHooks()
   installArtworkRotationControls()
   installArtworkFullscreenControls()
+  installArtworkSaveControls()
   // PostParams rotation applies once on cold load only — not on 'n' rebuilds,
   // so keyboard/viewport rotation persists across Chrome regen (NEUTRAL_RESET).
   if (typeof applyPostParamRotation === 'function') applyPostParamRotation(tokenData)
-  hashHorizon = new HashHorizon(tokenData.hash)
   protoBatch = new ProtoBatch()
   protoBatch.buildFromHash(tokenData.hash)
   // protoBatch.batchAnimationExport()

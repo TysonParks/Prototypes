@@ -61,6 +61,14 @@ Split from monolithic `safariImageSwap.js`:
 | [ProtoSegment-part-getters.js](ProtoSegment-part-getters.js) | `ProtoSegment` | Unused | Part delegates: `isUTurn*`, `isStairOut`, `isFlat`, `isCorner` | Revive for shape classification (pairs with [ProtoSegment-unused.js](ProtoSegment-unused.js), `Part` in ProtoUtility.js) |
 | [ProtoSegment-unused.js](ProtoSegment-unused.js) | `ProtoSegment` getters/methods | Unused / incomplete | Cubic/corner helpers, edge geometry, wrap experiments, neighbor removal | Wrapper/InterGrid work (pairs with [SegPath-unitRefined.js](SegPath-unitRefined.js), KNOWN-ISSUES §9.7.7) |
 
+## HashHorizon experiment (2026-06)
+
+| File | Removed from | Status | Intent |
+|------|--------------|--------|--------|
+| [HashHorizon.js](HashHorizon.js) | `Features.js`, `ProtoBatch.js`, `appControls.js` | Archived | Bounded hash-space nav: single hex digit stepped via `↑`/`↓`, origin reset via `0` |
+
+See [HASH-HORIZON.md](../docs/Operational/HASH-HORIZON.md) for conceptual framing and why it was removed from production.
+
 ### Symbols in `Grid-unused-api.js`
 
 - **Getters:** `gridBounds`, `takenBounds`, `cellPoints`, `cellsInAnIsland`, `biggestGroup`, `allSimpleSubShapesSegsCounterSorted`, `allInternalSimpleSubShapes`, `allSimpleInsideCorners`, `availableRows`, `availableColumns`, `gridCornerSegs`

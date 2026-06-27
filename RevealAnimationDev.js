@@ -329,7 +329,6 @@
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
         if (e.metaKey || e.ctrlKey || e.altKey) return
         if (e.key !== 'n' && e.key !== 'N') return
-        if (typeof isDevHashNavMode === 'function' && !isDevHashNavMode()) return
         if (core.isWebKitClass) {
           e.preventDefault()
           e.stopImmediatePropagation()

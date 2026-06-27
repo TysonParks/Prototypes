@@ -29,7 +29,7 @@
 | `lastHash[]`, `currentHash()` dev branch | ~1600 lines; AB injects `tokenData.hash` |
 | `values64x4bit`, `sliceHash`, `primes16` in tokenHash | Used only by testMess |
 | `functionTestPrint()` | Ad-hoc tests |
-| ProtoBatch dev methods | `batchAnimationExport`, `testContactSheet`, etc. (in ProtoBatchDev) |
+| ProtoBatch dev methods | `stepLastHash`, `batchAnimationExport`, `testContactSheet`, etc. (in ProtoBatchDev) |
 
 ---
 
@@ -59,7 +59,7 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 - `DeBug.enableLogging = false` in DeBugging.js — logging stripped at source in production builds optional.
 - Light animation: tap/touch to start only; no auto-start ([Animation.js](../../Animation.js) `userInitiated` chase).
 - PostParam `Rotation`: read in [ArtworkRotation.js](../../ArtworkRotation.js) `applyPostParamRotation()`; defaults `Up`.
-- **HashHorizon** — see [HASH-HORIZON.md](HASH-HORIZON.md). Chrome-only bounded hash navigation (`↑`/`↓`/`0`). `'n'` random regen disabled in production (`mode: 1`); enabled in dev (`mode: 0`). Disabled on Safari/WebKit.
+- **Collector controls (production):** `←`/`→` viewport rotation, `s` PNG save ([Export.js](../../Export.js)), `f`/`Esc` fullscreen ([ArtworkRotation.js](../../ArtworkRotation.js)). No hash stepping — see archived [HashHorizon experiment](HASH-HORIZON.md).
 
 ---
 

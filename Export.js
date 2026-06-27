@@ -1,6 +1,6 @@
 //MARK: Export CLASS
 // SIZE: 200 lines
-// SVG/PNG download helpers. createSVGMarkup used by ProtoLayerObjects; raster export via guiDev / ProtoBatchDev.
+// SVG/PNG download helpers. createSVGMarkup used by ProtoLayerObjects; production PNG save via saveArtworkPNG().
 class Export {
 
   // MARK: File export methods
@@ -200,4 +200,149 @@ class Export {
     const totalTime = ((performance.now() - startTime) / 1000).toFixed(1)
     console.log(`Export complete: ${totalFrames} frames in ${totalTime}s`)
   }
+}
+
+function getCurrentDateString() {
+  const currentDate = new Date()
+  const year = currentDate.getFullYear()
+  const month = String(currentDate.getMonth() + 1).padStart(2, '0')
+  const day = String(currentDate.getDate()).padStart(2, '0')
+  return `${year}.${month}.${day}`
+}
+
+function normalizeExportRotationAngle(angle) {
+  const n = Number(angle)
+  if (!Number.isFinite(n)) return 0
+  return ((Math.round(n / 90) * 90) % 360 + 360) % 360
+}
+
+function getLiveArtworkRotationAngle() {
+  const transform = FRAME?.bleed?.elt?.style?.transform || ''
+  const match = transform.match(/rotate\((-?\d+(?:\.\d+)?)deg\)/)
+  if (!match) return null
+  return normalizeExportRotationAngle(Number(match[1]))
+}
+
+function getArtworkExportRotationInfo() {
+  const snap = typeof artworkRotationSnapshot === 'function'
+    ? artworkRotationSnapshot()
+    : { angle: 0 }
+  const stateAngle = normalizeExportRotationAngle(snap.angle)
+  const visualAngle = getLiveArtworkRotationAngle()
+  const angle = visualAngle === null ? stateAngle : visualAngle
+  const position = angle / 90
+  const aspect = position % 2 === 0 ? 'V' : 'H'
+  return {
+    angle,
+    position,
+    aspect,
+    code: `r${position}${aspect}`,
+    isHorizontal: aspect === 'H',
+  }
+}
+
+function getArtworkExportResolution(baseRez, rotationInfo, scale = 1) {
+  const isHorizontal = rotationInfo.isHorizontal
+    || normalizeExportRotationAngle(rotationInfo.angle) % 180 !== 0
+  let width = isHorizontal ? baseRez.y : baseRez.x
+  let height = isHorizontal ? baseRez.x : baseRez.y
+  if (isHorizontal && height > width) [width, height] = [height, width]
+  if (!isHorizontal && width > height) [width, height] = [height, width]
+  return {
+    width,
+    height,
+    rezString: `${width * scale}x${height * scale}`,
+  }
+}
+
+function parseSVGViewBox(raw) {
+  const vals = String(raw || '').trim().split(/[\s,]+/).map(Number)
+  if (vals.length !== 4 || vals.some(v => !Number.isFinite(v))) return null
+  return { x: vals[0], y: vals[1], width: vals[2], height: vals[3] }
+}
+
+function formatSVGViewBox({ x, y, width, height }) {
+  return `${x} ${y} ${width} ${height}`
+}
+
+function createRotationAwareSVGMarkup(svgElement, rotationInfo, width, height) {
+  const clone = svgElement.cloneNode(true)
+  clone.style.removeProperty('transform')
+  clone.style.removeProperty('transform-origin')
+  clone.style.removeProperty('transform-box')
+  clone.style.removeProperty('will-change')
+  clone.style.removeProperty('position')
+  clone.style.removeProperty('left')
+  clone.style.removeProperty('top')
+  clone.style.removeProperty('max-width')
+  clone.style.removeProperty('max-height')
+  clone.setAttribute('width', `${width}`)
+  clone.setAttribute('height', `${height}`)
+
+  const viewBox = parseSVGViewBox(clone.getAttribute('viewBox'))
+  if (!viewBox) return Export.createSVGMarkup(clone)
+
+  const angle = rotationInfo.angle
+  if (angle === 0) return Export.createSVGMarkup(clone)
+
+  const cx = viewBox.x + viewBox.width / 2
+  const cy = viewBox.y + viewBox.height / 2
+  const rotatedViewBox = rotationInfo.isHorizontal
+    ? {
+      x: cx - viewBox.height / 2,
+      y: cy - viewBox.width / 2,
+      width: viewBox.height,
+      height: viewBox.width,
+    }
+    : viewBox
+  const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+  wrapper.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`)
+  while (clone.firstChild) wrapper.appendChild(clone.firstChild)
+  clone.appendChild(wrapper)
+  clone.setAttribute('viewBox', formatSVGViewBox(rotatedViewBox))
+  return Export.createSVGMarkup(clone)
+}
+
+function getSVGMarkupIntrinsicSize(svgMarkup) {
+  const doc = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml')
+  const root = doc.documentElement
+  const width = Number.parseFloat(root?.getAttribute('width'))
+  const height = Number.parseFloat(root?.getAttribute('height'))
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return null
+  if (width <= 0 || height <= 0) return null
+  return { width, height, rezString: `${width}x${height}` }
+}
+
+function saveArtworkPNG() {
+  if (!FRAME?.bleed?.elt) return
+  const scale = 1
+  const rez = vert(3000, 5400)
+  const rotationInfo = getArtworkExportRotationInfo()
+  const exportRez = getArtworkExportResolution(rez, rotationInfo, scale)
+  const date = getCurrentDateString()
+  const hash = tokenData.hash
+  const name = `Prototypes-${date}-${rotationInfo.code}-${hash}-${exportRez.rezString}.png`
+  const svgMarkup = createRotationAwareSVGMarkup(
+    FRAME.bleed.elt,
+    rotationInfo,
+    exportRez.width,
+    exportRez.height,
+  )
+  const exportSize = getSVGMarkupIntrinsicSize(svgMarkup) || exportRez
+  Export.exportPNG(svgMarkup, name, exportSize.width, exportSize.height, scale)
+}
+
+function handleArtworkSaveKey(event) {
+  if (event.key !== 's' && event.key !== 'S') return
+  const tag = event.target?.tagName?.toLowerCase()
+  if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+  event.preventDefault()
+  saveArtworkPNG()
+}
+
+function installArtworkSaveControls() {
+  if (window._artworkSaveInstalled) return
+  window._artworkSaveInstalled = true
+  document.addEventListener('keydown', handleArtworkSaveKey)
 }
