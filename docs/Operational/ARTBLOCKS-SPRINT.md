@@ -137,13 +137,21 @@ bounds for cascade/wave combo+R cuts (Safari perf — §9.15.3). Re-test J-in an
 per-cut filter AABBs only if a new repro appears.
 
 **B6 — Thin depth outline:**
-Three `lastHash` repros (#1494, #1518, #1521) on Flexible grids. **Fixed** with
-simple Feature enum limits: extra `cellOutset` trim for Flexible+Wide at `x > 2`,
-and conditional `frameWidth.removeLastOption()` when `cellOutset > 0.7 / 0.8`
-before the Flexible `frameWidth` draw. An attempted `neuShadeSVGFactory()`
-proportional-ladder branch showed no visual change and was reverted; a complex
-`#estimateFlexMinCellSize()` guard was also rejected as too aggressive. See
-§9.14.12.
+**Fixed** in two layers (§9.14.12):
+
+1. **Feature enum limits** — #1494, #1518, #1521 on Flexible grids: extra
+   `cellOutset` trim for Flexible+Wide at `x > 2`, and conditional
+   `frameWidth.removeLastOption()` when `cellOutset > 0.7 / 0.8` before the
+   Flexible `frameWidth` draw.
+
+2. **Shade ladder floor** — #1543, #1547–#1549 (new deterministic `lastHash`
+   band): `neuShadeSVGFactory()` `keep()` minimum layer count raised from `3`
+   to `4` when `mag < 9`, so fixed offset anchors (`1`, `2`, `4`) no longer
+   dominate shallow combo stacks. Rendering-side only; does not change geometry.
+
+An attempted proportional-ladder branch showed no visual change on early repros and
+was reverted; a complex `#estimateFlexMinCellSize()` guard was also rejected as too
+aggressive. Cascade geometry getting too thin remains a separate follow-up.
 
 **B4 — Animation:**
 Timing polish is now centered on a synchronized light clock rather than a

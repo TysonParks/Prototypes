@@ -2479,35 +2479,41 @@ after the fix.
 ### 9.14.12 Thin Depth Outline Bug (Resolved)
 
 *Added: 2026-06-17*
-*Resolution updated: 2026-06-17*
+*Resolution updated: 2026-06-18*
 
-**Status:** ✅ Resolved — FeatureSet enum limits (Flexible grids)
+**Status:** ✅ Resolved — two independent layers (Feature enum limits + shade ladder floor)
 
-**Symptom:** Rare outputs (~3 in 1500+ `lastHash` seeds) showed cut shading as a
-single dark outline ring instead of directional light/dark bands aligned to the
-light vector. All known repros used `gridStyle === 'Flexible'` with `cellInset ===
-'Min'`.
+**Symptom:** Rare outputs showed cut shading as a single dark outline ring instead
+of directional light/dark bands aligned to the light vector.
 
-**Repro designators:** #1494, #1518, #1521 (`0x8d31f933…`, `0x08c672bb…`,
-`0x86ba04c8…`).
+**Repro designators:**
 
-**Root cause (suspected):** The combination of high `cellOutset`, high column count
-(`x`), and/or wide `frameWidth` on Flexible grids compressed `minCellSize` enough
-that cut depth (`loft * minCellWidth`) fell into a sub-threshold range. At that
-scale, `Shade.neuShadeSVGFactory()`'s fixed offset anchors (`1`, `2`, `4`) mixed
-with depth-derived offsets and `keep()` can produce a stack dominated by a single
-fixed anchor — visually a dark outline rather than directional shading (see
-§9.14.10 for related shade-ladder context).
+| Band | Indices | Hashes |
+|------|---------|--------|
+| Flexible enum repros | #1494, #1518, #1521 | `0x8d31f933…`, `0x08c672bb…`, `0x86ba04c8…` |
+| New deterministic band | #1543, #1547–#1549 | `0x171732f4…`, `0xa30e8166…`, `0x73ea44ab…`, `0x6bd1b2ad…` |
 
-**Resolution (`Features.js`):** Simple, determinism-safe enum trimming before the
-relevant `feature(r)` draws — no new PRNG calls, no reordering of existing draws:
+The first band used `gridStyle === 'Flexible'` with `cellInset === 'Min'`. The
+second band surfaced after the deterministic `lastHash` extension; those outputs
+still had shallow combo cuts but were not fully eliminated by Feature-side enum
+trimming alone.
+
+**Root cause:** Cut depth (`loft * minCellWidth`) fell into a sub-threshold range
+where `Shade.neuShadeSVGFactory()`'s fixed offset anchors (`1`, `2`, `4`) mixed
+with depth-derived offsets. When `keep()` retained too few decay layers at low
+`mag`, the stack collapsed toward a single anchor — visually a dark outline rather
+than directional shading (see §9.14.10 for related shade-ladder context).
+
+**Resolution 1 — prevent thin geometry (`Features.js`):** Determinism-safe enum
+trimming before the relevant `feature(r)` draws — no new PRNG calls, no reordering
+of existing draws:
 
 1. **`#calcX()` — existing + one addition:**
    - `x > 4` + Flexible: `cellOutset.removeLastOption()` and
      `frameWidth.removeOptions(['Large'])` (pre-existing)
    - `x > 3`: progressive `cellOutset.removeLastOption(...)` (pre-existing)
    - **`x > 2` + Flexible + `cellAspect === 'Wide'`:** additional
-     `cellOutset.removeLastOption()` *(user fix)*
+     `cellOutset.removeLastOption()`
 
 2. **`#calcFrameProps()` — Flexible branch:**
    - After `cellOutset` is known, before `frameWidth.feature(r)`:
@@ -2515,23 +2521,39 @@ relevant `feature(r)` draws — no new PRNG calls, no reordering of existing dra
      - if `cellOutset > 0.8` → `frameWidth.removeLastOption()` again
    - Prevents high-outset grids from also drawing the widest frame options, which
      further compresses cell size and pushes cuts into the thin-depth range.
-     *(user fix)*
+
+Fixed #1494, #1518, #1521 in practice.
+
+**Resolution 2 — shade ladder floor (`neuMark_I.js`):** In `neuShadeSVGFactory()`,
+the `keep()` helper returns the minimum number of shade layers retained when
+`sqrt(mag) < 3` (i.e. `mag < 9`). Changed the floor from **`3` → `4`** (line ~372).
+
+*Why it works:* Below the `mag >= 9` threshold, the halving ladder is short. With
+only three retained layers, the pre-seeded fixed anchors (`1`, `2`, `4` in the
+offsets array) dominate the visible stack — one offset magnitude reads as a uniform
+outline. Keeping four layers preserves one additional decay step so depth-derived
+offsets participate and directional light/dark bands remain legible.
+
+*Scope:* Rendering-side only. Does not change cut geometry, cascade step count, or
+feature rarity. Complements Resolution 1 when cuts are legitimately shallow (e.g.
+cascade steps, frame bands) rather than globally cramped Flexible grids.
+
+Fixed remaining deterministic-band repros #1543, #1547–#1549.
 
 **Approaches tried and rejected:**
 
 | Approach | Location | Outcome |
 |----------|----------|---------|
-| Proportional shade ladder when `mag < 6` | `neuMark_I.js` `neuShadeSVGFactory()` | No visible difference on repro hashes; reverted |
-| Conservative `#estimateFlexMinCellSize()` + `#trimCellOutsetForThinDepth()` | `Features.js` `#calcX()` | Too aggressive/complex; reverted in favor of simpler limits above |
+| Proportional shade ladder when `mag < 6` | `neuMark_I.js` `neuShadeSVGFactory()` | No visible difference on early repro hashes; reverted |
+| Conservative `#estimateFlexMinCellSize()` + `#trimCellOutsetForThinDepth()` | `Features.js` `#calcX()` | Too aggressive/complex; reverted in favor of Resolution 1 |
 
-The rendering-path hypothesis (fixed anchors + `keep()` floor) remains plausible as
-*why* thin depths look wrong, but preventing those depths at feature time was the
-effective fix in practice.
+**Related (separate issue):** Cascade cut layers getting too thin — geometry-side
+limiter work; not addressed by `keep()` floor. See sprint notes / future cascade
+amount caps in `ProtoMill.mkFrame()` and `cutIslands()`.
 
 **Diagnostics (optional):** `reportThinDepthShadeHealth()` in
 `testing/WrapperTestHarness.js` flags shallow combo cuts whose offset stacks look
-anchor-dominated; `testing/thinDepthProbe.mjs` for headless `DEBUG_NEUSHADES`
-logging. These describe the suspected rendering failure mode, not the applied fix.
+anchor-dominated (archived `DEBUG_NEUSHADES` probe in `archive/thinDepthProbe.mjs`).
 
 **Baseline tag:** `features-calc-v1-submission` marks the commit before Feature
 calc changes for this bug; post-submission wrap debugging can diff against it.

@@ -369,7 +369,7 @@ class Shade {
       if (root >= 8) return 7 + 1             // mag >= 64
       if (root >= 6) return 6 + 1             // mag >= 36
       if (root >= 3) return floor(root) + 1   // mag >= 9
-      return 3
+      return 4
     }
 
     //ARROW: rounding(): [number] : preserve precision of lower offsets, reduce duplicates for larger offsets

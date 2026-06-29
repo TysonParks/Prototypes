@@ -1540,13 +1540,13 @@ const lastHash = [
   //
   //
   //------------------------------------------
-  '0x171732f4287174394dca2a3d384d7a25e311da9cc87018cc62508f0b75008b8d', // thin depth bug: //FUNC:
+  '0x171732f4287174394dca2a3d384d7a25e311da9cc87018cc62508f0b75008b8d', // thin depth bug: !!!FIXED!!!
   '0xad319a2b58f3866122b0000fc462f591bf942a6bd37f4f80fc9472ba9eef7e4d', // thin r-Out outline bug: //FUNC:
   '0xe13dfb481b1099ab606f3a95bf324c7929df54b4151db62168d554e47ea6c7f7', // 1525 METH: // Proximal Wrap: //FUNC:
   '0x329f10f0906785095b9301809c607575994c6009cc52ef73652ad1e51ea5ecfd', // Proximal Wrap: //FUNC:
-  '0xa30e8166fde166b5df5e33b2a8c3df507981ce440945fd60bbe9322db1ef8896', // thin depth bug: //FUNC:
-  '0x73ea44abe9d338f74463f36821a760abaa03fa30c1e094d71d5ff244e2314486', // thin depth bug: //FUNC:
-  '0x6bd1b2ad73f806c772ecd712342667de335844ed69603529251c64cb0f46ea41', // thin depth bug: //FUNC:
+  '0xa30e8166fde166b5df5e33b2a8c3df507981ce440945fd60bbe9322db1ef8896', // thin depth bug: !!!FIXED!!!
+  '0x73ea44abe9d338f74463f36821a760abaa03fa30c1e094d71d5ff244e2314486', // thin depth bug: !!!FIXED!!!
+  '0x6bd1b2ad73f806c772ecd712342667de335844ed69603529251c64cb0f46ea41', // thin depth bug: !!!FIXED!!!
   '0x631ae018e5116817dba91ee3c2fe6c5c16e492d7cd4e93b27c8dc39318bb8e19', // 1530 METH: // runtime error: //FUNC:
 
 

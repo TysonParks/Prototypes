@@ -49,6 +49,15 @@ git checkout features-calc-v1-submission -- Features.js artBlocks/ABFeaturesScri
 | 1494, 1518, 1521 | thin depth (Flexible) | §9.14.12 |
 | 1505–1516 | j-in crop | §9.14.1 |
 
+## Fixed — new deterministic `lastHash` band (June 2026)
+
+| Designator | Hash prefix | Label | KNOWN-ISSUES | Fix |
+|------------|-------------|-------|--------------|-----|
+| 1543 | `0x171732f4…` | thin depth bug | §9.14.12 | `keep()` floor 3→4 (`neuMark_I.js`) |
+| 1547 | `0xa30e8166…` | thin depth bug | §9.14.12 | `keep()` floor 3→4 (`neuMark_I.js`) |
+| 1548 | `0x73ea44ab…` | thin depth bug | §9.14.12 | `keep()` floor 3→4 (`neuMark_I.js`) |
+| 1549 | `0x6bd1b2ad…` | thin depth bug | §9.14.12 | `keep()` floor 3→4 (`neuMark_I.js`) |
+
 ---
 
 ## Corpus notes
