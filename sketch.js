@@ -270,7 +270,7 @@ class ProtoMill {
         return converts || []
       }
 
-      DeBug.log(`outsetGroup`, outsetGroup.nonNeighborIslands)
+      DeBug.log(`outsetGroup`, outsetGroup?.nonNeighborIslands)
       let tempConverts = converts()
 
       DeBug.log(`converts`, tempConverts?.map(i => i.id))

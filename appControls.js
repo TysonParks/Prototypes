@@ -6,7 +6,7 @@ const globalControls = {
 
 // Dev seed navigation defaults — must exist before artBlocks/tokenHash.js loads.
 const testingControls = {
-  hashNumber: 1519,
+  hashNumber: 1524,
   lastHash: true,
   blackMode: false,
 }

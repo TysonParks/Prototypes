@@ -1,7 +1,10 @@
 /**
+ * OBSOLETE — archived 2026-06. Depends on removed `window.DEBUG_NEUSHADES`
+ * instrumentation in neuShadeSVGFactory (see neuMark-archived-passes.js).
+ *
  * Headless probe for thin-depth shade ladder values (diagnostic only).
  * Fix for §9.14.12 is Feature-side enum limits, not neuMark ladder changes.
- * Usage: node testing/thinDepthProbe.mjs
+ * Usage: node archive/thinDepthProbe.mjs
  */
 import puppeteer from 'puppeteer'
 import { createServer } from 'http'

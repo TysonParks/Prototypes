@@ -1,5 +1,7 @@
 
 // TODO: keep these around and make adaptations using the curving code
+// ARCHIVED 2026-06 — not loaded by index.html or submission bundle.
+// Dev harness: testing/testMess.js drawSquircle() (optional manual script load).
 
 // FUNC: squircleShape()
 function squircleShape(width, height, curveWidth = 1, curveHeight = 1) {

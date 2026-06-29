@@ -96,6 +96,21 @@ class FilterDebugHarness {
   static patchSetLayouts() {
     if (!this.originals.setLayouts) this.originals.setLayouts = ProtoCut.prototype.setLayouts
 
+    function legacyPercentMaxLayout(cut) {
+      let [xMax, yMax, widthMax, heightMax] = [0, 0, 0, 0]
+      cut.shapeGroups.forEach(grp => {
+        const [size, padding] = [grp.insetSize, grp.padding]
+        const padSize = Vertex.div(padding, size)
+        const anchor = Vertex.mult(padSize, -100)
+        const newSize = Vertex.mult(padSize, 200).add(vert(100))
+        xMax = min(anchor.x, xMax)
+        yMax = min(anchor.y, yMax)
+        widthMax = max(newSize.x, widthMax)
+        heightMax = max(newSize.y, heightMax)
+      })
+      return { x: xMax, y: yMax, width: widthMax, height: heightMax }
+    }
+
     ProtoCut.prototype.setLayouts = function () {
       const mode = FilterDebugHarness.state.filterRegionMode
       if (mode === 'userSpace') {
@@ -111,7 +126,7 @@ class FilterDebugHarness {
       }
 
       if (mode) {
-        const layout = this.maxLayout
+        const layout = legacyPercentMaxLayout(this)
         this.filters.forEach(f => {
           f.filter.elt.removeAttribute('filterUnits')
           f.filter

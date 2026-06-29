@@ -22,7 +22,6 @@ Grid.js
 ProtoFilter.js
 oklch2rgb.js
 neuMark_I.js
-squircle.js
 ProtoBatch.js
 RevealAnimation.js
 ArtworkRotation.js

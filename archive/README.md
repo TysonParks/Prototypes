@@ -69,6 +69,15 @@ Split from monolithic `safariImageSwap.js`:
 
 See [HASH-HORIZON.md](../docs/Operational/HASH-HORIZON.md) for conceptual framing and why it was removed from production.
 
+## neuMark_I.js / misc (2026-06)
+
+| File | Removed from | Status | Intent |
+|------|--------------|--------|--------|
+| [squircle.js](squircle.js) | `index.html`, submission manifest | Unused | CSS clip-path squircle helpers for DOM experiments |
+| [neuMark-Profile-unimplemented.js](neuMark-Profile-unimplemented.js) | `Profile` / `ProtoCut` in neuMark_I.js | Unimplemented | `s`/`v` profiles, `halfCurve`/`frameEdge` modifiers |
+| [neuMark-archived-passes.js](neuMark-archived-passes.js) | `neuMark_I.js`, `ProtoLayerObjects.js` | Removed | Legacy `maxLayout` % filter regions, `curve()`, channel-cut stub, fake iridescent shades, `DEBUG_NEUSHADES` console probe |
+| [thinDepthProbe.mjs](thinDepthProbe.mjs) | `testing/` | Obsolete | Headless Puppeteer probe for `DEBUG_NEUSHADES` logs on thin-depth hashes |
+
 ### Symbols in `Grid-unused-api.js`
 
 - **Getters:** `gridBounds`, `takenBounds`, `cellPoints`, `cellsInAnIsland`, `biggestGroup`, `allSimpleSubShapesSegsCounterSorted`, `allInternalSimpleSubShapes`, `allSimpleInsideCorners`, `availableRows`, `availableColumns`, `gridCornerSegs`

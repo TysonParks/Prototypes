@@ -1335,6 +1335,10 @@ function drawClone() {
 
 // FUNC: drawSquircle()
 function drawSquircle(shape, wrapper) {
+  if (typeof squirclePath !== 'function') {
+    console.warn('drawSquircle: squircle.js archived — load archive/squircle.js to test')
+    return
+  }
   let path2 = squirclePath(testSquircleControls.width, testSquircleControls.height, testSquircleControls.curveWidth, testSquircleControls.curveHeight, testSquircleControls.flareMode)
 
   shape

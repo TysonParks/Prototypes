@@ -40,8 +40,8 @@
   // object first and only then resume Safari experimentation.
   const CHROME_REFERENCE_PRESET = Object.freeze({
     blurUserUnits: 20,
-    revealDurationMs: 500,
-    hideDurationMs: 500,
+    revealDurationMs: 200,
+    hideDurationMs: 200,
     phaseOffset: 0.5,
     hiddenScale: 0.5,
   })

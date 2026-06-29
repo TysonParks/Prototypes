@@ -48,7 +48,7 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 9. [OpArray.js](../../OpArray.js) · [color.js](../../color.js) · [drawAsSVG.js](../../drawAsSVG.js) · [Export.js](../../Export.js)
 10. [ProtoStore.js](../../ProtoStore.js) · [DeBugging.js](../../DeBugging.js) · [Animation.js](../../Animation.js)
 11. [ProtoUtility.js](../../ProtoUtility.js) · [ProtoLayerObjects.js](../../ProtoLayerObjects.js) · [Grid.js](../../Grid.js)
-12. [ProtoFilter.js](../../ProtoFilter.js) · [oklch2rgb.js](../../oklch2rgb.js) · [neuMark_I.js](../../neuMark_I.js) · [squircle.js](../../squircle.js)
+12. [ProtoFilter.js](../../ProtoFilter.js) · [oklch2rgb.js](../../oklch2rgb.js) · [neuMark_I.js](../../neuMark_I.js)
 13. [ProtoBatch.js](../../ProtoBatch.js) — core build/teardown only
 14. [RevealAnimation.js](../../RevealAnimation.js)
 15. [ArtworkRotation.js](../../ArtworkRotation.js)

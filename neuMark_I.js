@@ -1,17 +1,13 @@
 //ENUM: Profile : Cut Profile Descriptor
-// SIZE: 92 lines
+// SIZE: 72 lines
 class Profile {
   breed
   type
   cutIn
-  halfCurve
-  frameEdge
 
-  constructor(type, cutIn = true, frameEdge = false, halfCurve = false) {
+  constructor(type, cutIn = true) {
     this.type = type
     this.cutIn = cutIn
-    this.frameEdge = frameEdge
-    this.halfCurve = halfCurve
     this.breed = this.description
   }
 
@@ -29,14 +25,10 @@ class Profile {
   static jOut = new Profile(`j`, false)
   static rIn = new Profile(`r`)
   static rOut = new Profile(`r`, false)
-  static fIn = new Profile(`s`)
-  static fOut = new Profile(`s`, false)
-  static vIn = new Profile(`v`)
-  static vOut = new Profile(`v`, false)
 
-  static AllTypes = [`i`, `j`, `r`]     // Add `s`  and `v` when implemented
-  static CurveTypes = [`j`, `r`]        // Add `s` when implemented
-  static FlatTypes = [`i`]              // Add `v` when implemented
+  static AllTypes = [`i`, `j`, `r`]
+  static CurveTypes = [`j`, `r`]
+  static FlatTypes = [`i`]
 
   static CurveOptions = [Profile.jIn, Profile.jOut, Profile.rIn, Profile.rOut]
 
@@ -45,8 +37,6 @@ class Profile {
   get isI() { return this.type === `i` }                    // is `i` type
   get isJ() { return this.type === `j` }                    // is `j` type
   get isR() { return this.type === `r` }                    // is `r` type
-  get isS() { return this.type === `s` }                    // is `s` type
-  get isV() { return this.type === `v` }                    // is `v` type
 
   get isIIn() { return this.isI && this.isCutIn }
   get isIOut() { return this.isI && this.isCutOut }
@@ -65,7 +55,7 @@ class Profile {
   get isCurve() { return this.CurveTypes.includes(this.type) } // is in CurveTypes
   get isFlat() { return this.FlatTypes.includes(this.type) }   // is in FlatTypes
   get isSingleDepth() {                                        // only requires single filter / offsets in single direction
-    return this.isI || this.isJ || this.frameEdge || this.halfCurve
+    return this.isI || this.isJ
   }
   get isInset() { return this.isRType ? !this.cutIn : this.cutIn }       // filter insets from shape border (use cutRange.start)
 
@@ -89,8 +79,6 @@ class Profile {
   equals(profile) {
     return this.type === profile.type
       && this.cutIn === profile.cutIn
-      && this.halfCurve === profile.halfCurve
-      && this.frameEdge === profile.frameEdge
   }
 }
 
@@ -99,7 +87,7 @@ class Profile {
 class ProtoCut {
   id
   breed
-  profile           // Profile: cut profile: [i,j,r,f,v] combined with [in, out]
+  profile           // Profile: cut profile [i, j, r]
   depth             // (end) depth
   start
   extHighDepth      // limiter on external highlight depth
@@ -142,31 +130,9 @@ class ProtoCut {
   get padding() { return vert(this.depth * 2) }
   get description() {
     const
-      p = this.profile,
-      prime = p.breed,
-      half = p.halfCurve ? `-half` : ``,
-      edge = p.frameEdge ? `-frameEdge` : ``,
-      dep = roundToDec(this.depth / GRID.cellRadius, 4),
-      start = roundToDec(this.start, 4)
-    return `${prime}${half}${edge}-${dep}xCellRadius`
-    // return `${prime}${half}${edge}-${dep}xCellRadius-${start}start`
-  }
-  get maxLayout() {
-    let [xMax, yMax, widthMax, heightMax] = [0, 0, 0, 0]
-    this.shapeGroups.forEach(grp => {
-      const
-        [size, padding] = [grp.insetSize, grp.padding],
-        //  finalSize = grp.finalSize,
-        padSize = Vertex.div(padding, size),
-        anchor = Vertex.mult(padSize, -100),
-        newSize = Vertex.mult(padSize, 200).add(vert(100))
-
-      xMax = min(anchor.x, xMax)
-      yMax = min(anchor.y, yMax)
-      widthMax = max(newSize.x, widthMax)
-      heightMax = max(newSize.y, heightMax)
-    })
-    return { x: xMax, y: yMax, width: widthMax, height: heightMax }
+      prime = this.profile.breed,
+      dep = roundToDec(this.depth / GRID.cellRadius, 4)
+    return `${prime}-${dep}xCellRadius`
   }
 
   //MARK: Public Methods
@@ -214,43 +180,24 @@ class ProtoCut {
   // return FRAME for any cut/cascade group. Tier 1b cannot deliver
   // savings until that broadening is unwound (post §9.11 rebuild).
   //
-  // Revert flag: window.SAFARI_FILTER_REGION_USERSPACE_FIX = false (reload).
+  // Revert flag: window.SAFARI_FILTER_REGION_USERSPACE_FIX = false (reload; no-op — legacy path archived).
   setLayouts() {
-    let useUserSpaceFix = (typeof window !== 'undefined') &&
-      (window.SAFARI_FILTER_REGION_USERSPACE_FIX !== false)
-    // useUserSpaceFix = false
+    if (typeof window !== 'undefined' &&
+      window.SAFARI_FILTER_REGION_USERSPACE_FIX === false) return
 
-    if (useUserSpaceFix) {
-      // Centralized margin test point. To compare against alternate padding
-      // strategies, swap the active return in shadeFilterRegionMarginFor().
-      const fb = FRAME.boundsRect
-      this.filters.forEach(f => {
-        const margin = ProtoCut.shadeFilterRegionMarginFor(this, f)
-        const x = fb.x - margin
-        const y = fb.y - margin
-        const width = fb.width + margin * 2
-        const height = fb.height + margin * 2
-        f.filter
-          .attribute('filterUnits', 'userSpaceOnUse')
-          .attribute('x', x)
-          .attribute('y', y)
-          .attribute('width', width)
-          .attribute('height', height)
-      })
-      return
-    }
-
-    // LEGACY PATH — % values resolved against ShapeGroup viewport.
-    // Retained for revert / A-B comparison via SAFARI_FILTER_REGION_USERSPACE_FIX = false.
-    const layout = this.maxLayout
+    const fb = FRAME.boundsRect
     this.filters.forEach(f => {
-      if (f.filter.elt && f.filter.elt.removeAttribute) f.filter.elt.removeAttribute('filterUnits')
+      const margin = ProtoCut.shadeFilterRegionMarginFor(this, f)
+      const x = fb.x - margin
+      const y = fb.y - margin
+      const width = fb.width + margin * 2
+      const height = fb.height + margin * 2
       f.filter
-        .attribute('x', `${layout.x}%`)
-        .attribute('y', `${layout.y}%`)
-        .attribute('width', `${layout.width}%`)
-        .attribute('height', `${layout.height}%`)
         .attribute('filterUnits', 'userSpaceOnUse')
+        .attribute('x', x)
+        .attribute('y', y)
+        .attribute('width', width)
+        .attribute('height', height)
     })
   }
 
@@ -261,12 +208,6 @@ class ProtoCut {
     // return comboDepthScaled
     // return fixedMargin
     return filter.type === 'combo' ? comboDepthScaled : fixedMargin
-  }
-  //METH: curve() : type :
-  curve(layer) {
-    if (this.profile.isR) return layer === 0 ? `r` : `r2`
-    if (this.profile.isS) return layer === 0 ? `j` : `r`
-    return this.profile.type
   }
 
   //MARK: Private Methods
@@ -306,8 +247,6 @@ class ProtoCut {
       }
     }
 
-    if (this.profile.isS) DeBug.error(`ProtoCut "s" profile not yet implemented`)
-    if (this.profile.isV) DeBug.error(`ProtoCut "v" profile not yet implemented`)
   }
   //METH: createShader() : null : create shader for each cut type
   #createShader(shadeType, curve = this.profile.type, mag = this.depth) {
@@ -332,12 +271,6 @@ class ProtoCut {
   }
   //METH: equals() : boolean : compare two cuts
   equals(cut) { return this.breed === cut.breed }
-
-  //TODO: implement createPerimeter()
-  //METH: createChannelShader() : null : create channel shader for cut
-  #createChannelShader() {
-    // to be implemented utilizing an SVG stroke mask, similar to 'v' cut eventual implementation
-  }
 }
 Object.assign(ProtoCut.prototype, IdentifiableStored)
 
@@ -362,20 +295,6 @@ class Shade {
   }
   //METH: neuShadeSVG() : [dropShade] : create dropShade objects for SVG
   static neuShadeSVG(shadeType, vector = this.shadVect(), mag, highBlurRad, shadBlurRad, highCol, shadCol, inset = false, blur = true, curve = 'j', highOffsetRatio = 1, blurRatio = 1) {
-    //NOTE: FAKE IRIDESCENT
-    //NOTE: ----------------------------------
-    // const randomLCH = (l) => {
-    //   const
-    //     chroma = 1 / 8,
-    //     hue = R.random_num(0, 360)
-    //   return `oklch(${l} ${chroma} ${hue})`
-    // }
-    // highCol = randomLCH(.98)
-    // shadCol = randomLCH(0.7)
-    //NOTE: ----------------------------------
-
-    // highCol = achromic(1)
-    // shadCol = achromic(0.7)
 
     const
       invert = curve === `r`,
@@ -421,12 +340,9 @@ class Shade {
     vector = Shade.shadVect(),               // direction of light
     rotOffset = 0,                          // deg rotation offset, used for dif shade types and CHAOS
     pixToUserUnits = FRAME.pixToUserUnits,  // CONSTANT used to convert mag (given in userUnits) to pixel units
-    baseCol = frameColor,                   // highlights and shadows spread out from baseColor, always frameColor
-    colSpread = 25,                         // distance(8-bit) to spread shades from baseColor, always 26 (256-30 = 26)
     start = 0,                              // determine start of layers kept, always 0
     blur = true,                            // apply blur to shades, always true
     type = 'multiShade',                    // always use 'multishade' : ['multiShade', 'multiAlpha', 'flat']
-    count = 3,                              // used to calculate 'multiAlpha' type layer density/alpha, always 3
     sort = false,                           // end sorts all highlights over shadows (or opposite), always false
   } = {}) {
     vector = Shade.cleanRotate(vector, 0)
@@ -434,33 +350,9 @@ class Shade {
     const inset = mag > 0 ? false : true    // inset in this case means the effect is masked to inside the shape
     mag = 2 * abs(mag) //mag remains pos+ as light direction holds to vector, only change is where shade falls (inside/outside)
 
-    // DEBUG: instrument neuShadeSVGFactory inputs & key computed values
-    if (window && window.DEBUG_NEUSHADES) {
-      try {
-        const dbg = {
-          curve, cutIn, shadeType, rawMag: arguments[0]?.mag ?? undefined,
-          signedMag: arguments[0] ? arguments[0].mag : undefined,
-          initialMag: mag,
-          inset,
-          pixToUserUnits
-        }
-        console.groupCollapsed(`neuShadeSVGFactory debug — ${curve} ${shadeType}`)
-        console.log('inputs:', dbg)
-      } catch (e) {
-        console.warn('neuShadeSVGFactory debug failed to log', e)
-      }
-    }
-
     DeBug.log(``)
     DeBug.groupCollapsed(`neuShadeSVGFactory`, vector)
     DeBug.log(`mag`, mag)
-
-    // capture a snapshot of computed intermediate values for DEBUG_NEUSHADES
-    const __dbg_capture = (pathObj) => {
-      if (window && window.DEBUG_NEUSHADES) {
-        try { console.log('neuShadeDBG:', { cutIn, shadeType, inset, ...pathObj }) } catch (e) { /* noop */ }
-      }
-    }
 
     //MARK: "J" and "R" Cuts
 
@@ -536,7 +428,6 @@ class Shade {
       .filter((e, i, a) => i === 0 || !equalsRoundedDec(e, a[i - 1], 0))  // deduplicate within tolerance of 1
 
     DeBug.error('offsets filter-sort', offsets)
-    __dbg_capture({ offsets })
     let neuShades
     //NOTE: "multiShade" is the only/final choice for j-cuts 
     if (type === 'multiShade') {
@@ -596,7 +487,6 @@ class Shade {
             // DeBug.log(`rotOffset`, rotOffset)
 
             const shades1 = this.neuShadeSVG(shadeType, shadeVector, mag, blurRadius, blurRadius, highCol, shadCol1, inset, blur, curve, highOffsetRatio)
-            __dbg_capture({ curve, stage: 'i_r2_layer', offset, mag, blurRadius, highBlurRad: blurRadius, highColLuma, shadColLuma1, shadCol1, shades1 })
             shades.push(shades1)
 
             DeBug.log(`${curve} shades`, shades)
@@ -711,7 +601,6 @@ class Shade {
             // DeBug.log(`shadeVector.x ${shadeVector.x}, shadeVector.y ${shadeVector.y}`)
 
             let shades = this.neuShadeSVG(shadeType, shadeVector, mag, highBlurRad, shadBlurRad, highCol, shadCol, inset, blur, curve)
-            __dbg_capture({ curve, stage: 'j_r_layer', offset, mag, blurRadius, highBlurRad, highColLuma, shadColLuma, shadowReducer, shadCol, shades })
             DeBug.log(`${curve} ${shadeType} shades`, shades)
             return shades
           })
@@ -765,7 +654,6 @@ class Shade {
     // DeBug.error(`colorSpread`, neuShades.map(ns => ns.colorSpread))
     // DeBug.error(`${curve} colors`, neuShades.map(ns => ns.color.levels[0]))
     DeBug.groupEnd()
-    if (window && window.DEBUG_NEUSHADES) console.groupEnd()
     return neuShades
   }
 }

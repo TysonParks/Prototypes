@@ -1429,18 +1429,6 @@ class ShapeGroup extends ProtoLayer {
       defaultPadding = Vertex.mult(this.cut?.padding || backGroupPadding, 1)
     return this.cellGroup.isBackGroup ? backGroupPadding : defaultPadding
   }
-  get maxLayout() { return this.cut?.maxLayout }
-  get finalSize() {
-    const
-      insetLayout = { x: this.insetAnchor.x, y: this.insetAnchor.y, width: this.insetSize.x, height: this.insetSize.y },
-      maxLayout = this.cut?.maxLayout || 100
-    return {
-      x: insetLayout.x * maxLayout.x / 100,
-      y: insetLayout.y * maxLayout.y / 100,
-      width: insetLayout.width * maxLayout.width / 100,
-      height: insetLayout.height * maxLayout.height / 100,
-    }
-  }
 
   get shapes() { return this.islands.map(i => i.shape) }
 
