@@ -32,7 +32,7 @@ function summarizeRarity(records) {
 function bucketByGridStyle(records) {
   const buckets = {}
   records.forEach(row => {
-    const style = row.publicFeatures.gridStyle
+    const style = row.publicFeatures['Grid Style']
     if (!buckets[style]) buckets[style] = []
     buckets[style].push(row)
   })
@@ -121,8 +121,8 @@ function runFeatureBatchAnalyzer(options = {}) {
     conditionalByGridStyle: Object.fromEntries(
       Object.entries(bucketByGridStyle(records)).map(([style, rows]) => {
         const sub = {}
-        rows.forEach(row => incrementMarginal(sub, 'groupDensity', row.publicFeatures.groupDensity))
-        return [style, sub.groupDensity || {}]
+        rows.forEach(row => incrementMarginal(sub, 'Group Density', row.publicFeatures['Group Density']))
+        return [style, sub['Group Density'] || {}]
       })
     ),
     unreachable: unreachableOptionReport(records),

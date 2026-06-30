@@ -285,7 +285,7 @@
     },
   }
 
-  console.log('[SafariCompat] WebKit group-isolate workaround loaded.',
-    'window.SafariCompat available;',
-    'flag =', window.SAFARI_GROUP_ISOLATE_WORKAROUND)
+  // console.log('[SafariCompat] WebKit group-isolate workaround loaded.',
+  //   'window.SafariCompat available;',
+  //   'flag =', window.SAFARI_GROUP_ISOLATE_WORKAROUND)
 })()

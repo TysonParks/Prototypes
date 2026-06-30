@@ -70,34 +70,34 @@ class FeatureSet {
   get publicFeatures() {
     return {
       // grid features (6)
-      gridStyle: this.gridStyle,
-      gridWidth: this.x,
-      gridHeight: this.y,
-      cellAspect: this.cellAspect,
-      cellOutset: this.cellOutset,
-      cellInset: this.cellInset,
+      'Grid Style': this.gridStyle,
+      'Grid Width': this.x,
+      'Grid Height': this.y,
+      'Cell Aspect': this.cellAspect,
+      'Cell Outset': this.cellOutset,
+      'Cell Inset': this.cellInset,
 
       // group features (5)
-      primarySeedStyle: this.seed1,
-      secondarySeedStyle: this.seed2,
-      groupCountAdditive: this.groupCount.adds,
-      groupCountSubtractive: this.groupCount.subs,
-      groupDensity: this.density,
+      'Primary Seed Style': this.seed1,
+      'Secondary Seed Style': this.seed2,
+      'Group Count Additive': this.groupCount.adds,
+      'Group Count Subtractive': this.groupCount.subs,
+      'Group Density': this.density,
 
       // cut features (6–7)
-      uniformCuts: this.uniformCuts,
-      cutDirections: this.cutDirections,
-      uniformLofts: this.uniformLofts,
-      linearCuts: this.linearCuts,
-      insideCuts: this.insideCuts,
-      insideCutStyle: this.insideCutStyle,
-      ...(this.uniformCuts ? { cutStyleCount: this.#cutStyleCount() } : {}),
+      'Uniform Cuts': this.uniformCuts,
+      'Cut Directions': this.cutDirections,
+      'Uniform Lofts': this.uniformLofts,
+      'Linear Cuts': this.linearCuts,
+      'Inside Cuts': this.insideCuts,
+      'Inside Cut Style': this.insideCutStyle,
+      ...(this.uniformCuts ? { 'Cut Style Count': this.#cutStyleCount() } : {}),
 
       // frame features (4)
-      frameWidth: this.frameWidth,
-      frameDivisions: this.frameDivs,
-      frameSpacing: this.frameSpacing,
-      frameCascades: this.frameCascades,
+      'Frame Width': this.frameWidth,
+      'Frame Divisions': this.frameDivs,
+      'Frame Spacing': this.frameSpacing,
+      'Frame Cascades': this.frameCascades,
 
       // Internal Rarity Metrics (5) — system structure, not occurrence rarity
       'Enumerative Rarity Magnitude': this.enumerativeRarityMagnitude,
