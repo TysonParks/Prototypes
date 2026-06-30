@@ -101,6 +101,20 @@ class ProtoCut {
     comboDepthMarginRatio: 0.25,
   }
 
+  static depthFromLoft(loft, minCellWidth) {
+    return loft * minCellWidth
+  }
+
+  static maxCascadeSteps(bandLoft, minCellWidth) {
+    const minDepth = productionLimits.minCutDepth
+    if (bandLoft <= 0 || minCellWidth <= 0) return 1
+    return max(1, floor(bandLoft * minCellWidth / minDepth))
+  }
+
+  static isAllowedDepth(depth) {
+    return depth >= productionLimits.minCutDepth
+  }
+
   constructor({
     profile,
     depth,
@@ -115,6 +129,9 @@ class ProtoCut {
     this.extHighDepth = extHighDepth
     this.useExtHighDepth = useExtHighDepth
     this.angleOffset = angleOffset
+    if (depth > 0 && depth < productionLimits.minCutDepth) {
+      DeBug.warn(`ProtoCut depth below minCutDepth`, { depth, minCutDepth: productionLimits.minCutDepth, profile: profile?.type })
+    }
     this.breed = this.description
     const match = S.Cuts.find(item => item.breed === this.breed)  // use equivalent cut if already exists
     if (match) {

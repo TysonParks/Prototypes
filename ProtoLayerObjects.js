@@ -998,7 +998,8 @@ class CellGroup extends ProtoLayer {
 
       if (sh.hasInsideCorners) {
         if (profile?.hasOutsetShade) minRad = cellRadius
-        // if (sh.cellBounds.minCellThickness * cellRadius < minRad) minRad = sh.cellBounds.minCellThickness * cellRadius      // removes "BULGING" shapes
+        const wallRad = sh.cellBounds.minCellThickness * cellRadius
+        if (wallRad < minRad) minRad = wallRad
       }
 
       if (direction.hierarchy < 2) minRad = cellRadius
@@ -1123,35 +1124,53 @@ class CellGroup extends ProtoLayer {
       }
       DeBug.log(`after dilation start/end`, grpLayerStart, grpLayerEnd)
 
+      const isBackingFill = !profile
+
+      if (isBackingFill) {
+        const islands = grp.shapes.map(sh => sh.island)
+        const newIslands = this.createSubIslands({
+          islands: islands,
+          selection: selection,
+          direction: direction,
+          insetScale: grpLayerStart,
+        })
+        if (!newIslands.flat().isEmpty) this.islandsToShapeGroups(newIslands, undefined, direction, isFrame)
+        return
+      }
+
       const
+        bandLoft = grpLayerEnd !== undefined ? grpLayerStart - grpLayerEnd : grpLayerStart,
+        effectiveAmount = min(amount, ProtoCut.maxCascadeSteps(bandLoft, this.grid.minCellWidth)),
         firstLayerEnd = grpLayerEnd,
-        firstLayerRange = range(grpLayerStart, firstLayerEnd),      // create range
-        firstStepWidth = firstLayerRange.size / amount,             // equal step division
-        subLayerRange = range(grpLayerStart, grpLayerEnd),          // create range
-        subStepWidth = subLayerRange.size / amount                  // equal step division 
+        firstLayerRange = range(grpLayerStart, firstLayerEnd),
+        firstStepWidth = firstLayerRange.size / effectiveAmount,
+        subLayerRange = range(grpLayerStart, grpLayerEnd),
+        subStepWidth = subLayerRange.size / effectiveAmount
 
       DeBug.log(`firstLayerRange`, firstLayerRange)
       DeBug.log(`subLayerRange`, subLayerRange)
-      DeBug.error(`Inset Cuts amount`, amount)
+      DeBug.error(`Inset Cuts amount`, amount, `effectiveAmount`, effectiveAmount)
+
+      if (effectiveAmount < 1 || bandLoft <= 0) return
 
       //MARK: Cutting Loop
       let cutStart, cutEnd
-      for (let i = 0; i < amount; i++) {                            // if amount>1, calc cutStart/End for each step
+      for (let i = 0; i < effectiveAmount; i++) {
         DeBug.warn(`cutting loop ${i + 1}`)
         DeBug.groupCollapsed(`cutting loop ${i + 1}`)
         const
-          isLemonTop = i === amount - 1 && grp.shapes.every(sh => sh.isLemon),
+          isLemonTop = i === effectiveAmount - 1 && grp.shapes.every(sh => sh.isLemon),
           layerRange = i === 0 ? firstLayerRange : subLayerRange,
           stepWidth = i === 0 ? firstStepWidth : subStepWidth
-        let loft = i === 0 ? min(layerRange.size, stepWidth) : layerRange.size * loftScale / amount  // calc loft
+        let loft = i === 0 ? min(layerRange.size, stepWidth) : layerRange.size * loftScale / effectiveAmount
 
         DeBug.warn(`isLemonTop`, isLemonTop)
         DeBug.warn(`lemonLoftRadius`, grp.shapes[0].lemonLoftRadius)
 
-        if (amount > 1
-          && i === amount - 1
+        if (effectiveAmount > 1
+          && i === effectiveAmount - 1
           && grp.shapes.every(sh => sh.isLemon)
-        ) loft = (grp.shapes[0].lemonLoftRadius - (grp.minRad * (amount - 1) / amount)) / cellRadius
+        ) loft = (grp.shapes[0].lemonLoftRadius - (grp.minRad * (effectiveAmount - 1) / effectiveAmount)) / cellRadius
 
         DeBug.log(`loft`, loft)
         DeBug.log(`stepWidth`, stepWidth)
@@ -1193,20 +1212,24 @@ class CellGroup extends ProtoLayer {
         }
 
         extHighDepth = loft / 8
-        // extHighDepth = loft * cellRadius / 8
         DeBug.error(`final extHighDepth`, extHighDepth)
 
-        //MARK: Cut Assignment
-        if (profile) {
+        const
+          depth = ProtoCut.depthFromLoft(loft, this.grid.minCellWidth),
+          extHighDepthUser = ProtoCut.depthFromLoft(extHighDepth, this.grid.minCellWidth),
+          useExtHighDepth = !isFrame && ProtoCut.isAllowedDepth(extHighDepthUser)
+
+        //MARK: Cut Assignment — sub-min depth still advances islands as flat backing (no ProtoCut)
+        cut = undefined
+        if (ProtoCut.isAllowedDepth(depth)) {
           cut = new ProtoCut({
             profile: profile,
-            depth: loft * this.grid.minCellWidth * 1,
+            depth: depth,
             start: insetScale * 1,
             extHighDepth: extHighDepth * 1,
-            // useExtHighDepth: profile.isR ? amount < 2 : true,   //FIXME: also check 'cuts' for consecutive rCuts!
-            useExtHighDepth: !isFrame,
+            useExtHighDepth: useExtHighDepth,
           })
-        } else DeBug.error(`cut profile is undefined!`)
+        }
 
         DeBug.log(`loft`, loft)
         DeBug.log(`cut`, cut)
@@ -1541,8 +1564,7 @@ class ShapeGroup extends ProtoLayer {
 
         const maskRect = createSVGElt('rect')
           .id(`${this.id}-maskRect`)
-          // .viewBoxLimited(this.anchor, this.size, this.padding)
-          // .layoutLimited(this.anchor, this.size, this.padding)
+
           // .viewBox(this.anchor, this.size, this.padding)
           // .layout(this.anchor, this.size, this.padding)
           .layout(FRAME.anchor, FRAME.size)
@@ -2594,11 +2616,12 @@ class Shape extends ProtoLayer {
       minCellThickness = aspect.isPortrait ? min(hor, vert * aspect.ratio) : min(hor * aspect.ratio, vert)
     }
     const
-      minWallRad = roundToDec(minCellThickness * this.cellRadius),  // radius of min cell wall
-      minOuterRad = roundToDec(this.minOutsideCornerRadius),                        // min outside corner radius
-      larger = minWallRad < minOuterRad,                                            // minWallRad less than minOuterRad
-      ordinal = this.island.isOrdinal                                               // ordinal connections create bulges
-    return larger || ordinal
+      minWallRad = roundToDec(minCellThickness * this.cellRadius),
+      minOuterRad = roundToDec(this.minOutsideCornerRadius),
+      larger = minWallRad < minOuterRad,
+      ordinal = this.island.isOrdinal,
+      thinWall = minWallRad < productionLimits.minCutDepth
+    return larger || ordinal || thinWall
   }
 
   get minCornerRadius() { return min(this.allCornerRadii) }

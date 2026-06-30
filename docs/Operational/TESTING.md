@@ -163,7 +163,7 @@ Notes: Prefer capturing snapshots before/after `fixIssues()` and use `WTH.diffSn
 | `reportResetCoverage()` | Log which volatile keys are NOT in `#resetMemoProps` |
 | `reportSurvivedKeys()` | Log keys that survived mutations without invalidation |
 | `reportFilterBanding()` | Inspect active cuts/filters for sparse offset stacks, duplicate collapse, and shell gap statistics |
-| `reportThinDepthShadeHealth()` | Optional diagnostic: flag shallow combo cuts with anchor-dominated offset stacks (§9.14.12; fixed via Feature limits + `keep()` floor) |
+| `reportThinDepthShadeHealth()` | Optional diagnostic: sub-`minCutDepth` cuts (`belowMinDepth`) + shallow combo shade stacks (§9.14.12 / §9.14.12b) |
 
 ### 2.4 How to Run
 

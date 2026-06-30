@@ -71,10 +71,10 @@ const rgbLinear2xyz = rgb => {
   ], rgb)
 }
 
-const oklch2rgb = lch =>
-  srgbLinear2rgb(xyz2rgbLinear(oklab2xyz(oklch2oklab(lch))))
-const rgb2oklch = rgb =>
-  oklab2oklch(xyz2oklab(rgbLinear2xyz(rgb2srgbLinear(rgb))))
+// const oklch2rgb = lch =>
+//   srgbLinear2rgb(xyz2rgbLinear(oklab2xyz(oklch2oklab(lch))))
+// const rgb2oklch = rgb =>
+//   oklab2oklch(xyz2oklab(rgbLinear2xyz(rgb2srgbLinear(rgb))))
 
 // taken from https://github.com/color-js/color.js/blob/main/src/spaces/oklch.js
 // be aware, that oklch2rgb might return values out of bounds. I believe you should clamp them?

@@ -2558,6 +2558,35 @@ anchor-dominated (archived `DEBUG_NEUSHADES` probe in `archive/thinDepthProbe.mj
 **Baseline tag:** `features-calc-v1-submission` marks the commit before Feature
 calc changes for this bug; post-submission wrap debugging can diff against it.
 
+### 9.14.12b minCutDepth geometry floor (2026-06)
+
+**Status:** Implemented — reactive execution-time limiter (CNC / mint prep)
+
+**Constant:** `productionLimits.minCutDepth` in [`appControls.js`](../../appControls.js)
+(default `3` user units — tune before digital mint).
+
+**Enforcement:**
+
+1. **`ProtoCut` helpers** (`maxCascadeSteps`, `isAllowedDepth`, `depthFromLoft`) in
+   [`neuMark_I.js`](../../neuMark_I.js).
+2. **`CellGroup.cutIslands()`** — caps cascade `effectiveAmount`; skips **machined**
+   `ProtoCut` creation when step `depth < minCutDepth` (islands still advance with
+   flat `ShapeGroup-backing` fill); **backing-fill passes** (`!profile`, e.g.
+   `setBackGridGroup` flat layer) bypass depth limits entirely.
+3. **`ProtoMill.mkFrame()`** — frame cascade step count computed from **final**
+   inset bands (post profile processing), capped by `maxCascadeSteps`.
+4. **`ProtoMill.cutGroups()`** — public `insideCuts === 'True'` gate; optional
+   upstream hint on private `insideCutAmount`.
+5. **Packing limits** — `minInsetAmount`, `maxCellOutset` (all grid styles),
+   `cutIslands` wall `minRad` cap, `Shape.hasBulges` thin-wall predicate — all
+   reference `minCutDepth`.
+
+**Shading backstop:** `neuShadeSVGFactory()` `keep()` floor (`3 → 4`) remains
+separate; handles legitimately shallow cuts near the floor without changing geometry.
+
+**Diagnostics:** `reportThinDepthShadeHealth()` reports `belowMinDepth` cuts plus
+combo shade stack health.
+
 ### 9.14.13 Thin r-Out Outline Bug (Deferred)
 
 *Added: 2026-06-17*

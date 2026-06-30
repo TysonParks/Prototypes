@@ -170,19 +170,24 @@ class ProtoMill {
     DeBug.log('minCellWidth', GRID.minCellWidth)
 
     DeBug.log('this.F.enums.cellInset', this.F.enums.cellInset)
-    this.minInsetAmount = max(.05, 1 / GRID.minCellWidth * this.F.enums.cellInset.value)
+    const minInsetFromDepth = productionLimits.minCutDepth / GRID.minCellWidth
+    this.minInsetAmount = max(
+      minInsetFromDepth,
+      max(.05, 1 / GRID.minCellWidth * this.F.enums.cellInset.value)
+    )
     const minCellInsetAmount = this.minInsetAmount
     this.minInsetScale
       = 1 - minCellInsetAmount
-    // = 1
-    // const maxGlobalOutset = this.F.gridStyle === `Flexible` ? globalOutset : min(this.minInsetScale - minInsetAmount, max(GRID.minCellWidth - 5, 0))
     DeBug.log(`minInsetAmount`, minCellInsetAmount)
     DeBug.log(`this.minInsetScale`, this.minInsetScale)
     DeBug.log(`cellOutset`, cellOutset)
-    const maxCellOutset = this.F.gridStyle === `Flexible` ? cellOutset : min(this.minInsetScale - minCellInsetAmount, max(GRID.minCellWidth - 5, 0))
+    const wallReserve = productionLimits.minCutDepth * 2
+    const maxCellOutset = min(
+      this.minInsetScale - minCellInsetAmount,
+      max(GRID.minCellWidth - wallReserve, 0)
+    )
 
     DeBug.log(`maxCellOutset`, maxCellOutset)
-    // cellOutset = min(cellOutset, maxCellOutset)
     this.grid.cellOutset
       = min(cellOutset, maxCellOutset)
     // = 1
@@ -384,18 +389,20 @@ class ProtoMill {
       // if (i > 1) return                                                         //TESTING: reduce layer draws
       const
         group = this.F.groups[i],
-        makeInsideCut = this.F.enums.insideCuts.value
+        makeInsideCut = this.F.insideCuts === `True`
       let
         primeCut = new Profile(group.style, group.type !== `Additive`),
         insideStyle, insideCutAmount
 
       if (makeInsideCut) {
         insideStyle = this.F.insideCutStyle
-        if (insideStyle === `Cyma Recta`) insideCutAmount = 2
+        const bandLoft = primeCut.hasInsetShade ? this.minInsetScale : 1 - this.minInsetScale
+        if (insideStyle === `Cyma Recta`) insideCutAmount = min(2, ProtoCut.maxCascadeSteps(bandLoft, this.minCellSize))
         else {
           this.F.enums.insideCutAmount.feature(R)
           const insideCutDiv = this.F.enums.insideCutAmount.value
           insideCutAmount = R.random_int(2, floor(this.minCellSize * (1 + this.grid.cellOutset) / insideCutDiv))
+          insideCutAmount = min(insideCutAmount, ProtoCut.maxCascadeSteps(bandLoft, this.minCellSize))
         }
         DeBug.log(`insideCutAmount`, insideCutAmount)
       }
@@ -545,12 +552,6 @@ class ProtoMill {
         })                                                                // remove spaces that are too small
       DeBug.log(`cascades filtered`, cascades)
       if (cascades.length > 1) cascades = cascades.randReduce(cascadeCount / profCount)  // randomly reduce to cascadeCount amount
-      cascades = cascades                                                 // randomly add stairCounts
-        .map(e => {
-          const maxAmount = floor(spaceWidth(e) / 1.5)
-          DeBug.log(`maxAmount`, e, maxAmount)
-          return [e, R.random_int(2, maxAmount)]
-        })
     }
 
     DeBug.log(`cascadeCount:`, cascadeCount)
@@ -560,16 +561,14 @@ class ProtoMill {
     //ARROW: removeFlats()
     const removeFlats = () => {
       profiles.forEach((p, i, a) => {
-        let cascade = cascades?.find(c => c[0] === i)
-        // DeBug.log(`space`, space)
-        // DeBug.log(`cascade`, cascade)
+        let hasCascade = cascades?.includes(i)
 
         if (p === `Flat`) {
           // DeBug.warn(`trying to flatten!`)
           spaces[i] = undefined
           spaces = spaces.compacted
-          if (!cascade) {
-            cascades?.forEach(c => { if (c[0] > i) { c[0] -= 1 } })
+          if (!hasCascade) {
+            cascades?.forEach((c, idx) => { if (c > i) cascades[idx] -= 1 })
           }
           a[i] = undefined
         }
@@ -592,7 +591,7 @@ class ProtoMill {
         DeBug.log(`spaces`, spaces[0], spaces[1])
         let
           space = spaces[i],
-          cascade = cascades?.find(s => s[0] === i),
+          hasCascade = cascades?.includes(i),
           start = space.start,
           end = space.end,
           startInset = false
@@ -689,7 +688,7 @@ class ProtoMill {
           DeBug.log(`profiles`, profiles)
           DeBug.log(`this`, p)
           DeBug.log(`prev`, prev)
-          DeBug.log(`cascade`, cascade)
+          DeBug.log(`hasCascade`, hasCascade)
           if (p === `iOut`) {
             if (prev === `iIn` || prev === `jIn`) insetStart()
             if (prev === `rOut`) randFlatOrInset()
@@ -716,16 +715,24 @@ class ProtoMill {
         // DeBug.log(`spaces after`)
         let
           space = spaces[i],
-          cascade = cascades?.find(s => s[0] === i),
+          hasCascade = cascades?.includes(i),
           start = space.start,
           end = space.end,
-          amount = cascade ? cascade.last : 1
+          amount = 1
+
+        if (hasCascade) {
+          const
+            bandLoft = end - start,
+            maxByDepth = ProtoCut.maxCascadeSteps(bandLoft, this.minCellSize),
+            maxByWidth = max(2, floor(spaceWidth(i) / 1.5)),
+            maxAmount = min(maxByDepth, maxByWidth)
+          if (maxAmount >= 2) amount = R.random_int(2, maxAmount)
+        }
 
         DeBug.warn(`space`, space)
-        DeBug.warn(`cascade`, cascade)
+        DeBug.warn(`hasCascade`, hasCascade)
         DeBug.warn(`amount`, amount)
         DeBug.warn(`calculated inset Start/End`, start, end)
-        DeBug.warn(`cascade`, cascade)
 
         return p === `Flat` ? undefined : {
           profile: p,
@@ -832,7 +839,7 @@ function gridTests2(features) {
   DeBug.warn(`InsideCuts`, features.insideCuts)
   DeBug.warn(`Linear Cuts`, features.linearCuts)
   DeBug.log(`Mill`, mill)
-  DeBug.log('all ProtoLayers', S.allLayers)
+  console.log('all ProtoLayers', S.allLayers)
   console.log(`GRID`, GRID)
   DeBug.warn(`cellSize`, GRID.cellSize)
   DeBug.warn(`GRID cells`, features.x, features.y)

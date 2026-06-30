@@ -687,16 +687,25 @@ function runFilterBandingDiagnostics(hash = tokenData?.hash, rebuild = false) {
   return report
 }
 
-//FUNC: reportThinDepthShadeHealth(hash, rebuild, maxDepth) : [Object] : diagnostic for anchor-dominated shallow combo stacks (§9.14.12)
+//FUNC: reportThinDepthShadeHealth(hash, rebuild, maxDepth) : Object : shallow combo stacks + sub-minCutDepth cuts
 function reportThinDepthShadeHealth(hash = tokenData?.hash, rebuild = false, maxDepth = 3) {
   if (rebuild && hash) {
     protoBatch.buildFromHash(hash)
   }
 
+  const minDepth = productionLimits.minCutDepth
   const FIXED_ANCHOR_MAG = 0.2
-  const report = []
+  const comboReport = []
+  const belowMinDepth = []
 
   S.Cuts.db.forEach(cut => {
+    if (cut.depth > 0 && cut.depth < minDepth) {
+      belowMinDepth.push({
+        depth: roundToDec(cut.depth, 4),
+        profile: cut.profile?.type,
+        breed: cut.breed,
+      })
+    }
     if (cut.depth <= 0 || cut.depth > maxDepth) return
     cut.filters.filter(f => f.type === `combo`).forEach(filter => {
       const absMags = OpArray.from(filter.offsetElts.map(o => roundToDec(abs(o.mag), 4))).numSorted
@@ -704,7 +713,7 @@ function reportThinDepthShadeHealth(hash = tokenData?.hash, rebuild = false, max
       const anchorOnly = uniqueMags.length <= 1
         || (uniqueMags.length === 2 && equalsRoundedDec(uniqueMags[0], FIXED_ANCHOR_MAG, 2))
       const healthy = uniqueMags.length >= 2 && !anchorOnly
-      report.push({
+      comboReport.push({
         depth: roundToDec(cut.depth, 4),
         profile: cut.profile?.type,
         shadeCount: filter.shades?.length ?? 0,
@@ -714,8 +723,9 @@ function reportThinDepthShadeHealth(hash = tokenData?.hash, rebuild = false, max
     })
   })
 
+  const report = { minCutDepth: minDepth, belowMinDepth, comboReport }
   window.WTHThinDepth = report
-  DeBug.log(`WTHThinDepth: shallow combo shade health`, report)
+  DeBug.log(`WTHThinDepth`, report)
   return report
 }
 
