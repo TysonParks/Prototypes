@@ -137,17 +137,7 @@ class ProtoMill {
   }
 
   get outsetValue() { return this.F.enums.cellOutset.value }
-  //METH: mkProtoType()
-  mkProtoType() {
-    DeBug.log(':::PROTOMILL RUNNING:::')
-    this.mkGrid()
-    this.mkFeatureGroups()
-    this.mkShaders()
-    this.mkBaseShader()
-    DeBug.log('groups', this.groups)
-    DeBug.log('all ProtoLayers', S.allLayers)
-  }
-  //METH: mkShaders()
+  //METH: mkGrid()
   mkGrid() {
     //TODO: Tidy up path from setting inset multiplier to setting Frame style / cut size
     const
@@ -912,9 +902,4 @@ function windowResized() {
   BG.size(windowWidth, windowHeight)
   syncArtworkRotationToViewport()
   if (typeof positionRegenBtn === 'function') positionRegenBtn()
-}
-
-// FUNC: globalShadowVector()
-function globalShadowVector() {
-  return Shade.shadVect(globalControls.shadAngle, globalControls.shadMag)
 }

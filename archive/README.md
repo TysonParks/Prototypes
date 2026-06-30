@@ -69,6 +69,15 @@ Split from monolithic `safariImageSwap.js`:
 
 See [HASH-HORIZON.md](../docs/Operational/HASH-HORIZON.md) for conceptual framing and why it was removed from production.
 
+## Production bundle removals (2026-06)
+
+| File | Removed from | Status | Intent | Revive when |
+|------|--------------|--------|--------|-------------|
+| [color-experiments.js](color-experiments.js) | `color.js`, `oklch2rgb.js` | Archived | Weighted palette constants + OKLCH↔RGB for future projects | Copy palettes or OKLCH helpers into a new module |
+| [ProtoFilter-experiments.js](ProtoFilter-experiments.js) | `ProtoFilter.js` | Archived | `crossfadeElements`, `applyStrokeMask`, `updateOffsets`, SVG text helpers | Paste onto `ProtoFilter` / p5 prototypes when needed |
+
+**Kept in production:** `layoutLimited` / `viewBoxLimited` helper chain in `ProtoFilter.js` (prototypes commented — may uncomment for launch).
+
 ## neuMark_I.js / misc (2026-06)
 
 | File | Removed from | Status | Intent |

@@ -63,11 +63,6 @@ class ProtoStorage {
     this.#db.push([nextKey, value])
     return nextKey
   }
-  //METH: remove() :
-  remove(key) {
-    let index = this.#db.findIndex(e => e[0] === key)
-    if (index) this.#db.splice(index, 1)
-  }
   //METH: find() :
   find(callback) {
     for (let item of this.db) {
@@ -75,16 +70,8 @@ class ProtoStorage {
     }
     return undefined                            // Return undefined if no matching item is found
   }
-  //METH: named() :
-  named(id) { return this.item({ key: id }) }
-  //METH: random() :
-  random(count = 1) {
-    let items = rangeArray(1, count)
-    return items.map(e => this.#db[R.random_int(0, this.lastIndex)])
-  }
   //METH: item() :
   item({ index, key } = {}) {
-    if (arguments.length === 0) return this.random(1)
     if (index && key) return
     if (index) return this.#db[index]
     if (key) return this.#db.find(e => e[0] === key)
@@ -111,8 +98,6 @@ const Identifiable = {
   uid: 'unassigned',
   //METH: assignUID() :
   assignUID() { this.uid = RuID.random_hash() },
-  //METH: equals() :
-  equals(identifiable) { return this.uid === identifiable.uid }
 }
 
 // MIXIN: IdentifiableStored: mixin composition of Stored and Identifiable

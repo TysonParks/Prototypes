@@ -10,7 +10,6 @@ artBlocks/ABFeaturesScript.js
 artBlocks/tokenHash.submission.js
 artBlocks/Random.js
 OpArray.js
-color.js
 drawAsSVG.js
 Export.js
 ProtoStore.js
@@ -20,7 +19,6 @@ ProtoUtility.js
 ProtoLayerObjects.js
 Grid.js
 ProtoFilter.js
-oklch2rgb.js
 neuMark_I.js
 ProtoBatch.js
 RevealAnimation.js

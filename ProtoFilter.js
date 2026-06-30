@@ -217,20 +217,6 @@ class ProtoFilter {
     const oldGroup = element.p5Parent
     if (oldGroup.childElementCount === 0) oldGroup.remove()
   }
-  //METH: updateOffsets() : null : update the offsets of the filter elements
-  // updateOffsets(shadVect) {
-  //   const updates = []
-  //   this.offsetElts.forEach(({ elt, mag }) => {
-  //     const dx = shadVect.x * mag
-  //     const dy = shadVect.y * mag
-  //     updates.push({ elt, dx, dy })
-  //   })
-  //   // Perform all updates in a batch
-  //   updates.forEach(({ elt, dx, dy }) => {
-  //     elt.attribute(`dx`, dx)
-  //     elt.attribute(`dy`, dy)
-  //   })
-  // }
 
   //MARK: Setup methods
   //METH: storeObject() : null : assigns an id, a uid, and stores the instance in the store
@@ -254,22 +240,6 @@ p5.prototype.createSVGElt = function (qualifiedName = 'svg') {
     p5Element = addElement(elt, this)
   return p5Element
 }
-
-//PROTOTYPE: p5.createSVGText : p5.Element : create a text element in SVG
-// NOTE: Created with GPT-4 on Fri Jan 13, 2024
-// p5.prototype.createSVGText = function (content, x = 0, y = 0) {
-//   const textElt = this.createSVGElt('text').html(content)
-//     .attribute('x', x)
-//     .attribute('y', y)
-//   return textElt
-// }
-
-//PROTOTYPE: p5.Element.setText : p5.Element : set the text content of an SVG text element
-// NOTE: Created with GPT-4 on Fri Jan 13, 2024
-// p5.Element.prototype.setText = function (content) {
-//   if (this.type === 'svg' && this.elt.tagName === 'text') this.html(content)
-//   return this
-// }
 
 //PROTOTYPE: p5.Element.addToClassList(newClass) : p5.Element : add a class to the element's class list
 p5.Element.prototype.addToClassList = function (newClass) {
@@ -585,36 +555,4 @@ p5.Element.prototype.applyFilter = function (filter, time = 0) {
   if (filter) filter.applyFilterToElement(this, time)
   return this
 }
-
-//PROTOTYPE: p5.Element extension crossfadeElements(fromElement, toElement, duration, onComplete)
-// p5.prototype.crossfadeElements = async function (fromElement, toElement, duration, onComplete) {
-//   DeBug.log('fromElement', fromElement)
-//   DeBug.log('toElement', toElement)
-//   const
-//     startTime = performance.now(),
-//     fromElementOpacity = parseFloat(fromElement.attribute("opacity") || "1"),
-//     toElementOpacity = parseFloat(toElement.attribute("opacity") || "1")
-
-//   //ARROW: step() : null : animate the crossfade
-//   const step = (timestamp) => {
-//     const
-//       elapsed = timestamp - startTime,
-//       progress = Math.min(elapsed / duration, 1)
-
-//     fromElement.attribute("opacity", fromElementOpacity * (1 - progress))
-//     toElement.attribute("opacity", toElementOpacity * progress)
-
-//     if (progress < 1) requestAnimationFrame(step)
-//     else if (onComplete) onComplete()
-//   }
-
-//   requestAnimationFrame(step)
-// }
-
-// PROTOTYPE: p5.Element extension applyStrokeMask(color, width)
-// p5.Element.prototype.applyStrokeMask = function (color, width) {
-//   const strokeMaskFilter = new StrokeMaskFilter().strokeMask(color, width)
-//   strokeMaskFilter.applyFilterToElement(this)
-//   return this
-// }
 // #endregion

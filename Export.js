@@ -12,18 +12,6 @@ class Export {
       svgMarkup = serializer.serializeToString(svgElement)
     return svgMarkup
   }
-  //METH:
-  static exportSVG(svgMarkup, fileName) {
-    const blob = new Blob([svgMarkup], { type: 'image/svg+xmlcharset=utf-8' }),
-      url = URL.createObjectURL(blob),
-      link = document.createElement('a')
-
-    link.href = url
-    link.download = fileName
-    link.click()
-
-    URL.revokeObjectURL(url)
-  }
 
   // NOTE: Made with GPT-4 on April 14, 2023
   //METH:

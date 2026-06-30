@@ -272,15 +272,6 @@ class OpArray extends Array {
       (a, b) => a.filter(e => b.includes(e))
     )
   }
-  //METH: A △ B: return difference or values that are not in common, opposite result of intersect()
-  // [a,b,c] symDiff [b,c,d] = [a,d]
-  symDiff(vals, props) {
-    return this.boolOp(vals, props,
-      (a, b) => a
-        .filter(e => !b.includes(e))
-        .concat(b.filter(f => !a.includes(f)))
-    )
-  }
   //METH: A - B: return Relative Compliment or A minus any common values that B has
   // [a,b,c] exclude [b,c,d] = [a]
   exclude(vals, props) {
@@ -319,21 +310,6 @@ class OpArray extends Array {
     const secondSlice = this.slice(0, shiftedIndex)                // The remaining part is the second slice
     return firstSlice.concat(secondSlice)   // Concatenate the second slice with the first slice
   }
-  //TODO: complete implementation and test
-  // apply to numeric arrays 
-  reduceLength(reducer, fn) {
-    let array = this.unique().numSorted
-    // DeBug.log('this', this)
-    // DeBug.log('array', array)
-    let remove = round(reduce(array.length, reducer))
-    if (remove < 1 || !fn) { return array }
-
-    while (remove > 0) {
-      array = fn(array)
-      remove -= 1
-    }
-    return array
-  }
 
   randReduce(reducer) {
     const remove = round(reduce(this.length, reducer))
@@ -353,15 +329,6 @@ class OpArray extends Array {
     return this
   }
 
-  // TODO: complete implementation
-  // combReduce( dashArray, start = 0 ) {
-  //   let remove
-  //   if (drop) { remove = drop } else { remove = keep }
-  //   let period = keep + remove
-  //   let offset = this.length % period - start
-  //   for (let i = this.lastIndex; i > 0; i--) {
-  //   }
-  // }
   //NOTE: Implemented with ChatGPT o1-preview on Sept 16, 2024
   combReduce(dashArray) {
     // DeBug.log()
@@ -473,7 +440,7 @@ Set.prototype.equals = function (set, props) {
 
 // CLASS: Object EXTENSIONS
 // SIZE: 11 lines
-// PROTOTYPE: Object extension map() function
+// PROTOTYPE: Object extension map() function — used by Corners/Sides .obj, findBounds(), etc.
 Object.prototype.map = function (callback) {
   const result = {}
 

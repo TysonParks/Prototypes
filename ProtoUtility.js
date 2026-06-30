@@ -922,17 +922,11 @@ class EdgePart {
 // FUNC: isBoundsObj() : BOOL : checks if object has bounds properties
 function isBoundsObj(obj, every = true) { return hasProperties(obj, [`xMin`, `xMax`, `yMin`, `yMax`], every) }
 
-// FUNC: isCoordsObj() : BOOL : checks if object has coords properties
-function isCoordsObj(obj, every = true) { return hasProperties(obj, [`x`, `y`], every) }
-
 // FUNC: isCornerObj() : BOOL : checks if object has corner properties
 function isCornerObj(obj, every = true) { return hasProperties(obj, [`upLeft`, `upRight`, `downRight`, `downLeft`], every) }
 
 // FUNC: isSideObj() : BOOL : checks if object has side properties 
 function isSideObj(obj, every = true) { return hasProperties(obj, [`up`, `right`, `down`, `left`], every) }
-
-// FUNC: isDirectionObj() : BOOL : checks if object has direction properties
-function isDirectionObj(obj, every = true) { return hasProperties(obj, [`upLeft`, `up`, `upRight`, `right`, `downRight`, `down`, `downLeft`, `left`], every) }
 
 // FUNC: findBounds() : {BoundsObject} : get bounds for combos of [segments, verts] or objects that contain bounds props
 function findBounds(...geo) {
@@ -1054,38 +1048,6 @@ function boundsOverlap({ geo, accuracy = 3 } = {}) {
 // #endregion
 
 // MARK: Loop Utilities
-//FUNC: safeWhile() : null : executes actionFunc() while conditionFunc() is true, up to maxIterations  
-//NOTE: this is used to prevent infinite loops in cases where the conditionFunc() is not guaranteed to eventually return false
-function safeWhile(conditionFunc, actionFunc, maxIterations = 10) {
-  let iterations = 0
-  while (conditionFunc() && iterations < maxIterations) {
-    actionFunc()
-    iterations++
-  }
-  if (iterations >= maxIterations) DeBug.error('Reached the maximum iteration limit of ' + maxIterations)
-}
-//FUNC: safeArrayWhile() : null : executes actionFunc() while conditionArrayFunc() is true, up to maxIterations
-//NOTE: this is a more complex version of safeWhile() that checks for changes in the array length
-function safeArrayWhile(conditionArrayFunc, actionFunc, arrayMin = 0, maxRepeats = 5) {
-  let
-    repeats = 0,
-    minCount = Infinity,  // Initialize minCount to a very large number
-    currentCount
-  while (conditionArrayFunc().length > arrayMin && repeats < maxRepeats) {
-    currentCount = conditionArrayFunc().length
-
-    if (currentCount < minCount) minCount = currentCount
-
-    actionFunc()
-    let newCount = conditionArrayFunc().length
-    if (newCount >= minCount) repeats++
-    else {
-      minCount = newCount // Update minCount since we found a new lower count
-      repeats = 0
-    }
-  }
-  if (repeats >= maxRepeats) DeBug.error('Reached the maximum iteration limit of ' + maxRepeats)
-}
 
 //MARK: Geometry, Angles and Rotation
 // FUNC: gridPointIndex() : [Vertex] : calculates 2D array index given coords(x,y) and array width
@@ -1100,16 +1062,6 @@ function gridCoords(index, width, offset = 0) {
   return vert(x, y)
 }
 
-// FUNC: rotateCoords() : [x,y] : calculates rotated coords(x,y) given coords(x,y) and degree of rotation
-function rotateCoords(x, y, degree) {
-  switch (degree) {
-    case 90: return [y, -x]
-    case 180: return [-x, -y]
-    case 270: return [-y, x]
-    default: throw new Error("Invalid degree. Must be 90, 180, or 270.")
-  }
-}
-
 // FUNC: constrainAngle(angle) : RADIAN angle (Number) : keep angle between -PI and PI
 function constrainAngle(angle) {
   angle = angle % (2 * PI)
@@ -1122,23 +1074,8 @@ function constrainAngle(angle) {
 // FUNC: normalizeDegree() : DEGREES angle (number) : normalize any positive or negative degree to 0-360 range
 function normalizeDegree(degree) { return ((degree % 360) + 360) % 360 }
 
-// FUNC: normRadToDeg() : DEGREES angle (number) : convert RADIAN angle to normalized DEGREES angle
-function normRadToDeg(radians) {
-  const radPipe = pipe(degrees, normalizeDegree)
-  return radPipe(radians)
-}
-
-//FUNC: cosDeg() : DEGREES angle (number) : calculate cosine of angle in DEGREES
-function cosDeg(deg) { return cos(deg * PI / 180) }
-
-//FUNC: sinDeg()  : DEGREES angle (number) : calculate sine of angle in DEGREES
-function sinDeg(deg) { return sin(deg * PI / 180) }
-
 //MARK: Function Composition
 // NOTE: https://itnext.io/write-better-javascript-function-composition-with-pipe-and-compose-93cc39ab16ee
-// FUNC: compose() compose multiple functions that executes from right to left
-const compose = (...fns) => x => fns.reduceRight((res, fn) => fn(res), x)
-
 // FUNC: pipe() same as compose() but executes from left to right
 const pipe = (...fns) => x => fns.reduce((res, fn) => fn(res), x)
 
@@ -1163,33 +1100,6 @@ function hasProperties(obj, props, every = true) {
 
 //MARK: Math Utilities
 
-// FUNC: getDivisors() : [Number] : get array of prime divisors
-//NOTE: made with ChatGPT 4.0 June30.2023
-function getDivisors(number, prime = false) {
-  const divisors = []
-  for (let i = 2; i <= sqrt(number); i++) {
-    if (number % i === 0) {
-      divisors.push(i)
-      if (i !== number / i) {
-        divisors.push(number / i)
-      }
-    }
-  }
-  if (prime) return divisors.filter((divisor) => isPrime(divisor)).sort((a, b) => a - b)
-  return divisors.sort((a, b) => a - b)
-}
-
-// FUNC: isPrime() : BOOL : check if number is prime
-//NOTE: made with ChatGPT 4.0 June30.2023
-function isPrime(number) {
-  if (number < 2) return false
-  for (let i = 2; i <= Math.sqrt(number); i++) {
-    if (number % i === 0) return false
-  }
-  return true
-}
-//FUNC: isEven() : BOOL : check if number is even
-function isEven(number) { return number % 2 === 0 }
 //FUNC: isOdd() : BOOL : check if number is odd
 function isOdd(number) { return number % 2 !== 0 }
 // FUNC: roundToDec() : Number : round to number of decimal places
@@ -1248,10 +1158,6 @@ class Range {
   array(step = 1) {
     return OpArray.from({ length: (this.end - this.start) / step + 1 }, (_, i) => this.start + (i * step))
   }
-  //METH: forEach() : null : executes callback function for each number in range (like a for loop)
-  forEach(callbackFn) { return this.array().forEach(callbackFn) }             //UNUSED:
-  //METH: between() : BOOL : checks if number is between start and end of range
-  between(x) { return x >= this.start && x <= this.end }                      //UNUSED: -only used in ABFeaturesScript
   //METH: convertRange() : Number : converts a number from one range to another
   convertRange(x, range2) {
     return (x - this.start) * (range2.end - range2.start) / (this.end - this.start) + range2.start

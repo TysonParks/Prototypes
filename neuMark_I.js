@@ -12,13 +12,6 @@ class Profile {
   }
 
   //MARK: Static 
-  static breed(breed) {
-    const
-      type = breed[0],
-      cutIn = breed.slice(1) === 'In'
-    return new Profile(type, cutIn)
-  }
-
   static iIn = new Profile(`i`)
   static iOut = new Profile(`i`, false)
   static jIn = new Profile(`j`)
@@ -26,12 +19,8 @@ class Profile {
   static rIn = new Profile(`r`)
   static rOut = new Profile(`r`, false)
 
-  static AllTypes = [`i`, `j`, `r`]
   static CurveTypes = [`j`, `r`]
   static FlatTypes = [`i`]
-
-  static CurveOptions = [Profile.jIn, Profile.jOut, Profile.rIn, Profile.rOut]
-
 
   //MARK: Computed
   get isI() { return this.type === `i` }                    // is `i` type
@@ -63,22 +52,9 @@ class Profile {
   get channel() { return new Profile(this.type, !this.cutIn) }
   get cyma() { return new Profile(this.type === `r` ? `j` : `r`, this.cutIn) }
 
-  get insetDepth() {
-    if (this.isR) return this.cutIn ? .35 : 0.45
-    else return 1
-  }
-  get outsetDepth() {
-    if (isSingleDepth) return 0
-    else return 1
-  }
   get description() {
     const inOut = this.cutIn ? `In` : `Out`
     return this.type + inOut
-  }
-  //METH: equals()
-  equals(profile) {
-    return this.type === profile.type
-      && this.cutIn === profile.cutIn
   }
 }
 
@@ -623,40 +599,6 @@ class Shade {
           })
           .flat()
       }
-      //NOTE: These other options unused except for FAIL/Error outputs
-    } else {
-      // let color1, color2
-      // //NOTE: AVOID - 'multiAlpha' causes extreme banding artifacts in my implementation
-      // if (type === 'multiAlpha') {
-      //   color1 = protoColor(255, 256 / count)
-      //   color2 = protoColor(0, 256 / count)
-      // }
-      // //NOTE: AVOID - 'flat' isn't quite convincing and loses the crisp outlines of 'multishade'
-      // if (type === 'flat') {
-      //   const cols = baseCol.highShadComplementSpread(colSpread)
-      //   color1 = cols[0]
-      //   color2 = cols[1]
-      // }
-
-      // neuShades = offsets
-      //   .map(o => {
-      //     const mag = o / pixToUserUnits
-      //     const blurRadius = mag / sqrt(2)
-      //     const shades = this.neuShadeSVG(
-      // shadeType,
-      //       vector.setMag(mag).rotate(radians(rotOffset)),
-
-      //       blurRadius, 
-      //       blurRadius,
-      //       color1,
-      //       color2,
-      //       inset,
-      //       blur,
-      //       curve
-      //     )
-      //     return shades
-      //   })
-      //   .flat()
     }
 
     if (sort) {
@@ -710,42 +652,6 @@ class ProtoColor extends p5.Color {
     }
   }
 
-  get complement() {
-    return protoColor(`hsba(${this.complementHue}, ${this.saturation}%, ${this.brightness}%, ${this.alpha})`)
-  }
-  get complementHue() { return (this.hue + 180 % 360) }
-
-  //METH: setAlpha() : ProtoColor : set alpha value
-  setAlpha(alpha) { return protoColor(`hsba(${this.hue}, ${this.saturation}%, ${this.brightness}%, ${alpha})`) }
-  //METH: setSaturation() : ProtoColor : set saturation value
-  setSaturation(sat) { return protoColor(`hsba(${this.hue}, ${sat}%, ${this.brightness}%, ${this.alpha})`) }
-  //METH: highShadComplementSpread() : [ProtoColor] : create highlight and shadow colors with complementary hues
-  highShadComplementSpread(spread = 16) {
-    spread = spread / 2.56
-    const
-      h = this.hue,
-      s = this.saturation,
-      b = this.brightness,
-      // DeBug.log('brightness', b)
-      high = [h, s, constrain(b + spread, 0, 100)],
-      shad = [this.complementHue, s, constrain(b - 2.5 * spread, 0, 100)]
-    // DeBug.log('cols:', high, shad)
-    let cols = [high, shad]
-      .map(hsb => `hsb(${hsb[0]}, ${hsb[1]}%, ${hsb[2]}%)`)
-      .map(dscrpt => color(dscrpt))
-    return cols
-  }
-  //METH: highShadSpread() : [ProtoColor] : create achromic highlight and shadow colors 
-  highShadSpread(spread = 16) {
-    let
-      b = this.brightness,
-      bPair = [round(b + spread), round(b - 1.3 * spread)],
-      // DeBug.log('bPair', bPair)
-      cols = bPair
-        .map(b => `hsb(${this.hue}, ${this.saturation}%, ${b}%)`)
-        .map(dscrpt => protoColor(dscrpt))
-    return cols
-  }
   //METH: randomHighHue() : ProtoColor : create highlight color with random hue
   static randomHighHue(isSeeded = false) {
     let hue = floor(isSeeded ? R.random_num(0, 255) : random(255))
@@ -755,12 +661,6 @@ class ProtoColor extends p5.Color {
   static randomShadHue(isSeeded = false) {
     let hue = floor(isSeeded ? R.random_num(0, 255) : random(255))
     return protoColor(`hsb(${hue}, 100%, 50%)`)
-  }
-  //METH: okLCH() : ProtoColor : create okLCH color
-  static okLCH(l, c, h) {
-    const rgbColor = oklch2rgb([l, c, h])
-    // DeBug.log(`okLCH 2 RGB:`, rgbColor)
-    return protoColor(rgbColor)
   }
   //METH: achromic() : ProtoColor : create achromic color
   static achromic(l) { return protoColor(l * 255) }

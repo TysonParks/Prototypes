@@ -389,68 +389,6 @@ const Debuggable = {
     }
   },
 
-  // METH: showFrameRate()
-  showFrameRate(animationController) {
-    if (!Debuggable.frameRateDisplay) {
-      Debuggable.frameRateDisplay = createDiv('')
-        .id('frameRateDisplay')
-        .style('position', 'fixed')
-        .style('top', '10px')
-        .style('right', '10px')
-        .style('backgroundColor', 'rgba(0, 0, 0, 0.72)')
-        .style('color', 'white')
-        .style('padding', '6px 8px')
-        .style('fontFamily', 'monospace')
-        .style('fontSize', '12px')
-        .style('lineHeight', '1.35')
-        .style('pointerEvents', 'none')
-        .style('zIndex', '10000')
-        .parent(document.body)
-    }
-
-    if (Debuggable.frameRateRafId) cancelAnimationFrame(Debuggable.frameRateRafId)
-
-    let lastSampleTime = performance.now(),
-      frameCount = 0,
-      measuredFPS = 0
-
-    const update = (now) => {
-      frameCount++
-      const elapsed = now - lastSampleTime
-
-      if (elapsed >= 500) {
-        measuredFPS = frameCount * 1000 / elapsed
-        frameCount = 0
-        lastSampleTime = now
-
-        const
-          controller = animationController,
-          offsetCount = controller?.getOffsetBatch?.().length ?? S?.offsetElts?.length ?? 0,
-          batchSamples = controller?.batchTimeSamples || [],
-          recentBatchSamples = batchSamples.slice(-30),
-          avgBatchMs = recentBatchSamples.length
-            ? recentBatchSamples.reduce((sum, value) => sum + value, 0) / recentBatchSamples.length
-            : 0,
-          targetFPS = controller?.frameRate ?? 0,
-          lightFPS = controller?.lightUpdateFPS ?? 0,
-          animated = globalControls?.animated ? 'on' : 'off',
-          visibility = document.visibilityState
-
-        Debuggable.frameRateDisplay.html([
-          `RAF ${measuredFPS.toFixed(1)} fps`,
-          `light ${lightFPS.toFixed(1)} / ${targetFPS} fps ${animated}`,
-          `offsets ${offsetCount}`,
-          `batch ${avgBatchMs.toFixed(2)} ms`,
-          visibility,
-        ].join('<br>'))
-      }
-
-      Debuggable.frameRateRafId = requestAnimationFrame(update)
-    }
-
-    Debuggable.frameRateRafId = requestAnimationFrame(update)
-  }
-
 }
 
 //MARK: DeBug Class
