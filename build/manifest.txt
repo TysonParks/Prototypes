@@ -23,4 +23,5 @@ neuMark_I.js
 ProtoBatch.js
 RevealAnimation.js
 ArtworkRotation.js
+safariCardinalBuffers.js
 sketch.js

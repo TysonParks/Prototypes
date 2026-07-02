@@ -93,7 +93,7 @@
   // `white-space: pre-line` so we can use \n\n in textContent.
   const loadingTextCopy =
     'Safari and iOS browsers may\n take significantly longer\n and render slightly differently.\n\n' +
-    'Chrome desktop is the reference execution environment for Prototypes.'
+    'Chrome desktop is the\n reference viewing environment\n for Prototypes.'
 
   //SECT: State
   let _dummy = null
@@ -1078,6 +1078,7 @@
 
   function notifyRevealComplete() {
     _navInFlight = false
+    if (isWebKitClass) window.SafariCardinalBuffers?.scheduleCardinalBake?.()
     _devHooks?.onRevealComplete?.()
   }
 
@@ -1156,11 +1157,9 @@
       }
 
       const runBuild = () => {
+        window.SafariCompat?.beginInitialRender?.()
         const result = origBuild.apply(this, arguments)
-
-        if (isWebKitClass && typeof globalControls !== 'undefined' && globalControls) {
-          globalControls.animated = false
-        }
+        window.SafariCompat?.endInitialRender?.()
 
         _devHooks?.beforeRevealLayoutSync?.()
         updateLayoutVars(getCurrentFrameMetrics())

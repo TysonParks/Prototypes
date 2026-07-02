@@ -864,6 +864,7 @@ function gridTests2(features) {
 // MARK: DRAWING FUNCS
 // FUNC: startAnimationLoop()
 function startAnimationLoop({ userInitiated = false } = {}) {
+  if (window.SafariCompat?.capabilities?.lightAnimation === false) return
   if (globalControls.animated) return     // Don't start if already running
   globalControls.animated = true
   animationController.startClockSync({ userInitiated })
@@ -891,6 +892,7 @@ function stopAnimationLoopAndResetLight() {
 
 // // FUNC: shadeAnimation()
 function shadeAnimation() {
+  if (window.SafariCompat?.capabilities?.lightAnimation === false) return
   if (globalControls.animated) stopAnimationLoop()
   else startAnimationLoop({ userInitiated: true })
 }

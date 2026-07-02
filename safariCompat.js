@@ -263,6 +263,139 @@
     return rows
   }
 
+  //SECT: WebKit detection + performance capabilities (Phase 2)
+  // Runtime-measured tiers — not hard-coded forever. When LBSE is fast enough,
+  // metrics should promote rotation:'full' and lightAnimation:true automatically.
+
+  function detectWebKitClass() {
+    const ua = navigator.userAgent
+    const isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const isDesktopSafari = /Safari/i.test(ua) &&
+      !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|Android/i.test(ua)
+    return isDesktopSafari || isIOS
+  }
+
+  const CHROME_CAPABILITIES = Object.freeze({ rotation: 'full', lightAnimation: true })
+  const WEBKIT_FALLBACK_CAPABILITIES = Object.freeze({ rotation: 'cardinal', lightAnimation: false })
+
+  // Thresholds — tune after Safari smoke tests (ms).
+  const TIER_FIRST_PAINT_MS_ROTATION_OFF = 45000
+  const TIER_FIRST_PAINT_MS_ROTATION_FULL = 4000
+  const TIER_BUILD_MS_ROTATION_OFF = 20000
+  const TIER_PROBE_LIGHT_MS_DEFER = 16
+  const TIER_PROBE_LIGHT_MS_HEAVY = 80
+
+  let capabilities = detectWebKitClass()
+    ? { ...WEBKIT_FALLBACK_CAPABILITIES }
+    : { ...CHROME_CAPABILITIES }
+  let renderMetrics = null
+  let buildMarkStart = null
+
+  function computeWebKitCapabilities({ buildMs, probeLightUpdateMs, firstPaintMs }) {
+    const lightAnimation = false
+    const build = Number.isFinite(buildMs) ? buildMs : Infinity
+    const probe = Number.isFinite(probeLightUpdateMs) ? probeLightUpdateMs : Infinity
+    const paint = Number.isFinite(firstPaintMs) ? firstPaintMs : null
+
+    let rotation = 'cardinal'
+    if (paint !== null && paint >= TIER_FIRST_PAINT_MS_ROTATION_OFF) rotation = 'off'
+    else if (build >= TIER_BUILD_MS_ROTATION_OFF) rotation = 'off'
+    else if (paint !== null && paint < TIER_FIRST_PAINT_MS_ROTATION_FULL && probe < TIER_PROBE_LIGHT_MS_DEFER) {
+      rotation = 'full'
+    }
+    if (probe > TIER_PROBE_LIGHT_MS_HEAVY && rotation === 'full') rotation = 'cardinal'
+
+    return { rotation, lightAnimation }
+  }
+
+  function applyRotationCapabilityPolicy() {
+    if (capabilities.rotation === 'cardinal') {
+      window.SafariCardinalBuffers?.scheduleCardinalBake?.()
+    }
+    if (capabilities.rotation !== 'cardinal') {
+      window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()
+    }
+  }
+
+  function applyLightAnimationPolicy() {
+    if (capabilities.lightAnimation) return
+    if (typeof globalControls !== 'undefined' && globalControls) globalControls.animated = false
+    if (typeof animationController !== 'undefined' && animationController?.stop) {
+      animationController.stop()
+    }
+  }
+
+  function recordInitialRender(metrics = {}) {
+    renderMetrics = { ...metrics }
+    if (!detectWebKitClass()) {
+      capabilities = { ...CHROME_CAPABILITIES }
+      return { ...capabilities }
+    }
+    capabilities = computeWebKitCapabilities(metrics)
+    applyLightAnimationPolicy()
+    applyRotationCapabilityPolicy()
+    if (typeof DeBug !== 'undefined' && DeBug.log) {
+      DeBug.log('[SafariCompat] capabilities', capabilities, renderMetrics)
+    }
+    return { ...capabilities }
+  }
+
+  function beginInitialRender() {
+    buildMarkStart = performance.now()
+  }
+
+  function endInitialRender() {
+    const buildMs = buildMarkStart != null ? performance.now() - buildMarkStart : null
+    buildMarkStart = null
+
+    let probeLightUpdateMs = null
+    if (detectWebKitClass()
+      && typeof animationController !== 'undefined'
+      && animationController?.batchUpdateFilters) {
+      const t0 = performance.now()
+      const rad = ((typeof globalControls !== 'undefined' && globalControls?.shadAngle) ?? 90) * Math.PI / 180
+      animationController.batchUpdateFilters(Math.cos(rad), Math.sin(rad))
+      probeLightUpdateMs = performance.now() - t0
+    }
+
+    const caps = recordInitialRender({ buildMs, probeLightUpdateMs })
+    if (detectWebKitClass()) {
+      measureFirstPaint('post-build').then(firstPaintMs => {
+        if (!renderMetrics) return
+        renderMetrics.firstPaintMs = firstPaintMs
+        const next = computeWebKitCapabilities({ ...renderMetrics, firstPaintMs })
+        if (next.rotation !== capabilities.rotation
+          || next.lightAnimation !== capabilities.lightAnimation) {
+          capabilities = next
+          applyLightAnimationPolicy()
+          applyRotationCapabilityPolicy()
+          if (typeof DeBug !== 'undefined' && DeBug.log) {
+            DeBug.log('[SafariCompat] capabilities refined', capabilities, renderMetrics)
+          }
+        }
+      })
+    }
+    return caps
+  }
+
+  function getCapabilities() {
+    return { ...capabilities }
+  }
+
+  function setCapabilities(partial) {
+    if (!partial || typeof partial !== 'object') return getCapabilities()
+    capabilities = { ...capabilities, ...partial }
+    applyLightAnimationPolicy()
+    applyRotationCapabilityPolicy()
+    return getCapabilities()
+  }
+
+  function forceEnableAll() {
+    capabilities = { rotation: 'full', lightAnimation: true }
+    return getCapabilities()
+  }
+
   window.SafariCompat = {
     FILTER_ID,
     createIsolateFilter,
@@ -272,6 +405,15 @@
     stripIsolateFilters,
     applyIsolateFiltersNow,
     auditBlurFilters,
+    detectWebKitClass,
+    get capabilities() { return getCapabilities() },
+    get renderMetrics() { return renderMetrics ? { ...renderMetrics } : null },
+    getCapabilities,
+    setCapabilities,
+    forceEnableAll,
+    beginInitialRender,
+    endInitialRender,
+    recordInitialRender,
     isEnabled: () => window.SAFARI_GROUP_ISOLATE_WORKAROUND,
     disable: () => {
       window.SAFARI_GROUP_ISOLATE_WORKAROUND = false

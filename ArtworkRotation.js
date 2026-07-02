@@ -16,12 +16,79 @@ const artworkFullscreenState = {
 }
 
 // MARK: Artwork Rotation
-// Chrome-only interactive viewport rotation. Safari/WebKit ignores these keys.
+// Interactive viewport rotation (←/→/l). WebKit uses SafariCompat capability tiers.
+function artworkRotationMode() {
+  const mode = window.SafariCompat?.capabilities?.rotation
+  return typeof mode === 'string' ? mode : 'full'
+}
+
+function shouldUpdateLightDuringRotation() {
+  return artworkRotationMode() === 'full'
+}
+
+function shouldSyncRotationLight() {
+  const mode = artworkRotationMode()
+  return mode !== 'off'
+}
+
+function usesCardinalRotation() {
+  return artworkRotationMode() === 'cardinal'
+}
+
+function captureArtworkRotationSnapshot() {
+  return {
+    angle: artworkRotationState.angle,
+    scale: artworkRotationState.scale,
+    backingScale: artworkRotationState.backingScale,
+    screenLightAngle: artworkRotationState.screenLightAngle,
+    visualAngle: artworkRotationState.visualAngle,
+  }
+}
+
+function restoreArtworkRotationSnapshot(saved, { syncLight = true } = {}) {
+  if (!saved) return
+  artworkRotationState.angle = saved.angle
+  artworkRotationState.scale = saved.scale
+  artworkRotationState.backingScale = saved.backingScale
+  artworkRotationState.screenLightAngle = saved.screenLightAngle
+  artworkRotationState.visualAngle = saved.visualAngle
+  setArtworkBackingScale(saved.scale, saved.angle, saved.scale)
+  applyArtworkRotationTransform(saved.angle, saved.scale)
+  if (syncLight && shouldSyncRotationLight()) updateArtworkRotationLight(saved.angle)
+}
+
+// Bake target: portrait (0°) geometry; lighting only varies per cardinal viewport angle.
+function applyArtworkRotationForCardinalBake(cardinalAngle) {
+  const portraitScale = artworkRotationScaleFor(0)
+  artworkRotationState.angle = 0
+  artworkRotationState.scale = portraitScale
+  setArtworkBackingScale(portraitScale, 0, portraitScale)
+  applyArtworkRotationTransform(0, portraitScale)
+
+  if (artworkRotationState.screenLightAngle === null) {
+    artworkRotationState.screenLightAngle = readScreenSpaceLightAngle()
+  }
+  const screenAngle = readScreenSpaceLightAngle()
+  const localAngle = artworkLocalLightAngleFor(screenAngle, cardinalAngle)
+  globalControls.shadAngle = localAngle
+  const shadVect = Shade.shadVect(localAngle)
+  if (typeof animationController !== 'undefined' && animationController?.batchUpdateFilters) {
+    animationController.batchUpdateFilters(shadVect.x, shadVect.y)
+    return
+  }
+  if (S?.offsetElts) {
+    S.offsetElts.forEach(({ elt, mag }) => {
+      elt.attribute('dx', shadVect.x * mag)
+      elt.attribute('dy', shadVect.y * mag)
+    })
+  }
+}
 function installArtworkRotationHooks() {
   if (artworkRotationState.hooksInstalled || typeof ProtoBatch === 'undefined') return
   artworkRotationState.hooksInstalled = true
   const originalBuildFromHash = ProtoBatch.prototype.buildFromHash
   ProtoBatch.prototype.buildFromHash = function (hash) {
+    window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()
     const result = originalBuildFromHash.call(this, hash)
     scheduleArtworkRotationSync()
     return result
@@ -157,7 +224,7 @@ function handleArtworkRotationKey(event) {
   const direction = key === 'ArrowRight' ? 1
     : (key === 'ArrowLeft' || lowerKey === 'l') ? -1
       : 0
-  if (!direction || window.RevealAnim?.isWebKitClass) return
+  if (!direction || artworkRotationMode() === 'off') return
   event.preventDefault()
   rotateArtworkBy(direction)
 }
@@ -169,6 +236,51 @@ function syncRevealLayoutAfterArtworkRotation() {
 
 async function rotateArtworkBy(direction) {
   if (artworkRotationState.animating || !FRAME?.bleed?.elt) return
+  if (usesCardinalRotation()) return rotateArtworkByCardinal(direction)
+  return rotateArtworkByLive(direction)
+}
+
+async function rotateArtworkByCardinal(direction) {
+  const cardinal = window.SafariCardinalBuffers
+  if (!cardinal) return
+
+  if (cardinal.isAnimating?.()) return
+
+  const overlay = document.getElementById('safari-overlay')
+  const showBakeOverlay = !cardinal.isReady() && overlay
+  if (showBakeOverlay) overlay.classList.add('building')
+
+  let ready = false
+  try {
+    ready = await cardinal.ensureReady()
+  } finally {
+    if (showBakeOverlay) overlay.classList.remove('building')
+  }
+  if (!ready) return
+
+  const startAngle = artworkRotationState.angle
+  const targetAngle = startAngle + direction * 90
+  const startScale = artworkRotationState.scale
+  const targetScale = artworkRotationScaleFor(targetAngle)
+
+  artworkRotationState.animating = true
+  try {
+    await cardinal.animateCardinalRotation({
+      fromAngle: startAngle,
+      toAngle: targetAngle,
+      startScale,
+      targetScale,
+    })
+    artworkRotationState.angle = targetAngle
+    artworkRotationState.scale = targetScale
+  } finally {
+    artworkRotationState.animating = false
+    syncRevealLayoutAfterArtworkRotation()
+  }
+}
+
+async function rotateArtworkByLive(direction) {
+  if (artworkRotationState.animating || !FRAME?.bleed?.elt) return
   if (artworkRotationState.screenLightAngle === null) {
     artworkRotationState.screenLightAngle = readScreenSpaceLightAngle()
   }
@@ -178,8 +290,11 @@ async function rotateArtworkBy(direction) {
   const startScale = artworkRotationState.scale
   const targetScale = artworkRotationScaleFor(targetAngle)
   const shrinkFirst = targetScale < startScale
+  const deferLight = !shouldUpdateLightDuringRotation()
+  const pauseLight = deferLight && globalControls?.animated
 
   artworkRotationState.animating = true
+  if (pauseLight && typeof stopAnimationLoop === 'function') stopAnimationLoop()
   try {
     if (shrinkFirst) {
       await animateArtworkRotationPhase(startAngle, startAngle, startScale, targetScale, 260)
@@ -195,7 +310,7 @@ async function rotateArtworkBy(direction) {
     artworkRotationState.angle = targetAngle
     artworkRotationState.scale = targetScale
     applyArtworkRotationTransform(targetAngle, targetScale)
-    updateArtworkRotationLight(targetAngle)
+    if (shouldSyncRotationLight()) updateArtworkRotationLight(targetAngle)
   } finally {
     artworkRotationState.animating = false
     applyArtworkRotationTransform(artworkRotationState.angle, artworkRotationState.scale)
@@ -206,10 +321,15 @@ async function rotateArtworkBy(direction) {
 function syncArtworkRotationToViewport() {
   if (!FRAME?.bleed?.elt) return
   const targetScale = artworkRotationScaleFor(artworkRotationState.angle)
-  setArtworkBackingScale(targetScale, artworkRotationState.angle, targetScale)
   artworkRotationState.scale = targetScale
+  if (usesCardinalRotation() && window.SafariCardinalBuffers?.isImageDisplayActive?.()) {
+    window.SafariCardinalBuffers.syncDisplayLayout()
+    syncRevealLayoutAfterArtworkRotation()
+    return
+  }
+  setArtworkBackingScale(targetScale, artworkRotationState.angle, targetScale)
   applyArtworkRotationTransform(artworkRotationState.angle, targetScale)
-  if (artworkRotationState.screenLightAngle !== null) {
+  if (shouldSyncRotationLight() && artworkRotationState.screenLightAngle !== null) {
     updateArtworkRotationLight(artworkRotationState.angle)
   }
   syncRevealLayoutAfterArtworkRotation()
@@ -233,7 +353,7 @@ function animateArtworkRotationPhase(fromAngle, toAngle, fromScale, toScale, dur
       const angle = lerp(fromAngle, toAngle, t)
       const scale = lerp(fromScale, toScale, t)
       applyArtworkRotationTransform(angle, scale)
-      updateArtworkRotationLight(angle)
+      if (shouldUpdateLightDuringRotation()) updateArtworkRotationLight(angle)
       if (rawT < 1) requestAnimationFrame(step)
       else resolve()
     }
@@ -416,6 +536,9 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 }
 
+window.captureArtworkRotationSnapshot = captureArtworkRotationSnapshot
+window.restoreArtworkRotationSnapshot = restoreArtworkRotationSnapshot
+window.applyArtworkRotationForCardinalBake = applyArtworkRotationForCardinalBake
 window.artworkRotationSnapshot = artworkRotationSnapshot
 window.resolveArtworkVisualAngle = resolveArtworkVisualAngle
 window.readScreenSpaceLightAngle = readScreenSpaceLightAngle
