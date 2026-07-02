@@ -5,9 +5,10 @@
 > minification, or Art Blocks deployment.
 >
 **Related docs:**
-[GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
+[GEOMETRY-REFERENCE](../Canonical/GEOMETRY-REFERENCE.md) |
+[RENDERING-PIPELINE](../Canonical/RENDERING-PIPELINE.md) |
 [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-[ARCHITECTURE](ARCHITECTURE.md) |
+[ARCHITECTURE](../Canonical/ARCHITECTURE.md) |
 [ROADMAP](ROADMAP.md)
 
 ## What This Document Is Not
@@ -255,6 +256,9 @@ the widest outer offsets.
 **Console access:** `window.FilterDebugHarness`, `window.FDH`
 
 ### 3.1 Purpose
+
+For the canonical filter graph and cut-profile behavior, see
+[RENDERING-PIPELINE.md](../Canonical/RENDERING-PIPELINE.md).
 
 `FilterDebugHarness` exists to keep experimental SVG filter and cropping
 probes out of operational files. It monkeypatches selected runtime

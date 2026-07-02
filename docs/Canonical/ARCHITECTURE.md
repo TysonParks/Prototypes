@@ -6,9 +6,10 @@
 >
 > **Related docs:**
 > [GEOMETRY-REFERENCE](GEOMETRY-REFERENCE.md) |
-> [KNOWN-ISSUES](KNOWN-ISSUES.md) |
-> [ROADMAP](ROADMAP.md) |
-> [TESTING](TESTING.md)
+> [RENDERING-PIPELINE](RENDERING-PIPELINE.md) |
+> [KNOWN-ISSUES](../Operational/KNOWN-ISSUES.md) |
+> [ROADMAP](../Operational/ROADMAP.md) |
+> [TESTING](../Operational/TESTING.md)
 
 ## What This Document Is Not
 
@@ -42,7 +43,7 @@
   - [14.1 Entry Points](#141-entry-points)
   - [14.2 Layer Model vs. Traits](#142-layer-model-vs-traits)
   - [14.3 Constraint and Relaxation](#143-constraint-and-relaxation)
-  - [14.4 2.5D Rendering Stack](#144-25d-rendering-stack)
+  - [14.4 2.5D Rendering Stack](#144-25d-rendering-stack) — see also [RENDERING-PIPELINE.md](RENDERING-PIPELINE.md)
 
 > **Note on numbering:** Section numbers 10–11 preserved from the
 > original GEOMETRY-REFERENCE.md for consistency with any existing
@@ -590,13 +591,23 @@ Evaluation lives in `ProtoSegment`; aesthetic ordering in `maximizeCuddles()` /
 
 ### 14.4 2.5D Rendering Stack
 
-- **Geometry kernel:** `drawAsSVG.js` — `SegPath`, `SVGPath`, segments, insets.
-- **Cuts:** `ProtoCut` + `Profile` (`neuMark_I.js`) — memoized per breed.
-- **Filters:** `ProtoFilter.shade()` — stacked `feOffset` / blur / composite.
-- **Compositing:** `ShapeGroup` → grid shader `<g>` layers (`back`, `combo`, `high`, `shad`, masks).
-- **Layouts:** `ProtoCut.setLayouts()` — filter region in user units (Safari-sensitive).
+Full pipeline specification: **[RENDERING-PIPELINE.md](RENDERING-PIPELINE.md)**.
+
+Summary:
+
+- **Geometry kernel:** `drawAsSVG.js` — `SegPath`, `SVGPath`, segments, geometric insets.
+- **Cuts:** `ProtoCut` + `Profile` (`neuMark_I.js`) — memoized per breed; 1–3 filters per cut (`i` / `j` / `r`).
+- **Shade authoring:** `Shade.neuShadeSVGFactory()` — offset ladders, achromatic luma curves, inset/outset flags.
+- **Filters:** `ProtoFilter.shade()` — `feGaussianBlur` → `feFlood` → `feOffset` → `feComposite` → `feBlend`; no `feMerge`.
+- **Compositing:** `ShapeGroup` → grid shader `<g>` layers (`back`, `combo`, `high`, `shad`); R-combo luminance masks.
+- **Animation:** `AnimationController.batchUpdateFilters()` — mutates `feOffset` via `S.offsetElts`.
+- **Layouts:** `ProtoCut.setLayouts()` — `userSpaceOnUse` filter region (Safari-sensitive; see §13.3).
+
+The shading system is **pseudo-neumorphic**: each layer re-samples the path’s
+`SourceAlpha`, floods solid gray, and stacks normal-blended passes — not volumetric
+or shader-based lighting.
 
 ---
 
-*Part of the BoredUI documentation suite. See [docs/](./) for all documents.*
-*Last updated: 2026-06-17*
+*Part of the BoredUI documentation suite. See [docs/](../) for all documents.*
+*Last updated: 2026-07-02*

@@ -6,6 +6,7 @@ Canonical system definitions live in:
 
 - docs/Canonical/ARCHITECTURE.md
 - docs/Canonical/GEOMETRY-REFERENCE.md
+- docs/Canonical/RENDERING-PIPELINE.md
 
 ---
 
@@ -109,6 +110,35 @@ Focused pointers (where to look first)
 - Visual debugging: `WrapperDebugOverlay` — [testing/WrapperDebugOverlay.js#L1]
 
 
+[neuMark_I.js](neuMark_I.js)
+- Classes: `Profile`, `ProtoCut`, `Shade`, `ProtoColor`
+  - Key methods / areas:
+    - `Profile.hasInsetShade`, `hasOutsetShade`, `hasCastShadow` — cut semantics
+    - `ProtoCut.#createFilters()`, `#createShader()`, `setLayouts()` — filter recipes and Safari regions
+    - `Shade.neuShadeSVGFactory()`, `neuShadeSVG()`, `shadVect()` — offset ladders and shade stacks
+  - Responsibilities:
+    - Maps cut profiles (`i`, `j`, `r`) to 1–3 memoized SVG filters per depth
+    - Authors achromatic highlight/shadow parameters consumed by `ProtoFilter.shade()`
+  - Canonical spec: [RENDERING-PIPELINE.md](../Canonical/RENDERING-PIPELINE.md)
+
+[ProtoFilter.js](ProtoFilter.js)
+- Class: `ProtoFilter`
+  - Key methods:
+    - `shade()` — builds filter primitive graph (`feGaussianBlur`, `feFlood`, `feOffset`, `feComposite`, `feBlend`)
+    - `applyFilterToElement()` — Safari-safe defs placement and filter-group sharing
+    - `offsetElts` — registered `feOffset` nodes for light animation
+  - Prototypes: `p5.Element.blur()`, `p5.Element.mask()`, `p5.Element.applyFilter()`
+  - Canonical spec: [RENDERING-PIPELINE.md](../Canonical/RENDERING-PIPELINE.md)
+
+[Animation.js](Animation.js)
+- Class: `AnimationController`
+  - Key methods: `batchUpdateFilters()`, `rebuildOffsetBatch()`, `applyScreenLightAngle()`
+  - Responsibilities: mutates all `feOffset` dx/dy from `S.offsetElts` without rebuilding filters
+
+[ProtoStore.js](ProtoStore.js)
+- `S.Effects`, `S.Cuts`, `S.offsetElts` — global registries for filters and animation targets
+
+
 [PublicGenerator.js](PublicGenerator.js)
 - No class — top-level functions only
   - `DOMContentLoaded` listener: dynamically creates `<button id="regenBtn">` and attaches `protoBatch.buildFromNewSeed()` onclick
@@ -119,6 +149,7 @@ Focused pointers (where to look first)
 
 Quick notes / tips
 - When tracing bugs, start with `ProtoSegment.#resetMemoProps()` (cache invalidation) and `Grid.maximizeCuddles()` (ordering). These are the two places where evaluation/opinion interaction most commonly manifest.
+- For shading/filter bugs, start with [RENDERING-PIPELINE.md](../Canonical/RENDERING-PIPELINE.md) and KNOWN-ISSUES §§9.13–9.15.
 - `Frame.setBackGridGroup()` intentionally bypasses `maximizeCuddles()`; frame wrapping logic is simpler but may miss radiant/interference steps.
 - **Branch workflow:** Dev work happens on `agent-testing`. Public deployment branch is `PublicGenerator-v0.1` (GitHub Pages). Merge `agent-testing → PublicGenerator-v0.1` to deploy. The public branch diverges only in `index.html` (no testing scripts, no dat.gui, adds `PublicGenerator.js`, browser detection) and carries its own `#regenBtn` CSS styles.
 

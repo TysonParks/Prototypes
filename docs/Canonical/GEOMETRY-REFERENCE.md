@@ -10,10 +10,11 @@ logic for coordinating rounded corners between neighboring shapes on a grid.
 the implementing properties/methods in `drawAsSVG.js`.
 
 **Related docs:**
-[KNOWN-ISSUES](KNOWN-ISSUES.md) |
+[KNOWN-ISSUES](../Operational/KNOWN-ISSUES.md) |
 [ARCHITECTURE](ARCHITECTURE.md) |
-[ROADMAP](ROADMAP.md) |
-[TESTING](TESTING.md)
+[RENDERING-PIPELINE](RENDERING-PIPELINE.md) |
+[ROADMAP](../Operational/ROADMAP.md) |
+[TESTING](../Operational/TESTING.md)
 
 ## What This Document Is Not
 

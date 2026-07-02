@@ -38,9 +38,10 @@ specifically to the ArtBlocks token render path.
 ## Authority Order
 1. GEOMETRY-REFERENCE.md → canonical geometric vocabulary and wrapper taxonomy
 2. ARCHITECTURE.md → canonical system architecture and separation-of-concerns model
-3. KNOWN-ISSUES.md → canonical bug history, unresolved issues, failed fixes
-4. TESTING.md → canonical testing/debug procedures and harness usage
-5. ROADMAP.md → canonical future work and sequencing
+3. RENDERING-PIPELINE.md → canonical SVG shading / cut-profile / filter pipeline
+4. KNOWN-ISSUES.md → canonical bug history, unresolved issues, failed fixes
+5. TESTING.md → canonical testing/debug procedures and harness usage
+6. ROADMAP.md → canonical future work and sequencing
 
 ## Use By Task
 
@@ -48,6 +49,12 @@ specifically to the ArtBlocks token render path.
 Read:
 - GEOMETRY-REFERENCE.md
 - ARCHITECTURE.md only if architectural boundary matters
+
+### Explaining rendering / shading / cut profiles
+Read:
+- RENDERING-PIPELINE.md
+- ARCHITECTURE.md §§13–14 for inset propagation and pipeline placement
+- KNOWN-ISSUES.md §§9.13–9.15 for Safari filter/mask history
 
 ### Planning bug fixes
 Read:
@@ -68,6 +75,7 @@ Read:
 
 ## Current truth rules
 - GEOMETRY-REFERENCE.md defines terminology
+- RENDERING-PIPELINE.md defines the SVG shading system (Arcluminitism)
 - KNOWN-ISSUES.md records historical failed attempts; do not repeat them
 - ROADMAP.md is intent, not proof of implementation
 - `RevealAnimation.js` Chrome and Safari reveal behaviors are reference-locked and approved for ArtBlocks submission
