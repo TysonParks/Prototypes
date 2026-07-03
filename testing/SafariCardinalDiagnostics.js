@@ -13,9 +13,18 @@
     const reveal = window.RevealAnim
     const compat = window.SafariCompat
     const bleed = typeof FRAME !== 'undefined' ? FRAME?.bleed?.elt : null
+    const bg = typeof BG !== 'undefined' ? BG?.elt : null
     const viewport = document.getElementById('artwork-rotation-viewport')
     const overlay = document.getElementById('safari-cardinal-rotation-overlay')
     const building = document.getElementById('safari-overlay')?.classList.contains('building')
+
+    const isHidden = (el) => {
+      if (!el) return null
+      return el.style.display === 'none'
+        || getComputedStyle(el).display === 'none'
+        || el.style.visibility === 'hidden'
+        || el.style.opacity === '0'
+    }
 
     return {
       t: performance.now(),
@@ -25,8 +34,12 @@
       rotation: typeof artworkRotationSnapshot === 'function' ? artworkRotationSnapshot() : null,
       cardinal: cardinal?.getDiagnosticsSnapshot?.() ?? null,
       dom: {
-        bleedVisible: bleed ? getComputedStyle(bleed).visibility !== 'hidden' && bleed.style.opacity !== '0' : null,
+        bgHidden: isHidden(bg),
+        bleedHidden: isHidden(bleed),
+        viewportHidden: isHidden(viewport),
         bleedOpacity: bleed?.style.opacity ?? null,
+        bleedDisplay: bleed?.style.display ?? null,
+        bgDisplay: bg?.style.display ?? null,
         viewportRect: viewport?.getBoundingClientRect?.() ?? null,
         cardinalOverlayDisplay: overlay?.style.display ?? null,
         loadingOverlayBuilding: building ?? null,
@@ -79,31 +92,40 @@
       logEvent(events, 'build-skipped')
     }
 
-    await waitFor(
-      () => window.SafariCardinalBuffers?.isReady?.(),
-      { timeoutMs: waitBakeMs, label: 'cardinal buffers ready' },
-    ).catch(err => {
-      logEvent(events, 'bake-timeout', { error: String(err) })
-      throw err
-    })
-    logEvent(events, 'buffers-ready')
-
+    // Buffers bake lazily on first arrow — simulate the arrow first, then wait
+    // for the rotation (cardinalBusy) and the background bake of remaining angles.
     if (simulateArrow) {
       logEvent(events, 'arrow-sim-start', { direction: arrowDirection })
       const before = snapshot()
       rotateArtworkBy?.(arrowDirection)
       await waitFor(
-        () => !window.SafariCardinalBuffers?.isAnimating?.(),
-        { timeoutMs: 10000, label: 'rotation animation' },
+        () => !window.SafariCardinalBuffers?.isAnimating?.()
+          && !(typeof artworkRotationState !== 'undefined' && artworkRotationState.cardinalBusy),
+        { timeoutMs: waitBakeMs, label: 'rotation complete (cardinalBusy)' },
       ).catch(err => logEvent(events, 'arrow-anim-timeout', { error: String(err) }))
       await sleep(500)
       logEvent(events, 'arrow-sim-end', { before, after: snapshot() })
     }
 
+    await waitFor(
+      () => window.SafariCardinalBuffers?.isReady?.(),
+      { timeoutMs: waitBakeMs, label: 'all cardinal buffers ready' },
+    ).catch(err => {
+      logEvent(events, 'bake-timeout', { error: String(err) })
+      if (!simulateArrow) {
+        // Without an arrow there is no lazy-bake trigger — not a failure.
+        logEvent(events, 'bake-skipped-no-trigger')
+        return
+      }
+      throw err
+    })
+    logEvent(events, 'buffers-ready')
+
     const final = logEvent(events, 'smoke-complete')
-    const blackScreen = final.dom.bleedVisible === false
+    const blackScreen = final.dom.bgHidden === true
+      && final.dom.bleedHidden === true
       && final.cardinal?.imageDisplayActive
-      && final.dom.cardinalOverlayDisplay !== 'block'
+      && (final.cardinal?.bitmapDisplayBroken || final.dom.cardinalOverlayDisplay !== 'block')
     if (blackScreen) {
       console.error('[CardinalDiag] black-screen detected — recovering to live SVG')
       window.SafariCardinalBuffers?.recoverToLiveArtwork?.('diagnostics black-screen')

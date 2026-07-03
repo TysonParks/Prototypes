@@ -755,110 +755,104 @@ class ProtoMill {
 
     return cuts
   }
-}
+  //METH: mkPrototype()
+  mkPrototype() {
+    //                                                                  //NOTE: 1. Create Grid
+    DeBug.groupCollapsed(`mkGrid()`)
+    this.mkGrid()
+    DeBug.log(`mill.grid.`, this.grid.gridSize)
+    const minInsetScale = this.minInsetScale
+    DeBug.groupEnd()
+    //                                                                  //NOTE: 2. Populate Groups
+    DeBug.groupCollapsed(`Populate Groups`)
+    this.mkGroups()
+    DeBug.groupEnd()
+    //                                                                  //NOTE: 3. Nestle Groups
+    DeBug.groupCollapsed(`Nestle Groups`)
+    // DeBug.group(`Nestle Groups`)
+    this.nestleGroups()
+    DeBug.groupEnd()
+    //                                                                  //NOTE: 4. Cut Groups/Islands
+    DeBug.groupCollapsed(`Cut Groups`)
+    // DeBug.group(`Cut Groups`)
+    this.cutGroups()
+    // DeBug.log(`takenCells`, this.grid.takenCells.map(c => c.index))
+    DeBug.groupEnd()
+    DeBug.log(``)
+    //                                                                  //NOTE: 5. Make Frame
+    DeBug.groupCollapsed(`Make Frame`)
+    DeBug.groupCollapsed(`mill.mkFrame()`)
+    const frameCuts = this.mkFrame()
+    DeBug.groupEnd()
+    DeBug.groupCollapsed(`FRAME.setBackGridGroup`)
+    this.grid.protoParent.setBackGridGroup(0, true, frameCuts, this.minInsetAmount)
+    DeBug.groupEnd()
+    DeBug.groupEnd()
+    DeBug.log(``)
 
+    DeBug.error(`GRID`, this.grid.shapeGroups)
+    DeBug.error(`backGrid`, this.grid.backGrid.shapeGroups)
 
-// MARK: Testing Functions
-// FUNC: gridTests2()
-function gridTests2(features) {
-  //                                                                  //NOTE: 1. Initialize ProtoMill
-  DeBug.groupCollapsed(`mkGrid()`)
-  const mill = new ProtoMill(features)
-  //                                                                  //NOTE: 2. Create Grid
-  mill.mkGrid()
-  DeBug.log(`mill.grid.`, mill.grid.gridSize)
-  const minInsetScale = mill.minInsetScale
-  DeBug.groupEnd()
-  //                                                                  //NOTE: 3. Populate Groups
-  DeBug.groupCollapsed(`Populate Groups`)
-  mill.mkGroups()
-  DeBug.groupEnd()
-  //                                                                  //NOTE: 4. Nestle Groups
-  DeBug.groupCollapsed(`Nestle Groups`)
-  // DeBug.group(`Nestle Groups`)
-  mill.nestleGroups()
-  DeBug.groupEnd()
-  //                                                                  //NOTE: 5. Cut Groups/Islands
-  DeBug.groupCollapsed(`Cut Groups`)
-  // DeBug.group(`Cut Groups`)
-  mill.cutGroups()
-  // DeBug.log(`takenCells`, GRID.takenCells.map(c => c.index))
-  DeBug.groupEnd()
-  DeBug.log(``)
-  //                                                                  //NOTE: 6. Make Frame
-  DeBug.groupCollapsed(`Make Frame`)
-  DeBug.groupCollapsed(`mill.mkFrame()`)
-  const frameCuts = mill.mkFrame()
-  DeBug.groupEnd()
-  DeBug.groupCollapsed(`FRAME.setBackGridGroup`)
-  FRAME.setBackGridGroup(0, true, frameCuts, mill.minInsetAmount)
-  DeBug.groupEnd()
-  DeBug.groupEnd()
-  DeBug.log(``)
+    this.grid.shapeGroups.forEach(shgrp => shgrp.drawElement())
+    this.grid.backGrid.shapeGroups.forEach(shgrp => shgrp.drawElement())
 
-  DeBug.error(`GRID`, GRID.shapeGroups)
-  DeBug.error(`backGrid`, BGRID.shapeGroups)
+    // DeBug.error(`S.Cuts`, S.Cuts)
 
-  GRID.shapeGroups.forEach(shgrp => shgrp.drawElement())
-  BGRID.shapeGroups.forEach(shgrp => shgrp.drawElement())
+    S.Cuts.db.map(c => c[1]).forEach(c => c.setLayouts())
 
-  // DeBug.error(`S.Cuts`, S.Cuts)
+    // DeBug.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
+    // this.grid.protoParent.backGrid.showCellsDebug()
+    // this.grid.protoParent.backGrid.showPerimeterShapesDebug()
+    // this.grid.protoParent.backGrid.showShapeGroupsDebug(false)
+    // this.grid.protoParent.backGrid.showMasksDebug()
+    // this.grid.showCellsDebug()
+    // this.grid.showPerimeterShapesDebug()
+    // this.grid.showShapesDebug()
+    // this.grid.showShapeGroupsDebug()
+    // this.grid.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
+    // this.grid.showFinalMasksDebug()
+    // this.grid.showFrameRate(animationController)
+    // this.grid.showSizeGrid(4)
+    // UnitRefined test harness → archive/SegPath-unitRefined.js
 
-  S.Cuts.db.map(c => c[1]).forEach(c => c.setLayouts())
+    // DeBug.log(`  ######################   `)
+    // DeBug.error(`GRID`, this.grid.shapeGroups)
+    // DeBug.error(`backGrid`, this.grid.backGrid.shapeGroups)
+    // console.log('hash', tokenData.hash)
+    // console.log(`Features`, this.F)
+    // console.log('all ProtoLayers', S.allLayers)
+    // console.log(`GRID`, this.grid)
+    // console.warn(`FRAME Cuts`, this.grid.protoParent.backGroup.cuts)
 
-  // DeBug.log(group1.perimeterIslands[1].subIslands[0].shapes[0].insetSubShapes)
-  // FRAME.backGrid.showCellsDebug()
-  // FRAME.backGrid.showPerimeterShapesDebug()
-  // FRAME.backGrid.showShapeGroupsDebug(false)
-  // FRAME.backGrid.showMasksDebug()
-  // GRID.showCellsDebug()
-  // GRID.showPerimeterShapesDebug()
-  // GRID.showShapesDebug()
-  // GRID.showShapeGroupsDebug()
-  // GRID.showMasksDebug()                     // § 9.13.7 Step 1: verified — mask shapes correct
-  // GRID.showFinalMasksDebug()
-  // GRID.showFrameRate(animationController)
-  // GRID.showSizeGrid(4)
-  // UnitRefined test harness → archive/SegPath-unitRefined.js
+    DeBug.warn(`InsideCuts`, this.F.insideCuts)
+    DeBug.warn(`Linear Cuts`, this.F.linearCuts)
+    DeBug.log(`Mill`, this)
+    DeBug.warn(`cellSize`, this.grid.cellSize)
+    DeBug.warn(`GRID cells`, this.F.x, this.F.y)
+    DeBug.error(`F.groups`, this.F.groups)
+    DeBug.error(`mill.grid.groups`, this.grid.groups)
+    DeBug.warn(`uniformCutsStyle`, this.F.uniformCutsStyle)
+    DeBug.warn(`extraGroups avail`, this.F.enums.extraGroups.options)
+    DeBug.warn(`Islands needMask, canIset`, this.grid.perimeterIslands
+      .sortedBy(['id'])
+      .map(i => [i.id, i.needsMask, i.canInset]))
+    // DeBug.warn(`GRID cells`, gridSize)
+    DeBug.warn(`minInsetScale`, minInsetScale)
+    // DeBug.warn(`minInsetAmount`, (1 - minInsetScale) * this.grid.minCellWidth)
+    DeBug.warn(`minInsetAmount`, this.minInsetAmount)
+    DeBug.warn(`BGRID`, this.grid.backGrid)
+    DeBug.warn(`GRID Ratio: ${this.gridRatio / 2}:1`)
+    // DeBug.warn(`gridInsetScale:`, this.gridInsetScale)
+    DeBug.warn(`GRID.insetAmount.x:`, this.grid.insetAmount.x)
+    DeBug.warn(`GRID size:`, this.grid.insetSize)
+    DeBug.warn(`Groups OrdinalConnects`, this.grid.groups.map(g => g.ordinalConnections))
+    // DeBug.error(`cellSpansBetween`, this.grid.cellSpanBetween(0, 161))
+    DeBug.error(`filters`, S.Effects.db)
 
-  // DeBug.log(`  ######################   `)
-  // DeBug.error(`GRID`, GRID.shapeGroups)
-  // DeBug.error(`backGrid`, BGRID.shapeGroups)
-  // console.log('hash', tokenData.hash)
-  // console.log(`Features`, features)
-  // console.log('all ProtoLayers', S.allLayers)
-  // console.log(`GRID`, GRID)
-  // console.warn(`FRAME Cuts`, GRID.protoParent.backGroup.cuts)
-
-  DeBug.warn(`InsideCuts`, features.insideCuts)
-  DeBug.warn(`Linear Cuts`, features.linearCuts)
-  DeBug.log(`Mill`, mill)
-  DeBug.warn(`cellSize`, GRID.cellSize)
-  DeBug.warn(`GRID cells`, features.x, features.y)
-  DeBug.error(`F.groups`, features.groups)
-  DeBug.error(`mill.grid.groups`, mill.grid.groups)
-  DeBug.warn(`uniformCutsStyle`, mill.F.uniformCutsStyle)
-  DeBug.warn(`extraGroups avail`, mill.F.enums.extraGroups.options)
-  DeBug.warn(`Islands needMask, canIset`, mill.grid.perimeterIslands
-    .sortedBy(['id'])
-    .map(i => [i.id, i.needsMask, i.canInset]))
-  // DeBug.warn(`GRID cells`, gridSize)
-  DeBug.warn(`minInsetScale`, minInsetScale)
-  // DeBug.warn(`minInsetAmount`, (1 - minInsetScale) * GRID.minCellWidth)
-  DeBug.warn(`minInsetAmount`, mill.minInsetAmount)
-  DeBug.warn(`BGRID`, BGRID)
-  DeBug.warn(`GRID Ratio: ${mill.gridRatio / 2}:1`)
-  // DeBug.warn(`gridInsetScale:`, mill.gridInsetScale)
-  DeBug.warn(`GRID.insetAmount.x:`, GRID.insetAmount.x)
-  DeBug.warn(`GRID size:`, GRID.insetSize)
-  DeBug.warn(`Groups OrdinalConnects`, GRID.groups.map(g => g.ordinalConnections))
-  // DeBug.error(`cellSpansBetween`, GRID.cellSpanBetween(0, 161))
-  DeBug.error(`filters`, S.Effects.db)
-
-  DeBug.warn(`FRAME.backGroup.padding:`, FRAME.backGroup.padding)
-  // DeBug.log(GRID.cellRows.flat().map(cell => cell.center))
-  DeBug.warn('ShapeGroups', GRID.shapeGroups.map(sg => [sg.id, sg.shapes]))
-
+    DeBug.warn(`FRAME.backGroup.padding:`, this.grid.protoParent.backGroup.padding)
+    // DeBug.log(this.grid.cellRows.flat().map(cell => cell.center))
+    DeBug.warn('ShapeGroups', this.grid.shapeGroups.map(sg => [sg.id, sg.shapes]))
+  }
 }
 
 // MARK: DRAWING FUNCS
@@ -899,14 +893,20 @@ function shadeAnimation() {
 
 
 // MARK: GLOBAL FUNCS
+let _cardinalLayoutKey = ''
+
 // FUNC: windowResized()
 function windowResized() {
   sizeFrame()
   BG.size(windowWidth, windowHeight)
   syncArtworkRotationToViewport()
   if (typeof artworkRotationMode === 'function' && artworkRotationMode() === 'cardinal') {
-    window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()
-    window.SafariCardinalBuffers?.scheduleCardinalBake?.()
+    const nextKey = `${frameSize?.x}|${frameSize?.y}|${window.devicePixelRatio || 1}`
+    if (_cardinalLayoutKey && _cardinalLayoutKey !== nextKey) {
+      window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()
+    }
+    _cardinalLayoutKey = nextKey
+    // Rebake lazily on next rotate — no eager background bake on resize.
   }
   if (typeof positionRegenBtn === 'function') positionRegenBtn()
 }

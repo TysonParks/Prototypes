@@ -113,11 +113,22 @@ Cardinal prep overlay is triggered from `ArtworkRotation.rotateArtworkByCardinal
 when `SafariCardinalBuffers.ensureReady()` must wait for remaining orientation
 bitmaps after the artwork has already been revealed.
 
-**Cardinal bake timing (2026-07):** Background bitmap bake must not start from
-`safariCompat.endInitialRender()` — only after `notifyRevealComplete()`. Auto
-`enableImageDisplay` on bake complete was removed (it hid live SVG and could
-leave a black screen if bitmap display failed). Recovery: `Escape` or
-`SafariCardinalBuffers.recoverToLiveArtwork()`.
+**Cardinal bake timing (2026-07):** Background bitmap bake is **lazy** — it starts
+only when the user first presses ←/→ (`ensureReady()`), not after reveal. Eager
+post-reveal bake was removed: on heavy hashes it blocked the main thread for
+~50s, caused Safari compositor blackouts without user input, and multiplied
+memory use across reloads/windows. After the first rotation completes, the
+remaining orientations bake progressively in the background (no overlay) so all
+4 end up resident and later rotations need no re-render. The cardinals overlay
+shows whenever the pressed rotation's needed angles are not yet baked (including
+subsequent rotations while a target orientation is still baking). Rebake
+on window resize is also lazy (invalidate only; bake on next rotate). Recovery:
+`Escape` or `SafariCardinalBuffers.recoverToLiveArtwork()`.
+
+**Shading tree (do not alter for bake):** Bitmap bake and S export must use the
+same lighting hook as animation — only `feOffset` `dx`/`dy` on clones via
+`S.offsetElts`, never restructure filters. See
+[`RENDERING-PIPELINE.md`](../Canonical/RENDERING-PIPELINE.md) § Safari cardinal rotation.
 
 The Safari ring spinner is currently disabled and is not initialized. A later
 hidden-dummy corner-radii animation experiment was also removed: animating

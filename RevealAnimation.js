@@ -1178,7 +1178,9 @@
   function notifyRevealComplete() {
     _navInFlight = false
     _safariRevealComplete = true
-    if (isWebKitClass) window.SafariCardinalBuffers?.scheduleCardinalBake?.()
+    // Cardinal bitmap bake is lazy — starts on first rotate only (see
+    // SafariCardinalBuffers.ensureReady). Eager post-reveal bake blocked the
+    // main thread for ~50s on heavy hashes and caused Safari compositor blackouts.
     _devHooks?.onRevealComplete?.()
   }
 

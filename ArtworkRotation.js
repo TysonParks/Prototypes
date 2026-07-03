@@ -5,6 +5,7 @@ const artworkRotationState = {
   backingScale: 1,
   screenLightAngle: null,
   animating: false,
+  cardinalBusy: false,
   controlsInstalled: false,
   hooksInstalled: false,
 }
@@ -57,38 +58,13 @@ function restoreArtworkRotationSnapshot(saved, { syncLight = true } = {}) {
   if (syncLight && shouldSyncRotationLight()) updateArtworkRotationLight(saved.angle)
 }
 
-// Bake target: portrait (0°) geometry; lighting only varies per cardinal viewport angle.
-function applyArtworkRotationForCardinalBake(cardinalAngle) {
-  const portraitScale = artworkRotationScaleFor(0)
-  artworkRotationState.angle = 0
-  artworkRotationState.scale = portraitScale
-  setArtworkBackingScale(portraitScale, 0, portraitScale)
-  applyArtworkRotationTransform(0, portraitScale)
-
-  if (artworkRotationState.screenLightAngle === null) {
-    artworkRotationState.screenLightAngle = readScreenSpaceLightAngle()
-  }
-  const screenAngle = readScreenSpaceLightAngle()
-  const localAngle = artworkLocalLightAngleFor(screenAngle, cardinalAngle)
-  globalControls.shadAngle = localAngle
-  const shadVect = Shade.shadVect(localAngle)
-  if (typeof animationController !== 'undefined' && animationController?.batchUpdateFilters) {
-    animationController.batchUpdateFilters(shadVect.x, shadVect.y)
-    return
-  }
-  if (S?.offsetElts) {
-    S.offsetElts.forEach(({ elt, mag }) => {
-      elt.attribute('dx', shadVect.x * mag)
-      elt.attribute('dy', shadVect.y * mag)
-    })
-  }
-}
 function installArtworkRotationHooks() {
   if (artworkRotationState.hooksInstalled || typeof ProtoBatch === 'undefined') return
   artworkRotationState.hooksInstalled = true
   const originalBuildFromHash = ProtoBatch.prototype.buildFromHash
   ProtoBatch.prototype.buildFromHash = function (hash) {
     window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()
+    artworkRotationState.screenLightAngle = null
     const result = originalBuildFromHash.call(this, hash)
     scheduleArtworkRotationSync()
     return result
@@ -249,53 +225,84 @@ async function rotateArtworkByCardinal(direction) {
   const cardinal = window.SafariCardinalBuffers
   if (!cardinal) return
 
-  if (cardinal.isAnimating?.()) return
+  if (cardinal.isAnimating?.() || artworkRotationState.cardinalBusy) return
 
-  const needsCardinalWait = !cardinal.isReady()
-  const showCardinalOverlay = needsCardinalWait && window.RevealAnim?.isWebKitClass
+  if (cardinal.isImageDisplayActive?.() && cardinal.isBitmapDisplayBroken?.()) {
+    cardinal.recoverToLiveArtwork('broken bitmap before rotate')
+  }
+
+  const startAngle = artworkRotationState.angle
+  const targetAngle = startAngle + direction * 90
+  ensureCardinalScreenLightAngle()
+  const neededAngles = cardinal.anglesNeededForRotation?.(startAngle, targetAngle)
+    || [startAngle, targetAngle]
+
+  // Overlay when this rotation must wait for missing orientation bitmaps.
+  let showCardinalOverlay = !cardinal.isReadyForAngles?.(neededAngles)
+    && window.RevealAnim?.isWebKitClass
   if (showCardinalOverlay) {
     window.RevealAnim.showSafariLoadingOverlay('cardinals')
   }
 
-  let ready = false
+  cardinal.cacheLayoutRect?.()
+  artworkRotationState.cardinalBusy = true
+
   try {
-    ready = await cardinal.ensureReady()
-  } finally {
-    if (showCardinalOverlay) {
-      window.RevealAnim.hideSafariLoadingOverlay()
+    if (!cardinal.isReadyForAngles?.(neededAngles)
+      && !showCardinalOverlay
+      && window.RevealAnim?.isWebKitClass) {
+      window.RevealAnim.showSafariLoadingOverlay('cardinals')
+      showCardinalOverlay = true
     }
-  }
-  if (!ready) return
 
-  const startAngle = artworkRotationState.angle
-  const targetAngle = startAngle + direction * 90
-  const startScale = artworkRotationState.scale
-  const targetScale = artworkRotationScaleFor(targetAngle)
+    let ready = false
+    try {
+      ready = await cardinal.ensureReady(neededAngles)
+    } catch (_err) {
+      ready = false
+    }
 
-  if (!cardinal.isImageDisplayActive?.()) {
-    const activated = cardinal.enableImageDisplay(startAngle, startScale)
-    if (!activated) {
-      console.warn('[CardinalRotation] bitmap display unavailable — staying on live SVG')
+    if (!ready) {
+      if (showCardinalOverlay) window.RevealAnim.hideSafariLoadingOverlay()
+      if (cardinal.isImageDisplayActive?.()) {
+        cardinal.recoverToLiveArtwork?.('cardinal buffers not ready')
+      } else if (!cardinal.isBaking?.()) {
+        console.warn('[CardinalRotation] orientation bitmaps not ready — staying on live SVG')
+      }
       return
     }
-  }
 
-  artworkRotationState.animating = true
-  try {
-    const animated = await cardinal.animateCardinalRotation({
-      fromAngle: startAngle,
-      toAngle: targetAngle,
-      startScale,
-      targetScale,
-    })
-    if (!animated) {
-      cardinal.recoverToLiveArtwork?.('animateCardinalRotation returned false')
-      return
+    const startScale = artworkRotationState.scale
+    const targetScale = artworkRotationScaleFor(targetAngle)
+
+    if (showCardinalOverlay) window.RevealAnim.hideSafariLoadingOverlay()
+
+    artworkRotationState.animating = true
+    try {
+      const animated = await cardinal.animateCardinalRotation({
+        fromAngle: startAngle,
+        toAngle: targetAngle,
+        startScale,
+        targetScale,
+      })
+      if (!animated) {
+        cardinal.recoverToLiveArtwork?.('animateCardinalRotation returned false')
+        console.warn('[CardinalRotation] bitmap animation failed — trying live SVG rotation')
+        return rotateArtworkByLive(direction)
+      }
+      artworkRotationState.angle = targetAngle
+      artworkRotationState.scale = targetScale
+      // Progressively bake any remaining orientations in the background so all
+      // 4 end up resident — later rotations are transform + opacity only.
+      cardinal.scheduleCardinalBake?.(cardinal.CARDINAL_ANGLES)
+    } finally {
+      artworkRotationState.animating = false
     }
-    artworkRotationState.angle = targetAngle
-    artworkRotationState.scale = targetScale
   } finally {
-    artworkRotationState.animating = false
+    artworkRotationState.cardinalBusy = false
+    if (cardinal.isBitmapDisplayBroken?.()) {
+      cardinal.recoverToLiveArtwork('broken bitmap after rotate')
+    }
     syncRevealLayoutAfterArtworkRotation()
   }
 }
@@ -341,6 +348,7 @@ async function rotateArtworkByLive(direction) {
 
 function syncArtworkRotationToViewport() {
   if (!FRAME?.bleed?.elt) return
+  if (usesCardinalRotation()) ensureCardinalScreenLightAngle()
   const targetScale = artworkRotationScaleFor(artworkRotationState.angle)
   artworkRotationState.scale = targetScale
   if (usesCardinalRotation() && window.SafariCardinalBuffers?.isImageDisplayActive?.()) {
@@ -460,6 +468,91 @@ function resolveArtworkVisualAngle(visualAngle) {
   return artworkRotationState.angle ?? 0
 }
 
+function ensureCardinalScreenLightAngle() {
+  if (artworkRotationState.screenLightAngle !== null) return
+  // Screen-space reference captured at objRot=0. Cardinal path never syncs
+  // shadAngle to object rotation, so shadAngle still equals the objRot=0 value.
+  noteArtworkScreenLightAngle(normalizeDegree(globalControls?.shadAngle ?? 90))
+}
+
+function readCardinalBakeScreenLightAngle() {
+  ensureCardinalScreenLightAngle()
+  return normalizeDegree(artworkRotationState.screenLightAngle)
+}
+
+function artworkLocalLightAngleFor(screenAngle, visualAngle) {
+  // Screen-space light held constant: local = screenRef - objRot (objRot×-1 added to ref)
+  return normalizeDegree(normalizeDegree(screenAngle) - resolveArtworkVisualAngle(visualAngle))
+}
+
+/** Filter shadAngle for a cardinal object rotation (uses locked screen reference). */
+function artworkCompensatedLightAngle(objectRotationDeg) {
+  return artworkLocalLightAngleFor(readCardinalBakeScreenLightAngle(), objectRotationDeg)
+}
+
+function getArtworkOffsetBatch() {
+  if (typeof animationController !== 'undefined' && animationController?.getOffsetBatch) {
+    return animationController.getOffsetBatch()
+  }
+  if (typeof S !== 'undefined' && S?.offsetElts) {
+    return S.offsetElts.map(({ elt, mag }) => ({
+      node: elt?.elt || elt,
+      mag,
+    })).filter(({ node }) => node && typeof node.setAttribute === 'function')
+  }
+  return []
+}
+
+function findFeOffsetIndexInFilter(offsetNode, filterEl) {
+  if (!offsetNode || !filterEl) return -1
+  const siblings = filterEl.querySelectorAll('feOffset')
+  for (let i = 0; i < siblings.length; i++) {
+    if (siblings[i] === offsetNode) return i
+  }
+  return -1
+}
+
+function findCloneFeOffsetByLiveIndex(cloneRoot, filterId, offsetIndex) {
+  if (!cloneRoot || !filterId || offsetIndex < 0) return null
+  const cloneFilter = cloneRoot.querySelector(`#${CSS.escape(filterId)}`)
+  if (!cloneFilter) return null
+  const cloneOffsets = cloneFilter.querySelectorAll('feOffset')
+  return offsetIndex < cloneOffsets.length ? cloneOffsets[offsetIndex] : null
+}
+
+/** Apply compensated light to a clone — same hook as live batchUpdateFilters. */
+function applyCompensatedLightToSVGElement(cloneRoot, objectRotationDeg, liveRoot = FRAME?.bleed?.elt) {
+  if (!cloneRoot || typeof Shade === 'undefined') return false
+  const localAngle = artworkCompensatedLightAngle(objectRotationDeg)
+  const shadVect = Shade.shadVect(localAngle)
+  const batch = getArtworkOffsetBatch()
+  if (batch.length === 0) return false
+
+  let matched = 0
+  for (const { node, mag } of batch) {
+    const filterEl = typeof node.closest === 'function'
+      ? node.closest('filter')
+      : node.parentElement
+    const filterId = filterEl?.getAttribute?.('id')
+    if (!filterId) continue
+    const offsetIndex = findFeOffsetIndexInFilter(node, filterEl)
+    const cloneOffset = findCloneFeOffsetByLiveIndex(cloneRoot, filterId, offsetIndex)
+    if (!cloneOffset) continue
+    cloneOffset.setAttribute('dx', shadVect.x * mag)
+    cloneOffset.setAttribute('dy', shadVect.y * mag)
+    matched++
+  }
+
+  if (matched !== batch.length && typeof DeBug !== 'undefined' && DeBug.warn) {
+    DeBug.warn('[ArtworkRotation] clone feOffset match incomplete', {
+      batch: batch.length,
+      matched,
+      objectRotationDeg,
+    })
+  }
+  return matched > 0
+}
+
 function readScreenSpaceLightAngle() {
   if (artworkRotationState.screenLightAngle !== null) {
     return normalizeDegree(artworkRotationState.screenLightAngle)
@@ -483,10 +576,6 @@ function updateArtworkRotationLight(visualAngle) {
     elt.attribute('dx', shadVect.x * mag)
     elt.attribute('dy', shadVect.y * mag)
   })
-}
-
-function artworkLocalLightAngleFor(screenAngle, visualAngle) {
-  return normalizeDegree(screenAngle - resolveArtworkVisualAngle(visualAngle))
 }
 
 function noteArtworkScreenLightAngle(screenAngle) {
@@ -559,13 +648,17 @@ function easeInOutCubic(t) {
 
 window.captureArtworkRotationSnapshot = captureArtworkRotationSnapshot
 window.restoreArtworkRotationSnapshot = restoreArtworkRotationSnapshot
-window.applyArtworkRotationForCardinalBake = applyArtworkRotationForCardinalBake
 window.artworkRotationSnapshot = artworkRotationSnapshot
 window.resolveArtworkVisualAngle = resolveArtworkVisualAngle
 window.readScreenSpaceLightAngle = readScreenSpaceLightAngle
 window.updateArtworkRotationLight = updateArtworkRotationLight
 window.syncArtworkRotationToViewport = syncArtworkRotationToViewport
 window.artworkLocalLightAngleFor = artworkLocalLightAngleFor
+window.artworkCompensatedLightAngle = artworkCompensatedLightAngle
+window.applyCompensatedLightToSVGElement = applyCompensatedLightToSVGElement
+window.getArtworkOffsetBatch = getArtworkOffsetBatch
+window.ensureCardinalScreenLightAngle = ensureCardinalScreenLightAngle
+window.readCardinalBakeScreenLightAngle = readCardinalBakeScreenLightAngle
 window.noteArtworkScreenLightAngle = noteArtworkScreenLightAngle
 window.resetArtworkRotationToDefault = resetArtworkRotationToDefault
 window.toggleArtworkFullscreen = toggleArtworkFullscreen

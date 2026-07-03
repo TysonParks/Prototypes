@@ -24,7 +24,7 @@ class ProtoBatch {
     DeBug.warn('Features', features)
     DeBug.warn('Features R useage', R.useage)
 
-    gridTests2(features)
+    new ProtoMill(features).mkPrototype()
 
     DeBug.log('random R useage', R.useage)
     DeBug.log('random RuID useage', RuID.useage)

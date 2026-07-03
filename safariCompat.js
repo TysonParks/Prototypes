@@ -276,8 +276,18 @@
     return isDesktopSafari || isIOS
   }
 
-  const CHROME_CAPABILITIES = Object.freeze({ rotation: 'full', lightAnimation: true })
-  const WEBKIT_FALLBACK_CAPABILITIES = Object.freeze({ rotation: 'cardinal', lightAnimation: false })
+  const CHROME_CAPABILITIES = Object.freeze({
+    rotation: 'full',
+    lightAnimation: true,
+    export: 'full',
+    renderEngine: 'LBSE',
+  })
+  const WEBKIT_FALLBACK_CAPABILITIES = Object.freeze({
+    rotation: 'cardinal',
+    lightAnimation: false,
+    export: 'full',
+    renderEngine: 'preLBSE',
+  })
 
   // Thresholds — tune after Safari smoke tests (ms).
   const TIER_FIRST_PAINT_MS_ROTATION_OFF = 45000
@@ -285,18 +295,28 @@
   const TIER_BUILD_MS_ROTATION_OFF = 20000
   const TIER_PROBE_LIGHT_MS_DEFER = 16
   const TIER_PROBE_LIGHT_MS_HEAVY = 80
+  // Scaled export probe (10% of production res); disable S export if probe exceeds this.
+  const TIER_EXPORT_PROBE_MS_OFF = 12000
 
   let capabilities = detectWebKitClass()
     ? { ...WEBKIT_FALLBACK_CAPABILITIES }
     : { ...CHROME_CAPABILITIES }
   let renderMetrics = null
   let buildMarkStart = null
+  let exportProbeComplete = false
 
-  function computeWebKitCapabilities({ buildMs, probeLightUpdateMs, firstPaintMs }) {
+  function detectRenderEngine() {
+    // Stub: flip to 'LBSE' when a reliable WebKit LBSE detector exists.
+    if (!detectWebKitClass()) return 'LBSE'
+    return 'preLBSE'
+  }
+
+  function computeWebKitCapabilities({ buildMs, probeLightUpdateMs, firstPaintMs, exportRasterMs }) {
     const lightAnimation = false
     const build = Number.isFinite(buildMs) ? buildMs : Infinity
     const probe = Number.isFinite(probeLightUpdateMs) ? probeLightUpdateMs : Infinity
     const paint = Number.isFinite(firstPaintMs) ? firstPaintMs : null
+    const exportProbe = Number.isFinite(exportRasterMs) ? exportRasterMs : null
 
     let rotation = 'cardinal'
     if (paint !== null && paint >= TIER_FIRST_PAINT_MS_ROTATION_OFF) rotation = 'off'
@@ -306,7 +326,22 @@
     }
     if (probe > TIER_PROBE_LIGHT_MS_HEAVY && rotation === 'full') rotation = 'cardinal'
 
-    return { rotation, lightAnimation }
+    let exportCap = 'full'
+    if (exportProbe !== null && exportProbe >= TIER_EXPORT_PROBE_MS_OFF) exportCap = 'off'
+
+    return {
+      rotation,
+      lightAnimation,
+      export: exportCap,
+      renderEngine: detectRenderEngine(),
+    }
+  }
+
+  function applyExportCapabilityPolicy() {
+    if (capabilities.export !== 'off') return
+    if (typeof DeBug !== 'undefined' && DeBug.warn) {
+      DeBug.warn('[SafariCompat] PNG export disabled — scaled probe exceeded threshold')
+    }
   }
 
   function applyRotationCapabilityPolicy() {
@@ -332,9 +367,10 @@
       capabilities = { ...CHROME_CAPABILITIES }
       return { ...capabilities }
     }
-    capabilities = computeWebKitCapabilities(metrics)
+    capabilities = computeWebKitCapabilities({ ...renderMetrics, ...metrics })
     applyLightAnimationPolicy()
     applyRotationCapabilityPolicy()
+    applyExportCapabilityPolicy()
     if (typeof DeBug !== 'undefined' && DeBug.log) {
       DeBug.log('[SafariCompat] capabilities', capabilities, renderMetrics)
     }
@@ -366,10 +402,13 @@
         renderMetrics.firstPaintMs = firstPaintMs
         const next = computeWebKitCapabilities({ ...renderMetrics, firstPaintMs })
         if (next.rotation !== capabilities.rotation
-          || next.lightAnimation !== capabilities.lightAnimation) {
+          || next.lightAnimation !== capabilities.lightAnimation
+          || next.export !== capabilities.export
+          || next.renderEngine !== capabilities.renderEngine) {
           capabilities = next
           applyLightAnimationPolicy()
           applyRotationCapabilityPolicy()
+          applyExportCapabilityPolicy()
           if (typeof DeBug !== 'undefined' && DeBug.log) {
             DeBug.log('[SafariCompat] capabilities refined', capabilities, renderMetrics)
           }
@@ -388,11 +427,32 @@
     capabilities = { ...capabilities, ...partial }
     applyLightAnimationPolicy()
     applyRotationCapabilityPolicy()
+    applyExportCapabilityPolicy()
     return getCapabilities()
   }
 
+  function recordExportRasterProbe(exportRasterMs) {
+    if (!Number.isFinite(exportRasterMs)) return getCapabilities()
+    exportProbeComplete = true
+    renderMetrics = { ...(renderMetrics || {}), exportRasterMs }
+    if (!detectWebKitClass()) return getCapabilities()
+    const next = computeWebKitCapabilities({ ...(renderMetrics || {}), exportRasterMs })
+    if (next.export !== capabilities.export || next.renderEngine !== capabilities.renderEngine) {
+      capabilities = { ...capabilities, export: next.export, renderEngine: next.renderEngine }
+      applyExportCapabilityPolicy()
+      if (typeof DeBug !== 'undefined' && DeBug.log) {
+        DeBug.log('[SafariCompat] export probe', { exportRasterMs, capabilities })
+      }
+    }
+    return getCapabilities()
+  }
+
+  function isExportProbeComplete() {
+    return exportProbeComplete
+  }
+
   function forceEnableAll() {
-    capabilities = { rotation: 'full', lightAnimation: true }
+    capabilities = { rotation: 'full', lightAnimation: true, export: 'full', renderEngine: 'LBSE' }
     return getCapabilities()
   }
 
@@ -411,6 +471,9 @@
     getCapabilities,
     setCapabilities,
     forceEnableAll,
+    recordExportRasterProbe,
+    isExportProbeComplete,
+    detectRenderEngine,
     beginInitialRender,
     endInitialRender,
     recordInitialRender,

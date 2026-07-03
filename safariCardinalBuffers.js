@@ -1,15 +1,32 @@
 // safariCardinalBuffers.js — WebKit rotation via pre-baked cardinal lighting bitmaps.
-// All 4 cardinals rasterized at portrait 0° geometry; only lighting differs per angle.
-// Vertical cardinals (0°, 180°) on top layer; horizontal (90°, 270°) on bottom.
-// Both layers share one CSS rotation; top opacity fades vertical vs horizontal.
+// All 4 cardinals rasterized at identical portrait (0°) geometry; only the baked
+// lighting compensation differs per angle (local = screenRef - objRot).
+// Display: two aligned canvas layers on a shared stage. Settled state shows one
+// layer; rotation animates stage rotate+scale (Chrome-matched phase order) while
+// the incoming orientation crossfades in over the outgoing one — never a swap.
+// Buffers are monochrome (lum+alpha) and all 4 are retained once baked so
+// subsequent rotations are transform + opacity only.
 
 (function () {
   'use strict'
 
   const CARDINAL_ANGLES = [0, 90, 180, 270]
+  // Must match Chrome's live rotation phases in ArtworkRotation.js (do not change).
   const ROTATION_PHASE_MS = 520
   const SCALE_PHASE_MS = 260
   const BAKE_WAIT_MS = 45000
+  const ROTATION_WATCHDOG_MS = 10000
+  const BUFFER_VISIBLE_MIN_FRACTION = 0.001
+  const CANVAS_VISIBLE_MIN_HITS = 8
+  // All 4 angles stay resident (monochrome lum+alpha = 2 bytes/px), so the
+  // per-buffer pixel cap is derived from a total GA budget rather than sized
+  // for a single angle. 32MB total → ~4M px per buffer, comfortably above the
+  // on-screen footprint at DPR 2 while keeping Safari clear of memory reloads.
+  const MAX_TOTAL_GA_BYTES = 32 * 1024 * 1024
+  const GA_BYTES_PER_PIXEL = 2
+  const MAX_PIXELS_PER_BUFFER = Math.floor(MAX_TOTAL_GA_BYTES / CARDINAL_ANGLES.length / GA_BYTES_PER_PIXEL)
+  const MAX_BAKE_DPR = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3)
+  const BAKE_YIELD_MS = 120
 
   let buffers = {}
   let baking = false
@@ -18,16 +35,123 @@
   let overlayAnimating = false
   let overlayEl = null
   let overlayStage = null
-  let overlayBottomCanvas = null
-  let overlayTopCanvas = null
+  let layerCanvasA = null
+  let layerCanvasB = null
+  let baseLayer = null
   let scratchImageData = null
   let scratchImageDataSize = 0
-  let topCanvasKey = null
-  let bottomCanvasKey = null
   let imageDisplayActive = false
   let settledAngle = 0
   let settledScale = 1
   let layoutRectCache = null
+  let lastFrameLayoutKey = null
+  let activeRasterAbort = null
+  let liveArtworkStyleSnapshot = null
+
+  function getLiveArtworkTargets() {
+    const bg = typeof BG !== 'undefined' ? BG?.elt : null
+    const viewport = document.getElementById('artwork-rotation-viewport')
+    const bleed = FRAME?.bleed?.elt
+    const seen = new Set()
+    return [bg, viewport, bleed].filter(el => {
+      if (!el || seen.has(el)) return false
+      seen.add(el)
+      return true
+    })
+  }
+
+  function snapshotLiveArtworkStyles() {
+    return getLiveArtworkTargets().map(el => ({
+      el,
+      visibility: el.style.visibility,
+      pointerEvents: el.style.pointerEvents,
+      opacity: el.style.opacity,
+      display: el.style.display,
+    }))
+  }
+
+  function restoreLiveArtworkStyles() {
+    if (!liveArtworkStyleSnapshot) return
+    liveArtworkStyleSnapshot.forEach(({ el, visibility, pointerEvents, opacity, display }) => {
+      el.style.visibility = visibility
+      el.style.pointerEvents = pointerEvents
+      el.style.opacity = opacity
+      el.style.display = display
+    })
+    liveArtworkStyleSnapshot = null
+  }
+
+  function cancelActiveRaster() {
+    if (activeRasterAbort) {
+      activeRasterAbort.aborted = true
+      if (activeRasterAbort.img) activeRasterAbort.img.src = ''
+      activeRasterAbort = null
+    }
+  }
+
+  function yieldToMain(ms = BAKE_YIELD_MS) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  function getCurrentArtworkAngle() {
+    if (typeof artworkRotationState !== 'undefined' && Number.isFinite(artworkRotationState.angle)) {
+      return normalizeAngle(artworkRotationState.angle)
+    }
+    return 0
+  }
+
+  function cardinalBakePriority(currentAngle) {
+    const base = normalizeAngle(currentAngle)
+    return [
+      base,
+      normalizeAngle(base + 90),
+      normalizeAngle(base - 90),
+      normalizeAngle(base + 180),
+    ]
+  }
+
+  function sortAnglesByBakePriority(angles, currentAngle) {
+    const priority = cardinalBakePriority(currentAngle)
+    const rank = (a) => {
+      const i = priority.indexOf(normalizeAngle(a))
+      return i === -1 ? priority.length : i
+    }
+    return [...new Set((angles || []).map(normalizeAngle))].sort((a, b) => rank(a) - rank(b))
+  }
+
+  function otherLayer() {
+    if (!layerCanvasA || !layerCanvasB) return null
+    return baseLayer === layerCanvasA ? layerCanvasB : layerCanvasA
+  }
+
+  function getDisplayCanvas() {
+    ensureOverlay()
+    return baseLayer
+  }
+
+  function clearLayerCanvases() {
+    for (const canvas of [layerCanvasA, layerCanvasB]) {
+      if (!canvas) continue
+      const ctx = canvas.getContext('2d', { alpha: true })
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
+      canvas._gaKey = null
+    }
+  }
+
+  function isReadyForAngles(angles) {
+    const list = (angles?.length ? angles : CARDINAL_ANGLES).map(normalizeAngle)
+    return list.every(a => bufferIsValid(buffers[a]) && bufferHasSubstantialPixels(buffers[a]))
+  }
+
+  function missingAngles(angles) {
+    return (angles?.length ? angles : CARDINAL_ANGLES)
+      .map(normalizeAngle)
+      .filter(a => !bufferIsValid(buffers[a]) || !bufferHasSubstantialPixels(buffers[a]))
+  }
+
+  function anglesNeededForRotation(fromAngle, toAngle) {
+    return [normalizeAngle(fromAngle), normalizeAngle(toAngle)]
+  }
 
   function normalizeAngle(angle) {
     const n = Number(angle)
@@ -59,6 +183,65 @@
     return alpha[alpha.length - 1] >= minAlpha
   }
 
+  function bufferHasSubstantialPixels(buffer, minAlpha = 16) {
+    if (!bufferIsValid(buffer)) return false
+    const { alpha } = buffer
+    const stride = Math.max(1, Math.floor(alpha.length / 8192))
+    let visible = 0
+    let samples = 0
+    for (let i = 0; i < alpha.length; i += stride) {
+      samples++
+      if (alpha[i] >= minAlpha) visible++
+    }
+    return samples > 0 && (visible / samples) >= BUFFER_VISIBLE_MIN_FRACTION
+  }
+
+  function canvasHasVisiblePixels(canvas, minAlpha = 12, minHits = CANVAS_VISIBLE_MIN_HITS) {
+    if (!canvas || canvas.width < 1 || canvas.height < 1) return false
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return false
+    const { width, height } = canvas
+    const cx = width * 0.5
+    const cy = height * 0.5
+    let hits = 0
+    const samples = []
+    // Pill artwork sits near center — bias samples inward, not uniform grid.
+    for (let i = 0; i < 40; i++) {
+      const t = (i / 40) * Math.PI * 2
+      const r = Math.min(width, height) * (0.04 + (i % 10) * 0.035)
+      samples.push([
+        Math.max(0, Math.min(width - 1, Math.floor(cx + Math.cos(t) * r))),
+        Math.max(0, Math.min(height - 1, Math.floor(cy + Math.sin(t) * r))),
+      ])
+    }
+    for (let i = 0; i < 24; i++) {
+      samples.push([
+        Math.floor((i * 17 + 3) % width),
+        Math.floor((i * 31 + 7) % height),
+      ])
+    }
+    for (const [x, y] of samples) {
+      if (ctx.getImageData(x, y, 1, 1).data[3] >= minAlpha) hits++
+    }
+    return hits >= minHits
+  }
+
+  function isLiveArtworkHidden() {
+    const bg = typeof BG !== 'undefined' ? BG?.elt : null
+    const bleed = FRAME?.bleed?.elt
+    const targets = [bg, bleed].filter(Boolean)
+    if (targets.length === 0) return false
+    return targets.every(el => el.style.display === 'none'
+      || el.style.visibility === 'hidden'
+      || el.style.opacity === '0')
+  }
+
+  function isBitmapDisplayBroken() {
+    if (!imageDisplayActive || !isLiveArtworkHidden()) return false
+    if (!overlayEl || overlayEl.style.display !== 'block') return true
+    return !canvasHasVisiblePixels(getDisplayCanvas())
+  }
+
   function recoverToLiveArtwork(reason = 'manual') {
     if (typeof DeBug !== 'undefined' && DeBug.warn) {
       DeBug.warn('[CardinalBuffers] recoverToLiveArtwork', reason)
@@ -68,15 +251,21 @@
   }
 
   function releaseBuffers() {
+    for (const angle of Object.keys(buffers)) {
+      const entry = buffers[angle]
+      if (!entry) continue
+      entry.lum = null
+      entry.alpha = null
+    }
     buffers = {}
     scratchImageData = null
     scratchImageDataSize = 0
-    topCanvasKey = null
-    bottomCanvasKey = null
+    clearLayerCanvases()
   }
 
   function invalidateCardinalBuffers() {
     bakeToken++
+    cancelActiveRaster()
     releaseBuffers()
     baking = false
     bakePromise = null
@@ -84,27 +273,34 @@
   }
 
   function setLiveArtworkDisplayed(visible) {
-    const viewport = document.getElementById('artwork-rotation-viewport')
-    const bleed = FRAME?.bleed?.elt
-    ;[viewport, bleed].forEach(el => {
-      if (!el) return
-      if (visible) {
-        el.style.visibility = ''
-        el.style.pointerEvents = ''
-        el.style.opacity = ''
-      } else {
-        el.style.visibility = 'hidden'
-        el.style.pointerEvents = 'none'
-        el.style.opacity = '0'
-      }
+    if (visible) {
+      restoreLiveArtworkStyles()
+      return
+    }
+    if (!liveArtworkStyleSnapshot) {
+      liveArtworkStyleSnapshot = snapshotLiveArtworkStyles()
+    }
+    getLiveArtworkTargets().forEach(el => {
+      el.style.visibility = 'hidden'
+      el.style.pointerEvents = 'none'
+      el.style.opacity = '0'
+      // Hide the entire #BG subtree — WebKit can still composite filtered SVG
+      // from display:none descendants when the parent #BG remains opacity:1.
+      el.style.display = 'none'
     })
   }
 
   function disableImageDisplay() {
+    const wasActive = imageDisplayActive
     imageDisplayActive = false
     layoutRectCache = null
     hideOverlay()
     setLiveArtworkDisplayed(true)
+    // Live SVG may still carry a stale orientation/lighting from before bitmap
+    // mode — resync so Escape recovery shows the current rotation state.
+    if (wasActive && typeof window.syncArtworkRotationToViewport === 'function') {
+      window.syncArtworkRotationToViewport()
+    }
   }
 
   function getDisplayRect() {
@@ -127,31 +323,38 @@
     layoutRectCache = getDisplayRect()
   }
 
+  function setLayerVisibility(visibleCanvas, hiddenCanvas) {
+    if (visibleCanvas) {
+      visibleCanvas.style.opacity = '1'
+      visibleCanvas.style.zIndex = '2'
+    }
+    if (hiddenCanvas) {
+      hiddenCanvas.style.opacity = '0'
+      hiddenCanvas.style.zIndex = '1'
+    }
+  }
+
   function showSettledAngle(angle, scale) {
-    if (!isReady()) return false
     const norm = normalizeAngle(angle)
     const buffer = buffers[norm]
-    if (!bufferIsValid(buffer) || !bufferHasVisiblePixels(buffer)) return false
+    if (!bufferIsValid(buffer) || !bufferHasSubstantialPixels(buffer)) return false
+
+    ensureOverlay()
+    syncStageSize()
+    if (!layoutRectCache) cacheLayoutRect()
+    // Reuse whichever layer already holds this orientation to skip the blit.
+    const alt = otherLayer()
+    if (alt && alt._gaKey === norm && baseLayer._gaKey !== norm) baseLayer = alt
+    blitGAToCanvasIfNeeded(buffer, baseLayer)
+    setLayerVisibility(baseLayer, otherLayer())
+    applyStageTransform(angle, scale)
+    positionOverlay(layoutRectCache || getDisplayRect())
+    overlayEl.style.display = 'block'
 
     imageDisplayActive = true
     settledAngle = angle
     settledScale = scale
     setLiveArtworkDisplayed(false)
-    ensureOverlay()
-    syncStageSize()
-
-    const vert = isVerticalOrientation(norm)
-    blitGAToCanvasIfNeeded(
-      buffers[norm],
-      vert ? overlayTopCanvas : overlayBottomCanvas,
-      vert ? 'top' : 'bottom',
-    )
-
-    overlayBottomCanvas.style.opacity = '1'
-    overlayTopCanvas.style.opacity = vert ? '1' : '0'
-    applyStageTransform(angle, scale)
-    positionOverlay(getDisplayRect())
-    overlayEl.style.display = 'block'
     return true
   }
 
@@ -167,7 +370,7 @@
   }
 
   function syncDisplayLayout() {
-    if (!imageDisplayActive || !isReady()) return
+    if (!imageDisplayActive) return
     cacheLayoutRect()
     showSettledAngle(settledAngle, settledScale)
   }
@@ -182,8 +385,10 @@
 
   function displayScaleFor(scale) {
     const s = Number.isFinite(scale) ? scale : 1
-    const backing = Math.max(1, s)
-    return s / backing
+    const backing = typeof artworkRotationState !== 'undefined'
+      ? (artworkRotationState.backingScale || 1)
+      : Math.max(1, s)
+    return s / (backing > 0 ? backing : 1)
   }
 
   function extractGAFromImageData(data, width, height) {
@@ -198,30 +403,57 @@
     return { width, height, lum, alpha }
   }
 
-  function rasterizeToGA(svgMarkup, width, height) {
+  function rasterizeToGA(svgMarkup, width, height, token) {
     return new Promise((resolve, reject) => {
+      cancelActiveRaster()
+      const abort = { aborted: false, img: null }
+      activeRasterAbort = abort
+
       const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const img = new Image()
+      abort.img = img
+
+      const fail = (err) => {
+        URL.revokeObjectURL(url)
+        if (activeRasterAbort === abort) activeRasterAbort = null
+        reject(err)
+      }
+
       img.onload = () => {
+        if (abort.aborted || token !== bakeToken) {
+          fail(new Error('bake cancelled'))
+          return
+        }
+        let canvas = null
         try {
-          const canvas = document.createElement('canvas')
+          canvas = document.createElement('canvas')
           canvas.width = width
           canvas.height = height
           const ctx = canvas.getContext('2d', { willReadFrequently: true })
           ctx.drawImage(img, 0, 0, width, height)
-          URL.revokeObjectURL(url)
+          img.src = ''
+          abort.img = null
+          if (abort.aborted || token !== bakeToken) {
+            fail(new Error('bake cancelled'))
+            return
+          }
           const imageData = ctx.getImageData(0, 0, width, height)
+          canvas.width = 1
+          canvas.height = 1
+          canvas = null
+          URL.revokeObjectURL(url)
+          if (activeRasterAbort === abort) activeRasterAbort = null
           resolve(extractGAFromImageData(imageData.data, width, height))
         } catch (err) {
-          URL.revokeObjectURL(url)
-          reject(err)
+          if (canvas) {
+            canvas.width = 1
+            canvas.height = 1
+          }
+          fail(err)
         }
       }
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        reject(new Error('SVG raster failed'))
-      }
+      img.onerror = () => fail(new Error('SVG raster failed'))
       img.src = url
     })
   }
@@ -253,23 +485,21 @@
       out[oi + 3] = alpha[i]
     }
     ctx.putImageData(imageData, 0, 0)
+    // All buffers share portrait geometry — the stage transform handles rotation.
     if (frameSize) {
       canvas.style.width = `${frameSize.x}px`
       canvas.style.height = `${frameSize.y}px`
     }
+    canvas._gaKey = normalizeAngle(buffer.angle ?? 0)
   }
 
-  function blitGAToCanvasIfNeeded(buffer, canvas, layerKey) {
-    const angleKey = buffer?.angle
-    if (layerKey === 'top') {
-      if (topCanvasKey === angleKey && canvas.width === buffer?.width) return
-      blitGAToCanvas(buffer, canvas)
-      topCanvasKey = angleKey
-      return
-    }
-    if (bottomCanvasKey === angleKey && canvas.width === buffer?.width) return
+  function blitGAToCanvasIfNeeded(buffer, canvas) {
+    if (!bufferIsValid(buffer) || !canvas) return
+    const key = normalizeAngle(buffer.angle ?? 0)
+    if (canvas._gaKey === key
+      && canvas.width === buffer.width
+      && canvas.height === buffer.height) return
     blitGAToCanvas(buffer, canvas)
-    bottomCanvasKey = angleKey
   }
 
   function stripBakeStyles(clone) {
@@ -282,144 +512,151 @@
     clone.style.removeProperty('top')
     clone.style.removeProperty('max-width')
     clone.style.removeProperty('max-height')
+    // The live SVG carries display:none/visibility:hidden/opacity:0 inline while
+    // bitmap mode is active — a clone with those styles rasterizes empty.
+    clone.style.removeProperty('display')
+    clone.style.removeProperty('visibility')
+    clone.style.removeProperty('opacity')
   }
 
-  function createPortraitBakeMarkup(svgElement, width, height) {
+  function applyCloneCardinalLight(clone, cardinalAngle, liveRoot) {
+    if (typeof applyCompensatedLightToSVGElement === 'function') {
+      applyCompensatedLightToSVGElement(clone, cardinalAngle, liveRoot)
+    }
+  }
+
+  // Portrait geometry for every cardinal; only the baked lighting differs.
+  // The CSS stage rotate supplies the visual orientation, and the compensated
+  // light (screenRef - objRot) cancels it so screen-space light stays constant.
+  function createCardinalBakeMarkup(svgElement, width, height, cardinalAngle) {
     const clone = svgElement.cloneNode(true)
     stripBakeStyles(clone)
+    applyCloneCardinalLight(clone, cardinalAngle, svgElement)
+
+    const srcW = parseFloat(svgElement.getAttribute('width'))
+    const srcH = parseFloat(svgElement.getAttribute('height'))
+    if (!clone.getAttribute('viewBox') && Number.isFinite(srcW) && Number.isFinite(srcH) && srcW > 0 && srcH > 0) {
+      clone.setAttribute('viewBox', `0 0 ${srcW} ${srcH}`)
+    }
+
     clone.setAttribute('width', `${width}`)
     clone.setAttribute('height', `${height}`)
+    clone.setAttribute('preserveAspectRatio', 'xMidYMid meet')
     return Export.createSVGMarkup(clone)
   }
 
   //FUNC: cardinalRasterSize() : { width, height, ... } | null
-  // Unified bake resolution for all four cardinal lighting passes. Portrait-
-  // oriented SVG geometry is identical per buffer; pixel dimensions must cover
-  // the largest on-screen footprint across vertical (scale 1) and horizontal
-  // (scale = artworkRotationScaleFor(90)) orientations at devicePixelRatio.
-  //
-  // Sideways display applies fitScale < 1 on the stage, which supersamples the
-  // same bitmap and can make vertical look softer if raster is sized only for
-  // portrait width. parityBoost raises unified raster when fitScale < 1.
+  // Portrait base (frameSize × backingScale × DPR), capped per-buffer.
   function cardinalRasterSize() {
-    const bleedW = parseFloat(FRAME?.bleed?.elt?.getAttribute('width'))
-    const bleedH = parseFloat(FRAME?.bleed?.elt?.getAttribute('height'))
-    if (!Number.isFinite(bleedW) || !Number.isFinite(bleedH) || bleedW <= 0 || bleedH <= 0) {
-      return null
+    const cssW = frameSize?.x
+    const cssH = frameSize?.y
+    if (!cssW || !cssH || cssW <= 0 || cssH <= 0) return null
+
+    const dpr = MAX_BAKE_DPR
+    const backingScale = typeof artworkRotationState !== 'undefined'
+      ? (artworkRotationState.backingScale || 1)
+      : 1
+
+    let width = Math.max(1, Math.round(cssW * backingScale * dpr))
+    let height = Math.max(1, Math.round(cssH * backingScale * dpr))
+
+    if (width * height > MAX_PIXELS_PER_BUFFER) {
+      const scale = Math.sqrt(MAX_PIXELS_PER_BUFFER / (width * height))
+      width = Math.max(1, Math.round(width * scale))
+      height = Math.max(1, Math.round(height * scale))
     }
 
-    const dpr = window.devicePixelRatio || 1
-    const cssW = frameSize?.x || bleedW
-    const cssH = frameSize?.y || bleedH
-    const sidewaysScale = typeof artworkRotationScaleFor === 'function'
-      ? artworkRotationScaleFor(90)
-      : 1
-
-    const vertFootprintW = cssW
-    const vertFootprintH = cssH
-    const horizFootprintW = cssH * sidewaysScale
-    const horizFootprintH = cssW * sidewaysScale
-
-    // Portrait bitmap axes vs on-screen footprint after stage rotation.
-    const reqScaleW = Math.max(
-      (vertFootprintW * dpr) / bleedW,
-      (horizFootprintH * dpr) / bleedW,
-    )
-    const reqScaleH = Math.max(
-      (vertFootprintH * dpr) / bleedH,
-      (horizFootprintW * dpr) / bleedH,
-    )
-
-    const parityBoost = sidewaysScale > 0 && sidewaysScale < 1
-      ? 1 / sidewaysScale
-      : 1
-
-    const MAX_RASTER_SCALE = 3
-    const rasterScale = Math.min(
-      Math.max(reqScaleW, reqScaleH) * parityBoost,
-      MAX_RASTER_SCALE,
-    )
-
     return {
-      width: Math.max(1, Math.round(bleedW * rasterScale)),
-      height: Math.max(1, Math.round(bleedH * rasterScale)),
-      rasterScale,
-      sidewaysScale,
-      parityBoost,
+      width,
+      height,
+      pixels: width * height,
+      maxPixelsPerBuffer: MAX_PIXELS_PER_BUFFER,
+      cappedDpr: dpr,
+      backingScale,
     }
   }
 
   async function bakeAngle(angle, token) {
     if (token !== bakeToken) throw new Error('bake cancelled')
     if (!FRAME?.bleed?.elt || !frameSize) throw new Error('no artwork')
-    if (typeof captureArtworkRotationSnapshot !== 'function'
-      || typeof restoreArtworkRotationSnapshot !== 'function') {
-      throw new Error('rotation snapshot helpers missing')
+
+    const normalized = normalizeAngle(angle)
+    const raster = cardinalRasterSize()
+    if (!raster) throw new Error('invalid cardinal raster size')
+
+    // Lighting is applied on the cloned SVG only — never mutate live filters during
+    // background bake (avoids visible 0°→90°→180°→270° jumps on screen).
+    const svgMarkup = createCardinalBakeMarkup(
+      FRAME.bleed.elt,
+      raster.width,
+      raster.height,
+      normalized,
+    )
+    if (token !== bakeToken) throw new Error('bake cancelled')
+    if (typeof DeBug !== 'undefined' && DeBug.log) {
+      DeBug.log(`[CardinalBuffers] baking light@${normalized}°`, `${raster.width}x${raster.height}`, {
+        pixels: raster.pixels,
+        maxPixelsPerBuffer: raster.maxPixelsPerBuffer,
+        cappedDpr: raster.cappedDpr,
+        backingScale: raster.backingScale,
+      })
     }
-
-    const saved = captureArtworkRotationSnapshot()
-    try {
-      if (typeof applyArtworkRotationForCardinalBake !== 'function') {
-        throw new Error('applyArtworkRotationForCardinalBake missing')
-      }
-      applyArtworkRotationForCardinalBake(angle)
-
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-      if (token !== bakeToken) throw new Error('bake cancelled')
-
-      const normalized = normalizeAngle(angle)
-      const raster = cardinalRasterSize()
-      if (!raster) throw new Error('invalid cardinal raster size')
-
-      const svgMarkup = createPortraitBakeMarkup(
-        FRAME.bleed.elt,
-        raster.width,
-        raster.height,
-      )
-      if (typeof DeBug !== 'undefined' && DeBug.log) {
-        DeBug.log(`[CardinalBuffers] baking light@${normalized}°`, `${raster.width}x${raster.height}`, {
-          rasterScale: raster.rasterScale,
-          sidewaysScale: raster.sidewaysScale,
-          parityBoost: raster.parityBoost,
-        })
-      }
-      const ga = await rasterizeToGA(svgMarkup, raster.width, raster.height)
-      if (token !== bakeToken) throw new Error('bake cancelled')
-      return { ...ga, angle: normalized }
-    } finally {
-      restoreArtworkRotationSnapshot(saved, { syncLight: false })
+    const ga = await rasterizeToGA(svgMarkup, raster.width, raster.height, token)
+    if (token !== bakeToken) throw new Error('bake cancelled')
+    if (!bufferHasSubstantialPixels(ga)) {
+      throw new Error(`cardinal raster empty at ${normalized}°`)
     }
+    return { ...ga, angle: normalized }
   }
 
-  async function bakeCardinalBuffers() {
+  async function bakeCardinalBuffers({ angles: requestedAngles } = {}) {
+    let toBake = missingAngles(requestedAngles)
+    toBake = sortAnglesByBakePriority(toBake, getCurrentArtworkAngle())
+    if (toBake.length === 0) return { ...buffers }
     if (overlayAnimating) return { ...buffers }
-    if (baking && bakePromise) return bakePromise
-    if (CARDINAL_ANGLES.every(a => bufferIsValid(buffers[a]))) return { ...buffers }
+    if (baking && bakePromise) {
+      await bakePromise
+      const stillNeeded = missingAngles(requestedAngles)
+      if (stillNeeded.length === 0) return { ...buffers }
+      return bakeCardinalBuffers({ angles: stillNeeded })
+    }
 
     const token = ++bakeToken
     const saved = typeof captureArtworkRotationSnapshot === 'function'
       ? captureArtworkRotationSnapshot()
       : null
     baking = true
+    if (!imageDisplayActive) setLiveArtworkDisplayed(true)
     bakePromise = (async () => {
+      let inProgress = null
       try {
-        releaseBuffers()
-        for (const angle of CARDINAL_ANGLES) {
+        for (const angle of toBake) {
           if (token !== bakeToken || overlayAnimating) throw new Error('bake cancelled')
+          inProgress = angle
           buffers[angle] = await bakeAngle(angle, token)
-          await new Promise(resolve => setTimeout(resolve, 0))
+          inProgress = null
+          await yieldToMain()
         }
         return { ...buffers }
       } catch (err) {
-        if (token === bakeToken) releaseBuffers()
+        // Only discard the angle that was mid-bake — completed bakes stay valid.
+        if (token === bakeToken && inProgress !== null) {
+          const entry = buffers[inProgress]
+          if (entry) {
+            entry.lum = null
+            entry.alpha = null
+            delete buffers[inProgress]
+          }
+        }
         throw err
       } finally {
         if (token === bakeToken) baking = false
-        if (saved && typeof restoreArtworkRotationSnapshot === 'function') {
+        // Never restore live SVG while the bitmap overlay is showing — that can
+        // briefly re-enable filtered SVG under the canvas (double exposure).
+        if (saved && !imageDisplayActive && !overlayAnimating
+          && typeof restoreArtworkRotationSnapshot === 'function') {
           restoreArtworkRotationSnapshot(saved, { syncLight: false })
         }
-        // Do not auto-switch to bitmap here — keep live SVG visible until the
-        // user rotates. enableImageDisplay runs from rotateArtworkByCardinal().
       }
     })()
     return bakePromise
@@ -430,9 +667,16 @@
   }
 
   function ensureOverlay() {
-    if (overlayEl && overlayStage) return overlayEl
-
-    if (overlayEl) overlayEl.remove()
+    const stale = document.getElementById('safari-cardinal-rotation-overlay')
+    if (overlayEl && overlayStage && layerCanvasA && layerCanvasB) {
+      if (!stale || stale === overlayEl) return overlayEl
+    }
+    if (stale) stale.remove()
+    overlayEl = null
+    overlayStage = null
+    layerCanvasA = null
+    layerCanvasB = null
+    baseLayer = null
 
     overlayEl = document.createElement('div')
     overlayEl.id = 'safari-cardinal-rotation-overlay'
@@ -464,17 +708,17 @@
       'max-height:none',
     ].join(';')
 
-    overlayBottomCanvas = document.createElement('canvas')
-    overlayTopCanvas = document.createElement('canvas')
-    overlayBottomCanvas.id = 'safari-cardinal-layer-bottom'
-    overlayTopCanvas.id = 'safari-cardinal-layer-top'
-    overlayBottomCanvas.style.cssText = canvasStyle
-    overlayTopCanvas.style.cssText = canvasStyle
-    overlayBottomCanvas.style.opacity = '1'
-    overlayTopCanvas.style.opacity = '1'
+    layerCanvasA = document.createElement('canvas')
+    layerCanvasA.id = 'safari-cardinal-display-canvas'
+    layerCanvasA.style.cssText = `${canvasStyle};opacity:1;z-index:2`
 
-    overlayStage.appendChild(overlayBottomCanvas)
-    overlayStage.appendChild(overlayTopCanvas)
+    layerCanvasB = document.createElement('canvas')
+    layerCanvasB.id = 'safari-cardinal-display-canvas-b'
+    layerCanvasB.style.cssText = `${canvasStyle};opacity:0;z-index:1`
+
+    baseLayer = layerCanvasA
+    overlayStage.appendChild(layerCanvasA)
+    overlayStage.appendChild(layerCanvasB)
     overlayEl.appendChild(overlayStage)
     document.body.appendChild(overlayEl)
     syncStageSize()
@@ -504,19 +748,7 @@
   function hideOverlay() {
     if (!overlayEl) return
     overlayEl.style.display = 'none'
-    if (overlayTopCanvas) overlayTopCanvas.style.opacity = '1'
-    if (overlayBottomCanvas) overlayBottomCanvas.style.opacity = '1'
-  }
-
-  function prepareTransitionLayers(fromNorm, toNorm, topOpacityStart) {
-    const fromVert = isVerticalOrientation(fromNorm)
-    const toVert = isVerticalOrientation(toNorm)
-
-    blitGAToCanvasIfNeeded(buffers[fromNorm], fromVert ? overlayTopCanvas : overlayBottomCanvas, fromVert ? 'top' : 'bottom')
-    blitGAToCanvasIfNeeded(buffers[toNorm], toVert ? overlayTopCanvas : overlayBottomCanvas, toVert ? 'top' : 'bottom')
-
-    overlayBottomCanvas.style.opacity = '1'
-    overlayTopCanvas.style.opacity = String(topOpacityStart)
+    clearLayerCanvases()
   }
 
   function animateStagePhase({
@@ -525,8 +757,7 @@
     fromScale,
     toScale,
     durationMs,
-    topOpacityStart,
-    topOpacityEnd,
+    fadeInCanvas = null,
   }) {
     return new Promise(resolve => {
       const startMs = performance.now()
@@ -535,9 +766,8 @@
         const t = easeInOutCubic(rawT)
         const angle = lerp(fromAngle, toAngle, t)
         const scale = lerp(fromScale, toScale, t)
-        const topOpacity = lerp(topOpacityStart, topOpacityEnd, t)
         applyStageTransform(angle, scale)
-        overlayTopCanvas.style.opacity = String(topOpacity)
+        if (fadeInCanvas) fadeInCanvas.style.opacity = `${t}`
         if (rawT < 1) requestAnimationFrame(step)
         else resolve()
       }
@@ -545,6 +775,9 @@
     })
   }
 
+  // Two aligned layers on a shared stage: the outgoing orientation stays under
+  // the incoming one, which crossfades in during the rotate phase. Phase order
+  // and durations match Chrome's rotateArtworkByLive (shrinkFirst logic).
   function animateCardinalRotation({
     fromAngle,
     toAngle,
@@ -553,31 +786,54 @@
   }) {
     const fromNorm = normalizeAngle(fromAngle)
     const toNorm = normalizeAngle(toAngle)
-    if (!bufferIsValid(buffers[fromNorm]) || !bufferIsValid(buffers[toNorm])) {
+    const fromBuffer = buffers[fromNorm]
+    const toBuffer = buffers[toNorm]
+    if (!bufferIsValid(fromBuffer) || !bufferIsValid(toBuffer)) {
+      return Promise.resolve(false)
+    }
+    if (!bufferHasSubstantialPixels(fromBuffer) || !bufferHasSubstantialPixels(toBuffer)) {
       return Promise.resolve(false)
     }
 
-    const topOpacityStart = isVerticalOrientation(fromNorm) ? 1 : 0
-    const topOpacityEnd = isVerticalOrientation(toNorm) ? 1 : 0
     const shrinkFirst = targetScale < startScale
 
     overlayAnimating = true
-    setLiveArtworkDisplayed(false)
     ensureOverlay()
     syncStageSize()
-    prepareTransitionLayers(fromNorm, toNorm, topOpacityStart)
-    applyStageTransform(fromAngle, startScale)
-    positionOverlay(getDisplayRect())
-    overlayEl.style.display = 'block'
-    overlayStage.style.willChange = 'transform'
-    overlayTopCanvas.style.willChange = 'opacity'
 
+    // Reuse layers that already hold either orientation to avoid re-blits.
+    let outgoing = baseLayer
+    let incoming = otherLayer()
+    if (incoming._gaKey === fromNorm && outgoing._gaKey !== fromNorm) {
+      const tmp = outgoing
+      outgoing = incoming
+      incoming = tmp
+    }
+    blitGAToCanvasIfNeeded(fromBuffer, outgoing)
+    blitGAToCanvasIfNeeded(toBuffer, incoming)
+    outgoing.style.opacity = '1'
+    outgoing.style.zIndex = '1'
+    incoming.style.opacity = '0'
+    incoming.style.zIndex = '2'
+    baseLayer = outgoing
+
+    applyStageTransform(fromAngle, startScale)
+    positionOverlay(layoutRectCache || getDisplayRect())
+    overlayEl.style.display = 'block'
+    setLiveArtworkDisplayed(false)
+    imageDisplayActive = true
+    overlayStage.style.willChange = 'transform'
+
+    let watchdogId = null
     const finish = (success) => {
+      if (watchdogId != null) clearTimeout(watchdogId)
       overlayAnimating = false
       overlayStage.style.willChange = 'auto'
-      overlayTopCanvas.style.willChange = 'auto'
       if (success) {
-        showSettledAngle(toAngle, targetScale)
+        baseLayer = incoming
+        if (!showSettledAngle(toAngle, targetScale)) {
+          recoverToLiveArtwork('animation complete — settled frame invalid')
+        }
         return
       }
       if (imageDisplayActive) {
@@ -590,6 +846,15 @@
       setLiveArtworkDisplayed(true)
     }
 
+    watchdogId = setTimeout(() => {
+      if (!overlayAnimating) return
+      if (typeof DeBug !== 'undefined' && DeBug.warn) {
+        DeBug.warn('[CardinalBuffers] rotation watchdog')
+      }
+      finish(false)
+      recoverToLiveArtwork('rotation watchdog')
+    }, ROTATION_WATCHDOG_MS)
+
     return (async () => {
       try {
         if (shrinkFirst) {
@@ -599,8 +864,6 @@
             fromScale: startScale,
             toScale: targetScale,
             durationMs: SCALE_PHASE_MS,
-            topOpacityStart,
-            topOpacityEnd: topOpacityStart,
           })
           await animateStagePhase({
             fromAngle,
@@ -608,8 +871,7 @@
             fromScale: targetScale,
             toScale: targetScale,
             durationMs: ROTATION_PHASE_MS,
-            topOpacityStart,
-            topOpacityEnd,
+            fadeInCanvas: incoming,
           })
         } else {
           await animateStagePhase({
@@ -618,8 +880,7 @@
             fromScale: startScale,
             toScale: startScale,
             durationMs: ROTATION_PHASE_MS,
-            topOpacityStart,
-            topOpacityEnd,
+            fadeInCanvas: incoming,
           })
           await animateStagePhase({
             fromAngle: toAngle,
@@ -627,10 +888,9 @@
             fromScale: startScale,
             toScale: targetScale,
             durationMs: SCALE_PHASE_MS,
-            topOpacityStart: topOpacityEnd,
-            topOpacityEnd,
           })
         }
+        incoming.style.opacity = '1'
         finish(true)
         return true
       } catch (err) {
@@ -640,29 +900,59 @@
     })()
   }
 
-  function scheduleCardinalBake() {
+  function scheduleCardinalBake(angles) {
     if (!window.SafariCompat?.detectWebKitClass?.()) return
     if (SafariCompat.capabilities.rotation !== 'cardinal') return
     if (window.RevealAnim?.isSafariRevealComplete && !window.RevealAnim.isSafariRevealComplete()) return
-    if (CARDINAL_ANGLES.every(a => bufferIsValid(buffers[a]))) return
+    if (missingAngles(angles).length === 0) return
     if (baking || overlayAnimating) return
 
     const run = () => {
-      bakeCardinalBuffers().catch(err => {
+      bakeCardinalBuffers({ angles }).catch(err => {
         if (typeof DeBug !== 'undefined' && DeBug.warn) {
           DeBug.warn('[CardinalBuffers] bake failed', err)
         }
       })
     }
-    if (typeof requestIdleCallback !== 'undefined') {
-      requestIdleCallback(run, { timeout: 8000 })
-    } else {
-      setTimeout(run, 800)
+    requestAnimationFrame(run)
+  }
+
+  function noteFrameLayoutChange() {
+    const raster = cardinalRasterSize()
+    const key = raster ? `${raster.width}x${raster.height}` : null
+    if (key && lastFrameLayoutKey && lastFrameLayoutKey !== key) {
+      invalidateCardinalBuffers()
     }
+    lastFrameLayoutKey = key
+  }
+
+  function installCardinalLifecycleHooks() {
+    if (window._cardinalLifecycleInstalled) return
+    window._cardinalLifecycleInstalled = true
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'hidden') return
+      if (overlayAnimating || imageDisplayActive) return
+      if (!baking) return
+      bakeToken++
+      cancelActiveRaster()
+      baking = false
+      bakePromise = null
+      releaseBuffers()
+    })
+
+    window.addEventListener('pagehide', () => {
+      bakeToken++
+      cancelActiveRaster()
+      releaseBuffers()
+      baking = false
+      bakePromise = null
+      imageDisplayActive = false
+    })
   }
 
   function isReady() {
-    return CARDINAL_ANGLES.every(a => bufferIsValid(buffers[a]))
+    return isReadyForAngles(CARDINAL_ANGLES)
   }
 
   function isBaking() {
@@ -677,16 +967,17 @@
     }, 0)
   }
 
-  async function ensureReady() {
-    if (isReady()) return true
+  async function ensureReady(neededAngles) {
+    const angles = (neededAngles?.length ? neededAngles : CARDINAL_ANGLES).map(normalizeAngle)
+    if (isReadyForAngles(angles)) return true
     if (overlayAnimating) return false
-    if (!isBaking()) scheduleCardinalBake()
+    if (!isBaking()) scheduleCardinalBake(angles)
     try {
       await Promise.race([
-        bakeCardinalBuffers(),
+        bakeCardinalBuffers({ angles }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('cardinal bake timeout')), BAKE_WAIT_MS)),
       ])
-      return isReady()
+      return isReadyForAngles(angles)
     } catch (err) {
       if (typeof DeBug !== 'undefined' && DeBug.warn) {
         DeBug.warn('[CardinalBuffers] ensureReady failed', err)
@@ -696,6 +987,8 @@
   }
 
   function getDiagnosticsSnapshot() {
+    const bg = typeof BG !== 'undefined' ? BG?.elt : null
+    const bleed = FRAME?.bleed?.elt
     return {
       baking,
       overlayAnimating,
@@ -704,28 +997,47 @@
       settledScale,
       bakeToken,
       ready: isReady(),
+      busy: typeof artworkRotationState !== 'undefined'
+        ? !!artworkRotationState.cardinalBusy
+        : null,
+      screenLightAngle: typeof readCardinalBakeScreenLightAngle === 'function'
+        ? readCardinalBakeScreenLightAngle()
+        : null,
       bufferBytes: estimateBufferBytes(),
       raster: typeof cardinalRasterSize === 'function' ? cardinalRasterSize() : null,
+      layers: overlayStage
+        ? {
+          base: baseLayer?._gaKey ?? null,
+          baseOpacity: baseLayer?.style.opacity ?? null,
+          other: otherLayer()?._gaKey ?? null,
+          otherOpacity: otherLayer()?.style.opacity ?? null,
+        }
+        : null,
       angles: CARDINAL_ANGLES.map(a => ({
         angle: a,
         valid: bufferIsValid(buffers[a]),
-        visible: bufferHasVisiblePixels(buffers[a]),
+        visible: bufferHasSubstantialPixels(buffers[a]),
+        sparseVisible: bufferHasVisiblePixels(buffers[a]),
         width: buffers[a]?.width,
         height: buffers[a]?.height,
       })),
-      liveArtworkHidden: (() => {
-        const bleed = FRAME?.bleed?.elt
-        return bleed ? bleed.style.visibility === 'hidden' || bleed.style.opacity === '0' : null
-      })(),
+      liveArtworkHidden: isLiveArtworkHidden(),
+      bgDisplay: bg?.style?.display ?? null,
+      bleedDisplay: bleed?.style?.display ?? null,
       overlayDisplayed: overlayEl?.style.display === 'block',
+      bitmapDisplayBroken: isBitmapDisplayBroken(),
     }
   }
+
+  installCardinalLifecycleHooks()
 
   window.SafariCardinalBuffers = {
     CARDINAL_ANGLES,
     bakeCardinalBuffers,
     scheduleCardinalBake,
     invalidateCardinalBuffers,
+    noteFrameLayoutChange,
+    cancelActiveRaster,
     animateCardinalRotation,
     enableImageDisplay,
     showSettledAngle,
@@ -733,13 +1045,22 @@
     disableImageDisplay,
     recoverToLiveArtwork,
     isImageDisplayActive: () => imageDisplayActive,
+    isBitmapDisplayBroken,
+    cacheLayoutRect,
     ensureReady,
     isReady,
+    isReadyForAngles,
+    anglesNeededForRotation,
+    cardinalBakePriority,
+    sortAnglesByBakePriority,
+    getCurrentArtworkAngle,
     isBaking,
     isAnimating: () => overlayAnimating,
     estimateBufferBytes,
     bufferIsValid,
     bufferHasVisiblePixels,
+    bufferHasSubstantialPixels,
+    canvasHasVisiblePixels,
     isVerticalOrientation,
     cardinalRasterSize,
     getDiagnosticsSnapshot,

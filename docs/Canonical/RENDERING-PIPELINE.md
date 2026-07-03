@@ -312,21 +312,45 @@ same offset registry (`Export.js`, `ArtworkRotation.js`).
 
 When `SafariCompat.capabilities.rotation === 'cardinal'`, viewport rotation
 (←/→) uses pre-baked GA bitmaps at 0°/90°/180°/270° instead of live SVG
-transform + filter updates. Background bake starts after reveal
-(`scheduleCardinalBake` in `notifyRevealComplete` only — not during `endInitialRender`).
-Live SVG stays visible until the user rotates; bitmap mode activates in
+transform + filter updates. Bitmap bake is **lazy** — it starts on the first
+rotate (`ensureReady()` / `scheduleCardinalBake`), not after reveal. Live SVG
+stays visible until the user rotates; bitmap mode activates in
 `rotateArtworkByCardinal()` with fallback to live on failure (`recoverToLiveArtwork`,
 Escape key). Dev smoke test: `SafariCardinalDiagnostics.runSmoke({ hashIndex: 1519 })`.
 
-**Raster sizing (`cardinalRasterSize()`):** All four lighting passes share one
-portrait-oriented SVG geometry; only light direction differs per bake. Pixel
-dimensions are unified (not per-orientation bitmaps) and chosen as the maximum
-needed for both vertical display (stage scale 1) and horizontal display (stage
-scale = `artworkRotationScaleFor(90)`) at `devicePixelRatio`. Because sideways
-display shrinks with `fitScale < 1`, the same bitmap is supersampled on screen;
-`parityBoost` (`1 / fitScale` when `fitScale < 1`) raises the unified raster so
-vertical orientations are not softer than horizontal. Buffers invalidate and
-rebake on window resize.
+**Raster sizing (`cardinalRasterSize()`):** All 4 orientations share identical
+portrait geometry: `frameSize × backingScale × DPR` (min 2, max 3), capped so
+the four monochrome GA buffers (lum+alpha, 2 bytes/px) fit a ~32MB total budget.
+All 4 angles stay resident once baked — after the first rotation triggers the
+lazy bake, remaining orientations bake progressively in the background so later
+rotations are transform + opacity only (no SVG re-rasterization).
+
+**Lighting/orientation model:** Each cardinal bakes the **compensated** light
+into pixels (`local = screenRef − objRot`, screenRef locked at objRot=0);
+display applies CSS `rotate(objRot) + scale` on the overlay stage, which
+restores constant screen-space lighting. **Rotation animation** uses two aligned
+canvas layers on the shared stage: the incoming orientation crossfades in over
+the outgoing one during the rotate phase, with phase order and durations matching
+Chrome's live path (`shrinkFirst`: scale 260ms → rotate 520ms; else rotate 520ms
+→ scale 260ms). Never a buffer swap.
+
+While the bitmap overlay is active, the entire `#BG` subtree is `display:none`.
+**S export** always re-renders full SVG at 3000×5400 with compensated lighting
+(same as Chrome), not the display bitmap; the export clone strips the inline
+hidden styles bitmap mode leaves on `#bleed`. On WebKit, `SafariCompat.capabilities.export`
+may become `'off'` when a scaled export probe exceeds a time threshold; metrics
+live in `SafariCompat.renderMetrics` (`exportRasterMs`, `renderEngine: 'preLBSE'`).
+Bake order from current angle: current → +90° (CW) → −90° → ±180° last.
+
+**Shading tree invariant (bake/export):** Cardinal bitmap bake and PNG export
+must **never** modify filter structure — no zeroing all `feOffset` nodes, no
+pruning blur/composite layers, no filter graph edits. Only mutate `feOffset`
+`dx`/`dy` on **clone** nodes using the same `S.offsetElts` /
+`animationController.getOffsetBatch()` registry and signed magnitudes as live
+light animation (`batchUpdateFilters`). Map each live offset to its clone by
+filter ID + sibling index among that filter's `feOffset` nodes. Screen-space
+light compensation (`screenRef − objRot`) is the only angle-dependent input.
+See `applyCompensatedLightToSVGElement()` in [`ArtworkRotation.js`](../../ArtworkRotation.js).
 
 ---
 

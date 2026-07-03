@@ -216,7 +216,10 @@ function getArtworkExportRotationInfo() {
     ? artworkRotationSnapshot()
     : { angle: 0 }
   const stateAngle = normalizeExportRotationAngle(snap.angle)
-  const visualAngle = getLiveArtworkRotationAngle()
+  // In cardinal bitmap mode the live SVG transform is stale (hidden at its
+  // pre-bitmap orientation) — the rotation state is the source of truth.
+  const bitmapActive = window.SafariCardinalBuffers?.isImageDisplayActive?.()
+  const visualAngle = bitmapActive ? null : getLiveArtworkRotationAngle()
   const angle = visualAngle === null ? stateAngle : visualAngle
   const position = angle / 90
   const aspect = position % 2 === 0 ? 'V' : 'H'
@@ -253,8 +256,8 @@ function formatSVGViewBox({ x, y, width, height }) {
   return `${x} ${y} ${width} ${height}`
 }
 
-function createRotationAwareSVGMarkup(svgElement, rotationInfo, width, height) {
-  const clone = svgElement.cloneNode(true)
+function stripArtworkCloneStyles(clone) {
+  if (!clone?.style) return
   clone.style.removeProperty('transform')
   clone.style.removeProperty('transform-origin')
   clone.style.removeProperty('transform-box')
@@ -264,6 +267,25 @@ function createRotationAwareSVGMarkup(svgElement, rotationInfo, width, height) {
   clone.style.removeProperty('top')
   clone.style.removeProperty('max-width')
   clone.style.removeProperty('max-height')
+  // While cardinal bitmap mode is active the live bleed carries inline
+  // display:none/visibility:hidden/opacity:0 — a clone keeping those
+  // rasterizes as a blank PNG.
+  clone.style.removeProperty('display')
+  clone.style.removeProperty('visibility')
+  clone.style.removeProperty('opacity')
+}
+
+function ensureCloneViewBox(clone, sourceElement) {
+  if (clone.getAttribute('viewBox')) return
+  const srcW = Number.parseFloat(sourceElement?.getAttribute('width'))
+  const srcH = Number.parseFloat(sourceElement?.getAttribute('height'))
+  if (Number.isFinite(srcW) && Number.isFinite(srcH) && srcW > 0 && srcH > 0) {
+    clone.setAttribute('viewBox', `0 0 ${srcW} ${srcH}`)
+  }
+}
+
+function createRotationAwareSVGMarkupFromClone(clone, rotationInfo, width, height) {
+  stripArtworkCloneStyles(clone)
   clone.setAttribute('width', `${width}`)
   clone.setAttribute('height', `${height}`)
 
@@ -291,6 +313,11 @@ function createRotationAwareSVGMarkup(svgElement, rotationInfo, width, height) {
   return Export.createSVGMarkup(clone)
 }
 
+function createRotationAwareSVGMarkup(svgElement, rotationInfo, width, height) {
+  const clone = svgElement.cloneNode(true)
+  return createRotationAwareSVGMarkupFromClone(clone, rotationInfo, width, height)
+}
+
 function getSVGMarkupIntrinsicSize(svgMarkup) {
   const doc = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml')
   const root = doc.documentElement
@@ -301,8 +328,76 @@ function getSVGMarkupIntrinsicSize(svgMarkup) {
   return { width, height, rezString: `${width}x${height}` }
 }
 
-function saveArtworkPNG() {
+function buildExportSvgMarkup(rotationInfo, width, height) {
+  const liveRoot = FRAME.bleed.elt
+  const clone = liveRoot.cloneNode(true)
+  ensureCloneViewBox(clone, liveRoot)
+  if (typeof applyCompensatedLightToSVGElement === 'function') {
+    applyCompensatedLightToSVGElement(clone, rotationInfo.angle, liveRoot)
+  }
+  return createRotationAwareSVGMarkupFromClone(clone, rotationInfo, width, height)
+}
+
+function rasterizeSvgMarkupToCanvas(svgMarkup, width, height) {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+        URL.revokeObjectURL(url)
+        resolve(canvas)
+      } catch (err) {
+        URL.revokeObjectURL(url)
+        reject(err)
+      }
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('export raster failed'))
+    }
+    img.src = url
+  })
+}
+
+const EXPORT_PROBE_SCALE = 0.1
+
+async function probeExportRasterIfNeeded() {
+  if (!window.SafariCompat?.detectWebKitClass?.()) return true
+  if (window.SafariCompat.isExportProbeComplete?.()) {
+    return window.SafariCompat.getCapabilities?.().export !== 'off'
+  }
+  if (!FRAME?.bleed?.elt) return false
+  const rotationInfo = getArtworkExportRotationInfo()
+  const rez = vert(3000, 5400)
+  const exportRez = getArtworkExportResolution(rez, rotationInfo, 1)
+  const probeW = Math.max(1, Math.round(exportRez.width * EXPORT_PROBE_SCALE))
+  const probeH = Math.max(1, Math.round(exportRez.height * EXPORT_PROBE_SCALE))
+  const markup = buildExportSvgMarkup(rotationInfo, probeW, probeH)
+  const t0 = performance.now()
+  await rasterizeSvgMarkupToCanvas(markup, probeW, probeH)
+  const ms = performance.now() - t0
+  window.SafariCompat.recordExportRasterProbe?.(ms)
+  return window.SafariCompat.getCapabilities?.().export !== 'off'
+}
+
+async function saveArtworkPNG() {
   if (!FRAME?.bleed?.elt) return
+  if (window.SafariCompat?.getCapabilities?.().export === 'off') {
+    console.warn('[Export] PNG export unavailable in Safari — use Chrome desktop for full-resolution export')
+    return
+  }
+  const probeOk = await probeExportRasterIfNeeded()
+  if (!probeOk) {
+    console.warn('[Export] PNG export unavailable in Safari — scaled probe exceeded time threshold')
+    return
+  }
+
   const scale = 1
   const rez = vert(3000, 5400)
   const rotationInfo = getArtworkExportRotationInfo()
@@ -310,12 +405,8 @@ function saveArtworkPNG() {
   const date = getCurrentDateString()
   const hash = tokenData.hash
   const name = `Prototypes-${date}-${rotationInfo.code}-${hash}-${exportRez.rezString}.png`
-  const svgMarkup = createRotationAwareSVGMarkup(
-    FRAME.bleed.elt,
-    rotationInfo,
-    exportRez.width,
-    exportRez.height,
-  )
+
+  const svgMarkup = buildExportSvgMarkup(rotationInfo, exportRez.width, exportRez.height)
   const exportSize = getSVGMarkupIntrinsicSize(svgMarkup) || exportRez
   Export.exportPNG(svgMarkup, name, exportSize.width, exportSize.height, scale)
 }
@@ -326,7 +417,7 @@ function handleArtworkSaveKey(event) {
   if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
   if (event.metaKey || event.ctrlKey || event.altKey) return
   event.preventDefault()
-  saveArtworkPNG()
+  saveArtworkPNG().catch(err => console.warn('[Export] save failed', err))
 }
 
 function installArtworkSaveControls() {
