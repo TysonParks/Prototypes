@@ -49,6 +49,24 @@
       && entry.alpha.length === entry.width * entry.height)
   }
 
+  function bufferHasVisiblePixels(buffer, minAlpha = 8) {
+    if (!bufferIsValid(buffer)) return false
+    const { alpha } = buffer
+    const stride = Math.max(1, Math.floor(alpha.length / 4096))
+    for (let i = 0; i < alpha.length; i += stride) {
+      if (alpha[i] >= minAlpha) return true
+    }
+    return alpha[alpha.length - 1] >= minAlpha
+  }
+
+  function recoverToLiveArtwork(reason = 'manual') {
+    if (typeof DeBug !== 'undefined' && DeBug.warn) {
+      DeBug.warn('[CardinalBuffers] recoverToLiveArtwork', reason)
+    }
+    disableImageDisplay()
+    return true
+  }
+
   function releaseBuffers() {
     buffers = {}
     scratchImageData = null
@@ -112,7 +130,8 @@
   function showSettledAngle(angle, scale) {
     if (!isReady()) return false
     const norm = normalizeAngle(angle)
-    if (!bufferIsValid(buffers[norm])) return false
+    const buffer = buffers[norm]
+    if (!bufferIsValid(buffer) || !bufferHasVisiblePixels(buffer)) return false
 
     imageDisplayActive = true
     settledAngle = angle
@@ -138,7 +157,13 @@
 
   function enableImageDisplay(angle, scale) {
     cacheLayoutRect()
-    return showSettledAngle(angle, scale)
+    const ok = showSettledAngle(angle, scale)
+    if (!ok) {
+      imageDisplayActive = false
+      hideOverlay()
+      setLiveArtworkDisplayed(true)
+    }
+    return ok
   }
 
   function syncDisplayLayout() {
@@ -267,21 +292,60 @@
     return Export.createSVGMarkup(clone)
   }
 
-  function portraitRasterSize() {
+  //FUNC: cardinalRasterSize() : { width, height, ... } | null
+  // Unified bake resolution for all four cardinal lighting passes. Portrait-
+  // oriented SVG geometry is identical per buffer; pixel dimensions must cover
+  // the largest on-screen footprint across vertical (scale 1) and horizontal
+  // (scale = artworkRotationScaleFor(90)) orientations at devicePixelRatio.
+  //
+  // Sideways display applies fitScale < 1 on the stage, which supersamples the
+  // same bitmap and can make vertical look softer if raster is sized only for
+  // portrait width. parityBoost raises unified raster when fitScale < 1.
+  function cardinalRasterSize() {
     const bleedW = parseFloat(FRAME?.bleed?.elt?.getAttribute('width'))
     const bleedH = parseFloat(FRAME?.bleed?.elt?.getAttribute('height'))
     if (!Number.isFinite(bleedW) || !Number.isFinite(bleedH) || bleedW <= 0 || bleedH <= 0) {
       return null
     }
-    const screenRect = getArtworkScreenRect()
+
     const dpr = window.devicePixelRatio || 1
-    const maxRasterW = screenRect?.width
-      ? Math.ceil(screenRect.width * dpr)
-      : bleedW
-    const rasterScale = Math.min(1, maxRasterW / bleedW)
+    const cssW = frameSize?.x || bleedW
+    const cssH = frameSize?.y || bleedH
+    const sidewaysScale = typeof artworkRotationScaleFor === 'function'
+      ? artworkRotationScaleFor(90)
+      : 1
+
+    const vertFootprintW = cssW
+    const vertFootprintH = cssH
+    const horizFootprintW = cssH * sidewaysScale
+    const horizFootprintH = cssW * sidewaysScale
+
+    // Portrait bitmap axes vs on-screen footprint after stage rotation.
+    const reqScaleW = Math.max(
+      (vertFootprintW * dpr) / bleedW,
+      (horizFootprintH * dpr) / bleedW,
+    )
+    const reqScaleH = Math.max(
+      (vertFootprintH * dpr) / bleedH,
+      (horizFootprintW * dpr) / bleedH,
+    )
+
+    const parityBoost = sidewaysScale > 0 && sidewaysScale < 1
+      ? 1 / sidewaysScale
+      : 1
+
+    const MAX_RASTER_SCALE = 3
+    const rasterScale = Math.min(
+      Math.max(reqScaleW, reqScaleH) * parityBoost,
+      MAX_RASTER_SCALE,
+    )
+
     return {
       width: Math.max(1, Math.round(bleedW * rasterScale)),
       height: Math.max(1, Math.round(bleedH * rasterScale)),
+      rasterScale,
+      sidewaysScale,
+      parityBoost,
     }
   }
 
@@ -304,8 +368,8 @@
       if (token !== bakeToken) throw new Error('bake cancelled')
 
       const normalized = normalizeAngle(angle)
-      const raster = portraitRasterSize()
-      if (!raster) throw new Error('invalid portrait raster size')
+      const raster = cardinalRasterSize()
+      if (!raster) throw new Error('invalid cardinal raster size')
 
       const svgMarkup = createPortraitBakeMarkup(
         FRAME.bleed.elt,
@@ -313,7 +377,11 @@
         raster.height,
       )
       if (typeof DeBug !== 'undefined' && DeBug.log) {
-        DeBug.log(`[CardinalBuffers] baking light@${normalized}°`, `${raster.width}x${raster.height}`)
+        DeBug.log(`[CardinalBuffers] baking light@${normalized}°`, `${raster.width}x${raster.height}`, {
+          rasterScale: raster.rasterScale,
+          sidewaysScale: raster.sidewaysScale,
+          parityBoost: raster.parityBoost,
+        })
       }
       const ga = await rasterizeToGA(svgMarkup, raster.width, raster.height)
       if (token !== bakeToken) throw new Error('bake cancelled')
@@ -350,10 +418,8 @@
         if (saved && typeof restoreArtworkRotationSnapshot === 'function') {
           restoreArtworkRotationSnapshot(saved, { syncLight: false })
         }
-        if (token === bakeToken && isReady() && typeof artworkRotationSnapshot === 'function') {
-          const snap = artworkRotationSnapshot()
-          enableImageDisplay(snap.rawAngle ?? snap.angle, snap.scale)
-        }
+        // Do not auto-switch to bitmap here — keep live SVG visible until the
+        // user rotates. enableImageDisplay runs from rotateArtworkByCardinal().
       }
     })()
     return bakePromise
@@ -515,7 +581,9 @@
         return
       }
       if (imageDisplayActive) {
-        showSettledAngle(settledAngle, settledScale)
+        if (!showSettledAngle(settledAngle, settledScale)) {
+          recoverToLiveArtwork('animation failed — settled frame invalid')
+        }
         return
       }
       hideOverlay()
@@ -575,6 +643,7 @@
   function scheduleCardinalBake() {
     if (!window.SafariCompat?.detectWebKitClass?.()) return
     if (SafariCompat.capabilities.rotation !== 'cardinal') return
+    if (window.RevealAnim?.isSafariRevealComplete && !window.RevealAnim.isSafariRevealComplete()) return
     if (CARDINAL_ANGLES.every(a => bufferIsValid(buffers[a]))) return
     if (baking || overlayAnimating) return
 
@@ -609,13 +678,7 @@
   }
 
   async function ensureReady() {
-    if (isReady()) {
-      if (!imageDisplayActive && typeof artworkRotationSnapshot === 'function') {
-        const snap = artworkRotationSnapshot()
-        enableImageDisplay(snap.rawAngle ?? snap.angle, snap.scale)
-      }
-      return true
-    }
+    if (isReady()) return true
     if (overlayAnimating) return false
     if (!isBaking()) scheduleCardinalBake()
     try {
@@ -624,8 +687,37 @@
         new Promise((_, reject) => setTimeout(() => reject(new Error('cardinal bake timeout')), BAKE_WAIT_MS)),
       ])
       return isReady()
-    } catch (_) {
+    } catch (err) {
+      if (typeof DeBug !== 'undefined' && DeBug.warn) {
+        DeBug.warn('[CardinalBuffers] ensureReady failed', err)
+      }
       return false
+    }
+  }
+
+  function getDiagnosticsSnapshot() {
+    return {
+      baking,
+      overlayAnimating,
+      imageDisplayActive,
+      settledAngle,
+      settledScale,
+      bakeToken,
+      ready: isReady(),
+      bufferBytes: estimateBufferBytes(),
+      raster: typeof cardinalRasterSize === 'function' ? cardinalRasterSize() : null,
+      angles: CARDINAL_ANGLES.map(a => ({
+        angle: a,
+        valid: bufferIsValid(buffers[a]),
+        visible: bufferHasVisiblePixels(buffers[a]),
+        width: buffers[a]?.width,
+        height: buffers[a]?.height,
+      })),
+      liveArtworkHidden: (() => {
+        const bleed = FRAME?.bleed?.elt
+        return bleed ? bleed.style.visibility === 'hidden' || bleed.style.opacity === '0' : null
+      })(),
+      overlayDisplayed: overlayEl?.style.display === 'block',
     }
   }
 
@@ -639,6 +731,7 @@
     showSettledAngle,
     syncDisplayLayout,
     disableImageDisplay,
+    recoverToLiveArtwork,
     isImageDisplayActive: () => imageDisplayActive,
     ensureReady,
     isReady,
@@ -646,6 +739,9 @@
     isAnimating: () => overlayAnimating,
     estimateBufferBytes,
     bufferIsValid,
+    bufferHasVisiblePixels,
     isVerticalOrientation,
+    cardinalRasterSize,
+    getDiagnosticsSnapshot,
   }
 })()

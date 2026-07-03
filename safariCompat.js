@@ -310,12 +310,12 @@
   }
 
   function applyRotationCapabilityPolicy() {
-    if (capabilities.rotation === 'cardinal') {
-      window.SafariCardinalBuffers?.scheduleCardinalBake?.()
-    }
     if (capabilities.rotation !== 'cardinal') {
       window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()
     }
+    // Cardinal buffer bake is scheduled from RevealAnim.notifyRevealComplete()
+    // after the Safari reveal finishes — not here (avoids competing with reveal
+    // and prevents hiding live SVG during a long background bake).
   }
 
   function applyLightAnimationPolicy() {

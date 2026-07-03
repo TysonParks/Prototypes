@@ -308,6 +308,26 @@ Full history: KNOWN-ISSUES §§9.13–9.15, ARTBLOCKS-SPRINT Q16–Q19.
 Filters are **not** rebuilt when light rotates. Export and artwork rotation use the
 same offset registry (`Export.js`, `ArtworkRotation.js`).
 
+### Safari cardinal rotation (`safariCardinalBuffers.js`)
+
+When `SafariCompat.capabilities.rotation === 'cardinal'`, viewport rotation
+(←/→) uses pre-baked GA bitmaps at 0°/90°/180°/270° instead of live SVG
+transform + filter updates. Background bake starts after reveal
+(`scheduleCardinalBake` in `notifyRevealComplete` only — not during `endInitialRender`).
+Live SVG stays visible until the user rotates; bitmap mode activates in
+`rotateArtworkByCardinal()` with fallback to live on failure (`recoverToLiveArtwork`,
+Escape key). Dev smoke test: `SafariCardinalDiagnostics.runSmoke({ hashIndex: 1519 })`.
+
+**Raster sizing (`cardinalRasterSize()`):** All four lighting passes share one
+portrait-oriented SVG geometry; only light direction differs per bake. Pixel
+dimensions are unified (not per-orientation bitmaps) and chosen as the maximum
+needed for both vertical display (stage scale 1) and horizontal display (stage
+scale = `artworkRotationScaleFor(90)`) at `devicePixelRatio`. Because sideways
+display shrinks with `fitScale < 1`, the same bitmap is supersampled on screen;
+`parityBoost` (`1 / fitScale` when `fitScale < 1`) raises the unified raster so
+vertical orientations are not softer than horizontal. Buffers invalidate and
+rebake on window resize.
+
 ---
 
 ## 13. Store and Identity

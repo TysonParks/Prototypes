@@ -1,5 +1,5 @@
 # Reveal Animation Status Report
-*Last updated: 2026-05-05 (rev 8 - Chrome single-phase variant added)*
+*Last updated: 2026-07-02 (rev 9 — Safari loading text escalation + cardinal prep overlay)*
 
 > Handoff document for future work on `RevealAnimation.js` (formerly `safariImageSwap.js`). The current
 > priority is no longer a fully dynamic Safari generator. For Art Blocks,
@@ -93,6 +93,31 @@ The active Safari path uses persistent body-level elements that survive
   pulsing; the outer dummy keeps ownership of reveal morph/scale.
 - `#safari-overlay`: loading text container.
 - `#safari-loading-text`: Safari-specific loading copy.
+
+### Loading text tiers (WebKit)
+
+`RevealAnimation.js` drives copy through `showSafariLoadingOverlay(mode)` /
+`hideSafariLoadingOverlay()`. Public API: `window.RevealAnim`.
+
+| When | Mode | Copy | Escalation timers |
+|------|------|------|-------------------|
+| Cold load / hash build (before reveal) | `initial` | Default WebKit notice (`loadingTextCopy`) | 25s → “Still resolving…”; 90s → execution-limit notice |
+| Arrow rotation while cardinal bitmaps bake | `cardinals` | “Preparing remaining orientations…” | None (short wait; 500ms fade on dismiss) |
+
+Escalation timers are wall-clock from overlay show. During WebKit’s synchronous
+SVG build, timers queue and apply on the next JS turn after the lock releases
+(if the overlay is still visible). Timers are cleared on hide, rebuild
+(`resetForRebuild`), and when switching to cardinal-prep mode.
+
+Cardinal prep overlay is triggered from `ArtworkRotation.rotateArtworkByCardinal()`
+when `SafariCardinalBuffers.ensureReady()` must wait for remaining orientation
+bitmaps after the artwork has already been revealed.
+
+**Cardinal bake timing (2026-07):** Background bitmap bake must not start from
+`safariCompat.endInitialRender()` — only after `notifyRevealComplete()`. Auto
+`enableImageDisplay` on bake complete was removed (it hid live SVG and could
+leave a black screen if bitmap display failed). Recovery: `Escape` or
+`SafariCardinalBuffers.recoverToLiveArtwork()`.
 
 The Safari ring spinner is currently disabled and is not initialized. A later
 hidden-dummy corner-radii animation experiment was also removed: animating
@@ -211,8 +236,10 @@ trigger Safari compositor/filter behavior. The implementation now toggles a
   behavior again.
 - Any future Safari dynamic architecture should animate persistent body-level
   layers, not elements destroyed by `ProtoBatch.teardown()`.
-- Avoid JavaScript timers for visual timing during the synchronous Safari
-  build window. Prefer already-visible persistent layers.
+- Avoid JavaScript timers for **visual** timing during the synchronous Safari
+  build window. Prefer already-visible persistent layers. Exception: wall-clock
+  loading-text escalation (`loadingTextEscalationMs`) — copy-only updates queued
+  during the lock, applied after release if the overlay is still visible.
 - Avoid CSS filter animation on complex SVG content. Flat-color dummy layers
   are safer.
 - Do not leave `BG.elt` promoted with `transform`, `filter`, or `will-change`

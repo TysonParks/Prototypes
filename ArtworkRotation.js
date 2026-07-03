@@ -219,6 +219,11 @@ function handleArtworkRotationKey(event) {
   const tag = event.target?.tagName?.toLowerCase()
   if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
   if (event.metaKey || event.ctrlKey || event.altKey) return
+  if (event.key === 'Escape' && usesCardinalRotation() && window.SafariCardinalBuffers?.isImageDisplayActive?.()) {
+    event.preventDefault()
+    window.SafariCardinalBuffers.recoverToLiveArtwork?.('Escape')
+    return
+  }
   const key = event.key
   const lowerKey = typeof key === 'string' ? key.toLowerCase() : key
   const direction = key === 'ArrowRight' ? 1
@@ -246,15 +251,19 @@ async function rotateArtworkByCardinal(direction) {
 
   if (cardinal.isAnimating?.()) return
 
-  const overlay = document.getElementById('safari-overlay')
-  const showBakeOverlay = !cardinal.isReady() && overlay
-  if (showBakeOverlay) overlay.classList.add('building')
+  const needsCardinalWait = !cardinal.isReady()
+  const showCardinalOverlay = needsCardinalWait && window.RevealAnim?.isWebKitClass
+  if (showCardinalOverlay) {
+    window.RevealAnim.showSafariLoadingOverlay('cardinals')
+  }
 
   let ready = false
   try {
     ready = await cardinal.ensureReady()
   } finally {
-    if (showBakeOverlay) overlay.classList.remove('building')
+    if (showCardinalOverlay) {
+      window.RevealAnim.hideSafariLoadingOverlay()
+    }
   }
   if (!ready) return
 
@@ -263,14 +272,26 @@ async function rotateArtworkByCardinal(direction) {
   const startScale = artworkRotationState.scale
   const targetScale = artworkRotationScaleFor(targetAngle)
 
+  if (!cardinal.isImageDisplayActive?.()) {
+    const activated = cardinal.enableImageDisplay(startAngle, startScale)
+    if (!activated) {
+      console.warn('[CardinalRotation] bitmap display unavailable — staying on live SVG')
+      return
+    }
+  }
+
   artworkRotationState.animating = true
   try {
-    await cardinal.animateCardinalRotation({
+    const animated = await cardinal.animateCardinalRotation({
       fromAngle: startAngle,
       toAngle: targetAngle,
       startScale,
       targetScale,
     })
+    if (!animated) {
+      cardinal.recoverToLiveArtwork?.('animateCardinalRotation returned false')
+      return
+    }
     artworkRotationState.angle = targetAngle
     artworkRotationState.scale = targetScale
   } finally {
@@ -549,3 +570,4 @@ window.noteArtworkScreenLightAngle = noteArtworkScreenLightAngle
 window.resetArtworkRotationToDefault = resetArtworkRotationToDefault
 window.toggleArtworkFullscreen = toggleArtworkFullscreen
 window.exitArtworkFullscreen = exitArtworkFullscreen
+window.rotateArtworkBy = rotateArtworkBy

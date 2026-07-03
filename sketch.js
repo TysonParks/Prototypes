@@ -904,5 +904,9 @@ function windowResized() {
   sizeFrame()
   BG.size(windowWidth, windowHeight)
   syncArtworkRotationToViewport()
+  if (typeof artworkRotationMode === 'function' && artworkRotationMode() === 'cardinal') {
+    window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()
+    window.SafariCardinalBuffers?.scheduleCardinalBake?.()
+  }
   if (typeof positionRegenBtn === 'function') positionRegenBtn()
 }

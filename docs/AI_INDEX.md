@@ -54,6 +54,7 @@ Read:
 Read:
 - RENDERING-PIPELINE.md
 - ARCHITECTURE.md §§13–14 for inset propagation and pipeline placement
+- REVEAL-ANIMATION-STATUS.md for Safari loading overlay tiers and reveal UX
 - KNOWN-ISSUES.md §§9.13–9.15 for Safari filter/mask history
 
 ### Planning bug fixes

@@ -92,8 +92,15 @@
   // Two sentences, blank line between them — rendered via
   // `white-space: pre-line` so we can use \n\n in textContent.
   const loadingTextCopy =
-    'Safari and iOS browsers may\n take significantly longer\n and render slightly differently.\n\n' +
+    'Current WebKit-based browsers\n (including Safari and iOS browsers)\n may take significantly longer\n to resolve complex outputs.\n\n' +
     'Chrome desktop is the\n reference viewing environment\n for Prototypes.'
+  const cardinalPrepTextCopy = 'Preparing remaining\norientations...'
+  const cardinalPrepOverlayFadeMs = 500
+  const loadingTextEscalationMs = [25000, 90000]
+  const loadingTextEscalatedCopy = [
+    'Still resolving...\n\nSome complex outputs require significantly longer to execute in the current browser.',
+    'This output has exceeded the practical execution limits of the current browser.\n\nChrome desktop is recommended for complete compatibility.',
+  ]
 
   //SECT: State
   let _dummy = null
@@ -109,6 +116,9 @@
   // Safari loading text uses .building; hidden pulse lives on #safari-dummy-core.
   let _safariOverlay = null                      // #safari-overlay root element
   let _safariDummy = null                        // #safari-dummy visual cover/morph layer
+  let _safariRevealComplete = false              // true after first Safari reveal finishes
+  let _loadingTextEscalationTimers = []
+  let _loadingTextEscalationToken = 0
   let _uuToPxArt = 1                             // uu→px scale for current artwork (updated in updateLayoutVars)
 
   //FUNC: ensureStyles() : void
@@ -949,11 +959,100 @@
     }, safariTransitionMs + 80)
   }
 
-  function startSafariLoadingDelay() {
+  function getSafariLoadingTextElement() {
+    return _safariOverlay?.querySelector('#safari-loading-text')
+      || document.getElementById('safari-loading-text')
+  }
+
+  function clearLoadingTextEscalation() {
+    _loadingTextEscalationToken++
+    _loadingTextEscalationTimers.forEach(id => clearTimeout(id))
+    _loadingTextEscalationTimers = []
+  }
+
+  //FUNC: scheduleLoadingTextEscalation() : void
+  // WebKit initial-load only. Timers are wall-clock from overlay show; they
+  // queue during synchronous SVG build and apply on the next JS turn after
+  // the lock releases (if still visible).
+  function scheduleLoadingTextEscalation() {
+    clearLoadingTextEscalation()
+    const token = _loadingTextEscalationToken
+
+    loadingTextEscalationMs.forEach((delayMs, index) => {
+      const timerId = setTimeout(() => {
+        if (token !== _loadingTextEscalationToken) return
+        if (!_safariOverlay?.classList.contains('building')) return
+        if (_safariOverlay.classList.contains('cardinal-prep')) return
+
+        const txt = getSafariLoadingTextElement()
+        if (txt) txt.textContent = loadingTextEscalatedCopy[index]
+      }, delayMs)
+      _loadingTextEscalationTimers.push(timerId)
+    })
+  }
+
+  //FUNC: showSafariLoadingOverlay(mode) : void
+  // WebKit-only. mode: 'initial' (cold-load copy) | 'cardinals' (buffer bake wait).
+  function showSafariLoadingOverlay(mode = 'initial') {
+    if (!isWebKitClass) return
+    ensureSafariOverlay()
     if (!_safariOverlay) return
+
+    const txt = getSafariLoadingTextElement()
+    const useCardinals = mode === 'cardinals' && _safariRevealComplete
+    if (txt) {
+      txt.textContent = useCardinals ? cardinalPrepTextCopy : loadingTextCopy
+      txt.style.transition = ''
+    }
+
+    _safariOverlay.classList.toggle('cardinal-prep', useCardinals)
     _safariOverlay.classList.add('building')
-    updateSafariDummyPulseVars()
-    if (_safariDummy) _safariDummy.classList.add('safari-hidden-pulse')
+
+    if (useCardinals) {
+      clearLoadingTextEscalation()
+    } else {
+      scheduleLoadingTextEscalation()
+      updateSafariDummyPulseVars()
+      if (_safariDummy) _safariDummy.classList.add('safari-hidden-pulse')
+    }
+  }
+
+  //FUNC: hideSafariLoadingOverlay(options) : void
+  // WebKit-only. Removes loading text; optional shorter fade for cardinal prep.
+  function hideSafariLoadingOverlay({ fadeMs } = {}) {
+    if (!isWebKitClass || !_safariOverlay) return
+
+    clearLoadingTextEscalation()
+
+    const txt = getSafariLoadingTextElement()
+    const resolvedFadeMs = fadeMs ?? (
+      _safariOverlay.classList.contains('cardinal-prep')
+        ? cardinalPrepOverlayFadeMs
+        : null
+    )
+
+    if (resolvedFadeMs != null && txt) {
+      txt.style.transition = `opacity ${resolvedFadeMs}ms linear`
+    } else if (txt) {
+      txt.style.transition = ''
+    }
+
+    _safariOverlay.classList.remove('building')
+    _safariOverlay.classList.remove('cardinal-prep')
+
+    if (txt) {
+      txt.textContent = loadingTextCopy
+      if (resolvedFadeMs != null) {
+        setTimeout(() => {
+          if (txt.parentNode) txt.style.transition = ''
+        }, resolvedFadeMs + 50)
+      }
+    }
+  }
+
+  function startSafariLoadingDelay() {
+    _safariRevealComplete = false
+    showSafariLoadingOverlay('initial')
   }
 
   //FUNC: prepArtwork() : void
@@ -1036,7 +1135,7 @@
       }
       setSafariArtworkState(true, true)
       cleanupSafariArtworkRasterState(myToken)
-      if (_safariOverlay) _safariOverlay.classList.remove('building')
+      if (_safariOverlay) hideSafariLoadingOverlay()
       setTimeout(() => {
         if (myToken === _buildToken) notifyRevealComplete()
       }, safariTransitionMs)
@@ -1078,6 +1177,7 @@
 
   function notifyRevealComplete() {
     _navInFlight = false
+    _safariRevealComplete = true
     if (isWebKitClass) window.SafariCardinalBuffers?.scheduleCardinalBake?.()
     _devHooks?.onRevealComplete?.()
   }
@@ -1132,6 +1232,8 @@
   function resetForRebuild() {
     _buildToken++
     _frameElt = null
+    _safariRevealComplete = false
+    clearLoadingTextEscalation()
   }
 
   //SECT: Hook ProtoBatch + p5 lifecycle
@@ -1310,11 +1412,14 @@
   window.RevealAnim = {
     isSafari,
     isWebKitClass,
+    isSafariRevealComplete: () => _safariRevealComplete,
     syncRevealLayoutToArtwork,
     revealNow,
     hideNow,
     transitionToHash,
     resetForRebuild,
+    showSafariLoadingOverlay,
+    hideSafariLoadingOverlay,
     _installDevRegen,
   }
   window.SafariCompatUX = window.RevealAnim
