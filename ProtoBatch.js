@@ -22,12 +22,14 @@ class ProtoBatch {
     const features = setupFeatures()
     DeBug.groupEnd()
     DeBug.warn('Features', features)
-    DeBug.warn('Features R useage', R.useage)
+    if (typeof R.markFeaturesEnd === 'function') R.markFeaturesEnd()
+    DeBug.warn('Features R useage', R.afterFeatures ?? R.useage)
 
     new ProtoMill(features).mkPrototype()
 
-    DeBug.log('random R useage', R.useage)
-    DeBug.log('random RuID useage', RuID.useage)
+    DeBug.log('Geometry R useage', R.geometryUseage)
+    DeBug.log('Total R useage', R.useage)
+    DeBug.log('RuID useage', RuID.useage)
 
     if (typeof positionRegenBtn === 'function') positionRegenBtn()
   }

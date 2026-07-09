@@ -465,7 +465,7 @@ p5.Element.prototype.blur = function (radius) {
   let defs = parentSVG.querySelector('defs')
   if (!defs) defs = createSVGElt('defs').parent(parentSVG)
 
-  const filterID = 'blur-' + Math.floor(Math.random() * 100000)
+  const filterID = 'blur-' + RuID.random_hash(8, '')
   const filter = createSVGElt('filter').attribute('id', filterID)
 
   const useUserSpace = (typeof window !== 'undefined') && (window.SAFARI_BLUR_USERSPACE_FIX !== false)
@@ -511,7 +511,7 @@ p5.Element.prototype.mask = function (shape, blur = 0, strokeWidth = 0) {
     [x, y, width, height] = viewBox ? viewBox.split(' ').map(Number) : [parent.x, parent.y, parent.width, parent.height],
     padding = Math.ceil(blur * 3),
     newViewBox = [x - padding, y - padding, width + padding * 2, height + padding * 2].join(' '),
-    maskID = 'mask-' + Math.floor(Math.random() * 100000)
+    maskID = 'mask-' + RuID.random_hash(8, '')
 
   // Create defs element if it doesn't exist
   let defs = parent.querySelector('defs')

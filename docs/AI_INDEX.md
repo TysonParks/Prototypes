@@ -44,6 +44,7 @@ specifically to the ArtBlocks token render path.
 6. ROADMAP.md → canonical future work and sequencing
 7. DEFERRED-ADAPTIVE-RENDER-MODES.md → post-submission adaptive render modes and benchmarks
 8. MVP-ROTATION-SHIPPING.md → pre-submission cardinal rotation, Chrome R-toggle, interaction gating
+9. PRNG-MIGRATION.md → FeatureSet × PRNG eras, lastHash repro paths, submission vs dev profiles
 
 ## Use By Task
 
@@ -70,6 +71,12 @@ Read:
 - ARCHITECTURE.md
 - ROADMAP.md
 - KNOWN-ISSUES.md if related bug history exists
+
+### Determinism / lastHash / PRNG migration
+Read:
+- PRNG-MIGRATION.md
+- FEATURES-AND-DETERMINISM.md
+- LASTHASH-V1-REPRO-MANIFEST.md
 
 ### Writing tests
 Read:

@@ -11,7 +11,7 @@
 > [KNOWN-ISSUES](KNOWN-ISSUES.md) §9.18 |
 > [TESTING](TESTING.md)
 
-*Last updated: 2026-06-17*
+*Last updated: 2026-07-09*
 
 ---
 
@@ -29,12 +29,15 @@
 
 ```
 tokenData.hash
-  → Random (R) — alternating prngA/prngB, useage counter
-  → FeatureSet.#calcFeatures() — ordered enum draws + conditional pruning
+  → Random (R) — AB single-stream or legacy dual-stream (dev); RandomTracked useage counter
+  → FeatureSet or FeatureSetLegacy (dev era 1) — ordered enum draws + conditional pruning
   → calculateFeatures() returns FeatureSet
   → gridTests2(features) / ProtoMill — consumes features + R (generation)
   → (intended) window.$features — Art Blocks trait object
+  → RuID — separate stream for storage UIDs and SVG filter/mask DOM ids (non-visual)
 ```
+
+See [PRNG-MIGRATION.md](PRNG-MIGRATION.md) for era structure and repro paths.
 
 **Fragility:** Any change to **order**, **addition**, or **removal** of steps in
 `#calcFeatures()`, or any `R`/`r` draw inside it, shifts the PRNG stream for
@@ -172,10 +175,11 @@ entire corpus.
    analyzer on `artBlocksSprint` (or `main`). Re-baseline `lastHash` entries
    or maintain a `lastHash-v2` list for post-cleanup regression.
 
-4. **Document PRNG migration** — when the calc chain changes, record:
+4. **Document PRNG migration** — see [PRNG-MIGRATION.md](PRNG-MIGRATION.md):
    - commit hash of old vs new baseline
-   - whether geometry changed for existing hashes (usually yes)
+   - whether geometry changed for existing hashes (usually yes when PRNG or calc chain changes)
    - updated `R.useage` expectations if testing full builds
+   - `lastHash` era indices (era1: 0–1522, era2: 1523–1531, era3: 1532+)
 
 ### What changes break determinism
 

@@ -31,6 +31,7 @@ Object.assign(ProtoBatch.prototype, {
     if (next === testingControls.hashNumber) return false
 
     testingControls.hashNumber = next
+    if (typeof applyEraDefaults === 'function') applyEraDefaults(next)
     const hash = lastHash[next]
     console.log(`lastHash #${next}: ${hash}`)
     this.teardown()

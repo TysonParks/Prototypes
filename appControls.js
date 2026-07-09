@@ -25,9 +25,16 @@ const chromeRotationMode = 'full'
 
 window.chromeRotationMode = chromeRotationMode
 
+// Default PRNG for new work / submission parity. Dev era nav may override via testingControls.
+const prngMode = 'ab'
+window.prngMode = prngMode
+
 // Dev seed navigation defaults — must exist before artBlocks/tokenHash.js loads.
+// prngMode / featureSetMode: null = derive from lastHash era on hashNumber change.
 const testingControls = {
-  hashNumber: 1519,
+  hashNumber: 1527,
   lastHash: true,
   blackMode: false,
+  prngMode: null,
+  featureSetMode: null,
 };

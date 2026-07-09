@@ -2,15 +2,21 @@
 
 let gui
 
+function onHashNumberChange(value) {
+  if (typeof applyEraDefaults === 'function') applyEraDefaults(value)
+  redrawAll()
+}
+
 function createGUI() {
   gui = new dat.GUI()
   gui.close()
 
   let testingGUI = gui.addFolder('Testing')
   testingGUI.open()
-  testingGUI.add(testingControls, 'hashNumber', 0, lastHash.length - 1, 1).onChange(redrawAll).listen()
+  testingGUI.add(testingControls, 'hashNumber', 0, lastHash.length - 1, 1).onChange(onHashNumberChange).listen()
   testingGUI.add(testingControls, 'lastHash').onChange(redrawAll)
   testingGUI.add(testingControls, 'blackMode').onChange(redrawAll)
+  if (typeof applyEraDefaults === 'function') applyEraDefaults(testingControls.hashNumber)
 
   let globalGUI = gui.addFolder('Global Controls')
   globalGUI.open()

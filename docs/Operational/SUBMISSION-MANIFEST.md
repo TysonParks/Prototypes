@@ -11,7 +11,7 @@
 
 | Profile | `index.html` | `tokenHash` | GUI |
 |---------|--------------|-------------|-----|
-| **Dev** (current) | Full script list | [artBlocks/tokenHash.js](../../artBlocks/tokenHash.js) — `lastHash[]`, `testingControls` | [appControls.js](../../appControls.js) + [guiDev.js](../../guiDev.js) + dat.GUI |
+| **Dev** (current) | Full script list + legacy snapshots | [artBlocks/tokenHash.js](../../artBlocks/tokenHash.js) — `lastHash[]`, era metadata | [appControls.js](../../appControls.js) + [guiDev.js](../../guiDev.js) + dat.GUI |
 | **Submission** (E2 bundle) | Strip DEV-ONLY blocks | [artBlocks/tokenHash.submission.js](../../artBlocks/tokenHash.submission.js) | [appControls.js](../../appControls.js) only |
 
 ---
@@ -26,6 +26,12 @@
 | `libraries/dat.gui.min.js` | Dev GUI |
 | [guiDev.js](../../guiDev.js) | Export keys, seed nav, wrapper debug |
 | [RevealAnimationDev.js](../../RevealAnimationDev.js) | Dynamic `'n'` regen (dev `mode: 0` only), rotation-reload morph |
+| [FeaturesLegacy.js](../../FeaturesLegacy.js) | Frozen v1 FeatureSet snapshot (era 1 repro) |
+| [artBlocks/RandomLegacy.js](../../artBlocks/RandomLegacy.js) | Legacy dual-stream PRNG |
+| [artBlocks/Random.js](../../artBlocks/Random.js) | Dev PRNG factory (mode switch) |
+| [artBlocks/determinacyEra.js](../../artBlocks/determinacyEra.js) | Era / FeatureSet resolution |
+| [artBlocks/ABFeaturesScript.js](../../artBlocks/ABFeaturesScript.js) | Dev `calculateFeatures` with FeatureSet factory |
+| [artBlocks/prngFactory.js](../../artBlocks/prngFactory.js) | `resolvePrngMode`, `createRandom` |
 | `lastHash[]`, `currentHash()` dev branch | ~1600 lines; AB injects `tokenData.hash` |
 | `values64x4bit`, `sliceHash`, `primes16` in tokenHash | Used only by testMess |
 | `functionTestPrint()` | Ad-hoc tests |
@@ -42,18 +48,20 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 3. [sketchGlobals.js](../../sketchGlobals.js) — `var` hoisted globals (`FRAME`, `frameSize`, …) for bundle TDZ safety
 4. [safariCompat.js](../../safariCompat.js)
 5. [RandomExtended.js](../../RandomExtended.js)
-5. [Features.js](../../Features.js)
-6. [artBlocks/ABFeaturesScript.js](../../artBlocks/ABFeaturesScript.js)
-7. [artBlocks/tokenHash.submission.js](../../artBlocks/tokenHash.submission.js) *(or platform-injected tokenData)*
-8. [artBlocks/Random.js](../../artBlocks/Random.js)
-9. [OpArray.js](../../OpArray.js) · [drawAsSVG.js](../../drawAsSVG.js) · [Export.js](../../Export.js)
-10. [ProtoStore.js](../../ProtoStore.js) · [DeBugging.js](../../DeBugging.js) · [Animation.js](../../Animation.js)
-11. [ProtoUtility.js](../../ProtoUtility.js) · [ProtoLayerObjects.js](../../ProtoLayerObjects.js) · [Grid.js](../../Grid.js)
-12. [ProtoFilter.js](../../ProtoFilter.js) · [neuMark_I.js](../../neuMark_I.js)
-13. [ProtoBatch.js](../../ProtoBatch.js) — core build/teardown only
-14. [RevealAnimation.js](../../RevealAnimation.js)
-15. [ArtworkRotation.js](../../ArtworkRotation.js)
-16. [sketch.js](../../sketch.js)
+6. [Features.js](../../Features.js)
+7. [artBlocks/ABFeaturesScript.submission.js](../../artBlocks/ABFeaturesScript.submission.js)
+8. [artBlocks/tokenHash.submission.js](../../artBlocks/tokenHash.submission.js) *(or platform-injected tokenData)*
+9. [artBlocks/RandomArtBlocks.js](../../artBlocks/RandomArtBlocks.js)
+10. [artBlocks/RandomTracked.js](../../artBlocks/RandomTracked.js)
+11. [artBlocks/Random.submission.js](../../artBlocks/Random.submission.js)
+12. [OpArray.js](../../OpArray.js) · [drawAsSVG.js](../../drawAsSVG.js) · [Export.js](../../Export.js)
+13. [ProtoStore.js](../../ProtoStore.js) · [DeBugging.js](../../DeBugging.js) · [Animation.js](../../Animation.js)
+14. [ProtoUtility.js](../../ProtoUtility.js) · [ProtoLayerObjects.js](../../ProtoLayerObjects.js) · [Grid.js](../../Grid.js)
+15. [ProtoFilter.js](../../ProtoFilter.js) · [neuMark_I.js](../../neuMark_I.js) — filter/mask DOM ids via `RuID.random_hash()`
+16. [ProtoBatch.js](../../ProtoBatch.js) — core build/teardown only
+17. [RevealAnimation.js](../../RevealAnimation.js)
+18. [ArtworkRotation.js](../../ArtworkRotation.js)
+19. [sketch.js](../../sketch.js)
 
 **Runtime notes:**
 

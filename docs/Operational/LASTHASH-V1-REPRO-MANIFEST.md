@@ -11,7 +11,13 @@
 
 ## How to repro
 
-**Option A — full v1 workspace (recommended for visual bugs):**
+**Option A — dev era auto-sync (recommended for routine QA):**
+
+Set `testingControls.hashNumber` to the designator; leave `prngMode` and
+`featureSetMode` as `null`. Era 1 hashes auto-select `FeatureSetLegacy` + legacy PRNG.
+See [PRNG-MIGRATION.md](PRNG-MIGRATION.md).
+
+**Option B — full v1 workspace (when validating snapshot refresh):**
 
 ```bash
 git stash   # if needed
@@ -20,7 +26,7 @@ git checkout features-calc-v1-submission
 # protoBatch.buildFromHash('<hash>')
 ```
 
-**Option B — restore Feature calc only (trait/analyzer checks):**
+**Option C — restore Feature calc only (trait/analyzer checks):**
 
 ```bash
 git checkout features-calc-v1-submission -- Features.js artBlocks/ABFeaturesScript.js
@@ -62,7 +68,7 @@ git checkout features-calc-v1-submission -- Features.js artBlocks/ABFeaturesScri
 
 ## Corpus notes
 
-- **`lastHash` at v1 commit** — frozen repro archive; designator = array index ≈ gui `hashNumber`.
-- **`lastHash` on v2** — may diverge after re-baseline; new entries should note v1 vs v2 in comments.
+- **`lastHash` era 1 (indices 0–1522)** — v1 FeatureSet + legacy PRNG; dev repro via `FeatureSetLegacy` snapshot
+- **`lastHash` era 2+** — v2 FeatureSet; may differ from v1 tag geometry
 
-See [FEATURES-AND-DETERMINISM.md](FEATURES-AND-DETERMINISM.md) for tag SHAs and PRNG migration rules.
+See [PRNG-MIGRATION.md](PRNG-MIGRATION.md) for era table and [FEATURES-AND-DETERMINISM.md](FEATURES-AND-DETERMINISM.md) for tag SHAs.
