@@ -30,4 +30,4 @@ const testingControls = {
   hashNumber: 1519,
   lastHash: true,
   blackMode: false,
-}
+};

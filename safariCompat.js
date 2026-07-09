@@ -264,9 +264,9 @@
   }
 
   //SECT: WebKit detection + performance capabilities (Phase 2)
-  // Submission MVP: cardinal rotation on all browsers. WebKit never uses live SVG
-  // rotation (rotation:'full'). Thresholds only disable rotation/export on
-  // pathological loads. Adaptive quality probes deferred — see
+  // Safari: cardinal rotation only. Chrome: live SVG default via appControls.js
+  // chromeRotationMode; R-key toggles cardinal batch bake. Thresholds only disable
+  // rotation/export on pathological loads. Adaptive probes deferred — see
   // docs/Operational/DEFERRED-ADAPTIVE-RENDER-MODES.md
 
   function detectWebKitClass() {
@@ -282,8 +282,7 @@
   // Prefer chromeRotationMode when defined; else default to cardinal.
   // Valid: 'cardinal' | 'full' | 'off'
   function resolveChromeRotationMode() {
-    const override = (typeof window !== 'undefined' && window.chromeRotationMode)
-      || (typeof chromeRotationMode !== 'undefined' ? chromeRotationMode : null)
+    const override = typeof window !== 'undefined' ? window.chromeRotationMode : null
     if (override === 'cardinal' || override === 'full' || override === 'off') return override
     return 'cardinal'
   }
@@ -297,12 +296,6 @@
     }
   }
 
-  const CHROME_CAPABILITIES = Object.freeze({
-    rotation: 'cardinal',
-    lightAnimation: true,
-    export: 'full',
-    renderEngine: 'LBSE',
-  })
   const WEBKIT_FALLBACK_CAPABILITIES = Object.freeze({
     rotation: 'cardinal',
     lightAnimation: false,

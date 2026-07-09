@@ -15,7 +15,6 @@
   // Must match Chrome's live rotation phases in ArtworkRotation.js (do not change).
   const ROTATION_PHASE_MS = 520
   const SCALE_PHASE_MS = 260
-  const BAKE_WAIT_MS = 45000
   const ROTATION_WATCHDOG_MS = 10000
   const BUFFER_VISIBLE_MIN_FRACTION = 0.001
   const CANVAS_VISIBLE_MIN_HITS = 8
@@ -34,7 +33,6 @@
 
   let buffers = {}
   let baking = false
-  let bakePromise = null
   let bakeToken = 0
   let overlayAnimating = false
   let overlayEl = null
@@ -107,10 +105,6 @@
     const to = normalizeAngle(from + direction * 90)
     if (isFastFirstRotationDeferAll()) return !isReadyForAngles(CARDINAL_ANGLES)
     return !rotationAnglesReadyForRequest(from, to)
-  }
-
-  function wouldNeedPrepOverlayForRotation(direction) {
-    return shouldShowPrepForDirection(direction)
   }
 
   function ensurePrepOverlayForPendingBake() {
@@ -366,20 +360,10 @@
     return [to]
   }
 
-  function anglesNeededForRotation(fromAngle, toAngle) {
-    const st = window.artworkRotationState
-    const first = st ? !st.cardinalRotatedThisSession : true
-    return anglesRequiredForRotation(fromAngle, toAngle, first)
-  }
-
   function normalizeAngle(angle) {
     const n = Number(angle)
     if (!Number.isFinite(n)) return 0
     return ((Math.round(n / 90) * 90) % 360 + 360) % 360
-  }
-
-  function isVerticalOrientation(angle) {
-    return normalizeAngle(angle) % 180 === 0
   }
 
   function bufferIsValid(entry) {
@@ -673,8 +657,7 @@
   }
 
   function startCardinalSession({ seedDirection, mode, retentionAngles } = {}) {
-    // Lazy kickoff: registerPendingRotation (first arrow), enqueueRemainingCardinals,
-    // or ensureReady/scheduleCardinalBake.
+    // Lazy kickoff: registerPendingRotation (first arrow) or enqueueRemainingCardinals.
     if (!isCardinalBitmapClient()) return
     if (typeof window.isLightAnimationActive === 'function' && window.isLightAnimationActive()) return
 
@@ -719,7 +702,6 @@
     bakeToken++
     cancelActiveRaster()
     baking = false
-    bakePromise = null
     sessionStartPending = false
     bakeQueue = []
     rotationRequested = false
@@ -1137,69 +1119,6 @@
     })
   }
 
-  async function bakeCardinalBuffers({ angles: requestedAngles } = {}) {
-    if (!isCardinalBitmapClient()) return { ...buffers }
-    // Blocking prep overlay — no concurrent live rotation. Only pause for an
-    // active crossfade/animation, never for the prep wait itself.
-    if (isRotationInteractionActive()) return { ...buffers }
-    let toBake = missingAngles(requestedAngles)
-    toBake = sortAnglesByBakePriority(toBake, getCurrentArtworkAngle())
-    if (toBake.length === 0) return { ...buffers }
-    if (overlayAnimating) return { ...buffers }
-    if (baking && bakePromise) {
-      await bakePromise
-      const stillNeeded = missingAngles(requestedAngles)
-      if (stillNeeded.length === 0) return { ...buffers }
-      return bakeCardinalBuffers({ angles: stillNeeded })
-    }
-
-    const token = ++bakeToken
-    // Snapshot capture/restore while user is blocked behind the prep overlay.
-    const saved = typeof captureArtworkRotationSnapshot === 'function'
-      ? captureArtworkRotationSnapshot()
-      : null
-    baking = true
-    if (!imageDisplayActive) setLiveArtworkDisplayed(true)
-    bakePromise = (async () => {
-      let inProgress = null
-      try {
-        for (const angle of toBake) {
-          if (token !== bakeToken || overlayAnimating) throw new Error('bake cancelled')
-          await waitForRotationIdle(token, { useSessionToken: false })
-          if (token !== bakeToken || overlayAnimating) throw new Error('bake cancelled')
-          inProgress = angle
-          buffers[angle] = await bakeAngle(angle, token)
-          inProgress = null
-          await yieldToMain()
-        }
-        return { ...buffers }
-      } catch (err) {
-        // Only discard the angle that was mid-bake — completed bakes stay valid.
-        if (token === bakeToken && inProgress !== null) {
-          const entry = buffers[inProgress]
-          if (entry) {
-            entry.lum = null
-            entry.alpha = null
-            delete buffers[inProgress]
-          }
-        }
-        throw err
-      } finally {
-        baking = false
-        const rotationBusy = isRotationInteractionActive()
-        const mayRestore = token === bakeToken
-          && saved
-          && !imageDisplayActive
-          && !overlayAnimating
-          && !rotationBusy
-        if (mayRestore && typeof restoreArtworkRotationSnapshot === 'function') {
-          restoreArtworkRotationSnapshot(saved, { syncLight: false })
-        }
-      }
-    })()
-    return bakePromise
-  }
-
   function getArtworkScreenRect() {
     return getDisplayRect()
   }
@@ -1539,19 +1458,6 @@
     }
   }
 
-  function cancelBakeForLiveInteraction() {
-    bakeToken++
-    cancelActiveRaster()
-    baking = false
-    bakePromise = null
-    purgeInvalidBuffers()
-  }
-
-  // Deprecated: use bakeAllCardinalsBatch (Chrome R-toggle) instead.
-  function scheduleChromeCardinalWarmup() {
-    bakeAllCardinalsBatch()
-  }
-
   let chromeBatchBakePromise = null
 
   async function bakeAllCardinalsBatch() {
@@ -1605,20 +1511,6 @@
     return !!chromeBatchBakePromise || baking
   }
 
-  function isChromeWarmupComplete() {
-    return isReadyForAngles(CARDINAL_ANGLES)
-  }
-
-  function scheduleCardinalBake(angles) {
-    if (!isCardinalBitmapClient()) return
-    if (window.SafariCompat?.capabilities?.rotation !== 'cardinal') return
-    if (window.RevealAnim?.isSafariRevealComplete && !window.RevealAnim.isSafariRevealComplete()) return
-    prioritizeAngles(angles)
-    if (!sessionRunning && !sessionStartPending) {
-      startCardinalSession({ mode: 'pending' })
-    }
-  }
-
   function noteFrameLayoutChange() {
     const raster = cardinalRasterSize()
     const key = raster ? `${raster.width}x${raster.height}` : null
@@ -1639,7 +1531,6 @@
       bakeToken++
       cancelActiveRaster()
       baking = false
-      bakePromise = null
       releaseBuffers()
     })
 
@@ -1648,7 +1539,6 @@
       cancelActiveRaster()
       releaseBuffers()
       baking = false
-      bakePromise = null
       imageDisplayActive = false
     })
   }
@@ -1667,20 +1557,6 @@
       if (!bufferIsValid(b)) return sum
       return sum + b.lum.length + b.alpha.length
     }, 0)
-  }
-
-  async function ensureReady(neededAngles) {
-    const angles = (neededAngles?.length ? neededAngles : CARDINAL_ANGLES).map(normalizeAngle)
-    if (isReadyForAngles(angles)) return true
-    if (overlayAnimating) return false
-    prioritizeAngles(angles)
-    if (!sessionRunning && !sessionStartPending) startCardinalSession({ mode: 'pending' })
-    const deadline = Date.now() + BAKE_WAIT_MS
-    while (Date.now() < deadline) {
-      if (isReadyForAngles(angles)) return true
-      await new Promise(resolve => setTimeout(resolve, 50))
-    }
-    return isReadyForAngles(angles)
   }
 
   function getDiagnosticsSnapshot() {
@@ -1733,14 +1609,9 @@
 
   window.SafariCardinalBuffers = {
     CARDINAL_ANGLES,
-    bakeCardinalBuffers,
-    scheduleCardinalBake,
-    scheduleChromeCardinalWarmup,
     bakeAllCardinalsBatch,
     isChromeBatchBaking,
     waitForOverlayPaint,
-    cancelBakeForLiveInteraction,
-    isChromeWarmupComplete,
     startCardinalSession,
     stopCardinalSession,
     registerPendingRotation,
@@ -1749,7 +1620,6 @@
     ensurePrepOverlayForPendingBake,
     shouldShowPrepForDirection,
     rotationAnglesReadyForRequest,
-    wouldNeedPrepOverlayForRotation,
     pendingRotationReadyToFulfill,
     isFastFirstRotationDeferAll,
     enqueueRemainingCardinals,
@@ -1771,11 +1641,9 @@
     isImageDisplayActive: () => imageDisplayActive,
     isBitmapDisplayBroken,
     cacheLayoutRect,
-    ensureReady,
     isReady,
     isReadyForAngles,
     anglesRequiredForRotation,
-    anglesNeededForRotation,
     cardinalBakePriority,
     sortAnglesByBakePriority,
     getCurrentArtworkAngle,
@@ -1786,7 +1654,6 @@
     bufferHasVisiblePixels,
     bufferHasSubstantialPixels,
     canvasHasVisiblePixels,
-    isVerticalOrientation,
     cardinalRasterSize,
     getDiagnosticsSnapshot,
   }

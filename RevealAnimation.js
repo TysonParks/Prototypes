@@ -1097,11 +1097,6 @@
     txt.style.opacity = '1'
   }
 
-  function showCardinalPrepOverlayIfNeeded() {
-    if (!window.SafariCardinalBuffers?.isRotationRequested?.()) return
-    showCardinalPrepOverlay()
-  }
-
   // Cardinal buffer bake wait — Safari uses #safari-overlay; Chrome gets text only.
   function showCardinalPrepOverlay() {
     if (!_safariRevealComplete) return
@@ -1664,7 +1659,6 @@
     showSafariLoadingOverlay,
     hideSafariLoadingOverlay,
     showCardinalPrepOverlay,
-    showCardinalPrepOverlayIfNeeded,
     hideCardinalPrepOverlay,
     showExportPrepOverlay,
     hideExportPrepOverlay,

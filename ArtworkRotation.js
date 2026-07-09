@@ -1,5 +1,5 @@
-// Viewport rotation, PostParam Rotation, and fullscreen. Cardinal buffer rotation
-// is the default on all browsers for submission MVP (see MVP-ROTATION-SHIPPING.md).
+// Viewport rotation, PostParam Rotation, and fullscreen. Safari uses cardinal buffers;
+// Chrome defaults to live SVG with optional R-key cardinal (see MVP-ROTATION-SHIPPING.md).
 const artworkRotationState = {
   angle: 0,
   scale: 1,
@@ -78,39 +78,6 @@ function onLightAnimationStopped() {
     ensureCardinalScreenLightAngle()
   }
   syncArtworkRotationToViewport()
-}
-
-// Chrome standby: show live SVG after object rotation so tap-to-animate-light works.
-// Cardinal buffers stay resident in memory for the next rotation.
-function releaseChromeCardinalStandbyAfterRotation() {
-  if (isChromeCardinalOptIn()) return
-  if (isWebKitRotationLocked()) return
-  if (!cardinalRotationCapability()) return
-  const cardinal = window.SafariCardinalBuffers
-  if (!cardinal?.isImageDisplayActive?.()) return
-  cardinal.recoverToLiveArtwork('chrome standby after rotation')
-}
-
-function captureArtworkRotationSnapshot() {
-  return {
-    angle: artworkRotationState.angle,
-    scale: artworkRotationState.scale,
-    backingScale: artworkRotationState.backingScale,
-    screenLightAngle: artworkRotationState.screenLightAngle,
-    visualAngle: artworkRotationState.visualAngle,
-  }
-}
-
-function restoreArtworkRotationSnapshot(saved, { syncLight = true } = {}) {
-  if (!saved) return
-  artworkRotationState.angle = saved.angle
-  artworkRotationState.scale = saved.scale
-  artworkRotationState.backingScale = saved.backingScale
-  artworkRotationState.screenLightAngle = saved.screenLightAngle
-  artworkRotationState.visualAngle = saved.visualAngle
-  setArtworkBackingScale(saved.scale, saved.angle, saved.scale)
-  applyArtworkRotationTransform(saved.angle, saved.scale)
-  if (syncLight && shouldSyncRotationLight()) updateArtworkRotationLight(saved.angle)
 }
 
 function installArtworkRotationHooks() {
@@ -488,7 +455,6 @@ async function runCardinalRotationAnimation(cardinal, direction, startAngle, tar
     }
     artworkRotationState.angle = targetAngle
     artworkRotationState.scale = targetScale
-    releaseChromeCardinalStandbyAfterRotation()
     return true
   } finally {
     artworkRotationState.animating = false
@@ -915,8 +881,6 @@ function easeInOutCubic(t) {
 }
 
 window.artworkRotationState = artworkRotationState
-window.captureArtworkRotationSnapshot = captureArtworkRotationSnapshot
-window.restoreArtworkRotationSnapshot = restoreArtworkRotationSnapshot
 window.artworkRotationSnapshot = artworkRotationSnapshot
 window.resolveArtworkVisualAngle = resolveArtworkVisualAngle
 window.readScreenSpaceLightAngle = readScreenSpaceLightAngle
@@ -937,7 +901,6 @@ window.isLightAnimationActive = isLightAnimationActive
 window.readEffectiveScreenLightAngle = readEffectiveScreenLightAngle
 window.onLightAnimationStarted = onLightAnimationStarted
 window.onLightAnimationStopped = onLightAnimationStopped
-window.isLightAnimationActive = isLightAnimationActive
 window.toggleChromeCardinalMode = toggleChromeCardinalMode
 window.isChromeCardinalOptIn = isChromeCardinalOptIn
 window.usesCardinalRotation = usesCardinalRotation

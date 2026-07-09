@@ -38,8 +38,8 @@
 From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 
 1. `libraries/p5.min.js` — confirm AB dependency version at upload (Q6); may be injected by platform
-2. [safariCompat.js](../../safariCompat.js)
-3. [appControls.js](../../appControls.js)
+2. [appControls.js](../../appControls.js) — must load before safariCompat (sets `window.chromeRotationMode`)
+3. [safariCompat.js](../../safariCompat.js)
 4. [RandomExtended.js](../../RandomExtended.js)
 5. [Features.js](../../Features.js)
 6. [artBlocks/ABFeaturesScript.js](../../artBlocks/ABFeaturesScript.js)

@@ -2,8 +2,8 @@
 # Source of truth companion: docs/Operational/SUBMISSION-MANIFEST.md
 # Lines starting with # are ignored. Paths are relative to repo root.
 
-safariCompat.js
 appControls.js
+safariCompat.js
 RandomExtended.js
 Features.js
 artBlocks/ABFeaturesScript.js
