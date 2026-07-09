@@ -8,7 +8,11 @@
 
 ## Summary
 
-Safari forced discovery of **Cardinal Buffer Mode** — pre-baked orientation bitmaps with compensated lighting and dual-layer crossfade rotation. This is a general viewing strategy, not only a Safari workaround. Post-submission work will:
+Safari forced discovery of **Cardinal Buffer Mode** — pre-baked orientation bitmaps with compensated lighting and dual-layer crossfade rotation. This is a general viewing strategy, not only a Safari workaround.
+
+**Current shipping (2026-07-09):** Safari is cardinal-only. Chrome defaults to **live SVG** with manual **R**-key cardinal opt-in for testing. Automatic adaptive promotion remains deferred.
+
+Post-submission work will:
 
 1. Promote cardinal buffers to a **cross-browser adaptive** feature (not browser-gated).
 2. Use **Chrome first-rotation quality probes** (`maxFrameGapMs`, long tasks) to decide Live SVG vs Cardinal per session.

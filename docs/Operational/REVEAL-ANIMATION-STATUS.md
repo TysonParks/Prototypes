@@ -1,5 +1,5 @@
 # Reveal Animation Status Report
-*Last updated: 2026-07-02 (rev 9 — Safari loading text escalation + cardinal prep overlay)*
+*Last updated: 2026-07-09 (rev 10 — cardinal prep z-index, export prep overlay, Chrome status cues)*
 
 > Handoff document for future work on `RevealAnimation.js` (formerly `safariImageSwap.js`). The current
 > priority is no longer a fully dynamic Safari generator. For Art Blocks,
@@ -66,12 +66,12 @@ The final Safari implementation solved four requirements simultaneously:
 - no hard-edged hidden-scale rectangle flash during handoff, and
 - no intermittent low-resolution final artwork raster.
 
-Note: Viewport rotation uses **cardinal buffer mode on all browsers** for the
-submission MVP (2026-07-07). The generator supports an initial `Rotation`
-PostParam (defaults to `Up` / 0°) and interactive keyboard rotation. Rotational
-**light** animation is tap/touch-to-start only on Chrome (disabled on WebKit);
-tap uses forward chase with immediate visible motion (`Animation.js`
-`userInitiated` path, 2026-06). See [MVP-ROTATION-SHIPPING.md](MVP-ROTATION-SHIPPING.md).
+Note: **Safari** viewport rotation uses cardinal buffer mode. **Chrome** defaults to
+live SVG; optional cardinal via **R** (see [MVP-ROTATION-SHIPPING.md](MVP-ROTATION-SHIPPING.md)).
+The generator supports an initial `Rotation` PostParam (defaults to `Up` / 0°) and
+interactive keyboard rotation. Rotational **light** animation is tap/touch-to-start
+only on Chrome (disabled on WebKit); tap uses forward chase with immediate visible
+motion (`Animation.js` `userInitiated` path, 2026-06).
 
 The key architectural decisions that made this stable were:
 
@@ -102,28 +102,34 @@ The active Safari path uses persistent body-level elements that survive
 | When | Mode | Copy | Escalation timers |
 |------|------|------|-------------------|
 | Cold load / hash build (before reveal) | `initial` | Default WebKit notice (`loadingTextCopy`) | 25s → “Still resolving…”; 90s → execution-limit notice |
-| Arrow rotation while cardinal bitmaps bake | `cardinals` | “Preparing remaining orientations…” | None (short wait; 500ms fade on dismiss) |
+| Arrow rotation while cardinal bitmaps bake | `cardinals` | “Preparing orientation…” + adaptive second line | None (hold until bake completes; 500ms fade on dismiss) |
+| Safari PNG export (S) | `export-prep` | “Preparing image…” | None (hold until export raster starts) |
+| Chrome R-toggle cardinal batch bake | `cardinal-prep` (Chrome) | “Preparing smooth rotation…” | Status cues after bake: *Smooth rotation ready / enabled / Live rotation restored* |
+
+**Z-index:** `#safari-overlay.cardinal-prep` uses **10050** so prep text stays above
+`#safari-cardinal-rotation-overlay` (9998) during cardinal crossfade.
 
 Escalation timers are wall-clock from overlay show. During WebKit’s synchronous
 SVG build, timers queue and apply on the next JS turn after the lock releases
 (if the overlay is still visible). Timers are cleared on hide, rebuild
-(`resetForRebuild`), and when switching to cardinal-prep mode.
+(`resetForRebuild`), and when switching to cardinal-prep or export-prep modes.
 
-Cardinal prep overlay is triggered from `ArtworkRotation.rotateArtworkByCardinal()`
-when `SafariCardinalBuffers.ensureReady()` must wait for remaining orientation
-bitmaps after the artwork has already been revealed.
+Cardinal prep overlay is triggered from `SafariCardinalBuffers.ensurePrepOverlayForPendingBake()`
+whenever a user-waiting bake is in progress (not only the first arrow). Chrome prep
+uses the same overlay helpers with Chrome-specific copy and post-bake status cues.
 
-**Cardinal bake timing (2026-07):** Background bitmap bake is **lazy** — it starts
-only when the user first presses ←/→ (`ensureReady()`), not after reveal. Eager
-post-reveal bake was removed: on heavy hashes it blocked the main thread for
-~50s, caused Safari compositor blackouts without user input, and multiplied
-memory use across reloads/windows. After the first rotation completes, the
-remaining orientations bake progressively in the background (no overlay) so all
-4 end up resident and later rotations need no re-render. The cardinals overlay
-shows whenever the pressed rotation's needed angles are not yet baked (including
-subsequent rotations while a target orientation is still baking). Rebake
-on window resize is also lazy (invalidate only; bake on next rotate). Recovery:
-`Escape` or `SafariCardinalBuffers.recoverToLiveArtwork()`.
+**Safari adaptive second lines** (after first-bake classifier):
+
+- Fast (< 500 ms): *"Additional orientations are being prepared."*
+- Medium / slow / unclassified: *"Additional orientations will be prepared as needed."*
+
+**Cardinal bake timing (2026-07-09):** Background bitmap bake is **lazy** — it starts
+only when the user first presses ←/→, not after reveal. After classification, fast
+hashes batch remaining orientations before the first rotation; medium/slow bake
+progressively per policy. Prep overlay shows on **every** user-waiting bake (fixed
+z-index above cardinal canvas). Rebake on window resize is lazy (invalidate only;
+bake on next rotate). Buffer invalidation on **light angle change** only (not
+Chrome R-toggle exit). Recovery: `Escape` or `SafariCardinalBuffers.recoverToLiveArtwork()`.
 
 **Shading tree (do not alter for bake):** Bitmap bake and S export must use the
 same lighting hook as animation — only `feOffset` `dx`/`dy` on clones via
@@ -174,7 +180,8 @@ Cold-load sequence:
 Current Safari key behavior:
 
 - `n`: Chrome — `RevealAnimationDev.js` capture handler (hide → regen). Safari — blocked (no teardown, no new hash).
-- `s`: not intercepted by reveal modules; `guiDev.js` handles PNG export.
+- `s`: `guiDev.js` / `Export.js` PNG export; on Safari shows `export-prep` overlay
+  (`Preparing image...`) before raster. Gated by `isArtworkActionBlocked('export')`.
 
 ---
 

@@ -43,7 +43,7 @@ specifically to the ArtBlocks token render path.
 5. TESTING.md → canonical testing/debug procedures and harness usage
 6. ROADMAP.md → canonical future work and sequencing
 7. DEFERRED-ADAPTIVE-RENDER-MODES.md → post-submission adaptive render modes and benchmarks
-8. MVP-ROTATION-SHIPPING.md → pre-submission cardinal rotation shipping plan
+8. MVP-ROTATION-SHIPPING.md → pre-submission cardinal rotation, Chrome R-toggle, interaction gating
 
 ## Use By Task
 
@@ -56,7 +56,7 @@ Read:
 Read:
 - RENDERING-PIPELINE.md
 - ARCHITECTURE.md §§13–14 for inset propagation and pipeline placement
-- REVEAL-ANIMATION-STATUS.md for Safari loading overlay tiers and reveal UX
+- REVEAL-ANIMATION-STATUS.md for Safari loading overlay tiers, cardinal/export prep overlays, reveal UX
 - KNOWN-ISSUES.md §§9.13–9.15 for Safari filter/mask history
 
 ### Planning bug fixes
@@ -82,6 +82,7 @@ Read:
 - KNOWN-ISSUES.md records historical failed attempts; do not repeat them
 - ROADMAP.md is intent, not proof of implementation
 - `RevealAnimation.js` Chrome and Safari reveal behaviors are reference-locked and approved for ArtBlocks submission
+- MVP-ROTATION-SHIPPING.md defines current rotation shipping behavior (Safari cardinal, Chrome R-toggle, input gating)
 - Dev dynamic regen: `RevealAnimationDev.js` (excluded from submission bundle)
    as of 2026-05-05; Safari work must not alter Chrome behavior unless explicitly requested.
 

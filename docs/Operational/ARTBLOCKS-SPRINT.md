@@ -103,9 +103,10 @@ attack plan below). **ArtBlocks validates on headless Chromium (SwiftShell) —
 Safari fixes are for collector experience, not ArtBlocks evaluation.** But Safari
 is a primary collector browser and should not be ignored. Test early, not at the end.
 
-**Submission MVP (2026-07-07):** Cardinal buffer rotation is enabled on **all browsers**
-for shipping. Safari stays locked to cardinal (no live SVG rotation tier). Adaptive
-metrics-based toggling deferred — see [MVP-ROTATION-SHIPPING.md](MVP-ROTATION-SHIPPING.md)
+**Submission MVP (2026-07-09):** Safari uses cardinal buffer rotation exclusively.
+Chrome defaults to **live SVG**; **R** toggles optional cardinal batch bake.
+Interaction input gating prevents overlapping heavy work (export, bake, crossfade).
+Adaptive metrics-based toggling deferred — see [MVP-ROTATION-SHIPPING.md](MVP-ROTATION-SHIPPING.md)
 and [DEFERRED-ADAPTIVE-RENDER-MODES.md](DEFERRED-ADAPTIVE-RENDER-MODES.md).
 
 **B2 — Wrapping:**

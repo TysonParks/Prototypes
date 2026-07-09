@@ -7,76 +7,149 @@
 
 ## Goals (this sprint)
 
-1. **Cardinal buffer rotation on all browsers** — default for Chrome and Safari; no metrics-based toggling yet.
-2. **Safari locked to cardinal** — never tier to live SVG rotation (`rotation: 'full'`); block WebKit live-rotation fallback paths.
-3. **Ship sooner** — defer benchmark harnesses, adaptive promotion, and `RenderMode` extraction.
+1. **Safari:** Cardinal buffer rotation is native and only path (←/→).
+2. **Chrome:** Default **live SVG** rotation; optional cardinal buffers via **R** key (dev/submission testing).
+3. **Ship sooner** — defer metrics-based adaptive promotion and `RenderMode` extraction.
 
 ---
 
-## What changed in code
+## Browser models (current)
 
-| Area | Change |
-|------|--------|
-| `safariCompat.js` | `CHROME_CAPABILITIES.rotation = 'cardinal'`; WebKit never promotes to `'full'` |
-| `safariCardinalBuffers.js` | **Yielding cardinal bake coordinator** — lazy session on first arrow; per-angle bake with yield points; last-click-wins deferred rotation |
-| `ArtworkRotation.js` | Deferred rotation via `pendingDirection`; prep overlay when user waits; live SVG when light animation is on |
-| `RevealAnimation.js` | No post-reveal bake kickoff; prep overlay only on user rotation wait |
-| `sketch.js` | Light toggle stops coordinator / invalidates; shade tap blocked only during active crossfade |
+| Browser | Default rotation | Cardinal buffers | Toggle |
+|---------|------------------|------------------|--------|
+| **Safari / WebKit** | Cardinal (lazy bake) | Always when rotation enabled | — |
+| **Chrome** | Live SVG (`chromeRotationMode = 'full'`) | Opt-in batch bake | **R** key |
+
+Config: [`appControls.js`](../../appControls.js) → `chromeRotationMode` (`'full'` | `'cardinal'`).  
+Console: `artworkRotationMode()`, `toggleChromeCardinalMode()`, `isChromeCardinalOptIn()`.
 
 ---
 
-## Cardinal bake coordinator (current behavior)
+## User-facing wait messages (only these three)
+
+All use overlay fade-in, hold until work completes, fade-out. Everything else fails **silently**.
+
+| Copy | When |
+|------|------|
+| `Preparing orientation...` (+ adaptive second line) | Safari cardinal bake wait |
+| `Preparing smooth rotation...` (+ second line) | Chrome R-toggle cardinal batch bake |
+| `Preparing image...` | Safari PNG export (S) |
+
+**Safari orientation second lines** (after first-bake classifier):
+
+- **Fast** (< 500 ms first bake): *"Additional orientations are being prepared."*
+- **Medium / Slow** (or before classification): *"Additional orientations will be prepared as needed."*
+
+**Chrome R-toggle status cues** (after batch or on re-enable): *"Smooth rotation ready."*, *"Smooth rotation enabled."*, *"Live rotation restored."*
+
+Prep overlay on Safari uses `#safari-overlay.cardinal-prep` at **z-index 10050** (above `#safari-cardinal-rotation-overlay` at 9998).
+
+---
+
+## Safari cardinal bake coordinator
 
 **Lazy kickoff:** no baking after reveal or light-off.
 
 **First arrow:**
-1. Show `Preparing orientation...`
+
+1. Show `Preparing orientation...` (adaptive second line until classified)
 2. Wait 2 frames so the message paints
-3. Bake **target orientation only** (live SVG is outgoing on first rotation)
-4. Rotate when target buffer is ready
+3. Bake **target orientation only**
+4. Classify first bake time → background policy
+5. **Fast:** queue remaining 3, crossfade to fast copy, rotate only when **all 4** ready
+6. **Medium / Slow:** rotate when target ready; lazy background per policy
 
-**After each rotation:** the orientation you left is always queued for retention (enables instant reverse). Classifier adds more only when fast enough:
+**Classifier** (first single-angle bake time):
 
-| First bake | Additional background |
-|------------|----------------------|
-| < 500ms | All remaining missing orientations |
-| 500ms–2s | One adjacent (+90° or −90°) |
-| > 2s | Retention only (reverse angle) — no extra background |
+| First bake | Policy | Subsequent behavior |
+|------------|--------|---------------------|
+| < 500 ms | Fast (`all`) | Batch remaining orientations; first rotation waits for all 4 |
+| 500 ms – 2 s | Medium (`adjacent`) | One likely adjacent per direction; opportunistic after each background bake |
+| > 2 s | Slow (`none`) | Bake only explicit requests + retention (reverse angle) |
 
-Diagnostics: `SafariCardinalBuffers.getDiagnosticsSnapshot()` exposes `firstBakeMs` and `backgroundBakePolicy`.
+**After each rotation:** orientation left is queued for retention (instant reverse). Prep overlay shows on **every** user-waiting bake, not only the first.
+
+**Buffer invalidation:** only when **screen light angle** changes (not on Chrome R-toggle exit). Hash rebuild and layout resize still invalidate.
+
+Diagnostics: `SafariCardinalBuffers.getDiagnosticsSnapshot()` → `firstBakeMs`, `backgroundBakePolicy`.
+
+---
+
+## Chrome R-toggle cardinal mode
+
+1. Press **R** → `chromeRotationMode = 'cardinal'`
+2. If buffers not ready: `Preparing smooth rotation...` → batch-bake all 4 → status cue → fade out
+3. Arrows use bitmap crossfade when buffers ready
+4. Press **R** again → live SVG; buffers **stay resident** in memory
+5. Re-press **R** with valid buffers → *"Smooth rotation enabled."* (no re-bake unless invalidated)
+
+While light animation runs, Chrome uses live SVG (cardinal disabled) — unchanged.
+
+---
+
+## Interaction input gating
+
+Central API: `isArtworkActionBlocked(action)` in [`ArtworkRotation.js`](../../ArtworkRotation.js).  
+Actions: `'rotate' | 'export' | 'fullscreen' | 'chromeCardinal' | 'light'`.
+
+**Principle:** one heavy operation at a time. **Light running does not block** F, S, R, or arrows.
+
+| Input | Blocked when |
+|-------|----------------|
+| **← / →** | Export, rotation crossfade, Chrome R-toggle work, nav — **not** during cardinal bake wait (last-click-wins via `registerPendingRotation`) |
+| **S** | Any heavy work; `exportInFlight` mutex; Safari shows prep overlay before raster |
+| **F** | Export, bake, crossfade, R-toggle, nav |
+| **R** (Chrome) | Same heavy flags |
+| **Light tap** | Same heavy flags (toggle only — not blocked because light is already on) |
+
+Export mutex: `window.isArtworkExportInFlight()`.
+
+---
+
+## What changed in code (summary)
+
+| Area | Change |
+|------|--------|
+| `appControls.js` | Chrome default `chromeRotationMode = 'full'` |
+| `ArtworkRotation.js` | R-toggle; `isArtworkActionBlocked()`; deferred Safari rotation; light invalidation on angle change only |
+| `safariCardinalBuffers.js` | Yielding bake coordinator; classifier; fast-path all-4-before-rotate; Safari prep overlay policy |
+| `RevealAnimation.js` | Safari cardinal + export prep overlays; Chrome prep/status cues |
+| `Export.js` | `exportInFlight`; Safari `Preparing image...` with 2-frame paint wait before raster |
+| `sketch.js` | Light toggle gated during heavy work only |
 
 ---
 
 ## Safari “frozen image spin” bug (clarified)
 
-**Symptom:** On light hashes (#1527–1529), arrow rotation animated but looked like spinning the 0° snapshot — lighting did not update.
+**Symptom:** Arrow rotation animated but lighting stayed locked at 0°.
 
-**Cause:** Performance tiering set `rotation: 'full'` (live CSS transform) while `lightAnimation: false` (no `feOffset` updates during rotation). The SVG rotated visually but **shading stayed locked** at the initial angle.
+**Cause:** WebKit tiered to `rotation: 'full'` without live light updates during CSS transform.
 
-**Fix:** WebKit always uses cardinal buffers when rotation is enabled. Live SVG rotation is blocked on WebKit even as a fallback.
+**Fix:** WebKit always uses cardinal buffers when rotation is enabled.
 
 ---
 
 ## What stays deferred
 
-- Chrome first-rotation quality probe and adaptive Live ↔ Cardinal switching
-- Proactive post-reveal bake kickoff tuned by metrics
-- Four-phase automated benchmarks and regression suite manifest
-- `revealCompleteMs` instrumentation and threshold retuning
-- LBSE detection and Safari live-first probe
-- Light-angle invalidation when toggling animated lighting during cardinal mode
+- Chrome automatic adaptive Live ↔ Cardinal (metrics probe)
+- Proactive post-reveal bake on all browsers
+- Four-phase automated benchmarks
+- `revealCompleteMs` threshold retuning
 
 ---
 
-## Quick manual QA before submit
+## Quick manual QA
 
 | Browser | Hash | Check |
 |---------|------|-------|
-| Safari | #1519 | Reveal → no background bake → first arrow shows prep then rotates; ×3 stable |
-| Safari | #1527 | Same; not frozen 0° spin |
-| Chrome | #1519 | Reveal idle (no bake) → first arrow prep/rotate; export (S) works |
-| Chrome | #1527 | Lazy first arrow; second rotation faster if post-rotate fill completed |
+| Safari | #1519 | Reveal → no bake → first arrow prep → rotate; prep on each new unbaked arrow |
+| Safari | #1527 | Heavy hash; classifier slow/medium; mash S during bake → silent ignore |
+| Safari | #1527 | Light running → arrows still work |
+| Safari | any | S → `Preparing image...` during export |
+| Chrome | #1519 | Default live arrows; **R** → batch prep → smooth rotations |
+| Chrome | #1519 | **R** off → live; **R** on with buffers → *enabled* cue |
+| Chrome | #1527 | Mash S during R batch → silent ignore |
 
-Console: `SafariCompat.capabilities.rotation` should be **`'cardinal'`** on both browsers (or `'off'` only on pathological loads).
+Console: `SafariCompat.capabilities.rotation` is `'cardinal'` on WebKit; Chrome live default uses `window.chromeRotationMode === 'full'`.
 
-*Last updated: 2026-07-07*
+*Last updated: 2026-07-09*

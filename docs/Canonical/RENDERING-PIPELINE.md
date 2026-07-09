@@ -310,25 +310,37 @@ same offset registry (`Export.js`, `ArtworkRotation.js`).
 
 ### Safari cardinal rotation (`safariCardinalBuffers.js`)
 
-**Submission MVP (2026-07-07):** Cardinal buffer rotation is the **default on all browsers**.
-WebKit never uses live SVG rotation (`rotation:'full'`). Adaptive quality-based toggling
-is deferred — see [`docs/Operational/MVP-ROTATION-SHIPPING.md`](../Operational/MVP-ROTATION-SHIPPING.md)
-and [`docs/Operational/DEFERRED-ADAPTIVE-RENDER-MODES.md`](../Operational/DEFERRED-ADAPTIVE-RENDER-MODES.md).
+**Safari / WebKit:** Cardinal buffer rotation is the **only** interactive rotation path.
+WebKit never uses live SVG rotation (`rotation:'full'`). See
+[`docs/Operational/MVP-ROTATION-SHIPPING.md`](../Operational/MVP-ROTATION-SHIPPING.md).
 
-When `SafariCompat.capabilities.rotation === 'cardinal'`, viewport rotation
-(←/→) uses pre-baked GA bitmaps at 0°/90°/180°/270° instead of live SVG
-transform + filter updates. Bitmap bake is **lazy** — it starts on the first
-rotate (`ensureReady()` / `scheduleCardinalBake`), not after reveal. Live SVG
-stays visible until the user rotates; bitmap mode activates in
-`rotateArtworkByCardinal()` with fallback to live on failure (`recoverToLiveArtwork`,
-Escape key). Dev smoke test: `SafariCardinalDiagnostics.runSmoke({ hashIndex: 1519 })`.
+**Chrome (2026-07-09):** Default is **live SVG** (`appControls.js` → `chromeRotationMode = 'full'`).
+Press **R** to opt into cardinal mode: batch-bakes all 4 orientations with prep overlay,
+then arrows use bitmap crossfade. Press **R** again to return to live SVG; buffers stay
+resident until light-angle change, hash rebuild, or layout invalidation.
+
+When cardinal mode is active (`usesCardinalRotation()` — Safari always when enabled;
+Chrome when `chromeRotationMode === 'cardinal'` and light animation off), viewport
+rotation (←/→) uses pre-baked GA bitmaps at 0°/90°/180°/270°. Bitmap bake is
+**lazy** on Safari (yielding coordinator on first arrow). Chrome cardinal bake runs
+only after **R** toggle (`bakeAllCardinalsBatch()`).
 
 **Raster sizing (`cardinalRasterSize()`):** All 4 orientations share identical
 portrait geometry: `frameSize × backingScale × DPR` (min 2, max 3), capped so
 the four monochrome GA buffers (lum+alpha, 2 bytes/px) fit a ~32MB total budget.
-All 4 angles stay resident once baked — after the first rotation triggers the
-lazy bake, remaining orientations bake progressively in the background so later
-rotations are transform + opacity only (no SVG re-rasterization).
+All 4 angles stay resident once baked. On Safari, after the first rotation the
+coordinator may bake remaining orientations in the background per the first-bake
+classifier (< 500 ms → all; 500 ms–2 s → adjacent; > 2 s → on-demand only).
+Later rotations are transform + opacity only when buffers are ready.
+
+**Safari first-bake classifier:** Measures the first single-angle bake. Fast path
+defers first rotation until all 4 cardinals are ready and updates prep copy to
+*"Additional orientations are being prepared."* Medium/slow paths rotate after
+the target is ready and show *"will be prepared as needed"* on user-waiting bakes.
+
+**Buffer invalidation:** Cardinal buffers invalidate on hash rebuild, layout resize,
+and when **screen light angle** changes after light animation — not when toggling
+Chrome live/cardinal mode.
 
 **Lighting/orientation model:** Each cardinal bakes the **compensated** light
 into pixels (`local = screenRef − objRot`, screenRef locked at objRot=0);
@@ -340,11 +352,13 @@ Chrome's live path (`shrinkFirst`: scale 260ms → rotate 520ms; else rotate 520
 → scale 260ms). Never a buffer swap.
 
 While the bitmap overlay is active, the entire `#BG` subtree is `display:none`.
-**S export** always re-renders full SVG at 3000×5400 with compensated lighting
-(same as Chrome), not the display bitmap; the export clone strips the inline
-hidden styles bitmap mode leaves on `#bleed`. On WebKit, `SafariCompat.capabilities.export`
-may become `'off'` when a scaled export probe exceeds a time threshold; metrics
-live in `SafariCompat.renderMetrics` (`exportRasterMs`, `renderEngine: 'preLBSE'`).
+
+**S export** re-renders full SVG at 3000×5400 with compensated lighting (not the
+display bitmap). On Safari, **S** shows `Preparing image...` via
+`RevealAnim.showExportPrepOverlay()` for 2 frames before the heavy raster path.
+Export is mutex-guarded (`exportInFlight`); blocked during bake/crossfade/R-toggle.
+On WebKit, `SafariCompat.capabilities.export` may become `'off'` when a scaled
+export probe exceeds a time threshold.
 Bake order from current angle: current → +90° (CW) → −90° → ±180° last.
 
 **Shading tree invariant (bake/export):** Cardinal bitmap bake and PNG export
@@ -356,6 +370,18 @@ light animation (`batchUpdateFilters`). Map each live offset to its clone by
 filter ID + sibling index among that filter's `feOffset` nodes. Screen-space
 light compensation (`screenRef − objRot`) is the only angle-dependent input.
 See `applyCompensatedLightToSVGElement()` in [`ArtworkRotation.js`](../../ArtworkRotation.js).
+
+### Interaction input gating (`ArtworkRotation.js`, `Export.js`, `sketch.js`)
+
+`isArtworkActionBlocked(action)` centralizes mutex checks for **S**, **F**, **R**,
+**←/→**, and light toggle. One heavy operation at a time (export, cardinal bake,
+rotation crossfade, Chrome R-toggle batch, hash nav). **Animated light running does
+not block** other inputs — only toggling light during heavy work is denied.
+
+During Safari cardinal bake **wait**, arrows remain allowed: `registerPendingRotation`
+updates pending direction (last-click-wins) without starting a duplicate bake session.
+
+Full matrix: [`MVP-ROTATION-SHIPPING.md`](../Operational/MVP-ROTATION-SHIPPING.md).
 
 ---
 
@@ -394,4 +420,4 @@ animates by updating pre-registered `feOffset` nodes without rebuilding filters.
 ---
 
 *Part of the BoredUI documentation suite. See [docs/](../) for all documents.*
-*Last updated: 2026-07-02*
+*Last updated: 2026-07-09*
