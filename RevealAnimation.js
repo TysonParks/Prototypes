@@ -1643,7 +1643,8 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init)
   } else {
-    init()
+    // Submission bundle: defer until concatenated script finishes (FRAME / frameSize).
+    queueMicrotask(init)
   }
 
   window.RevealAnim = {

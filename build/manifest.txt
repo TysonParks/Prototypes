@@ -3,6 +3,7 @@
 # Lines starting with # are ignored. Paths are relative to repo root.
 
 appControls.js
+sketchGlobals.js
 safariCompat.js
 RandomExtended.js
 Features.js

@@ -8,7 +8,7 @@
 // Buffers are monochrome (lum+alpha) and all 4 are retained once baked so
 // subsequent rotations are transform + opacity only.
 
-(function () {
+;(function () {
   'use strict'
 
   const CARDINAL_ANGLES = [0, 90, 180, 270]

@@ -11,23 +11,7 @@ Bored UI Buttons Club by Tyson Parks, 2021
 // import { Store } from './ProtoStore.js'
 // import { Shade } from './neuMark_I.js'
 
-// MARK: Storage
-const xmlns = 'http://www.w3.org/2000/svg'
-
-let
-  //Color Constants
-  backgroundColor, frameColor,
-
-  //Variables
-  frameSize,
-  //  FTS                   // Feature Set
-  BG, FRAME, BGRID, GRID,   // Background, Frame, Background Grid, Grid
-  ROT, frameRate, lightClock, arcSecond, // Rotation, Frame Rate, Synced Light Clock
-  R, S, RuID,               // Random, Store, Random UID
-  animationController,       // Animation Controller
-  protoBatch                 // Batch Renderer
-
-
+// Globals: sketchGlobals.js (xmlns, FRAME, frameSize, …)
 // MARK: setup
 // FUNC: setup()
 function setup() {

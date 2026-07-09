@@ -908,4 +908,4 @@ window.usesCardinalBitmapRotation = usesCardinalBitmapRotation
 window.resetArtworkRotationToDefault = resetArtworkRotationToDefault
 window.toggleArtworkFullscreen = toggleArtworkFullscreen
 window.exitArtworkFullscreen = exitArtworkFullscreen
-window.rotateArtworkBy = rotateArtworkBy
+window.rotateArtworkBy = rotateArtworkBy;

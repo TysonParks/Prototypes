@@ -39,8 +39,9 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 
 1. `libraries/p5.min.js` — confirm AB dependency version at upload (Q6); may be injected by platform
 2. [appControls.js](../../appControls.js) — must load before safariCompat (sets `window.chromeRotationMode`)
-3. [safariCompat.js](../../safariCompat.js)
-4. [RandomExtended.js](../../RandomExtended.js)
+3. [sketchGlobals.js](../../sketchGlobals.js) — `var` hoisted globals (`FRAME`, `frameSize`, …) for bundle TDZ safety
+4. [safariCompat.js](../../safariCompat.js)
+5. [RandomExtended.js](../../RandomExtended.js)
 5. [Features.js](../../Features.js)
 6. [artBlocks/ABFeaturesScript.js](../../artBlocks/ABFeaturesScript.js)
 7. [artBlocks/tokenHash.submission.js](../../artBlocks/tokenHash.submission.js) *(or platform-injected tokenData)*

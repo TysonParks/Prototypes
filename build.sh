@@ -140,7 +140,7 @@ build_bundle() {
       printf '\n// === file:%s ===\n' "$rel" >> "$tmp"
     fi
     cat "${ROOT}/${rel}" >> "$tmp"
-    printf '\n' >> "$tmp"
+    printf ';\n' >> "$tmp"
   done
 
   if [[ $MINIFY -eq 1 || $STRIP -eq 1 ]]; then
