@@ -40,9 +40,19 @@ All use overlay fade-in, hold until work completes, fade-out. Everything else fa
 - **Fast** (< 500 ms first bake): *"Additional orientations are being prepared."*
 - **Medium / Slow** (or before classification): *"Additional orientations will be prepared as needed."*
 
-**Chrome R-toggle status cues** (after batch or on re-enable): *"Smooth rotation ready."*, *"Smooth rotation enabled."*, *"Live rotation restored."*
+**Chrome R-toggle status cues** (2 s hold, fade out via `cardinalStatusHoldMs`):
 
-Prep overlay on Safari uses `#safari-overlay.cardinal-prep` at **z-index 10050** (above `#safari-cardinal-rotation-overlay` at 9998).
+| Copy | When |
+|------|------|
+| *Smooth rotation ready.* | First batch bake completed (crossfade from prep overlay) |
+| *Smooth rotation enabled.* | Re-enable cardinal while buffers still valid (no re-bake) |
+| *Live rotation restored.* | Exit cardinal → live SVG (`R` again) |
+
+Every **R** toggle shows the matching cue whenever buffers are valid on re-enable; invalidation (light angle change, hash rebuild, layout resize) forces a fresh bake and *Smooth rotation ready.*
+
+**Status cues are display-only:** once visible, they do **not** gate keys or clicks. Only actual work (`chromeCardinalToggleBusy`, batch bake, crossfade, export, nav) blocks input. Users may press **R**, arrows, **S**, or tap light while a status message is still on screen.
+
+Prep overlay on Safari uses `#safari-overlay.cardinal-prep` at **z-index 10050** (above `#safari-cardinal-rotation-overlay` at 9998). Chrome prep/status overlay `#chrome-cardinal-prep-overlay` uses `pointer-events: none` so it never intercepts artwork clicks.
 
 ---
 
@@ -80,10 +90,20 @@ Diagnostics: `SafariCardinalBuffers.getDiagnosticsSnapshot()` → `firstBakeMs`,
 1. Press **R** → `chromeRotationMode = 'cardinal'`
 2. If buffers not ready: `Preparing smooth rotation...` → batch-bake all 4 → status cue → fade out
 3. Arrows use bitmap crossfade when buffers ready
-4. Press **R** again → live SVG; buffers **stay resident** in memory
-5. Re-press **R** with valid buffers → *"Smooth rotation enabled."* (no re-bake unless invalidated)
+4. Press **R** again → live SVG + *"Live rotation restored."*; buffers **stay resident** in memory
+5. Re-press **R** with valid buffers → *"Smooth rotation enabled."* (no re-bake, no prep overlay)
 
 While light animation runs, Chrome uses live SVG (cardinal disabled) — unchanged.
+
+**Light tap in cardinal mode:** Tap/click on the artwork restores live SVG
+(`restoreChromeLiveRotation({ forLight: true })`, no status cue), sets `chromeRotationMode = 'full'`,
+and starts the light clock.
+
+- **Capture handler:** `pointerup` on `document` (capture phase) when cardinal mode is active or live SVG is hidden.
+- **Hit testing:** when the bitmap overlay is active, `#BG` is `display:none` so viewport rects collapse — use `SafariCardinalBuffers.getDisplayRect()` (cached layout rect) instead of live DOM bounds.
+- **Status dismiss:** light tap cancels any in-flight Chrome status cue before restoring live SVG.
+
+Press **R** again to re-enable smooth rotation.
 
 ---
 
@@ -92,15 +112,15 @@ While light animation runs, Chrome uses live SVG (cardinal disabled) — unchang
 Central API: `isArtworkActionBlocked(action)` in [`ArtworkRotation.js`](../../ArtworkRotation.js).  
 Actions: `'rotate' | 'export' | 'fullscreen' | 'chromeCardinal' | 'light'`.
 
-**Principle:** one heavy operation at a time. **Light running does not block** F, S, R, or arrows.
+**Principle:** one heavy operation at a time. **Light running does not block** F, S, R, or arrows. **Chrome status popups do not block** any input once shown.
 
 | Input | Blocked when |
 |-------|----------------|
-| **← / →** | Export, rotation crossfade, Chrome R-toggle work, nav — **not** during cardinal bake wait (last-click-wins via `registerPendingRotation`) |
+| **← / →** | Export, rotation crossfade, Chrome R-toggle **batch bake** (`chromeCardinalToggleBusy`), nav — **not** during cardinal bake wait (last-click-wins via `registerPendingRotation`); **not** during status cues |
 | **S** | Any heavy work; `exportInFlight` mutex; Safari shows prep overlay before raster |
-| **F** | Export, bake, crossfade, R-toggle, nav |
-| **R** (Chrome) | Same heavy flags |
-| **Light tap** | Same heavy flags (toggle only — not blocked because light is already on) |
+| **F** | Export, bake, crossfade, R-toggle batch, nav |
+| **R** (Chrome) | Export, bake, crossfade, R-toggle batch, nav — **not** during status cues |
+| **Light tap** | Export, bake, crossfade, R-toggle batch, nav — **not** during status cues. Starting light in Chrome cardinal mode restores live SVG first (no status cue). |
 
 Export mutex: `window.isArtworkExportInFlight()`.
 
@@ -111,11 +131,11 @@ Export mutex: `window.isArtworkExportInFlight()`.
 | Area | Change |
 |------|--------|
 | `appControls.js` | Chrome default `chromeRotationMode = 'full'` |
-| `ArtworkRotation.js` | R-toggle; `isArtworkActionBlocked()`; deferred Safari rotation; light invalidation on angle change only |
-| `safariCardinalBuffers.js` | Yielding bake coordinator; classifier; fast-path all-4-before-rotate; Safari prep overlay policy |
-| `RevealAnimation.js` | Safari cardinal + export prep overlays; Chrome prep/status cues |
+| `ArtworkRotation.js` | R-toggle; `isArtworkActionBlocked()`; light capture + `getDisplayRect` hit test; status cues excluded from `isChromeCardinalWorkActive()` |
+| `safariCardinalBuffers.js` | Yielding bake coordinator; classifier; fast-path all-4-before-rotate; Safari prep overlay policy; exports `getDisplayRect` |
+| `RevealAnimation.js` | Safari cardinal + export prep overlays; Chrome prep/status cues (display-only, `pointer-events: none`) |
 | `Export.js` | `exportInFlight`; Safari `Preparing image...` with 2-frame paint wait before raster |
-| `sketch.js` | Light toggle gated during heavy work only |
+| `sketch.js` | Light toggle via `activateLightAnimation()` |
 
 ---
 
@@ -147,9 +167,10 @@ Export mutex: `window.isArtworkExportInFlight()`.
 | Safari | #1527 | Light running → arrows still work |
 | Safari | any | S → `Preparing image...` during export |
 | Chrome | #1519 | Default live arrows; **R** → batch prep → smooth rotations |
-| Chrome | #1519 | **R** off → live; **R** on with buffers → *enabled* cue |
+| Chrome | #1519 | **R** off → live; **R** on with buffers → *enabled* cue; interact while cue visible |
+| Chrome | #1519 | Cardinal mode + rotate → tap artwork → live SVG + light animation |
 | Chrome | #1527 | Mash S during R batch → silent ignore |
 
 Console: `SafariCompat.capabilities.rotation` is `'cardinal'` on WebKit; Chrome live default uses `window.chromeRotationMode === 'full'`.
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-09 (status cues display-only; cardinal light tap hit test)*

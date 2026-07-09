@@ -105,7 +105,7 @@
   const liveRotationRestoredTextCopy = 'Live rotation restored.'
   const exportPrepTextCopy = 'Preparing image...'
   const cardinalPrepOverlayFadeMs = 500
-  const cardinalStatusHoldMs = 3000
+  const cardinalStatusHoldMs = 2000
   const loadingTextEscalationMs = [25000, 90000]
   const loadingTextEscalatedCopy = [
     'Still resolving...\n\nSome complex outputs require significantly longer to execute in the current browser.',
@@ -463,7 +463,7 @@
       }
       #chrome-cardinal-prep-overlay.visible {
         opacity: 1;
-        pointer-events: auto;
+        pointer-events: none;
       }
       #chrome-cardinal-prep-text {
         max-width: 80vw;
@@ -1163,6 +1163,7 @@
   }
 
   // Chrome R-toggle status cue: optional crossfade from current copy, hold, fade out.
+  // _chromeCardinalStatusActive guards overlay lifecycle only — never blocks keys/clicks.
   async function showChromeCardinalStatusCue({ text, crossfade = false, holdMs = cardinalStatusHoldMs } = {}) {
     if (!_safariRevealComplete || isWebKitClass || !text) return
     cancelChromeCardinalStatusSequence()

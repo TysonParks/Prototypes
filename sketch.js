@@ -873,13 +873,13 @@ function stopAnimationLoopAndResetLight() {
 
 // // FUNC: shadeAnimation()
 function shadeAnimation() {
+  if (typeof activateLightAnimation === 'function') {
+    void activateLightAnimation()
+    return
+  }
   if (typeof isArtworkActionBlocked === 'function' && isArtworkActionBlocked('light')) return
   if (typeof window.isArtworkInteractionReady === 'function' && !window.isArtworkInteractionReady()) return
   if (window.SafariCompat?.capabilities?.lightAnimation === false) return
-  const starting = !globalControls.animated
-  if (starting && window.SafariCardinalBuffers?.isImageDisplayActive?.()) {
-    if (typeof onLightAnimationStarted === 'function') onLightAnimationStarted()
-  }
   if (globalControls.animated) stopAnimationLoop()
   else startAnimationLoop({ userInitiated: true })
 }

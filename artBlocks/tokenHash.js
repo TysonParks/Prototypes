@@ -1543,6 +1543,10 @@ const lastHash_era2_v2_legacy = [
 
 // Era 3 — v2 FeatureSet + AB PRNG (post-migration captures only)
 const lastHash_era3_v2_ab = [
+  '0x08c672bb15be0069282123b4573985dded9718a95a5bce7639d005cdd247f5f8', // Era 1 repeats
+  '0x9dc995ab1bf1ddc93ebfacc9f627329a2b85cfb6c9e55c784ee33116c76e6bb5', // Era 1 repeats
+  '0x631ae018e5116817dba91ee3c2fe6c5c16e492d7cd4e93b27c8dc39318bb8e19', // Era 2 repeats
+  '0x179d1da11218e0ee1901a3da9fe23d602d3a8570ac5d0b1991e3783272ddbe13', // 1535 METH: // Era 2 repeats
 ]
 
 const lastHashEras = {

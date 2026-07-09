@@ -74,7 +74,7 @@ Manual override: set `testingControls.prngMode` or `featureSetMode` to `'legacy'
 
 | File | Role |
 |------|------|
-| [`FeaturesLegacy.js`](../../FeaturesLegacy.js) | Frozen v1 FeatureSet snapshot |
+| [`FeaturesLegacy.js`](../../FeaturesLegacy.js) | Frozen v1 FeatureSet snapshot (IIFE-scoped; exposes `window.FeatureSetLegacy` only) |
 | [`artBlocks/RandomLegacy.js`](../../artBlocks/RandomLegacy.js) | Dual-stream PRNG |
 | [`artBlocks/Random.js`](../../artBlocks/Random.js) | PRNG factory (reads era / override) |
 | [`artBlocks/determinacyEra.js`](../../artBlocks/determinacyEra.js) | Era + FeatureSet resolution |

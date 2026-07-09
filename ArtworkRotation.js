@@ -104,6 +104,7 @@ function installArtworkRotationControls() {
   artworkRotationState.controlsInstalled = true
   document.addEventListener('keydown', handleChromeCardinalModeKey)
   document.addEventListener('keydown', handleArtworkRotationKey)
+  document.addEventListener('pointerup', handleArtworkLightPointerUp, true)
 }
 
 function handleChromeCardinalModeKey(event) {
@@ -142,16 +143,15 @@ async function enterChromeCardinalMode() {
 
     if (cardinal.isReady?.()) {
       wasAlreadyReady = true
-      return
+    } else {
+      window.RevealAnim?.showCardinalPrepOverlay?.()
+      artworkRotationState.prepOverlayVisible = true
+      prepOverlayActive = true
+      if (cardinal.waitForOverlayPaint) await cardinal.waitForOverlayPaint()
+      else await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+
+      await cardinal.bakeAllCardinalsBatch?.()
     }
-
-    window.RevealAnim?.showCardinalPrepOverlay?.()
-    artworkRotationState.prepOverlayVisible = true
-    prepOverlayActive = true
-    if (cardinal.waitForOverlayPaint) await cardinal.waitForOverlayPaint()
-    else await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-
-    await cardinal.bakeAllCardinalsBatch?.()
   } finally {
     artworkRotationState.chromeCardinalToggleBusy = false
     if (prepOverlayActive && !cardinal.isReady?.()) {
@@ -183,22 +183,104 @@ async function enterChromeCardinalMode() {
   }
 }
 
-async function exitChromeCardinalMode() {
+async function restoreChromeLiveRotation({ showStatusCue = false, forLight = false } = {}) {
   const cardinal = window.SafariCardinalBuffers
+  const shouldRestore = isChromeCardinalOptIn()
+    || (forLight && cardinal?.isImageDisplayActive?.())
+  if (!shouldRestore) return
+
   window.chromeRotationMode = 'full'
   cardinal?.stopCardinalSession?.()
   if (cardinal?.isImageDisplayActive?.()) {
-    cardinal.recoverToLiveArtwork?.('Chrome live mode')
+    cardinal.recoverToLiveArtwork?.(forLight ? 'Light animation' : 'Chrome live mode')
   }
   artworkRotationState.cardinalRotatedThisSession = false
   syncArtworkRotationToViewport()
-  await window.RevealAnim?.showChromeCardinalStatusCue?.({
-    text: window.RevealAnim.liveRotationRestoredTextCopy,
-  })
   artworkRotationState.prepOverlayVisible = false
-  if (typeof DeBug !== 'undefined' && DeBug.log) {
-    DeBug.log('[CardinalRotation] Chrome cardinal mode OFF (live SVG)')
+  if (showStatusCue) {
+    await window.RevealAnim?.showChromeCardinalStatusCue?.({
+      text: window.RevealAnim.liveRotationRestoredTextCopy,
+    })
   }
+  if (typeof DeBug !== 'undefined' && DeBug.log) {
+    DeBug.log('[CardinalRotation] Chrome cardinal mode OFF (live SVG)', { showStatusCue, forLight })
+  }
+}
+
+async function exitChromeCardinalMode() {
+  await restoreChromeLiveRotation({ showStatusCue: true })
+}
+
+function isLiveArtworkPointerBlocked() {
+  const diag = window.SafariCardinalBuffers?.getDiagnosticsSnapshot?.()
+  if (diag?.liveArtworkHidden) return true
+  const bleed = FRAME?.bleed?.elt
+  if (bleed && (bleed.style.pointerEvents === 'none' || bleed.style.display === 'none')) return true
+  const bg = typeof BG !== 'undefined' ? BG?.elt : null
+  if (bg && (bg.style.pointerEvents === 'none' || bg.style.display === 'none')) return true
+  return false
+}
+
+function getArtworkPointerHitRect() {
+  const cardinal = window.SafariCardinalBuffers
+  if (cardinal?.isImageDisplayActive?.() || isLiveArtworkPointerBlocked()) {
+    const rect = cardinal?.getDisplayRect?.()
+    if (rect?.width > 0 && rect?.height > 0) return rect
+  }
+  const viewport = document.getElementById('artwork-rotation-viewport')
+  const target = viewport || FRAME?.bleed?.elt
+  if (target?.getBoundingClientRect) {
+    const rect = target.getBoundingClientRect()
+    if (rect.width > 0 && rect.height > 0) return rect
+  }
+  return null
+}
+
+function isPointerOverArtwork(event) {
+  const rect = getArtworkPointerHitRect()
+  if (!rect) return false
+  const { clientX: x, clientY: y } = event
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+}
+
+function shouldCaptureLightTap() {
+  if (isWebKitRotationLocked()) return false
+  return isChromeCardinalOptIn() || isLiveArtworkPointerBlocked()
+}
+
+async function activateLightAnimation() {
+  if (!isArtworkInteractionReady()) return
+  if (window.SafariCompat?.capabilities?.lightAnimation === false) return
+
+  const starting = !globalControls?.animated
+  const exitingCardinal = starting && (
+    isChromeCardinalOptIn()
+    || window.SafariCardinalBuffers?.isImageDisplayActive?.()
+  )
+  if (exitingCardinal) {
+    window.RevealAnim?.cancelChromeCardinalStatusSequence?.()
+    window.RevealAnim?.hideCardinalPrepOverlay?.({ force: true })
+    await restoreChromeLiveRotation({ showStatusCue: false, forLight: true })
+  }
+
+  if (isArtworkActionBlocked('light')) return
+
+  if (globalControls.animated) {
+    if (typeof stopAnimationLoop === 'function') stopAnimationLoop()
+  } else if (typeof startAnimationLoop === 'function') {
+    startAnimationLoop({ userInitiated: true })
+  }
+}
+
+function handleArtworkLightPointerUp(event) {
+  if (event.button !== 0) return
+  if (!shouldCaptureLightTap()) return
+  if (!isPointerOverArtwork(event)) return
+  if (!isArtworkInteractionReady()) return
+
+  event.preventDefault()
+  event.stopImmediatePropagation()
+  void activateLightAnimation()
 }
 
 function installArtworkFullscreenControls() {
@@ -379,9 +461,9 @@ function isRotationCrossfadeActive() {
     || cardinal?.isAnimating?.())
 }
 
+// Batch bake / R-toggle only — status popups are display-only and must not gate input.
 function isChromeCardinalWorkActive() {
-  return !!(artworkRotationState.chromeCardinalToggleBusy
-    || window.RevealAnim?.isChromeCardinalStatusActive?.())
+  return !!artworkRotationState.chromeCardinalToggleBusy
 }
 
 function isHeavyArtworkWorkActive() {
@@ -902,6 +984,8 @@ window.readEffectiveScreenLightAngle = readEffectiveScreenLightAngle
 window.onLightAnimationStarted = onLightAnimationStarted
 window.onLightAnimationStopped = onLightAnimationStopped
 window.toggleChromeCardinalMode = toggleChromeCardinalMode
+window.restoreChromeLiveRotation = restoreChromeLiveRotation
+window.activateLightAnimation = activateLightAnimation
 window.isChromeCardinalOptIn = isChromeCardinalOptIn
 window.usesCardinalRotation = usesCardinalRotation
 window.usesCardinalBitmapRotation = usesCardinalBitmapRotation

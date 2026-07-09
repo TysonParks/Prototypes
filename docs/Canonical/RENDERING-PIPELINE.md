@@ -352,11 +352,14 @@ Chrome's live path (`shrinkFirst`: scale 260ms → rotate 520ms; else rotate 520
 → scale 260ms). Never a buffer swap.
 
 While the bitmap overlay is active, the entire `#BG` subtree is `display:none`.
+Light tap in Chrome cardinal mode uses a document capture `pointerup` handler and
+`SafariCardinalBuffers.getDisplayRect()` for hit testing (live viewport rects
+collapse when `#BG` is hidden).
 
 **S export** re-renders full SVG at 3000×5400 with compensated lighting (not the
 display bitmap). On Safari, **S** shows `Preparing image...` via
 `RevealAnim.showExportPrepOverlay()` for 2 frames before the heavy raster path.
-Export is mutex-guarded (`exportInFlight`); blocked during bake/crossfade/R-toggle.
+Export is mutex-guarded (`exportInFlight`); blocked during bake/crossfade/R-toggle batch bake (not status cues).
 On WebKit, `SafariCompat.capabilities.export` may become `'off'` when a scaled
 export probe exceeds a time threshold.
 Bake order from current angle: current → +90° (CW) → −90° → ±180° last.
@@ -375,8 +378,9 @@ See `applyCompensatedLightToSVGElement()` in [`ArtworkRotation.js`](../../Artwor
 
 `isArtworkActionBlocked(action)` centralizes mutex checks for **S**, **F**, **R**,
 **←/→**, and light toggle. One heavy operation at a time (export, cardinal bake,
-rotation crossfade, Chrome R-toggle batch, hash nav). **Animated light running does
-not block** other inputs — only toggling light during heavy work is denied.
+rotation crossfade, Chrome R-toggle **batch bake**, hash nav). **Animated light running does
+not block** other inputs. **Chrome status popups do not block** input once shown —
+only `chromeCardinalToggleBusy` and other in-flight work gates keys/clicks.
 
 During Safari cardinal bake **wait**, arrows remain allowed: `registerPendingRotation`
 updates pending direction (last-click-wins) without starting a duplicate bake session.

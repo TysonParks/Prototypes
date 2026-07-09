@@ -1641,6 +1641,7 @@
     isImageDisplayActive: () => imageDisplayActive,
     isBitmapDisplayBroken,
     cacheLayoutRect,
+    getDisplayRect,
     isReady,
     isReadyForAngles,
     anglesRequiredForRotation,

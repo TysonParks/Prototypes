@@ -1,5 +1,5 @@
 # Reveal Animation Status Report
-*Last updated: 2026-07-09 (rev 10 — cardinal prep z-index, export prep overlay, Chrome status cues)*
+*Last updated: 2026-07-09 (rev 11 — Chrome status cues display-only; prep overlay pointer-events)*
 
 > Handoff document for future work on `RevealAnimation.js` (formerly `safariImageSwap.js`). The current
 > priority is no longer a fully dynamic Safari generator. For Art Blocks,
@@ -104,7 +104,7 @@ The active Safari path uses persistent body-level elements that survive
 | Cold load / hash build (before reveal) | `initial` | Default WebKit notice (`loadingTextCopy`) | 25s → “Still resolving…”; 90s → execution-limit notice |
 | Arrow rotation while cardinal bitmaps bake | `cardinals` | “Preparing orientation…” + adaptive second line | None (hold until bake completes; 500ms fade on dismiss) |
 | Safari PNG export (S) | `export-prep` | “Preparing image…” | None (hold until export raster starts) |
-| Chrome R-toggle cardinal batch bake | `cardinal-prep` (Chrome) | “Preparing smooth rotation…” | Status cues after bake: *Smooth rotation ready / enabled / Live rotation restored* |
+| Chrome R-toggle cardinal batch bake | `cardinal-prep` (Chrome) | “Preparing smooth rotation…” | Post-bake / toggle status cues (2 s hold): *Smooth rotation ready* (first bake), *Smooth rotation enabled* (re-enable with valid buffers), *Live rotation restored* (exit to live). **Status cues are display-only** — they do not block R, arrows, S, F, or light tap once visible. |
 
 **Z-index:** `#safari-overlay.cardinal-prep` uses **10050** so prep text stays above
 `#safari-cardinal-rotation-overlay` (9998) during cardinal crossfade.
@@ -116,7 +116,11 @@ SVG build, timers queue and apply on the next JS turn after the lock releases
 
 Cardinal prep overlay is triggered from `SafariCardinalBuffers.ensurePrepOverlayForPendingBake()`
 whenever a user-waiting bake is in progress (not only the first arrow). Chrome prep
-uses the same overlay helpers with Chrome-specific copy and post-bake status cues.
+uses the same overlay helpers with Chrome-specific copy and post-bake status cues
+(`cardinalStatusHoldMs` = 2000 ms). `_chromeCardinalStatusActive` guards overlay
+lifecycle (prevent premature hide) only — it is **not** wired into
+`isArtworkActionBlocked()`. `#chrome-cardinal-prep-overlay` uses
+`pointer-events: none` so status text never intercepts artwork clicks.
 
 **Safari adaptive second lines** (after first-bake classifier):
 
