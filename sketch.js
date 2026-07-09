@@ -889,7 +889,7 @@ function stopAnimationLoopAndResetLight() {
 
 // // FUNC: shadeAnimation()
 function shadeAnimation() {
-  if (window.artworkRotationState?.animating) return
+  if (typeof isArtworkActionBlocked === 'function' && isArtworkActionBlocked('light')) return
   if (typeof window.isArtworkInteractionReady === 'function' && !window.isArtworkInteractionReady()) return
   if (window.SafariCompat?.capabilities?.lightAnimation === false) return
   const starting = !globalControls.animated

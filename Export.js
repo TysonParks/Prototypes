@@ -577,8 +577,29 @@ async function probeExportRasterIfNeeded() {
   return window.SafariCompat.getCapabilities?.().export !== 'off'
 }
 
+let exportInFlight = false
+
+window.isArtworkExportInFlight = () => exportInFlight
+
+async function waitForExportPrepOverlayPaint(frames = 2) {
+  if (window.SafariCardinalBuffers?.waitForOverlayPaint) {
+    return window.SafariCardinalBuffers.waitForOverlayPaint(frames)
+  }
+  return new Promise(resolve => {
+    let count = 0
+    const tick = () => {
+      count++
+      if (count >= frames) resolve()
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
 async function saveArtworkPNG() {
   if (!FRAME?.bleed?.elt) return
+  if (typeof isArtworkActionBlocked === 'function' && isArtworkActionBlocked('export')) return
+  if (exportInFlight) return
   if (window.SafariCompat?.getCapabilities?.().export === 'off') {
     console.warn('[Export] PNG export unavailable in Safari — use Chrome desktop for full-resolution export')
     return
@@ -591,8 +612,15 @@ async function saveArtworkPNG() {
     ? (artworkRotationState.scale ?? 1)
     : 1
   const wasBitmapActive = window.SafariCardinalBuffers?.isImageDisplayActive?.() ?? false
+  const showPrep = window.SafariCompat?.detectWebKitClass?.()
 
+  exportInFlight = true
   try {
+    if (showPrep) {
+      window.RevealAnim?.showExportPrepOverlay?.()
+      await waitForExportPrepOverlayPaint()
+    }
+
     const probeOk = await probeExportRasterIfNeeded()
     if (!probeOk) {
       console.warn('[Export] PNG export unavailable in Safari — scaled probe exceeded time threshold')
@@ -618,7 +646,9 @@ async function saveArtworkPNG() {
   } catch (err) {
     console.warn('[Export] save failed', err)
   } finally {
+    if (showPrep) window.RevealAnim?.hideExportPrepOverlay?.()
     await restoreDisplayAfterExport(wasBitmapActive, exportAngle, exportScale)
+    exportInFlight = false
   }
 }
 
@@ -627,6 +657,8 @@ function handleArtworkSaveKey(event) {
   const tag = event.target?.tagName?.toLowerCase()
   if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
   if (event.metaKey || event.ctrlKey || event.altKey) return
+  if (typeof isArtworkActionBlocked === 'function' && isArtworkActionBlocked('export')) return
+  if (exportInFlight) return
   event.preventDefault()
   saveArtworkPNG()
 }

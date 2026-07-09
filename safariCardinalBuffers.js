@@ -63,6 +63,112 @@
   let overlayPaintWaited = false
   let pendingRetentionAngles = []
   let buffersScreenLightAngle = null
+  let lastRequestedDirection = null
+
+  function oneLikelyAdjacentForDirection(currentAngle, direction) {
+    const c = normalizeAngle(currentAngle)
+    if (direction === 1 || direction === -1) {
+      const forward = normalizeAngle(c + direction * 90)
+      if (!bufferIsDisplayable(buffers[forward])) return forward
+      const backward = normalizeAngle(c - direction * 90)
+      if (!bufferIsDisplayable(buffers[backward])) return backward
+    }
+    return oneAdjacentMissingAngle(c)
+  }
+
+  function isFastFirstRotationDeferAll() {
+    const st = window.artworkRotationState
+    return backgroundBakePolicy === 'all'
+      && firstBakeMs !== null
+      && !st?.cardinalRotatedThisSession
+      && (st?.pendingDirection != null || rotationRequested)
+  }
+
+  function rotationAnglesReadyForRequest(fromAngle, toAngle) {
+    const st = window.artworkRotationState
+    const first = !st?.cardinalRotatedThisSession
+    if (first && backgroundBakePolicy === 'all' && firstBakeMs !== null) {
+      return isReadyForAngles(CARDINAL_ANGLES)
+    }
+    const needed = anglesRequiredForRotation(fromAngle, toAngle, first)
+    return isReadyForAngles(needed)
+  }
+
+  function pendingRotationReadyToFulfill() {
+    const st = window.artworkRotationState
+    if (!st?.pendingDirection) return false
+    const from = getCurrentArtworkAngle()
+    const to = normalizeAngle(from + st.pendingDirection * 90)
+    return rotationAnglesReadyForRequest(from, to)
+  }
+
+  function shouldShowPrepForDirection(direction) {
+    const from = getCurrentArtworkAngle()
+    const to = normalizeAngle(from + direction * 90)
+    if (isFastFirstRotationDeferAll()) return !isReadyForAngles(CARDINAL_ANGLES)
+    return !rotationAnglesReadyForRequest(from, to)
+  }
+
+  function wouldNeedPrepOverlayForRotation(direction) {
+    return shouldShowPrepForDirection(direction)
+  }
+
+  function ensurePrepOverlayForPendingBake() {
+    if (!window.SafariCompat?.detectWebKitClass?.()) {
+      if (!shouldShowPrepOverlayForPendingBake()) return
+      window.RevealAnim?.showCardinalPrepOverlay?.()
+      if (window.artworkRotationState) artworkRotationState.prepOverlayVisible = true
+      return
+    }
+    const st = window.artworkRotationState
+    if (!st?.pendingDirection && !rotationRequested) return
+    if (pendingRotationReadyToFulfill()) return
+    window.RevealAnim?.showCardinalPrepOverlay?.()
+    st.prepOverlayVisible = true
+  }
+
+  function shouldShowPrepOverlayForPendingBake() {
+    if (!window.SafariCompat?.detectWebKitClass?.()) return false
+    const st = window.artworkRotationState
+    if (!st?.pendingDirection && !rotationRequested) return false
+    return !pendingRotationReadyToFulfill()
+  }
+
+  function expandBakeQueueAfterClassification() {
+    if (backgroundBakePolicy === 'none') return
+    const current = getCurrentArtworkAngle()
+    if (backgroundBakePolicy === 'all') {
+      sessionBakeMode = 'background'
+      const missing = sortAnglesByBakePriority(missingAngles(CARDINAL_ANGLES), current)
+      for (const a of missing) {
+        if (!bakeQueue.includes(a)) bakeQueue.push(a)
+      }
+      return
+    }
+    if (backgroundBakePolicy === 'adjacent') {
+      sessionBakeMode = 'background'
+      const direction = window.artworkRotationState?.pendingDirection ?? lastRequestedDirection
+      const adj = oneLikelyAdjacentForDirection(current, direction)
+      if (adj !== null && !bakeQueue.includes(adj)) bakeQueue.push(adj)
+    }
+  }
+
+  function maybeQueueOpportunisticAdjacentBake() {
+    if (backgroundBakePolicy !== 'adjacent') return
+    if (sessionBakeMode !== 'background') return
+    if (rotationRequested || window.artworkRotationState?.pendingDirection) return
+    const adj = oneLikelyAdjacentForDirection(getCurrentArtworkAngle(), lastRequestedDirection)
+    if (adj !== null && !bakeQueue.includes(adj)) bakeQueue.push(adj)
+  }
+
+  function onFirstBakeClassified() {
+    expandBakeQueueAfterClassification()
+    if (!shouldShowPrepOverlayForPendingBake()) return
+    if (backgroundBakePolicy === 'all') {
+      window.RevealAnim?.refreshCardinalPrepOverlayText?.({ crossfade: true })
+    }
+    ensurePrepOverlayForPendingBake()
+  }
 
   function noteBuffersLightReference() {
     if (typeof readCardinalBakeScreenLightAngle === 'function') {
@@ -179,6 +285,7 @@
     if (typeof DeBug !== 'undefined' && DeBug.log) {
       DeBug.log('[CardinalBuffers] first bake', `${Math.round(ms)}ms`, 'policy', backgroundBakePolicy)
     }
+    onFirstBakeClassified()
   }
 
   function resetBakeClassifier() {
@@ -187,6 +294,7 @@
     sessionBakeMode = 'idle'
     overlayPaintWaited = false
     pendingRetentionAngles = []
+    lastRequestedDirection = null
   }
 
   function getCurrentArtworkAngle() {
@@ -460,7 +568,8 @@
         if (!bufferIsDisplayable(buffers[a]) && !priority.includes(a)) priority.push(a)
       }
     } else if (firstBakeMs !== null && backgroundBakePolicy === 'adjacent') {
-      const adj = oneAdjacentMissingAngle(current)
+      const direction = window.artworkRotationState?.pendingDirection ?? lastRequestedDirection
+      const adj = oneLikelyAdjacentForDirection(current, direction)
       if (adj !== null && !priority.includes(adj)) priority.push(adj)
     }
     bakeQueue = priority
@@ -483,10 +592,7 @@
     const st = window.artworkRotationState
     if (!st?.pendingDirection) return false
     if (st.animating || st.cardinalBusy || overlayAnimating) return false
-    const from = getCurrentArtworkAngle()
-    const to = normalizeAngle(from + st.pendingDirection * 90)
-    const needed = anglesRequiredForRotation(from, to, !st.cardinalRotatedThisSession)
-    return isReadyForAngles(needed)
+    return pendingRotationReadyToFulfill()
   }
 
   async function tryFulfillPendingRotation() {
@@ -530,6 +636,9 @@
           continue
         }
 
+        ensurePrepOverlayForPendingBake()
+        if (token !== sessionToken) break
+
         const bakeGen = ++bakeToken
         baking = true
         if (!imageDisplayActive) setLiveArtworkDisplayed(true)
@@ -554,7 +663,8 @@
 
         if (token !== sessionToken) break
         await yieldToMain()
-        await tryFulfillPendingRotation()
+        const fulfilled = await tryFulfillPendingRotation()
+        if (!fulfilled) maybeQueueOpportunisticAdjacentBake()
       }
     } finally {
       sessionRunning = false
@@ -618,6 +728,7 @@
 
   function registerPendingRotation(direction) {
     if (!window.artworkRotationState) return
+    lastRequestedDirection = direction
     artworkRotationState.pendingDirection = direction
     rotationRequested = true
     sessionBakeMode = 'pending'
@@ -626,10 +737,12 @@
     const to = normalizeAngle(from + direction * 90)
     const needed = anglesRequiredForRotation(from, to, !artworkRotationState.cardinalRotatedThisSession)
     prioritizeAngles(needed)
+    ensurePrepOverlayForPendingBake()
     if (!sessionRunning && !sessionStartPending) {
       startCardinalSession({ seedDirection: direction, mode: 'pending' })
     } else {
       rebuildPendingBakeQueue(direction)
+      ensurePrepOverlayForPendingBake()
     }
   }
 
@@ -1632,6 +1745,13 @@
     stopCardinalSession,
     registerPendingRotation,
     canFulfillPendingRotation,
+    shouldShowPrepOverlayForPendingBake,
+    ensurePrepOverlayForPendingBake,
+    shouldShowPrepForDirection,
+    rotationAnglesReadyForRequest,
+    wouldNeedPrepOverlayForRotation,
+    pendingRotationReadyToFulfill,
+    isFastFirstRotationDeferAll,
     enqueueRemainingCardinals,
     isRotationRequested,
     bufferIsDisplayable,

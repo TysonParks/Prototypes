@@ -145,10 +145,7 @@ function handleChromeCardinalModeKey(event) {
   if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
   if (event.metaKey || event.ctrlKey || event.altKey) return
   if (event.key !== 'r' && event.key !== 'R') return
-  if (!isArtworkInteractionReady()) return
-  if (artworkRotationState.animating || artworkRotationState.cardinalBusy) return
-  if (artworkRotationState.chromeCardinalToggleBusy) return
-  if (window.RevealAnim?.isChromeCardinalStatusActive?.()) return
+  if (isArtworkActionBlocked('chromeCardinal')) return
   event.preventDefault()
   toggleChromeCardinalMode()
 }
@@ -256,6 +253,7 @@ function handleArtworkFullscreenKey(event) {
   const isToggle = lowerKey === 'f'
   const isExit = event.key === 'Escape' && isArtworkFullscreenActive()
   if (!isToggle && !isExit) return
+  if (isToggle && isArtworkActionBlocked('fullscreen')) return
   event.preventDefault()
   event.stopImmediatePropagation()
   if (isToggle) toggleArtworkFullscreen()
@@ -360,10 +358,16 @@ function handleArtworkRotationKey(event) {
     : (key === 'ArrowLeft' || lowerKey === 'l') ? -1
       : 0
   if (!direction || artworkRotationMode() === 'off') return
-  if (artworkRotationState.animating || artworkRotationState.cardinalBusy) return
-  if (!isArtworkInteractionReady()) return
+  if (isArtworkActionBlocked('rotate')) return
   event.preventDefault()
-  if (usesCardinalRotation()) maybeShowCardinalPrepForRotation(direction)
+  if (usesCardinalRotation()) {
+    maybeShowCardinalPrepForRotation(direction)
+    requestAnimationFrame(() => {
+      if (window.artworkRotationState?.prepOverlayVisible) {
+        window.RevealAnim?.showCardinalPrepOverlay?.()
+      }
+    })
+  }
   rotateArtworkBy(direction)
 }
 
@@ -376,12 +380,7 @@ function maybeShowCardinalPrepForRotation(direction) {
     artworkRotationState.prepOverlayVisible = true
     return
   }
-  const startAngle = artworkRotationState.angle
-  const targetAngle = startAngle + direction * 90
-  const firstRotation = !artworkRotationState.cardinalRotatedThisSession
-  const needed = cardinal.anglesRequiredForRotation?.(startAngle, targetAngle, firstRotation)
-    || [startAngle, targetAngle]
-  if (cardinal.isReadyForAngles?.(needed)) return
+  if (!cardinal.shouldShowPrepForDirection?.(direction)) return
   window.RevealAnim?.showCardinalPrepOverlay?.()
   artworkRotationState.prepOverlayVisible = true
 }
@@ -393,6 +392,62 @@ function isArtworkInteractionReady() {
   return true
 }
 
+function isNavInFlight() {
+  return !!(window.RevealAnim?.isNavInFlight?.())
+}
+
+function isExportInFlight() {
+  return !!(typeof window.isArtworkExportInFlight === 'function' && window.isArtworkExportInFlight())
+}
+
+function isCardinalBakeActive() {
+  const cardinal = window.SafariCardinalBuffers
+  return !!(cardinal?.isBaking?.() || cardinal?.isChromeBatchBaking?.())
+}
+
+function isRotationCrossfadeActive() {
+  const cardinal = window.SafariCardinalBuffers
+  return !!(artworkRotationState.animating
+    || artworkRotationState.cardinalBusy
+    || cardinal?.isAnimating?.())
+}
+
+function isChromeCardinalWorkActive() {
+  return !!(artworkRotationState.chromeCardinalToggleBusy
+    || window.RevealAnim?.isChromeCardinalStatusActive?.())
+}
+
+function isHeavyArtworkWorkActive() {
+  return isExportInFlight()
+    || isCardinalBakeActive()
+    || isRotationCrossfadeActive()
+    || isChromeCardinalWorkActive()
+    || isNavInFlight()
+}
+
+// Actions: 'rotate' | 'export' | 'fullscreen' | 'chromeCardinal' | 'light'
+// Light running is not heavy — do not block F/S/R/arrows solely because light is on.
+function isArtworkActionBlocked(action) {
+  if (!isArtworkInteractionReady()) return true
+  if (isNavInFlight()) return true
+
+  switch (action) {
+    case 'rotate':
+      if (isExportInFlight()) return true
+      if (isRotationCrossfadeActive()) return true
+      if (isChromeCardinalWorkActive()) return true
+      // Cardinal bake wait: allow — registerPendingRotation updates direction only.
+      return false
+    case 'export':
+    case 'fullscreen':
+    case 'chromeCardinal':
+    case 'light':
+      return isHeavyArtworkWorkActive()
+    default:
+      return isHeavyArtworkWorkActive()
+  }
+}
+
 function syncRevealLayoutAfterArtworkRotation() {
   if (artworkRotationState.animating) return
   if (!isArtworkInteractionReady()) return
@@ -401,7 +456,8 @@ function syncRevealLayoutAfterArtworkRotation() {
 
 async function rotateArtworkBy(direction) {
   if (!isArtworkInteractionReady()) return
-  if (artworkRotationState.animating || artworkRotationState.cardinalBusy || !FRAME?.bleed?.elt) return
+  if (isArtworkActionBlocked('rotate')) return
+  if (!FRAME?.bleed?.elt) return
   if (usesCardinalRotation()) return rotateArtworkByCardinal(direction)
   if (isWebKitRotationLocked()) {
     console.warn('[CardinalRotation] WebKit cannot use live SVG rotation — cardinal required')
@@ -483,7 +539,7 @@ async function rotateArtworkByCardinal(direction) {
   const cardinal = window.SafariCardinalBuffers
   if (!cardinal) return
 
-  if (cardinal.isAnimating?.() || artworkRotationState.cardinalBusy || artworkRotationState.animating) return
+  if (isRotationCrossfadeActive()) return
 
   const startAngle = artworkRotationState.angle
   const targetAngle = startAngle + direction * 90
@@ -497,14 +553,12 @@ async function rotateArtworkByCardinal(direction) {
     return executeCardinalRotation(cardinal, direction, startAngle, targetAngle)
   }
 
-  const firstRotation = !artworkRotationState.cardinalRotatedThisSession
-  const needed = cardinal.anglesRequiredForRotation?.(startAngle, targetAngle, firstRotation)
-    || [startAngle, targetAngle]
-
-  if (cardinal.isReadyForAngles?.(needed)) {
+  if (cardinal.rotationAnglesReadyForRequest?.(startAngle, targetAngle)) {
     return executeCardinalRotation(cardinal, direction, startAngle, targetAngle)
   }
 
+  // Pending rotation: registerPendingRotation updates direction when session is
+  // already running; it only starts a session when none is active.
   cardinal.registerPendingRotation?.(direction)
   showCardinalPrepOverlayForWait()
 }
@@ -876,6 +930,8 @@ window.ensureCardinalScreenLightAngle = ensureCardinalScreenLightAngle
 window.readCardinalBakeScreenLightAngle = readCardinalBakeScreenLightAngle
 window.noteArtworkScreenLightAngle = noteArtworkScreenLightAngle
 window.isArtworkInteractionReady = isArtworkInteractionReady
+window.isArtworkActionBlocked = isArtworkActionBlocked
+window.isHeavyArtworkWorkActive = isHeavyArtworkWorkActive
 window.fulfillPendingCardinalRotation = fulfillPendingCardinalRotation
 window.isLightAnimationActive = isLightAnimationActive
 window.readEffectiveScreenLightAngle = readEffectiveScreenLightAngle

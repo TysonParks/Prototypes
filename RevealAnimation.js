@@ -96,9 +96,14 @@
     'Chrome desktop is the\n reference viewing environment\n for Prototypes.'
   const cardinalPrepTextCopy =
     'Preparing smooth rotation...\n\nSubsequent rotations will be\n significantly smoother.'
+  const cardinalPrepTextFastCopy =
+    'Preparing orientation...\n\nAdditional orientations are being prepared.'
+  const cardinalPrepTextAdaptiveCopy =
+    'Preparing orientation...\n\nAdditional orientations will be prepared as needed.'
   const cardinalReadyTextCopy = 'Smooth rotation ready.'
   const cardinalEnabledTextCopy = 'Smooth rotation enabled.'
   const liveRotationRestoredTextCopy = 'Live rotation restored.'
+  const exportPrepTextCopy = 'Preparing image...'
   const cardinalPrepOverlayFadeMs = 500
   const cardinalStatusHoldMs = 3000
   const loadingTextEscalationMs = [25000, 90000]
@@ -401,6 +406,13 @@
         z-index: 100;
         pointer-events: none;
       }
+      /* Cardinal prep must sit above #safari-cardinal-rotation-overlay (9998). */
+      #safari-overlay.cardinal-prep {
+        z-index: 10050;
+      }
+      #safari-overlay.export-prep {
+        z-index: 10050;
+      }
 
       /* === LOADING TEXT === */
       #safari-loading-text {
@@ -425,6 +437,12 @@
         user-select: none;
         will-change: opacity;
         transition: opacity var(--safari-overlay-fade-ms) linear;
+      }
+      #safari-overlay.cardinal-prep #safari-loading-text {
+        z-index: 10051;
+      }
+      #safari-overlay.export-prep #safari-loading-text {
+        z-index: 10051;
       }
       #safari-overlay.building #safari-loading-text {
         opacity: 1;
@@ -1047,6 +1065,38 @@
     document.body.appendChild(_chromeCardinalPrepOverlay)
   }
 
+  function resolveSafariCardinalPrepTextCopy() {
+    const snap = window.SafariCardinalBuffers?.getDiagnosticsSnapshot?.()
+    const policy = snap?.backgroundBakePolicy
+    const firstBakeMs = snap?.firstBakeMs
+    const st = window.artworkRotationState
+    const onFirstRotationPath = !st?.cardinalRotatedThisSession
+
+    if (firstBakeMs == null && onFirstRotationPath) return cardinalPrepTextAdaptiveCopy
+    if (policy === 'all' && onFirstRotationPath && st?.pendingDirection) {
+      return cardinalPrepTextFastCopy
+    }
+    return cardinalPrepTextAdaptiveCopy
+  }
+
+  async function refreshCardinalPrepOverlayText({ crossfade = false } = {}) {
+    if (!isWebKitClass) return
+    const next = resolveSafariCardinalPrepTextCopy()
+    const txt = getSafariLoadingTextElement()
+    if (!txt || txt.textContent === next) return
+    if (!crossfade || !_safariOverlay?.classList.contains('building')) {
+      txt.textContent = next
+      txt.style.opacity = '1'
+      return
+    }
+    txt.style.transition = `opacity ${cardinalPrepOverlayFadeMs}ms linear`
+    txt.style.opacity = '0'
+    await waitCardinalOverlayMs(cardinalPrepOverlayFadeMs + 20)
+    txt.textContent = next
+    void txt.offsetWidth
+    txt.style.opacity = '1'
+  }
+
   function showCardinalPrepOverlayIfNeeded() {
     if (!window.SafariCardinalBuffers?.isRotationRequested?.()) return
     showCardinalPrepOverlay()
@@ -1056,7 +1106,16 @@
   function showCardinalPrepOverlay() {
     if (!_safariRevealComplete) return
     if (isWebKitClass) {
-      showSafariLoadingOverlay('cardinals')
+      const text = resolveSafariCardinalPrepTextCopy()
+      showSafariLoadingOverlay('cardinals', { text })
+      const txt = getSafariLoadingTextElement()
+      if (txt) {
+        txt.textContent = text
+        txt.style.transition = 'none'
+        txt.style.opacity = '1'
+        void txt.offsetWidth
+      }
+      if (_safariOverlay) void _safariOverlay.offsetWidth
       return
     }
     ensureChromeCardinalPrepOverlay()
@@ -1068,6 +1127,35 @@
     void _chromeCardinalPrepOverlay.offsetWidth
     _chromeCardinalPrepOverlay.style.transition = `opacity ${cardinalPrepOverlayFadeMs}ms linear`
     _chromeCardinalPrepOverlay.classList.add('visible')
+  }
+
+  function showExportPrepOverlay() {
+    if (!_safariRevealComplete) return
+    if (isWebKitClass) {
+      showSafariLoadingOverlay('export', { text: exportPrepTextCopy })
+      const txt = getSafariLoadingTextElement()
+      if (txt) {
+        txt.textContent = exportPrepTextCopy
+        txt.style.transition = 'none'
+        txt.style.opacity = '1'
+        void txt.offsetWidth
+      }
+      if (_safariOverlay) void _safariOverlay.offsetWidth
+      return
+    }
+    ensureChromeCardinalPrepOverlay()
+    if (!_chromeCardinalPrepOverlay) return
+    const txt = document.getElementById('chrome-cardinal-prep-text')
+    if (txt) txt.textContent = exportPrepTextCopy
+    _chromeCardinalPrepOverlay.style.transition = 'none'
+    _chromeCardinalPrepOverlay.classList.remove('visible')
+    void _chromeCardinalPrepOverlay.offsetWidth
+    _chromeCardinalPrepOverlay.style.transition = `opacity ${cardinalPrepOverlayFadeMs}ms linear`
+    _chromeCardinalPrepOverlay.classList.add('visible')
+  }
+
+  function hideExportPrepOverlay() {
+    hideCardinalPrepOverlay({ force: true })
   }
 
   function cancelChromeCardinalStatusSequence() {
@@ -1146,23 +1234,29 @@
   }
 
   //FUNC: showSafariLoadingOverlay(mode) : void
-  // WebKit-only. mode: 'initial' (cold-load copy) | 'cardinals' (buffer bake wait).
-  function showSafariLoadingOverlay(mode = 'initial') {
+  // WebKit-only. mode: 'initial' | 'cardinals' | 'export'
+  function showSafariLoadingOverlay(mode = 'initial', { text } = {}) {
     if (!isWebKitClass) return
     ensureSafariOverlay()
     if (!_safariOverlay) return
 
     const txt = getSafariLoadingTextElement()
     const useCardinals = mode === 'cardinals' && _safariRevealComplete
+    const useExport = mode === 'export' && _safariRevealComplete
+    const useWaitOverlay = useCardinals || useExport
     if (txt) {
-      txt.textContent = useCardinals ? cardinalPrepTextCopy : loadingTextCopy
-      txt.style.transition = ''
+      txt.textContent = useWaitOverlay
+        ? (text ?? (useExport ? exportPrepTextCopy : resolveSafariCardinalPrepTextCopy()))
+        : loadingTextCopy
+      txt.style.transition = useWaitOverlay ? 'none' : ''
+      txt.style.opacity = useWaitOverlay ? '1' : ''
     }
 
     _safariOverlay.classList.toggle('cardinal-prep', useCardinals)
+    _safariOverlay.classList.toggle('export-prep', useExport)
     _safariOverlay.classList.add('building')
 
-    if (useCardinals) {
+    if (useWaitOverlay) {
       clearLoadingTextEscalation()
     } else {
       scheduleLoadingTextEscalation()
@@ -1179,28 +1273,22 @@
     clearLoadingTextEscalation()
 
     const txt = getSafariLoadingTextElement()
-    const resolvedFadeMs = fadeMs ?? (
-      _safariOverlay.classList.contains('cardinal-prep')
-        ? cardinalPrepOverlayFadeMs
-        : null
-    )
-
-    if (resolvedFadeMs != null && txt) {
-      txt.style.transition = `opacity ${resolvedFadeMs}ms linear`
-    } else if (txt) {
-      txt.style.transition = ''
-    }
+    const resolvedFadeMs = fadeMs ?? cardinalPrepOverlayFadeMs
 
     _safariOverlay.classList.remove('building')
     _safariOverlay.classList.remove('cardinal-prep')
+    _safariOverlay.classList.remove('export-prep')
 
     if (txt) {
-      txt.textContent = loadingTextCopy
-      if (resolvedFadeMs != null) {
-        setTimeout(() => {
-          if (txt.parentNode) txt.style.transition = ''
-        }, resolvedFadeMs + 50)
-      }
+      txt.style.transition = `opacity ${resolvedFadeMs}ms linear`
+      txt.style.opacity = '0'
+      setTimeout(() => {
+        if (!_safariOverlay.classList.contains('building') && txt.parentNode) {
+          txt.style.transition = ''
+          txt.style.opacity = ''
+          txt.textContent = loadingTextCopy
+        }
+      }, resolvedFadeMs + 50)
     }
   }
 
@@ -1289,7 +1377,7 @@
       }
       setSafariArtworkState(true, true)
       cleanupSafariArtworkRasterState(myToken)
-      if (_safariOverlay) hideSafariLoadingOverlay()
+      if (_safariOverlay) hideSafariLoadingOverlay({ fadeMs: safariOverlayFadeMs })
       setTimeout(() => {
         if (myToken === _buildToken) notifyRevealComplete()
       }, safariTransitionMs)
@@ -1567,6 +1655,7 @@
     isSafari,
     isWebKitClass,
     isSafariRevealComplete: () => _safariRevealComplete,
+    isNavInFlight: () => _navInFlight,
     syncRevealLayoutToArtwork,
     revealNow,
     hideNow,
@@ -1577,6 +1666,10 @@
     showCardinalPrepOverlay,
     showCardinalPrepOverlayIfNeeded,
     hideCardinalPrepOverlay,
+    showExportPrepOverlay,
+    hideExportPrepOverlay,
+    refreshCardinalPrepOverlayText,
+    resolveSafariCardinalPrepTextCopy,
     showChromeCardinalStatusCue,
     cancelChromeCardinalStatusSequence,
     isChromeCardinalStatusActive: () => _chromeCardinalStatusActive,
