@@ -1,4 +1,5 @@
-// safariCardinalBuffers.js — WebKit rotation via pre-baked cardinal lighting bitmaps.
+// Cardinal orientation buffers — default rotation path on all browsers (submission MVP).
+// WebKit motivated the implementation; not browser-exclusive. See MVP-ROTATION-SHIPPING.md.
 // All 4 cardinals rasterized at identical portrait (0°) geometry; only the baked
 // lighting compensation differs per angle (local = screenRef - objRot).
 // Display: two aligned canvas layers on a shared stage. Settled state shows one
@@ -27,6 +28,9 @@
   const MAX_PIXELS_PER_BUFFER = Math.floor(MAX_TOTAL_GA_BYTES / CARDINAL_ANGLES.length / GA_BYTES_PER_PIXEL)
   const MAX_BAKE_DPR = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3)
   const BAKE_YIELD_MS = 120
+  const BAKE_FAST_MS = 500
+  const BAKE_MODERATE_MS = 2000
+  const OVERLAY_PAINT_FRAMES = 2
 
   let buffers = {}
   let baking = false
@@ -47,6 +51,46 @@
   let lastFrameLayoutKey = null
   let activeRasterAbort = null
   let liveArtworkStyleSnapshot = null
+  let sessionToken = 0
+  let sessionRunning = false
+  let sessionPromise = null
+  let bakeQueue = []
+  let rotationRequested = false
+  let sessionStartPending = false
+  let sessionBakeMode = 'idle' // 'pending' | 'background' | 'idle'
+  let firstBakeMs = null
+  let backgroundBakePolicy = null // 'all' | 'adjacent' | 'none'
+  let overlayPaintWaited = false
+  let pendingRetentionAngles = []
+  let buffersScreenLightAngle = null
+
+  function noteBuffersLightReference() {
+    if (typeof readCardinalBakeScreenLightAngle === 'function') {
+      buffersScreenLightAngle = normalizeDegree(readCardinalBakeScreenLightAngle())
+    }
+  }
+
+  function maybeNoteBuffersLightReferenceWhenReady() {
+    if (isReadyForAngles(CARDINAL_ANGLES)) noteBuffersLightReference()
+  }
+
+  function buffersStaleDueToLightChange() {
+    if (buffersScreenLightAngle === null) return false
+    if (!isReadyForAngles(CARDINAL_ANGLES)) return false
+    const current = typeof readEffectiveScreenLightAngle === 'function'
+      ? readEffectiveScreenLightAngle()
+      : (typeof readCardinalBakeScreenLightAngle === 'function'
+        ? readCardinalBakeScreenLightAngle()
+        : null)
+    if (current == null) return false
+    return normalizeDegree(current) !== normalizeDegree(buffersScreenLightAngle)
+  }
+
+  function invalidateCardinalBuffersIfLightChanged() {
+    if (!buffersStaleDueToLightChange()) return false
+    invalidateCardinalBuffers()
+    return true
+  }
 
   function getLiveArtworkTargets() {
     const bg = typeof BG !== 'undefined' ? BG?.elt : null
@@ -81,16 +125,68 @@
     liveArtworkStyleSnapshot = null
   }
 
+  function isCardinalBitmapClient() {
+    if (window.SafariCompat?.detectWebKitClass?.()) {
+      return window.SafariCompat?.capabilities?.rotation === 'cardinal'
+    }
+    const mode = window.chromeRotationMode ?? window.SafariCompat?.capabilities?.rotation
+    return mode === 'cardinal'
+  }
+
+  function isRotationInteractionActive() {
+    return typeof artworkRotationState !== 'undefined' && !!artworkRotationState.animating
+  }
+
+  function detachRasterImage(img) {
+    if (!img) return
+    img.onload = null
+    img.onerror = null
+    // Never assign img.src = '' — Chrome resolves it to the document URL and loads
+    // favicon.ico, which can re-fire onload and rasterize a tiny corrupt buffer.
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+  }
+
   function cancelActiveRaster() {
     if (activeRasterAbort) {
       activeRasterAbort.aborted = true
-      if (activeRasterAbort.img) activeRasterAbort.img.src = ''
+      detachRasterImage(activeRasterAbort.img)
       activeRasterAbort = null
     }
   }
 
   function yieldToMain(ms = BAKE_YIELD_MS) {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  function waitForOverlayPaint(frames = OVERLAY_PAINT_FRAMES) {
+    return new Promise(resolve => {
+      let count = 0
+      const tick = () => {
+        count++
+        if (count >= frames) resolve()
+        else requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    })
+  }
+
+  function recordFirstBakeMs(ms) {
+    if (firstBakeMs !== null) return
+    firstBakeMs = ms
+    if (ms < BAKE_FAST_MS) backgroundBakePolicy = 'all'
+    else if (ms < BAKE_MODERATE_MS) backgroundBakePolicy = 'adjacent'
+    else backgroundBakePolicy = 'none'
+    if (typeof DeBug !== 'undefined' && DeBug.log) {
+      DeBug.log('[CardinalBuffers] first bake', `${Math.round(ms)}ms`, 'policy', backgroundBakePolicy)
+    }
+  }
+
+  function resetBakeClassifier() {
+    firstBakeMs = null
+    backgroundBakePolicy = null
+    sessionBakeMode = 'idle'
+    overlayPaintWaited = false
+    pendingRetentionAngles = []
   }
 
   function getCurrentArtworkAngle() {
@@ -139,18 +235,33 @@
   }
 
   function isReadyForAngles(angles) {
+    purgeInvalidBuffers()
     const list = (angles?.length ? angles : CARDINAL_ANGLES).map(normalizeAngle)
-    return list.every(a => bufferIsValid(buffers[a]) && bufferHasSubstantialPixels(buffers[a]))
+    return list.every(a => bufferIsDisplayable(buffers[a]))
   }
 
   function missingAngles(angles) {
     return (angles?.length ? angles : CARDINAL_ANGLES)
       .map(normalizeAngle)
-      .filter(a => !bufferIsValid(buffers[a]) || !bufferHasSubstantialPixels(buffers[a]))
+      .filter(a => !bufferIsDisplayable(buffers[a]))
+  }
+
+  function anglesRequiredForRotation(fromAngle, toAngle, firstRotation) {
+    const from = normalizeAngle(fromAngle)
+    const to = normalizeAngle(toAngle)
+    // Chrome opt-in: all four cardinals batch-baked; crossfade always needs both.
+    if (!window.SafariCompat?.detectWebKitClass?.() && window.chromeRotationMode === 'cardinal') {
+      return [from, to]
+    }
+    if (firstRotation && !bufferIsDisplayable(buffers[from])) return [to]
+    if (!bufferIsDisplayable(buffers[from])) return [from, to]
+    return [to]
   }
 
   function anglesNeededForRotation(fromAngle, toAngle) {
-    return [normalizeAngle(fromAngle), normalizeAngle(toAngle)]
+    const st = window.artworkRotationState
+    const first = st ? !st.cardinalRotatedThisSession : true
+    return anglesRequiredForRotation(fromAngle, toAngle, first)
   }
 
   function normalizeAngle(angle) {
@@ -181,6 +292,37 @@
       if (alpha[i] >= minAlpha) return true
     }
     return alpha[alpha.length - 1] >= minAlpha
+  }
+
+  function bufferCoversArtworkExtent(buffer, minSpanFraction = 0.12) {
+    if (!bufferIsValid(buffer)) return false
+    const { width, height, alpha } = buffer
+    const minAlpha = 16
+    let minX = width
+    let minY = height
+    let maxX = -1
+    let maxY = -1
+    const stride = Math.max(1, Math.floor(Math.max(width, height) / 64))
+    for (let y = 0; y < height; y += stride) {
+      for (let x = 0; x < width; x += stride) {
+        if (alpha[y * width + x] >= minAlpha) {
+          if (x < minX) minX = x
+          if (y < minY) minY = y
+          if (x > maxX) maxX = x
+          if (y > maxY) maxY = y
+        }
+      }
+    }
+    if (maxX < minX || maxY < minY) return false
+    const spanW = (maxX - minX + stride) / width
+    const spanH = (maxY - minY + stride) / height
+    return spanW >= minSpanFraction && spanH >= minSpanFraction
+  }
+
+  function bufferIsDisplayable(buffer) {
+    return bufferIsValid(buffer)
+      && bufferHasSubstantialPixels(buffer)
+      && bufferCoversArtworkExtent(buffer)
   }
 
   function bufferHasSubstantialPixels(buffer, minAlpha = 16) {
@@ -264,12 +406,244 @@
   }
 
   function invalidateCardinalBuffers() {
-    bakeToken++
+    stopCardinalSession()
+    resetCardinalSessionUserState()
     cancelActiveRaster()
     releaseBuffers()
+    disableImageDisplay()
+    buffersScreenLightAngle = null
+  }
+
+  function resetCardinalSessionUserState() {
+    rotationRequested = false
+    bakeQueue = []
+    resetBakeClassifier()
+    if (window.artworkRotationState) {
+      artworkRotationState.pendingDirection = null
+      artworkRotationState.cardinalRotatedThisSession = false
+      artworkRotationState.prepOverlayVisible = false
+    }
+    window.RevealAnim?.hideCardinalPrepOverlay?.()
+  }
+
+  function rebuildPendingBakeQueue(seedDirection) {
+    const current = getCurrentArtworkAngle()
+    const st = window.artworkRotationState
+    const pending = seedDirection ?? st?.pendingDirection ?? null
+    if (!pending) {
+      bakeQueue = []
+      return
+    }
+    const target = normalizeAngle(current + pending * 90)
+    bakeQueue = bufferIsDisplayable(buffers[target]) ? [] : [target]
+  }
+
+  function oneAdjacentMissingAngle(currentAngle) {
+    const c = normalizeAngle(currentAngle)
+    for (const delta of [90, -90]) {
+      const a = normalizeAngle(c + delta)
+      if (!bufferIsDisplayable(buffers[a])) return a
+    }
+    return null
+  }
+
+  function rebuildBackgroundBakeQueue({ retentionAngles = pendingRetentionAngles } = {}) {
+    const current = getCurrentArtworkAngle()
+    const priority = []
+    const retention = (retentionAngles || []).map(normalizeAngle)
+    pendingRetentionAngles = retention.filter(a => !bufferIsDisplayable(buffers[a]))
+    for (const a of pendingRetentionAngles) {
+      if (!priority.includes(a)) priority.push(a)
+    }
+    if (firstBakeMs !== null && backgroundBakePolicy === 'all') {
+      for (const a of cardinalBakePriority(current)) {
+        if (!bufferIsDisplayable(buffers[a]) && !priority.includes(a)) priority.push(a)
+      }
+    } else if (firstBakeMs !== null && backgroundBakePolicy === 'adjacent') {
+      const adj = oneAdjacentMissingAngle(current)
+      if (adj !== null && !priority.includes(adj)) priority.push(adj)
+    }
+    bakeQueue = priority
+  }
+
+  function prioritizeAngles(angles) {
+    sessionBakeMode = 'pending'
+    bakeQueue = (angles || []).map(normalizeAngle).filter(a => !bufferIsDisplayable(buffers[a]))
+  }
+
+  function popNextBakeAngle() {
+    while (bakeQueue.length > 0) {
+      const next = bakeQueue.shift()
+      if (!bufferIsDisplayable(buffers[next])) return next
+    }
+    return null
+  }
+
+  function canFulfillPendingRotation() {
+    const st = window.artworkRotationState
+    if (!st?.pendingDirection) return false
+    if (st.animating || st.cardinalBusy || overlayAnimating) return false
+    const from = getCurrentArtworkAngle()
+    const to = normalizeAngle(from + st.pendingDirection * 90)
+    const needed = anglesRequiredForRotation(from, to, !st.cardinalRotatedThisSession)
+    return isReadyForAngles(needed)
+  }
+
+  async function tryFulfillPendingRotation() {
+    if (!canFulfillPendingRotation()) return false
+    const st = window.artworkRotationState
+    const direction = st.pendingDirection
+    st.pendingDirection = null
+    rotationRequested = false
+    // Do not clear bakeQueue here — fulfill → enqueueRemainingCardinals may
+    // immediately queue retention of the angle we are leaving.
+    if (typeof window.fulfillPendingCardinalRotation === 'function') {
+      await window.fulfillPendingCardinalRotation(direction)
+    }
+    return true
+  }
+
+  async function runCardinalSession(token) {
+    sessionRunning = true
+    try {
+      while (token === sessionToken) {
+        if (!isCardinalBitmapClient()) break
+        if (typeof window.isLightAnimationActive === 'function' && window.isLightAnimationActive()) break
+
+        try {
+          await waitForRotationIdle(token)
+        } catch (_err) {
+          break
+        }
+        if (token !== sessionToken) break
+
+        if (rotationRequested && !overlayPaintWaited) {
+          overlayPaintWaited = true
+          await waitForOverlayPaint()
+        }
+        if (token !== sessionToken) break
+
+        const next = popNextBakeAngle()
+        if (next === null) {
+          if (await tryFulfillPendingRotation()) continue
+          await new Promise(resolve => setTimeout(resolve, 150))
+          continue
+        }
+
+        const bakeGen = ++bakeToken
+        baking = true
+        if (!imageDisplayActive) setLiveArtworkDisplayed(true)
+        let inProgress = next
+        const bakeStartMs = performance.now()
+        try {
+          if (token !== sessionToken || bakeGen !== bakeToken) throw new Error('bake cancelled')
+          buffers[next] = await bakeAngle(next, bakeGen)
+          inProgress = null
+          recordFirstBakeMs(performance.now() - bakeStartMs)
+          maybeNoteBuffersLightReferenceWhenReady()
+        } catch (err) {
+          if (bakeGen === bakeToken && inProgress !== null) {
+            delete buffers[inProgress]
+          }
+          if (typeof DeBug !== 'undefined' && DeBug.warn) {
+            DeBug.warn('[CardinalBuffers] session bake failed', err)
+          }
+        } finally {
+          if (bakeGen === bakeToken) baking = false
+        }
+
+        if (token !== sessionToken) break
+        await yieldToMain()
+        await tryFulfillPendingRotation()
+      }
+    } finally {
+      sessionRunning = false
+      sessionPromise = null
+    }
+  }
+
+  function startCardinalSession({ seedDirection, mode, retentionAngles } = {}) {
+    // Lazy kickoff: registerPendingRotation (first arrow), enqueueRemainingCardinals,
+    // or ensureReady/scheduleCardinalBake.
+    if (!isCardinalBitmapClient()) return
+    if (typeof window.isLightAnimationActive === 'function' && window.isLightAnimationActive()) return
+
+    if (mode) sessionBakeMode = mode
+    if (retentionAngles) {
+      pendingRetentionAngles = retentionAngles.map(normalizeAngle)
+        .filter(a => !bufferIsDisplayable(buffers[a]))
+    }
+
+    if (sessionRunning) {
+      if (sessionBakeMode === 'pending') rebuildPendingBakeQueue(seedDirection)
+      else if (sessionBakeMode === 'background') {
+        rebuildBackgroundBakeQueue({ retentionAngles: pendingRetentionAngles })
+      }
+      return
+    }
+    if (sessionStartPending) return
+
+    sessionStartPending = true
+    const token = sessionToken
+    const seed = seedDirection
+    const retentionSnapshot = [...pendingRetentionAngles]
+
+    requestAnimationFrame(() => {
+      sessionStartPending = false
+      if (token !== sessionToken) return
+      if (typeof window.isLightAnimationActive === 'function' && window.isLightAnimationActive()) return
+
+      if (sessionBakeMode === 'pending') rebuildPendingBakeQueue(seed)
+      else if (sessionBakeMode === 'background') {
+        rebuildBackgroundBakeQueue({ retentionAngles: retentionSnapshot })
+      }
+
+      if (!sessionRunning && bakeQueue.length > 0) {
+        sessionPromise = runCardinalSession(token)
+      }
+    })
+  }
+
+  function stopCardinalSession() {
+    sessionToken++
+    bakeToken++
+    cancelActiveRaster()
     baking = false
     bakePromise = null
-    disableImageDisplay()
+    sessionStartPending = false
+    bakeQueue = []
+    rotationRequested = false
+    overlayPaintWaited = false
+  }
+
+  function registerPendingRotation(direction) {
+    if (!window.artworkRotationState) return
+    artworkRotationState.pendingDirection = direction
+    rotationRequested = true
+    sessionBakeMode = 'pending'
+    overlayPaintWaited = false
+    const from = getCurrentArtworkAngle()
+    const to = normalizeAngle(from + direction * 90)
+    const needed = anglesRequiredForRotation(from, to, !artworkRotationState.cardinalRotatedThisSession)
+    prioritizeAngles(needed)
+    if (!sessionRunning && !sessionStartPending) {
+      startCardinalSession({ seedDirection: direction, mode: 'pending' })
+    } else {
+      rebuildPendingBakeQueue(direction)
+    }
+  }
+
+  function enqueueRemainingCardinals(fromAngle) {
+    sessionBakeMode = 'background'
+    const retention = fromAngle != null ? [normalizeAngle(fromAngle)] : []
+    pendingRetentionAngles = retention.filter(a => !bufferIsDisplayable(buffers[a]))
+    rebuildBackgroundBakeQueue({ retentionAngles: pendingRetentionAngles })
+    if (bakeQueue.length === 0) return
+    startCardinalSession({ mode: 'background', retentionAngles: pendingRetentionAngles })
+  }
+
+  function isRotationRequested() {
+    return rotationRequested
   }
 
   function setLiveArtworkDisplayed(visible) {
@@ -335,9 +709,10 @@
   }
 
   function showSettledAngle(angle, scale) {
+    if (!isCardinalBitmapClient()) return false
     const norm = normalizeAngle(angle)
     const buffer = buffers[norm]
-    if (!bufferIsValid(buffer) || !bufferHasSubstantialPixels(buffer)) return false
+    if (!bufferIsDisplayable(buffer)) return false
 
     ensureOverlay()
     syncStageSize()
@@ -403,59 +778,77 @@
     return { width, height, lum, alpha }
   }
 
-  function rasterizeToGA(svgMarkup, width, height, token) {
-    return new Promise((resolve, reject) => {
-      cancelActiveRaster()
-      const abort = { aborted: false, img: null }
-      activeRasterAbort = abort
+  async function rasterizeToGA(svgMarkup, width, height, token) {
+    if (token !== bakeToken) throw new Error('bake cancelled')
 
-      const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-      const img = new Image()
-      abort.img = img
-
-      const fail = (err) => {
-        URL.revokeObjectURL(url)
-        if (activeRasterAbort === abort) activeRasterAbort = null
-        reject(err)
+    let markup = svgMarkup
+    let host = null
+    if (window.SafariCompat?.detectWebKitClass?.()) {
+      host = document.createElement('div')
+      host.setAttribute('aria-hidden', 'true')
+      host.style.cssText = [
+        'position:fixed',
+        'left:-20000px',
+        'top:0',
+        'overflow:hidden',
+        'visibility:hidden',
+        'pointer-events:none',
+      ].join(';')
+      document.body.appendChild(host)
+      host.innerHTML = markup
+      const svg = host.querySelector('svg')
+      if (svg) {
+        svg.setAttribute('width', `${width}`)
+        svg.setAttribute('height', `${height}`)
+        markup = new XMLSerializer().serializeToString(svg)
       }
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      if (token !== bakeToken) throw new Error('bake cancelled')
+    }
 
-      img.onload = () => {
-        if (abort.aborted || token !== bakeToken) {
-          fail(new Error('bake cancelled'))
-          return
+    const blob = new Blob([markup], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    let settled = false
+
+    try {
+      const imageData = await new Promise((resolve, reject) => {
+        const img = new Image()
+        const finish = (err, data) => {
+          if (settled) return
+          settled = true
+          img.onload = null
+          img.onerror = null
+          if (err) reject(err)
+          else resolve(data)
         }
-        let canvas = null
-        try {
-          canvas = document.createElement('canvas')
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d', { willReadFrequently: true })
-          ctx.drawImage(img, 0, 0, width, height)
-          img.src = ''
-          abort.img = null
-          if (abort.aborted || token !== bakeToken) {
-            fail(new Error('bake cancelled'))
+        img.onload = () => {
+          if (token !== bakeToken) {
+            finish(new Error('bake cancelled'))
             return
           }
-          const imageData = ctx.getImageData(0, 0, width, height)
-          canvas.width = 1
-          canvas.height = 1
-          canvas = null
-          URL.revokeObjectURL(url)
-          if (activeRasterAbort === abort) activeRasterAbort = null
-          resolve(extractGAFromImageData(imageData.data, width, height))
-        } catch (err) {
-          if (canvas) {
+          try {
+            const canvas = document.createElement('canvas')
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d', { willReadFrequently: true })
+            ctx.drawImage(img, 0, 0, width, height)
+            const data = ctx.getImageData(0, 0, width, height)
             canvas.width = 1
             canvas.height = 1
+            finish(null, data)
+          } catch (err) {
+            finish(err)
           }
-          fail(err)
         }
-      }
-      img.onerror = () => fail(new Error('SVG raster failed'))
-      img.src = url
-    })
+        img.onerror = () => finish(new Error('SVG raster failed'))
+        img.src = url
+      })
+      return extractGAFromImageData(imageData.data, width, height)
+    } finally {
+      settled = true
+      URL.revokeObjectURL(url)
+      host?.remove()
+    }
   }
 
   function getScratchImageData(width, height) {
@@ -603,13 +996,39 @@
     }
     const ga = await rasterizeToGA(svgMarkup, raster.width, raster.height, token)
     if (token !== bakeToken) throw new Error('bake cancelled')
-    if (!bufferHasSubstantialPixels(ga)) {
+    if (!bufferHasSubstantialPixels(ga) || !bufferCoversArtworkExtent(ga)) {
       throw new Error(`cardinal raster empty at ${normalized}°`)
     }
     return { ...ga, angle: normalized }
   }
 
+  // Background bake must never read the live SVG mid-rotation (the element's
+  // width/height attributes and transform are being mutated). Wait for idle.
+  function waitForRotationIdle(token, { useSessionToken = true } = {}) {
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        const cancelled = useSessionToken ? token !== sessionToken : token !== bakeToken
+        if (cancelled) {
+          reject(new Error(useSessionToken ? 'session cancelled' : 'bake cancelled'))
+          return
+        }
+        const st = window.artworkRotationState
+        const busy = st && (st.animating || st.cardinalBusy)
+        if (!busy && !overlayAnimating) {
+          resolve()
+          return
+        }
+        requestAnimationFrame(check)
+      }
+      check()
+    })
+  }
+
   async function bakeCardinalBuffers({ angles: requestedAngles } = {}) {
+    if (!isCardinalBitmapClient()) return { ...buffers }
+    // Blocking prep overlay — no concurrent live rotation. Only pause for an
+    // active crossfade/animation, never for the prep wait itself.
+    if (isRotationInteractionActive()) return { ...buffers }
     let toBake = missingAngles(requestedAngles)
     toBake = sortAnglesByBakePriority(toBake, getCurrentArtworkAngle())
     if (toBake.length === 0) return { ...buffers }
@@ -622,6 +1041,7 @@
     }
 
     const token = ++bakeToken
+    // Snapshot capture/restore while user is blocked behind the prep overlay.
     const saved = typeof captureArtworkRotationSnapshot === 'function'
       ? captureArtworkRotationSnapshot()
       : null
@@ -631,6 +1051,8 @@
       let inProgress = null
       try {
         for (const angle of toBake) {
+          if (token !== bakeToken || overlayAnimating) throw new Error('bake cancelled')
+          await waitForRotationIdle(token, { useSessionToken: false })
           if (token !== bakeToken || overlayAnimating) throw new Error('bake cancelled')
           inProgress = angle
           buffers[angle] = await bakeAngle(angle, token)
@@ -650,11 +1072,14 @@
         }
         throw err
       } finally {
-        if (token === bakeToken) baking = false
-        // Never restore live SVG while the bitmap overlay is showing — that can
-        // briefly re-enable filtered SVG under the canvas (double exposure).
-        if (saved && !imageDisplayActive && !overlayAnimating
-          && typeof restoreArtworkRotationSnapshot === 'function') {
+        baking = false
+        const rotationBusy = isRotationInteractionActive()
+        const mayRestore = token === bakeToken
+          && saved
+          && !imageDisplayActive
+          && !overlayAnimating
+          && !rotationBusy
+        if (mayRestore && typeof restoreArtworkRotationSnapshot === 'function') {
           restoreArtworkRotationSnapshot(saved, { syncLight: false })
         }
       }
@@ -784,16 +1209,19 @@
     startScale,
     targetScale,
   }) {
+    if (!isCardinalBitmapClient()) return Promise.resolve(false)
     const fromNorm = normalizeAngle(fromAngle)
     const toNorm = normalizeAngle(toAngle)
     const fromBuffer = buffers[fromNorm]
     const toBuffer = buffers[toNorm]
-    if (!bufferIsValid(fromBuffer) || !bufferIsValid(toBuffer)) {
-      return Promise.resolve(false)
-    }
-    if (!bufferHasSubstantialPixels(fromBuffer) || !bufferHasSubstantialPixels(toBuffer)) {
-      return Promise.resolve(false)
-    }
+    const fromReady = bufferIsDisplayable(fromBuffer)
+    const toReady = bufferIsDisplayable(toBuffer)
+    if (!toReady) return Promise.resolve(false)
+
+    const st = window.artworkRotationState
+    const liveOutgoing = !fromReady && !imageDisplayActive
+      && st && !st.cardinalRotatedThisSession
+    if (!fromReady && !liveOutgoing) return Promise.resolve(false)
 
     const shrinkFirst = targetScale < startScale
 
@@ -801,7 +1229,92 @@
     ensureOverlay()
     syncStageSize()
 
-    // Reuse layers that already hold either orientation to avoid re-blits.
+    // First rotation: only target buffer exists. Hide live SVG first, then
+    // stage-rotate the portrait-baked target from fromAngle→toAngle. Never
+    // fade a black-backed canvas over the still-visible live artwork.
+    if (liveOutgoing) {
+      const incoming = baseLayer || otherLayer()
+      blitGAToCanvasIfNeeded(toBuffer, incoming)
+      incoming.style.opacity = '1'
+      incoming.style.zIndex = '2'
+      baseLayer = incoming
+      const alt = otherLayer()
+      if (alt) {
+        alt.style.opacity = '0'
+        alt.style.zIndex = '1'
+      }
+
+      setLiveArtworkDisplayed(false)
+      imageDisplayActive = true
+      applyStageTransform(fromAngle, startScale)
+      positionOverlay(layoutRectCache || getDisplayRect())
+      overlayEl.style.display = 'block'
+      overlayStage.style.willChange = 'transform'
+
+      let watchdogId = null
+      const finishLive = (success) => {
+        if (watchdogId != null) clearTimeout(watchdogId)
+        overlayAnimating = false
+        overlayStage.style.willChange = 'auto'
+        if (success) {
+          baseLayer = incoming
+          if (!showSettledAngle(toAngle, targetScale)) {
+            recoverToLiveArtwork('live-first rotation — settled frame invalid')
+          }
+          return
+        }
+        hideOverlay()
+        setLiveArtworkDisplayed(true)
+      }
+
+      watchdogId = setTimeout(() => {
+        if (!overlayAnimating) return
+        finishLive(false)
+        recoverToLiveArtwork('live-first rotation watchdog')
+      }, ROTATION_WATCHDOG_MS)
+
+      return (async () => {
+        try {
+          if (shrinkFirst) {
+            await animateStagePhase({
+              fromAngle,
+              toAngle: fromAngle,
+              fromScale: startScale,
+              toScale: targetScale,
+              durationMs: SCALE_PHASE_MS,
+            })
+            await animateStagePhase({
+              fromAngle,
+              toAngle,
+              fromScale: targetScale,
+              toScale: targetScale,
+              durationMs: ROTATION_PHASE_MS,
+            })
+          } else {
+            await animateStagePhase({
+              fromAngle,
+              toAngle,
+              fromScale: startScale,
+              toScale: startScale,
+              durationMs: ROTATION_PHASE_MS,
+            })
+            await animateStagePhase({
+              fromAngle: toAngle,
+              toAngle,
+              fromScale: startScale,
+              toScale: targetScale,
+              durationMs: SCALE_PHASE_MS,
+            })
+          }
+          finishLive(true)
+          return true
+        } catch (err) {
+          finishLive(false)
+          throw err
+        }
+      })()
+    }
+
     let outgoing = baseLayer
     let incoming = otherLayer()
     if (incoming._gaKey === fromNorm && outgoing._gaKey !== fromNorm) {
@@ -900,21 +1413,97 @@
     })()
   }
 
-  function scheduleCardinalBake(angles) {
-    if (!window.SafariCompat?.detectWebKitClass?.()) return
-    if (SafariCompat.capabilities.rotation !== 'cardinal') return
-    if (window.RevealAnim?.isSafariRevealComplete && !window.RevealAnim.isSafariRevealComplete()) return
-    if (missingAngles(angles).length === 0) return
-    if (baking || overlayAnimating) return
-
-    const run = () => {
-      bakeCardinalBuffers({ angles }).catch(err => {
-        if (typeof DeBug !== 'undefined' && DeBug.warn) {
-          DeBug.warn('[CardinalBuffers] bake failed', err)
+  function purgeInvalidBuffers() {
+    for (const angle of Object.keys(buffers)) {
+      if (!bufferIsDisplayable(buffers[angle])) {
+        const entry = buffers[angle]
+        if (entry) {
+          entry.lum = null
+          entry.alpha = null
         }
-      })
+        delete buffers[angle]
+      }
     }
-    requestAnimationFrame(run)
+  }
+
+  function cancelBakeForLiveInteraction() {
+    bakeToken++
+    cancelActiveRaster()
+    baking = false
+    bakePromise = null
+    purgeInvalidBuffers()
+  }
+
+  // Deprecated: use bakeAllCardinalsBatch (Chrome R-toggle) instead.
+  function scheduleChromeCardinalWarmup() {
+    bakeAllCardinalsBatch()
+  }
+
+  let chromeBatchBakePromise = null
+
+  async function bakeAllCardinalsBatch() {
+    if (!isCardinalBitmapClient()) return false
+    if (isReady()) return true
+    if (chromeBatchBakePromise) return chromeBatchBakePromise
+
+    stopCardinalSession()
+    ensureCardinalScreenLightAngleForBake()
+
+    chromeBatchBakePromise = (async () => {
+      const angles = sortAnglesByBakePriority(
+        missingAngles(CARDINAL_ANGLES),
+        getCurrentArtworkAngle(),
+      )
+      if (angles.length === 0) return isReady()
+
+      const token = ++bakeToken
+      baking = true
+      if (!imageDisplayActive) setLiveArtworkDisplayed(true)
+      try {
+        for (const angle of angles) {
+          if (token !== bakeToken) throw new Error('batch bake cancelled')
+          await waitForRotationIdle(token, { useSessionToken: false })
+          buffers[angle] = await bakeAngle(angle, token)
+          await yieldToMain()
+        }
+        maybeNoteBuffersLightReferenceWhenReady()
+        return isReady()
+      } catch (err) {
+        if (typeof DeBug !== 'undefined' && DeBug.warn) {
+          DeBug.warn('[CardinalBuffers] batch bake failed', err)
+        }
+        return false
+      } finally {
+        if (token === bakeToken) baking = false
+        chromeBatchBakePromise = null
+      }
+    })()
+
+    return chromeBatchBakePromise
+  }
+
+  function ensureCardinalScreenLightAngleForBake() {
+    if (typeof window.ensureCardinalScreenLightAngle === 'function') {
+      window.ensureCardinalScreenLightAngle()
+    }
+  }
+
+  function isChromeBatchBaking() {
+    return !!chromeBatchBakePromise || baking
+  }
+
+  function isChromeWarmupComplete() {
+    return isReadyForAngles(CARDINAL_ANGLES)
+  }
+
+  function scheduleCardinalBake(angles) {
+    if (!isCardinalBitmapClient()) return
+    if (window.SafariCompat?.capabilities?.rotation !== 'cardinal') return
+    if (window.RevealAnim?.isSafariRevealComplete && !window.RevealAnim.isSafariRevealComplete()) return
+    prioritizeAngles(angles)
+    if (!sessionRunning && !sessionStartPending) {
+      startCardinalSession({ mode: 'pending' })
+    }
   }
 
   function noteFrameLayoutChange() {
@@ -971,19 +1560,14 @@
     const angles = (neededAngles?.length ? neededAngles : CARDINAL_ANGLES).map(normalizeAngle)
     if (isReadyForAngles(angles)) return true
     if (overlayAnimating) return false
-    if (!isBaking()) scheduleCardinalBake(angles)
-    try {
-      await Promise.race([
-        bakeCardinalBuffers({ angles }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('cardinal bake timeout')), BAKE_WAIT_MS)),
-      ])
-      return isReadyForAngles(angles)
-    } catch (err) {
-      if (typeof DeBug !== 'undefined' && DeBug.warn) {
-        DeBug.warn('[CardinalBuffers] ensureReady failed', err)
-      }
-      return false
+    prioritizeAngles(angles)
+    if (!sessionRunning && !sessionStartPending) startCardinalSession({ mode: 'pending' })
+    const deadline = Date.now() + BAKE_WAIT_MS
+    while (Date.now() < deadline) {
+      if (isReadyForAngles(angles)) return true
+      await new Promise(resolve => setTimeout(resolve, 50))
     }
+    return isReadyForAngles(angles)
   }
 
   function getDiagnosticsSnapshot() {
@@ -996,6 +1580,9 @@
       settledAngle,
       settledScale,
       bakeToken,
+      firstBakeMs,
+      backgroundBakePolicy,
+      sessionBakeMode,
       ready: isReady(),
       busy: typeof artworkRotationState !== 'undefined'
         ? !!artworkRotationState.cardinalBusy
@@ -1035,7 +1622,24 @@
     CARDINAL_ANGLES,
     bakeCardinalBuffers,
     scheduleCardinalBake,
+    scheduleChromeCardinalWarmup,
+    bakeAllCardinalsBatch,
+    isChromeBatchBaking,
+    waitForOverlayPaint,
+    cancelBakeForLiveInteraction,
+    isChromeWarmupComplete,
+    startCardinalSession,
+    stopCardinalSession,
+    registerPendingRotation,
+    canFulfillPendingRotation,
+    enqueueRemainingCardinals,
+    isRotationRequested,
+    bufferIsDisplayable,
+    bufferCoversArtworkExtent,
     invalidateCardinalBuffers,
+    invalidateCardinalBuffersIfLightChanged,
+    buffersStaleDueToLightChange,
+    noteBuffersLightReference,
     noteFrameLayoutChange,
     cancelActiveRaster,
     animateCardinalRotation,
@@ -1050,6 +1654,7 @@
     ensureReady,
     isReady,
     isReadyForAngles,
+    anglesRequiredForRotation,
     anglesNeededForRotation,
     cardinalBakePriority,
     sortAnglesByBakePriority,

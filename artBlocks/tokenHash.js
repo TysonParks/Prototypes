@@ -1548,6 +1548,7 @@ const lastHash = [
   '0x73ea44abe9d338f74463f36821a760abaa03fa30c1e094d71d5ff244e2314486', // thin depth bug: !!!FIXED!!!
   '0x6bd1b2ad73f806c772ecd712342667de335844ed69603529251c64cb0f46ea41', // thin depth bug: !!!FIXED!!!
   '0x631ae018e5116817dba91ee3c2fe6c5c16e492d7cd4e93b27c8dc39318bb8e19', // 1530 METH: // runtime error: //FUNC:
+  '0x179d1da11218e0ee1901a3da9fe23d602d3a8570ac5d0b1991e3783272ddbe13', // Bad Grouping w/overlap: //FUNC:
 
 
 

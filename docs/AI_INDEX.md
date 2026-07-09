@@ -42,6 +42,8 @@ specifically to the ArtBlocks token render path.
 4. KNOWN-ISSUES.md → canonical bug history, unresolved issues, failed fixes
 5. TESTING.md → canonical testing/debug procedures and harness usage
 6. ROADMAP.md → canonical future work and sequencing
+7. DEFERRED-ADAPTIVE-RENDER-MODES.md → post-submission adaptive render modes and benchmarks
+8. MVP-ROTATION-SHIPPING.md → pre-submission cardinal rotation shipping plan
 
 ## Use By Task
 

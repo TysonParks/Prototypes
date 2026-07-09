@@ -92,10 +92,15 @@
   // Two sentences, blank line between them — rendered via
   // `white-space: pre-line` so we can use \n\n in textContent.
   const loadingTextCopy =
-    'Current WebKit-based browsers\n (including Safari and iOS browsers)\n may take significantly longer\n to resolve complex outputs.\n\n' +
+    'Current WebKit-based browsers\n (including Safari and iOS browsers)\n may take significantly longer\n to render and navigate\n complex outputs.\n\n' +
     'Chrome desktop is the\n reference viewing environment\n for Prototypes.'
-  const cardinalPrepTextCopy = 'Preparing remaining\norientations...'
+  const cardinalPrepTextCopy =
+    'Preparing smooth rotation...\n\nSubsequent rotations will be\n significantly smoother.'
+  const cardinalReadyTextCopy = 'Smooth rotation ready.'
+  const cardinalEnabledTextCopy = 'Smooth rotation enabled.'
+  const liveRotationRestoredTextCopy = 'Live rotation restored.'
   const cardinalPrepOverlayFadeMs = 500
+  const cardinalStatusHoldMs = 3000
   const loadingTextEscalationMs = [25000, 90000]
   const loadingTextEscalatedCopy = [
     'Still resolving...\n\nSome complex outputs require significantly longer to execute in the current browser.',
@@ -115,6 +120,9 @@
   // Survives every ProtoBatch teardown/rebuild cycle (BG.elt does not).
   // Safari loading text uses .building; hidden pulse lives on #safari-dummy-core.
   let _safariOverlay = null                      // #safari-overlay root element
+  let _chromeCardinalPrepOverlay = null
+  let _chromeCardinalStatusToken = 0
+  let _chromeCardinalStatusActive = false
   let _safariDummy = null                        // #safari-dummy visual cover/morph layer
   let _safariRevealComplete = false              // true after first Safari reveal finishes
   let _loadingTextEscalationTimers = []
@@ -421,6 +429,40 @@
       #safari-overlay.building #safari-loading-text {
         opacity: 1;
         transition: none;
+      }
+
+      /* Chrome: cardinal buffer prep only (no cold-load Safari loading UI). */
+      #chrome-cardinal-prep-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: none;
+      }
+      #chrome-cardinal-prep-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #chrome-cardinal-prep-text {
+        max-width: 80vw;
+        text-align: center;
+        white-space: pre-line;
+        color: #ffffff;
+        font-family: ui-rounded, "SF Pro Rounded", system-ui,
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+        font-weight: 500;
+        font-size: var(--loading-text-size);
+        line-height: 1.35;
+        letter-spacing: 0.01em;
+        text-shadow: 0 var(--loading-text-shadow-y) var(--loading-text-shadow-blur) rgba(0, 0, 0, 0.85);
+        user-select: none;
+        pointer-events: none;
+        opacity: 1;
+        will-change: opacity;
       }
     `
     document.head.appendChild(style)
@@ -991,6 +1033,118 @@
     })
   }
 
+  function ensureChromeCardinalPrepOverlay() {
+    if (isWebKitClass) return
+    if (_chromeCardinalPrepOverlay?.parentNode) return
+    if (!document.body) return
+    ensureStyles()
+    _chromeCardinalPrepOverlay = document.createElement('div')
+    _chromeCardinalPrepOverlay.id = 'chrome-cardinal-prep-overlay'
+    const txt = document.createElement('div')
+    txt.id = 'chrome-cardinal-prep-text'
+    txt.textContent = cardinalPrepTextCopy
+    _chromeCardinalPrepOverlay.appendChild(txt)
+    document.body.appendChild(_chromeCardinalPrepOverlay)
+  }
+
+  function showCardinalPrepOverlayIfNeeded() {
+    if (!window.SafariCardinalBuffers?.isRotationRequested?.()) return
+    showCardinalPrepOverlay()
+  }
+
+  // Cardinal buffer bake wait — Safari uses #safari-overlay; Chrome gets text only.
+  function showCardinalPrepOverlay() {
+    if (!_safariRevealComplete) return
+    if (isWebKitClass) {
+      showSafariLoadingOverlay('cardinals')
+      return
+    }
+    ensureChromeCardinalPrepOverlay()
+    if (!_chromeCardinalPrepOverlay) return
+    const txt = document.getElementById('chrome-cardinal-prep-text')
+    if (txt) txt.textContent = cardinalPrepTextCopy
+    _chromeCardinalPrepOverlay.style.transition = 'none'
+    _chromeCardinalPrepOverlay.classList.remove('visible')
+    void _chromeCardinalPrepOverlay.offsetWidth
+    _chromeCardinalPrepOverlay.style.transition = `opacity ${cardinalPrepOverlayFadeMs}ms linear`
+    _chromeCardinalPrepOverlay.classList.add('visible')
+  }
+
+  function cancelChromeCardinalStatusSequence() {
+    _chromeCardinalStatusToken++
+    _chromeCardinalStatusActive = false
+  }
+
+  function waitCardinalOverlayMs(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  // Chrome R-toggle status cue: optional crossfade from current copy, hold, fade out.
+  async function showChromeCardinalStatusCue({ text, crossfade = false, holdMs = cardinalStatusHoldMs } = {}) {
+    if (!_safariRevealComplete || isWebKitClass || !text) return
+    cancelChromeCardinalStatusSequence()
+    const token = _chromeCardinalStatusToken
+    _chromeCardinalStatusActive = true
+
+    ensureChromeCardinalPrepOverlay()
+    const txt = document.getElementById('chrome-cardinal-prep-text')
+    if (!txt || !_chromeCardinalPrepOverlay) {
+      _chromeCardinalStatusActive = false
+      return
+    }
+
+    if (crossfade && _chromeCardinalPrepOverlay.classList.contains('visible')) {
+      txt.style.transition = `opacity ${cardinalPrepOverlayFadeMs}ms linear`
+      txt.style.opacity = '0'
+      await waitCardinalOverlayMs(cardinalPrepOverlayFadeMs + 20)
+      if (token !== _chromeCardinalStatusToken) return
+      txt.textContent = text
+      void txt.offsetWidth
+      txt.style.opacity = '1'
+      await waitCardinalOverlayMs(cardinalPrepOverlayFadeMs + 20)
+    } else {
+      txt.style.transition = 'none'
+      txt.style.opacity = '1'
+      txt.textContent = text
+      _chromeCardinalPrepOverlay.style.transition = 'none'
+      _chromeCardinalPrepOverlay.classList.remove('visible')
+      void _chromeCardinalPrepOverlay.offsetWidth
+      _chromeCardinalPrepOverlay.style.transition = `opacity ${cardinalPrepOverlayFadeMs}ms linear`
+      _chromeCardinalPrepOverlay.classList.add('visible')
+      await waitCardinalOverlayMs(cardinalPrepOverlayFadeMs + 20)
+    }
+
+    if (token !== _chromeCardinalStatusToken) return
+    await waitCardinalOverlayMs(holdMs)
+    if (token !== _chromeCardinalStatusToken) return
+
+    _chromeCardinalStatusActive = false
+    hideCardinalPrepOverlay({ force: true })
+  }
+
+  function hideCardinalPrepOverlay({ force = false } = {}) {
+    if (isWebKitClass) {
+      hideSafariLoadingOverlay()
+      return
+    }
+    if (!force && (
+      window.artworkRotationState?.chromeCardinalToggleBusy
+      || window.SafariCardinalBuffers?.isChromeBatchBaking?.()
+      || _chromeCardinalStatusActive
+    )) {
+      return
+    }
+    if (force) cancelChromeCardinalStatusSequence()
+    if (!_chromeCardinalPrepOverlay?.classList.contains('visible')) return
+    _chromeCardinalPrepOverlay.style.transition = `opacity ${cardinalPrepOverlayFadeMs}ms linear`
+    _chromeCardinalPrepOverlay.classList.remove('visible')
+    setTimeout(() => {
+      if (_chromeCardinalPrepOverlay && !_chromeCardinalPrepOverlay.classList.contains('visible')) {
+        _chromeCardinalPrepOverlay.style.transition = 'none'
+      }
+    }, cardinalPrepOverlayFadeMs + 50)
+  }
+
   //FUNC: showSafariLoadingOverlay(mode) : void
   // WebKit-only. mode: 'initial' (cold-load copy) | 'cardinals' (buffer bake wait).
   function showSafariLoadingOverlay(mode = 'initial') {
@@ -1178,9 +1332,7 @@
   function notifyRevealComplete() {
     _navInFlight = false
     _safariRevealComplete = true
-    // Cardinal bitmap bake is lazy — starts on first rotate only (see
-    // SafariCardinalBuffers.ensureReady). Eager post-reveal bake blocked the
-    // main thread for ~50s on heavy hashes and caused Safari compositor blackouts.
+    // Cardinal buffers bake lazily on first arrow (yielding coordinator).
     _devHooks?.onRevealComplete?.()
   }
 
@@ -1422,6 +1574,15 @@
     resetForRebuild,
     showSafariLoadingOverlay,
     hideSafariLoadingOverlay,
+    showCardinalPrepOverlay,
+    showCardinalPrepOverlayIfNeeded,
+    hideCardinalPrepOverlay,
+    showChromeCardinalStatusCue,
+    cancelChromeCardinalStatusSequence,
+    isChromeCardinalStatusActive: () => _chromeCardinalStatusActive,
+    cardinalReadyTextCopy,
+    cardinalEnabledTextCopy,
+    liveRotationRestoredTextCopy,
     _installDevRegen,
   }
   window.SafariCompatUX = window.RevealAnim

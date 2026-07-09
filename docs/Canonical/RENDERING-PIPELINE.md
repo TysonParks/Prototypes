@@ -310,6 +310,11 @@ same offset registry (`Export.js`, `ArtworkRotation.js`).
 
 ### Safari cardinal rotation (`safariCardinalBuffers.js`)
 
+**Submission MVP (2026-07-07):** Cardinal buffer rotation is the **default on all browsers**.
+WebKit never uses live SVG rotation (`rotation:'full'`). Adaptive quality-based toggling
+is deferred — see [`docs/Operational/MVP-ROTATION-SHIPPING.md`](../Operational/MVP-ROTATION-SHIPPING.md)
+and [`docs/Operational/DEFERRED-ADAPTIVE-RENDER-MODES.md`](../Operational/DEFERRED-ADAPTIVE-RENDER-MODES.md).
+
 When `SafariCompat.capabilities.rotation === 'cardinal'`, viewport rotation
 (←/→) uses pre-baked GA bitmaps at 0°/90°/180°/270° instead of live SVG
 transform + filter updates. Bitmap bake is **lazy** — it starts on the first

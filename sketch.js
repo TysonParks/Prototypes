@@ -863,15 +863,17 @@ function startAnimationLoop({ userInitiated = false } = {}) {
   globalControls.animated = true
   animationController.startClockSync({ userInitiated })
   animationController.globalAnimation()
+  if (typeof onLightAnimationStarted === 'function') onLightAnimationStarted()
 }
 
 // FUNC: stopAnimationLoop()
 function stopAnimationLoop() {
   if (animationController?.stop) {
     animationController.stop()
-    return
+  } else {
+    globalControls.animated = false
   }
-  globalControls.animated = false
+  if (typeof onLightAnimationStopped === 'function') onLightAnimationStopped()
 }
 
 function stopAnimationLoopAndResetLight() {
@@ -882,11 +884,18 @@ function stopAnimationLoopAndResetLight() {
     globalControls.shadAngle = 90
     if (typeof noteArtworkScreenLightAngle === 'function') noteArtworkScreenLightAngle(90)
   }
+  if (typeof onLightAnimationStopped === 'function') onLightAnimationStopped()
 }
 
 // // FUNC: shadeAnimation()
 function shadeAnimation() {
+  if (window.artworkRotationState?.animating) return
+  if (typeof window.isArtworkInteractionReady === 'function' && !window.isArtworkInteractionReady()) return
   if (window.SafariCompat?.capabilities?.lightAnimation === false) return
+  const starting = !globalControls.animated
+  if (starting && window.SafariCardinalBuffers?.isImageDisplayActive?.()) {
+    if (typeof onLightAnimationStarted === 'function') onLightAnimationStarted()
+  }
   if (globalControls.animated) stopAnimationLoop()
   else startAnimationLoop({ userInitiated: true })
 }
@@ -900,7 +909,7 @@ function windowResized() {
   sizeFrame()
   BG.size(windowWidth, windowHeight)
   syncArtworkRotationToViewport()
-  if (typeof artworkRotationMode === 'function' && artworkRotationMode() === 'cardinal') {
+  if (typeof usesCardinalRotation === 'function' && usesCardinalRotation()) {
     const nextKey = `${frameSize?.x}|${frameSize?.y}|${window.devicePixelRatio || 1}`
     if (_cardinalLayoutKey && _cardinalLayoutKey !== nextKey) {
       window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()

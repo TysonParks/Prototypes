@@ -66,12 +66,12 @@ The final Safari implementation solved four requirements simultaneously:
 - no hard-edged hidden-scale rectangle flash during handoff, and
 - no intermittent low-resolution final artwork raster.
 
-Note: A separate Chrome-only rotation feature has been implemented and
-integrated with the reveal/build choreography. The generator now supports an
-initial `Rotation` PostParam (defaults to `Up` / 0°) and interactive keyboard
-rotation in Chrome. Rotational **light** animation is tap/touch-to-start only
-(no auto-start); tap uses forward chase with immediate visible motion
-(`Animation.js` `userInitiated` path, 2026-06).
+Note: Viewport rotation uses **cardinal buffer mode on all browsers** for the
+submission MVP (2026-07-07). The generator supports an initial `Rotation`
+PostParam (defaults to `Up` / 0°) and interactive keyboard rotation. Rotational
+**light** animation is tap/touch-to-start only on Chrome (disabled on WebKit);
+tap uses forward chase with immediate visible motion (`Animation.js`
+`userInitiated` path, 2026-06). See [MVP-ROTATION-SHIPPING.md](MVP-ROTATION-SHIPPING.md).
 
 The key architectural decisions that made this stable were:
 

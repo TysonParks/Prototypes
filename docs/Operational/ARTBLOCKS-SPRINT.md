@@ -86,6 +86,7 @@ Priority scale: **P1** = must fix before upload · **P2** = should fix · **P3**
 | ID | Bug | Priority | Est. Time | Depends On | KNOWN-ISSUES Ref | Status |
 |----|-----|----------|-----------|------------|-------------------|--------|
 | B1 | **Safari compatibility** — overlay UX done; further perf tuning deferred post-submission | P1 | — | — | §9.14.4b, §9.15.6 | ♻️ Deferred (post-submission) |
+| B8 | **Adaptive render modes + benchmark tuning** — cardinal as cross-browser strategy, quality probes, four-phase sweeps | P2 | — | Submission | [DEFERRED-ADAPTIVE-RENDER-MODES.md](DEFERRED-ADAPTIVE-RENDER-MODES.md) | ♻️ Deferred (post-submission) |
 | B2 | **Remaining wrapping bugs** — e.g. Proximal Wrap #1526; rare incidence | P2 | — | Wrapper audit §1 | §9.7, §9.12 | ♻️ Deferred (post-submission) |
 | B3 | **Shade retuning before release** — viewport-scale unit bug solved for now | P2 | 1–2 days | B5 | §9.14.10 | ♻️ Deferred (post-submission) |
 | B5 | **ShapeGroup bounds / cascade crop** | P2 | — | — | §9.14.1 | ✅ Fixed (mask layout) |
@@ -101,6 +102,11 @@ Three sub-issues: (1) 10 sec–1 min render delay, (2) missing/incorrect shapes,
 attack plan below). **ArtBlocks validates on headless Chromium (SwiftShell) —
 Safari fixes are for collector experience, not ArtBlocks evaluation.** But Safari
 is a primary collector browser and should not be ignored. Test early, not at the end.
+
+**Submission MVP (2026-07-07):** Cardinal buffer rotation is enabled on **all browsers**
+for shipping. Safari stays locked to cardinal (no live SVG rotation tier). Adaptive
+metrics-based toggling deferred — see [MVP-ROTATION-SHIPPING.md](MVP-ROTATION-SHIPPING.md)
+and [DEFERRED-ADAPTIVE-RENDER-MODES.md](DEFERRED-ADAPTIVE-RENDER-MODES.md).
 
 **B2 — Wrapping:**
 Scoped to visual verification of adjacent wrappers and the Bug B opposite-facing

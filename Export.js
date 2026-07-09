@@ -328,6 +328,66 @@ function getSVGMarkupIntrinsicSize(svgMarkup) {
   return { width, height, rezString: `${width}x${height}` }
 }
 
+function ensureSvgDocumentNamespaces(svgMarkup) {
+  if (!svgMarkup || svgMarkup.includes('xmlns=')) return svgMarkup
+  return svgMarkup.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
+}
+
+function canvasHasExportPixels(canvas, minAlpha = 12, minFraction = 0.001) {
+  if (!canvas || canvas.width < 1 || canvas.height < 1) return false
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return false
+  const { width, height } = canvas
+  const stride = Math.max(1, Math.floor((width * height) / 4096))
+  let visible = 0
+  let samples = 0
+  for (let i = 0; i < width * height; i += stride) {
+    samples++
+    const x = i % width
+    const y = Math.floor(i / width)
+    if (ctx.getImageData(x, y, 1, 1).data[3] >= minAlpha) visible++
+  }
+  return samples > 0 && (visible / samples) >= minFraction
+}
+
+function downloadCanvasPng(canvas, fileName) {
+  return new Promise((resolve, reject) => {
+    const watchdog = setTimeout(() => reject(new Error('PNG blob timeout')), 90000)
+    canvas.toBlob(blob => {
+      clearTimeout(watchdog)
+      if (!blob) {
+        reject(new Error('PNG blob creation failed'))
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.click()
+      URL.revokeObjectURL(url)
+      resolve()
+    }, 'image/png')
+  })
+}
+
+async function exportArtworkPngFromMarkup(svgMarkup, fileName, width, height) {
+  const canvas = await rasterizeExportMarkup(svgMarkup, width, height)
+  if (!canvasHasExportPixels(canvas)) {
+    throw new Error('export raster empty')
+  }
+  await yieldExportToMain(32)
+  await downloadCanvasPng(canvas, fileName)
+  if (typeof DeBug !== 'undefined' && DeBug.log) {
+    DeBug.log('PNG saved', fileName)
+  }
+}
+
+async function waitForExportPaintFrames(frames = 2) {
+  for (let i = 0; i < frames; i++) {
+    await new Promise(resolve => requestAnimationFrame(resolve))
+  }
+}
+
 function buildExportSvgMarkup(rotationInfo, width, height) {
   const liveRoot = FRAME.bleed.elt
   const clone = liveRoot.cloneNode(true)
@@ -338,31 +398,157 @@ function buildExportSvgMarkup(rotationInfo, width, height) {
   return createRotationAwareSVGMarkupFromClone(clone, rotationInfo, width, height)
 }
 
-function rasterizeSvgMarkupToCanvas(svgMarkup, width, height) {
+async function restoreDisplayAfterExport(wasBitmapActive, angle, scale) {
+  if (!wasBitmapActive) return
+  const cardinal = window.SafariCardinalBuffers
+  cardinal?.cacheLayoutRect?.()
+  if (!cardinal?.showSettledAngle?.(angle, scale)) {
+    cardinal?.enableImageDisplay?.(angle, scale)
+  }
+  await waitForExportPaintFrames(1)
+  cardinal?.syncDisplayLayout?.()
+}
+
+function parseMarkupViewBox(svgMarkup) {
+  const doc = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml')
+  return parseSVGViewBox(doc.documentElement?.getAttribute('viewBox'))
+}
+
+function buildTiledExportMarkup(fullMarkup, fullWidth, fullHeight, viewBox, srcY, tileHeight) {
+  const doc = new DOMParser().parseFromString(fullMarkup, 'image/svg+xml')
+  const svg = doc.documentElement
+  if (!svg || !viewBox) return fullMarkup
+  const sliceViewBox = {
+    x: viewBox.x,
+    y: viewBox.y + (srcY / fullHeight) * viewBox.height,
+    width: viewBox.width,
+    height: (tileHeight / fullHeight) * viewBox.height,
+  }
+  svg.setAttribute('viewBox', formatSVGViewBox(sliceViewBox))
+  svg.setAttribute('width', `${fullWidth}`)
+  svg.setAttribute('height', `${tileHeight}`)
+  return ensureSvgDocumentNamespaces(new XMLSerializer().serializeToString(svg))
+}
+
+function yieldExportToMain(ms = 16) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+// Match cardinal per-buffer budget — Safari chokes on single 16MP filter raster.
+const WEBKIT_MAX_TILE_PIXELS = 4 * 1024 * 1024
+const WEBKIT_TILED_EXPORT_THRESHOLD = 6 * 1024 * 1024
+
+function rasterizeSvgBlobToCanvasInternal(svgMarkup, width, height) {
   return new Promise((resolve, reject) => {
     const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const img = new Image()
+    let settled = false
+    const finish = (err, canvas) => {
+      if (settled) return
+      settled = true
+      URL.revokeObjectURL(url)
+      if (err) reject(err)
+      else resolve(canvas)
+    }
+    const watchdog = setTimeout(() => finish(new Error('export raster timeout')), 120000)
     img.onload = () => {
+      clearTimeout(watchdog)
       try {
         const canvas = document.createElement('canvas')
         canvas.width = width
         canvas.height = height
+        if (canvas.width !== width || canvas.height !== height) {
+          finish(new Error('export canvas allocation failed'))
+          return
+        }
         const ctx = canvas.getContext('2d')
         ctx.drawImage(img, 0, 0, width, height)
-        URL.revokeObjectURL(url)
-        resolve(canvas)
+        finish(null, canvas)
       } catch (err) {
-        URL.revokeObjectURL(url)
-        reject(err)
+        finish(err)
       }
     }
     img.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('export raster failed'))
+      clearTimeout(watchdog)
+      finish(new Error('export SVG image load failed'))
     }
     img.src = url
   })
+}
+
+async function rasterizeSvgBlobToCanvas(svgMarkup, width, height) {
+  let host = null
+  let markup = ensureSvgDocumentNamespaces(svgMarkup)
+  if (window.SafariCompat?.detectWebKitClass?.()) {
+    host = document.createElement('div')
+    host.id = 'safari-export-raster-host'
+    host.setAttribute('aria-hidden', 'true')
+    host.style.cssText = [
+      'position:fixed',
+      'left:-20000px',
+      'top:0',
+      'overflow:hidden',
+      'visibility:hidden',
+      'pointer-events:none',
+    ].join(';')
+    document.body.appendChild(host)
+    host.innerHTML = markup
+    const svg = host.querySelector('svg')
+    if (svg) {
+      svg.setAttribute('width', `${width}`)
+      svg.setAttribute('height', `${height}`)
+      markup = ensureSvgDocumentNamespaces(new XMLSerializer().serializeToString(svg))
+    }
+    await waitForExportPaintFrames(1)
+  }
+  try {
+    return await rasterizeSvgBlobToCanvasInternal(markup, width, height)
+  } finally {
+    host?.remove()
+  }
+}
+
+async function rasterizeSvgMarkupTiled(fullMarkup, width, height, maxTilePixels) {
+  const viewBox = parseMarkupViewBox(fullMarkup)
+  const tileHeight = Math.max(1, Math.floor(maxTilePixels / width))
+  const finalCanvas = document.createElement('canvas')
+  finalCanvas.width = width
+  finalCanvas.height = height
+  if (finalCanvas.width !== width || finalCanvas.height !== height) {
+    throw new Error('export final canvas allocation failed')
+  }
+  const finalCtx = finalCanvas.getContext('2d')
+  const markup = ensureSvgDocumentNamespaces(fullMarkup)
+
+  for (let srcY = 0; srcY < height; srcY += tileHeight) {
+    const sliceH = Math.min(tileHeight, height - srcY)
+    const tileMarkup = viewBox
+      ? buildTiledExportMarkup(markup, width, height, viewBox, srcY, sliceH)
+      : markup
+    if (typeof DeBug !== 'undefined' && DeBug.log) {
+      DeBug.log('[Export] raster tile', { y: srcY, h: sliceH, w: width })
+    }
+    const tileCanvas = await rasterizeSvgBlobToCanvas(tileMarkup, width, sliceH)
+    if (!canvasHasExportPixels(tileCanvas)) {
+      throw new Error(`export tile empty at y=${srcY}`)
+    }
+    finalCtx.drawImage(tileCanvas, 0, srcY)
+    tileCanvas.width = 1
+    tileCanvas.height = 1
+    await yieldExportToMain()
+  }
+  return finalCanvas
+}
+
+async function rasterizeExportMarkup(svgMarkup, width, height) {
+  const pixels = width * height
+  const useTiles = window.SafariCompat?.detectWebKitClass?.()
+    && pixels > WEBKIT_TILED_EXPORT_THRESHOLD
+  if (useTiles) {
+    return rasterizeSvgMarkupTiled(svgMarkup, width, height, WEBKIT_MAX_TILE_PIXELS)
+  }
+  return rasterizeSvgBlobToCanvas(svgMarkup, width, height)
 }
 
 const EXPORT_PROBE_SCALE = 0.1
@@ -380,8 +566,13 @@ async function probeExportRasterIfNeeded() {
   const probeH = Math.max(1, Math.round(exportRez.height * EXPORT_PROBE_SCALE))
   const markup = buildExportSvgMarkup(rotationInfo, probeW, probeH)
   const t0 = performance.now()
-  await rasterizeSvgMarkupToCanvas(markup, probeW, probeH)
+  const probeCanvas = await rasterizeExportMarkup(markup, probeW, probeH)
   const ms = performance.now() - t0
+  if (!canvasHasExportPixels(probeCanvas)) {
+    window.SafariCompat.recordExportRasterProbe?.(ms)
+    console.warn('[Export] Safari export probe raster empty')
+    return false
+  }
   window.SafariCompat.recordExportRasterProbe?.(ms)
   return window.SafariCompat.getCapabilities?.().export !== 'off'
 }
@@ -392,23 +583,43 @@ async function saveArtworkPNG() {
     console.warn('[Export] PNG export unavailable in Safari — use Chrome desktop for full-resolution export')
     return
   }
-  const probeOk = await probeExportRasterIfNeeded()
-  if (!probeOk) {
-    console.warn('[Export] PNG export unavailable in Safari — scaled probe exceeded time threshold')
-    return
+
+  const exportAngle = typeof artworkRotationState !== 'undefined'
+    ? (artworkRotationState.angle ?? 0)
+    : 0
+  const exportScale = typeof artworkRotationState !== 'undefined'
+    ? (artworkRotationState.scale ?? 1)
+    : 1
+  const wasBitmapActive = window.SafariCardinalBuffers?.isImageDisplayActive?.() ?? false
+
+  try {
+    const probeOk = await probeExportRasterIfNeeded()
+    if (!probeOk) {
+      console.warn('[Export] PNG export unavailable in Safari — scaled probe exceeded time threshold')
+      return
+    }
+
+    const scale = 1
+    const rez = vert(3000, 5400)
+    const rotationInfo = getArtworkExportRotationInfo()
+    const exportRez = getArtworkExportResolution(rez, rotationInfo, scale)
+    const date = getCurrentDateString()
+    const hash = tokenData.hash
+    const name = `Prototypes-${date}-${rotationInfo.code}-${hash}-${exportRez.rezString}.png`
+
+    const svgMarkup = buildExportSvgMarkup(rotationInfo, exportRez.width, exportRez.height)
+    const exportSize = getSVGMarkupIntrinsicSize(svgMarkup) || exportRez
+    await exportArtworkPngFromMarkup(
+      svgMarkup,
+      name,
+      exportSize.width,
+      exportSize.height,
+    )
+  } catch (err) {
+    console.warn('[Export] save failed', err)
+  } finally {
+    await restoreDisplayAfterExport(wasBitmapActive, exportAngle, exportScale)
   }
-
-  const scale = 1
-  const rez = vert(3000, 5400)
-  const rotationInfo = getArtworkExportRotationInfo()
-  const exportRez = getArtworkExportResolution(rez, rotationInfo, scale)
-  const date = getCurrentDateString()
-  const hash = tokenData.hash
-  const name = `Prototypes-${date}-${rotationInfo.code}-${hash}-${exportRez.rezString}.png`
-
-  const svgMarkup = buildExportSvgMarkup(rotationInfo, exportRez.width, exportRez.height)
-  const exportSize = getSVGMarkupIntrinsicSize(svgMarkup) || exportRez
-  Export.exportPNG(svgMarkup, name, exportSize.width, exportSize.height, scale)
 }
 
 function handleArtworkSaveKey(event) {
@@ -417,7 +628,7 @@ function handleArtworkSaveKey(event) {
   if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
   if (event.metaKey || event.ctrlKey || event.altKey) return
   event.preventDefault()
-  saveArtworkPNG().catch(err => console.warn('[Export] save failed', err))
+  saveArtworkPNG()
 }
 
 function installArtworkSaveControls() {

@@ -264,8 +264,10 @@
   }
 
   //SECT: WebKit detection + performance capabilities (Phase 2)
-  // Runtime-measured tiers — not hard-coded forever. When LBSE is fast enough,
-  // metrics should promote rotation:'full' and lightAnimation:true automatically.
+  // Submission MVP: cardinal rotation on all browsers. WebKit never uses live SVG
+  // rotation (rotation:'full'). Thresholds only disable rotation/export on
+  // pathological loads. Adaptive quality probes deferred — see
+  // docs/Operational/DEFERRED-ADAPTIVE-RENDER-MODES.md
 
   function detectWebKitClass() {
     const ua = navigator.userAgent
@@ -276,8 +278,27 @@
     return isDesktopSafari || isIOS
   }
 
+  // MARK: Chrome rotation capability (A/B via appControls.js → chromeRotationMode)
+  // Prefer chromeRotationMode when defined; else default to cardinal.
+  // Valid: 'cardinal' | 'full' | 'off'
+  function resolveChromeRotationMode() {
+    const override = (typeof window !== 'undefined' && window.chromeRotationMode)
+      || (typeof chromeRotationMode !== 'undefined' ? chromeRotationMode : null)
+    if (override === 'cardinal' || override === 'full' || override === 'off') return override
+    return 'cardinal'
+  }
+
+  function chromeCapabilities() {
+    return {
+      rotation: resolveChromeRotationMode(),
+      lightAnimation: true,
+      export: 'full',
+      renderEngine: 'LBSE',
+    }
+  }
+
   const CHROME_CAPABILITIES = Object.freeze({
-    rotation: 'full',
+    rotation: 'cardinal',
     lightAnimation: true,
     export: 'full',
     renderEngine: 'LBSE',
@@ -291,16 +312,13 @@
 
   // Thresholds — tune after Safari smoke tests (ms).
   const TIER_FIRST_PAINT_MS_ROTATION_OFF = 45000
-  const TIER_FIRST_PAINT_MS_ROTATION_FULL = 4000
   const TIER_BUILD_MS_ROTATION_OFF = 20000
-  const TIER_PROBE_LIGHT_MS_DEFER = 16
-  const TIER_PROBE_LIGHT_MS_HEAVY = 80
   // Scaled export probe (10% of production res); disable S export if probe exceeds this.
   const TIER_EXPORT_PROBE_MS_OFF = 12000
 
   let capabilities = detectWebKitClass()
     ? { ...WEBKIT_FALLBACK_CAPABILITIES }
-    : { ...CHROME_CAPABILITIES }
+    : chromeCapabilities()
   let renderMetrics = null
   let buildMarkStart = null
   let exportProbeComplete = false
@@ -314,17 +332,14 @@
   function computeWebKitCapabilities({ buildMs, probeLightUpdateMs, firstPaintMs, exportRasterMs }) {
     const lightAnimation = false
     const build = Number.isFinite(buildMs) ? buildMs : Infinity
-    const probe = Number.isFinite(probeLightUpdateMs) ? probeLightUpdateMs : Infinity
     const paint = Number.isFinite(firstPaintMs) ? firstPaintMs : null
     const exportProbe = Number.isFinite(exportRasterMs) ? exportRasterMs : null
 
     let rotation = 'cardinal'
     if (paint !== null && paint >= TIER_FIRST_PAINT_MS_ROTATION_OFF) rotation = 'off'
     else if (build >= TIER_BUILD_MS_ROTATION_OFF) rotation = 'off'
-    else if (paint !== null && paint < TIER_FIRST_PAINT_MS_ROTATION_FULL && probe < TIER_PROBE_LIGHT_MS_DEFER) {
-      rotation = 'full'
-    }
-    if (probe > TIER_PROBE_LIGHT_MS_HEAVY && rotation === 'full') rotation = 'cardinal'
+    // Never rotation:'full' on WebKit — live CSS rotation without light sync spins
+    // a frozen-lit snapshot (see MVP-ROTATION-SHIPPING.md).
 
     let exportCap = 'full'
     if (exportProbe !== null && exportProbe >= TIER_EXPORT_PROBE_MS_OFF) exportCap = 'off'
@@ -348,9 +363,7 @@
     if (capabilities.rotation !== 'cardinal') {
       window.SafariCardinalBuffers?.invalidateCardinalBuffers?.()
     }
-    // Cardinal buffer bake is scheduled from RevealAnim.notifyRevealComplete()
-    // after the Safari reveal finishes — not here (avoids competing with reveal
-    // and prevents hiding live SVG during a long background bake).
+    // Cardinal buffer bake is lazy — first arrow via yielding coordinator.
   }
 
   function applyLightAnimationPolicy() {
@@ -364,7 +377,7 @@
   function recordInitialRender(metrics = {}) {
     renderMetrics = { ...metrics }
     if (!detectWebKitClass()) {
-      capabilities = { ...CHROME_CAPABILITIES }
+      capabilities = chromeCapabilities()
       return { ...capabilities }
     }
     capabilities = computeWebKitCapabilities({ ...renderMetrics, ...metrics })

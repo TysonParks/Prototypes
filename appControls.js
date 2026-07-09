@@ -10,11 +10,20 @@ const productionLimits = {
   minCutDepth: 1,
 }
 
-// Runtime controls required by Animation.js and shade filters (not dev dat.GUI).
+// Runtime controls required by Animation.js and shade filters (not for production UI).
 const globalControls = {
   shadAngle: 90,
   animated: false,
 }
+
+// MARK: Chrome rotation mode (non-WebKit only)
+// Default: 'full' (live SVG rotation). Press R in Chrome to toggle cardinal buffers.
+// 'cardinal' — batch-baked bitmap crossfade (smoother; toggled via R key)
+// 'full'     — live SVG CSS transform rotation
+// Safari ignores this (always cardinal). Confirm: artworkRotationMode()
+const chromeRotationMode = 'full'
+
+window.chromeRotationMode = chromeRotationMode
 
 // Dev seed navigation defaults — must exist before artBlocks/tokenHash.js loads.
 const testingControls = {
