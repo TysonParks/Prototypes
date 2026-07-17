@@ -1547,6 +1547,7 @@ const lastHash_era3_v2_ab = [
   '0x9dc995ab1bf1ddc93ebfacc9f627329a2b85cfb6c9e55c784ee33116c76e6bb5', // Era 1 repeats
   '0x631ae018e5116817dba91ee3c2fe6c5c16e492d7cd4e93b27c8dc39318bb8e19', // Era 2 repeats
   '0x179d1da11218e0ee1901a3da9fe23d602d3a8570ac5d0b1991e3783272ddbe13', // 1535 METH: // Era 2 repeats
+  '0x213b4a9d3bb5a884ad4e72010865856a2c09668accf6dc0d44bbab7ff208612a', // Proximal Wrap: //FUNC:
 ]
 
 const lastHashEras = {

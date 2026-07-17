@@ -17,6 +17,7 @@ WITH_P5=0
 WITH_MARKERS=0
 PREVIEW=1
 VERIFY_ONLY=0
+CHUNKS=0
 
 usage() {
   cat <<'EOF'
@@ -30,6 +31,7 @@ Options:
   --strip        Readable strip: remove comments + DeBug.*, keep indentation (terser beautify)
   --with-p5      Prepend libraries/p5.min.js (standalone bundle; AB injects p5 for upload)
   --markers      Insert // === file:path === boundaries between sources (debug builds)
+  --chunks       After build, split bundle into dist/submission/chunks/ (≤23552 B plaintext)
   --no-preview   Skip dist/preview/index.html + style.css copy
   --verify       Check manifest paths exist, then exit
   --out-dir DIR  Output root (default: dist/)
@@ -43,20 +45,26 @@ Outputs (default):
   dist/preview/style.css
   dist/preview/libraries/p5.min.js  (symlink or copy when present)
 
+With --chunks (or run scripts/split-ab-chunks.py after build):
+  dist/submission/chunks/chunk-NN-of-MM.js
+  dist/submission/chunks/MANIFEST.txt
+
 Art Blocks (Q1/Q6): upload dist/submission/prototypes.js only — platform injects p5.
+Manual on-chain segments: paste plaintext chunks in order; leave Script Compression ON.
 Local preview: open dist/preview/index.html via a static server (file:// may block modules).
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --minify) MINIFY=1 ;;
-    --strip) STRIP=1 ;;
-    --with-p5) WITH_P5=1 ;;
-    --markers) WITH_MARKERS=1 ;;
-    --no-preview) PREVIEW=0 ;;
-    --verify) VERIFY_ONLY=1 ;;
-    --out-dir)
+  --minify) MINIFY=1 ;;
+  --strip) STRIP=1 ;;
+  --with-p5) WITH_P5=1 ;;
+  --markers) WITH_MARKERS=1 ;;
+  --chunks) CHUNKS=1 ;;
+  --no-preview) PREVIEW=0 ;;
+  --verify) VERIFY_ONLY=1 ;;
+  --out-dir)
       shift
       OUT_DIR="$1"
       SUB_DIR="${OUT_DIR}/submission"
@@ -229,6 +237,8 @@ write_report() {
     printf '  %8d  bundle output\n' "$bsz"
     echo ""
     echo "Upload: dist/submission/prototypes.js (p5 injected by Art Blocks)"
+    echo "On-chain segments: ./build.sh --strip --chunks  →  dist/submission/chunks/"
+    echo "  (or: python3 scripts/split-ab-chunks.py)"
     echo "Local test: dist/preview/index.html"
   } > "$report"
 }
@@ -259,6 +269,13 @@ if [[ $PREVIEW -eq 1 ]]; then
   <title>Prototypes — submission preview</title>
   <link rel="stylesheet" type="text/css" href="style.css">
 ${P5_SCRIPT}
+  <script>
+    // Mirror Art Blocks generator: inject tokenData before the art script.
+    let tokenData = {
+      tokenId: "0",
+      hash: "0x0000000000000000000000000000000000000000000000000000000000000000"
+    };
+  </script>
 </head>
 <body>
   <script src="${BUNDLE_NAME}"></script>
@@ -266,4 +283,8 @@ ${P5_SCRIPT}
 </html>
 EOF
   echo "Preview: ${PREVIEW_DIR}/index.html"
+fi
+
+if [[ $CHUNKS -eq 1 ]]; then
+  python3 "${ROOT}/scripts/split-ab-chunks.py" --src "$SUB_BUNDLE"
 fi

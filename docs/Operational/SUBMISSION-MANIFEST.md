@@ -50,7 +50,7 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 5. [RandomExtended.js](../../RandomExtended.js)
 6. [Features.js](../../Features.js)
 7. [artBlocks/ABFeaturesScript.submission.js](../../artBlocks/ABFeaturesScript.submission.js)
-8. [artBlocks/tokenHash.submission.js](../../artBlocks/tokenHash.submission.js) *(or platform-injected tokenData)*
+8. [artBlocks/tokenHash.submission.js](../../artBlocks/tokenHash.submission.js) — comments only; **do not declare `tokenData`** (AB injects `let tokenData`)
 9. [artBlocks/RandomArtBlocks.js](../../artBlocks/RandomArtBlocks.js)
 10. [artBlocks/RandomTracked.js](../../artBlocks/RandomTracked.js)
 11. [artBlocks/Random.submission.js](../../artBlocks/Random.submission.js)
@@ -88,9 +88,75 @@ From [index.html](../../index.html), **omit DEV-ONLY blocks**:
 ./build.sh              # dist/submission/prototypes.js + dist/preview/
 ./build.sh --minify     # compact: strip comments + DeBug.*, single-line output
 ./build.sh --strip      # readable: strip comments + DeBug.*, keep indentation
+./build.sh --strip --chunks  # strip build + split into on-chain plaintext segments
 ./build.sh --verify     # manifest paths only
 ./build.sh --with-p5    # include p5 in bundle (local standalone; not for AB upload)
+python3 scripts/split-ab-chunks.py   # chunk an existing dist/submission/prototypes.js
 ```
 
 **Upload:** `dist/submission/prototypes.js` only (Art Blocks injects p5).  
-**Local E4:** serve `dist/preview/` and compare hashes to dev `index.html`.
+**Local E4:** serve `dist/preview/` and compare hashes to dev `index.html`.  
+**`tokenData`:** Never declare in the submission bundle. Art Blocks injects
+`let tokenData` before the art script; a second `const`/`let`/`var` throws
+`Identifier 'tokenData' has already been declared` (blank outputs). Local
+preview injects `tokenData` in `dist/preview/index.html` via `build.sh`.
+
+### On-chain single-segment hotfix (tokenData)
+
+If the script is already deployed in 22×23552 segments and only the stub must
+go, replace the declaration with an **equal-length** comment so segment byte
+boundaries stay aligned, then **UPDATE segment 2 only**
+(`chunk-02-of-22.js`). See `dist/submission/chunks/HOTFIX-tokenData.txt`.
+A normal `./build.sh --strip --chunks` after removing the stub shifts all
+later segments — use that only when you intend a full re-upload.
+
+---
+
+## Art Blocks script chunks (manual / on-chain)
+
+Scripts larger than ~24 KB must be stored as sequential on-chain segments. Creator
+Dashboard **Script Compression** compresses **each segment independently** before
+`addProjectScriptCompressed()`; on read, each index is decompressed then
+concatenated. Do **not** gzip the whole file and slice compressed bytes.
+
+### Workflow
+
+```bash
+./build.sh --strip --chunks
+# → dist/submission/chunks/chunk-01-of-NN.js … chunk-NN-of-NN.js
+# → dist/submission/chunks/MANIFEST.txt  (sha256, sizes, gzip-9 estimates)
+```
+
+1. **UPDATE** existing script index 0 with `chunk-01` (UI may forbid deleting the first segment).
+2. **ADD** `chunk-02` … `chunk-NN` in order. Leave **Script Compression ON**.
+3. On a failed tx, retry the **same** chunk file — do not re-split mid-upload.
+4. Preview after all indices land; do not lock until render works.
+
+Default plaintext limit: **23552 bytes** (matches Sepolia auto-chunker review UI, 2026-07-09).
+Override: `python3 scripts/split-ab-chunks.py --limit 23000`.
+
+### Sepolia compression / chunk math (2026-07-09 reference)
+
+Hold these numbers when estimating gas / segment count if the auto-chunk pipeline
+is unavailable again.
+
+| Observation | Value |
+|-------------|--------|
+| Strip bundle under test | ~499 626 B (`./build.sh --strip`) |
+| Auto UI (Script Compression ON) | **17** chunks × **23552** B review size |
+| Implied auto payload | 17 × 23552 = **400 384** B |
+| Naive plaintext split @ 23552 of same ~500 KB file | **22** chunks |
+| Local whole-file gzip-9 of that strip build | **~107 578** B (~21.5% of plaintext) |
+| Local split@23552 then gzip-9 each | 22 segments, each well under 24 KB compressed |
+
+**Interpretation:** Compression is **per-segment**, not whole-file-then-slice.
+The 17 vs 22 discrepancy is unresolved (dashboard packing vs source delta at
+upload time). For planning:
+
+- **Conservative tx count:** `ceil(bundle_bytes / 23552)` (plaintext split).
+- **Optional soft factor from this event only:** auto UI showed ~17/22 ≈ **0.77×**
+  fewer segments than naive plaintext — use only as a rough gas guess, not as a
+  split algorithm.
+
+`scripts/split-ab-chunks.py` embeds this reference in every `MANIFEST.txt` and
+prints per-chunk gzip-9 estimates for packing intuition.

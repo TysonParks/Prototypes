@@ -1,6 +1,4 @@
-// Submission profile: Art Blocks injects hash and tokenId before the generator runs.
-// This stub is the E2 bundle input — replace or omit when the platform provides tokenData.
-const tokenData = {
-  hash: '0x0000000000000000000000000000000000000000000000000000000000000000',
-  tokenId: '0',
-}
+// Submission profile: Art Blocks injects `let tokenData` before the art script runs.
+// Do NOT declare tokenData here — `const`/`let`/`var` redeclaration throws SyntaxError
+// on the generator (blank outputs). Local preview injects tokenData in
+// dist/preview/index.html (see build.sh).
