@@ -179,7 +179,7 @@ entire corpus.
    - commit hash of old vs new baseline
    - whether geometry changed for existing hashes (usually yes when PRNG or calc chain changes)
    - updated `R.useage` expectations if testing full builds
-   - `lastHash` era indices (era1: 0–1522, era2: 1523–1531, era3: 1532+)
+   - `lastHash` era indices (era1: 0–1522, era2: 1523–1531, era3: 1532–1536, era4: 1537+)
 
 ### What changes break determinism
 

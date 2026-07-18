@@ -1,4 +1,4 @@
-// lastHash corpus — three determinacy eras (FeatureSet × PRNG).
+// lastHash corpus — four determinacy eras (FeatureSet × PRNG × weight baseline).
 // See docs/Operational/PRNG-MIGRATION.md for repro paths.
 
 // Era 1 — v1 FeatureSet + legacy PRNG (indices 0–1522)
@@ -1541,13 +1541,18 @@ const lastHash_era2_v2_legacy = [
   '0x179d1da11218e0ee1901a3da9fe23d602d3a8570ac5d0b1991e3783272ddbe13', // Bad Grouping w/overlap: //FUNC:,
 ]
 
-// Era 3 — v2 FeatureSet + AB PRNG (post-migration captures only)
+// Era 3 — v2 FeatureSet + AB PRNG (pre–Feature-weight retune; indices 1532–1536)
 const lastHash_era3_v2_ab = [
   '0x08c672bb15be0069282123b4573985dded9718a95a5bce7639d005cdd247f5f8', // Era 1 repeats
   '0x9dc995ab1bf1ddc93ebfacc9f627329a2b85cfb6c9e55c784ee33116c76e6bb5', // Era 1 repeats
   '0x631ae018e5116817dba91ee3c2fe6c5c16e492d7cd4e93b27c8dc39318bb8e19', // Era 2 repeats
   '0x179d1da11218e0ee1901a3da9fe23d602d3a8570ac5d0b1991e3783272ddbe13', // 1535 METH: // Era 2 repeats
   '0x213b4a9d3bb5a884ad4e72010865856a2c09668accf6dc0d44bbab7ff208612a', // Proximal Wrap: //FUNC:
+]
+
+// Era 4 — v2 FeatureSet + AB PRNG (post–Feature-weight retune; append new QA here)
+const lastHash_era4_v2_ab = [
+
 ]
 
 const lastHashEras = {
@@ -1572,10 +1577,19 @@ const lastHashEras = {
   era3_v2_ab: {
     id: 'era3',
     start: 1532,
+    end: 1536,
+    featureSet: 'v2',
+    prng: 'ab',
+    git: 'prng-v2-ab baseline (pre Feature weight retune)',
+    class: 'FeatureSet',
+  },
+  era4_v2_ab: {
+    id: 'era4',
+    start: 1537,
     end: null,
     featureSet: 'v2',
     prng: 'ab',
-    git: 'HEAD + prng-v2-ab tag',
+    git: 'HEAD (Feature weight retune)',
     class: 'FeatureSet',
   },
 }
@@ -1584,6 +1598,7 @@ const lastHash = [
   ...lastHash_era1_v1_legacy,
   ...lastHash_era2_v2_legacy,
   ...lastHash_era3_v2_ab,
+  ...lastHash_era4_v2_ab,
 ]
 
 function lastHashEra(index) {

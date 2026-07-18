@@ -9,7 +9,7 @@
 [LASTHASH-V1-REPRO-MANIFEST](LASTHASH-V1-REPRO-MANIFEST.md) |
 [SUBMISSION-MANIFEST](SUBMISSION-MANIFEST.md)
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-18*
 
 ---
 
@@ -44,9 +44,11 @@ The sfc32 bitwise step is identical; scheduling differs. **Same hash string → 
 |-----|---------|------------|------|------------|
 | **era1** | 0–1522 | v1 (`FeatureSetLegacy`) | legacy | `features-calc-v1-submission @ a67f45c` |
 | **era2** | 1523–1531 | v2 (`FeatureSet`) | legacy | `features-calc-v2-pre-release @ 00001d7` / HEAD |
-| **era3** | 1532+ | v2 (`FeatureSet`) | ab | HEAD + tag `prng-v2-ab` (recommended at first AB upload) |
+| **era3** | 1532–1536 | v2 (`FeatureSet`) | ab | `prng-v2-ab` baseline (pre Feature weight retune) |
+| **era4** | 1537+ | v2 (`FeatureSet`) | ab | HEAD (Feature weight retune) |
 
-New QA hashes after migration append **only** to `lastHash_era3_v2_ab`.
+New QA hashes after the Feature weight retune append **only** to `lastHash_era4_v2_ab`.
+Era3 hashes still resolve to v2 + ab at runtime; visual repro of era3 may require checking out the pre-retune `Features.js` weights.
 
 ---
 
@@ -64,7 +66,8 @@ Manual override: set `testingControls.prngMode` or `featureSetMode` to `'legacy'
 |------|------------|---------------------|
 | v1 bug from June 2026 band | e.g. 1490 | v1 + legacy |
 | v2 pre-PRNG-migration hash | e.g. 1527 | v2 + legacy |
-| Submission-parity hash | era3 entry | v2 + ab |
+| Pre–weight-retune AB hash | era3 entry (1532–1536) | v2 + ab |
+| Submission-parity hash | era4 entry | v2 + ab |
 
 ---
 
