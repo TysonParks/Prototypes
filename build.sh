@@ -18,6 +18,8 @@ WITH_MARKERS=0
 PREVIEW=1
 VERIFY_ONLY=0
 CHUNKS=0
+CHUNK_COUNT=""
+CHUNK_LIMIT=""
 
 usage() {
   cat <<'EOF'
@@ -31,7 +33,10 @@ Options:
   --strip        Readable strip: remove comments + DeBug.*, keep indentation (terser beautify)
   --with-p5      Prepend libraries/p5.min.js (standalone bundle; AB injects p5 for upload)
   --markers      Insert // === file:path === boundaries between sources (debug builds)
-  --chunks       After build, split bundle into dist/submission/chunks/ (≤23552 B plaintext)
+  --chunks       After build, split into dist/submission/chunks/ (default: 18 segments)
+  --chunk-count N  With --chunks: target N segments (default 18; Sepolia auto was 17)
+  --chunk-limit B  With --chunks: max plaintext bytes/segment (overrides --chunk-count;
+                     use 23552 for conservative dashboard-safe splits)
   --no-preview   Skip dist/preview/index.html + style.css copy
   --verify       Check manifest paths exist, then exit
   --out-dir DIR  Output root (default: dist/)
@@ -62,6 +67,16 @@ while [[ $# -gt 0 ]]; do
   --with-p5) WITH_P5=1 ;;
   --markers) WITH_MARKERS=1 ;;
   --chunks) CHUNKS=1 ;;
+  --chunk-count)
+      shift
+      CHUNK_COUNT="$1"
+      CHUNKS=1
+      ;;
+  --chunk-limit)
+      shift
+      CHUNK_LIMIT="$1"
+      CHUNKS=1
+      ;;
   --no-preview) PREVIEW=0 ;;
   --verify) VERIFY_ONLY=1 ;;
   --out-dir)
@@ -286,5 +301,13 @@ EOF
 fi
 
 if [[ $CHUNKS -eq 1 ]]; then
-  python3 "${ROOT}/scripts/split-ab-chunks.py" --src "$SUB_BUNDLE"
+  CHUNK_ARGS=(--src "$SUB_BUNDLE")
+  if [[ -n "$CHUNK_LIMIT" ]]; then
+    CHUNK_ARGS+=(--limit "$CHUNK_LIMIT")
+  elif [[ -n "$CHUNK_COUNT" ]]; then
+    CHUNK_ARGS+=(--count "$CHUNK_COUNT")
+  else
+    CHUNK_ARGS+=(--count 18)
+  fi
+  python3 "${ROOT}/scripts/split-ab-chunks.py" "${CHUNK_ARGS[@]}"
 fi

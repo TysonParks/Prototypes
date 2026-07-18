@@ -742,6 +742,9 @@
   }
 
   function setLiveArtworkDisplayed(visible) {
+    // Cardinal bitmap mode hides #BG (which carries the page fill). Keep the
+    // document chrome black so the viewport outside the overlay never flashes white.
+    window.ensureArtworkPageBackground?.()
     if (visible) {
       restoreLiveArtworkStyles()
       return
@@ -775,11 +778,19 @@
   function getDisplayRect() {
     const viewport = document.getElementById('artwork-rotation-viewport')
     const target = viewport || FRAME?.bleed?.elt
+    // When live artwork is hidden (display:none), getBoundingClientRect collapses
+    // to 0 — prefer the cached layout rect captured before hide.
+    if (target && !imageDisplayActive) {
+      const rect = target.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) return rect
+    }
+    if (layoutRectCache && layoutRectCache.width > 0 && layoutRectCache.height > 0) {
+      return layoutRectCache
+    }
     if (target) {
       const rect = target.getBoundingClientRect()
       if (rect.width > 0 && rect.height > 0) return rect
     }
-    if (layoutRectCache) return layoutRectCache
     if (!frameSize) return null
     const w = frameSize.x
     const h = frameSize.y
@@ -1160,6 +1171,13 @@
       'position:absolute',
       'left:50%',
       'top:50%',
+      // Defeat Art Blocks generator CSS: `canvas { left/right/top/bottom: 0 }`.
+      // Without right/bottom:auto, the canvas stretches to the corner and the
+      // rotation pivot reads as off-center (clipped after 90°/270°) — Chrome and
+      // Safari, whenever cardinal/smooth bitmap rotation is active.
+      'right:auto',
+      'bottom:auto',
+      'margin:0',
       'transform:translate(-50%,-50%)',
       'max-width:none',
       'max-height:none',

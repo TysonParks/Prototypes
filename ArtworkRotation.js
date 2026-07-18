@@ -621,9 +621,10 @@ async function rotateArtworkByLive(direction) {
   if (!isWebKitRotationLocked() && window.SafariCardinalBuffers?.isImageDisplayActive?.()) {
     window.SafariCardinalBuffers.recoverToLiveArtwork('chrome live rotation')
   }
-  if (artworkRotationState.screenLightAngle === null) {
-    artworkRotationState.screenLightAngle = readScreenSpaceLightAngle()
-  }
+  // Lock screen-up light from object-space shadAngle (post-rebuild default 90°),
+  // never from readEffectiveScreenLightAngle — that adds current objRot and would
+  // freeze a wrong screen reference after PostParam non-Up cold loads.
+  if (shouldSyncRotationLight()) ensureCardinalScreenLightAngle()
 
   const startAngle = artworkRotationState.angle
   const targetAngle = startAngle + direction * 90
@@ -660,7 +661,11 @@ async function rotateArtworkByLive(direction) {
 
 function syncArtworkRotationToViewport() {
   if (!FRAME?.bleed?.elt) return
-  if (usesCardinalRotation()) ensureCardinalScreenLightAngle()
+  // All interactive rotation modes (Chrome live + cardinal): lock screen-space
+  // light to "from above" then compensate filters for current objRot. Chrome live
+  // used to skip ensureCardinalScreenLightAngle, so PostParam non-Up loads left
+  // shadAngle uncompensated and subsequent rotates could lock the wrong ref.
+  if (shouldSyncRotationLight()) ensureCardinalScreenLightAngle()
   const targetScale = artworkRotationScaleFor(artworkRotationState.angle)
   artworkRotationState.scale = targetScale
   if (window.SafariCardinalBuffers?.isImageDisplayActive?.()) {
@@ -670,7 +675,7 @@ function syncArtworkRotationToViewport() {
   }
   setArtworkBackingScale(targetScale, artworkRotationState.angle, targetScale)
   applyArtworkRotationTransform(artworkRotationState.angle, targetScale)
-  if (shouldSyncRotationLight() && artworkRotationState.screenLightAngle !== null) {
+  if (shouldSyncRotationLight()) {
     updateArtworkRotationLight(artworkRotationState.angle)
   }
   syncRevealLayoutAfterArtworkRotation()
@@ -782,8 +787,9 @@ function resolveArtworkVisualAngle(visualAngle) {
 
 function ensureCardinalScreenLightAngle() {
   if (artworkRotationState.screenLightAngle !== null) return
-  // Screen-space reference captured at objRot=0. Cardinal path never syncs
-  // shadAngle to object rotation, so shadAngle still equals the objRot=0 value.
+  // Screen-space "from above" reference. Capture object-space shadAngle while it
+  // still means objRot=0 (rebuild resets to 90°). Do not derive from
+  // local+objRot — that would bake PostParam orientation into the screen ref.
   noteArtworkScreenLightAngle(normalizeDegree(globalControls?.shadAngle ?? 90))
 }
 

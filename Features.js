@@ -71,15 +71,15 @@ class FeatureSet {
     return {
       // grid features (6)
       'Grid Style': this.gridStyle,
-      'Grid Width': this.x,
-      'Grid Height': this.y,
+      'Grid Columns': this.x,
+      'Grid Rows': this.y,
       'Cell Aspect': this.cellAspect,
       'Cell Outset': this.cellOutset,
       'Cell Inset': this.cellInset,
 
       // group features (5)
-      'Primary Seed Style': this.seed1,
-      'Secondary Seed Style': this.seed2,
+      'Seed Style Primary': this.seed1,
+      'Seed Style Secondary': this.seed2,
       'Group Count Additive': this.groupCount.adds,
       'Group Count Subtractive': this.groupCount.subs,
       'Group Density': this.density,
@@ -793,35 +793,35 @@ const publicOptions = {
   gridXFlex: {
     name: 'Columns',
     options: [
-      ['1', 0.04],              // 4  / 100 ("Flexible")
-      ['2', 0.08],              // 5  / 100 ("Flexible")
-      ['3', 0.12],              // 6  / 100 ("Flexible")
-      ['4', 0.15],              // 15 / 100 ("Flexible")
-      ['5', 0.15],              // 15 / 100 ("Flexible")
-      ['6', 0.15],              // 15 / 100 ("Flexible")
-      ['7', 0.1],               // 15 / 100 ("Flexible")
-      ['8', 0.1],               // 6  / 100 ("Flexible")
-      ['9', 0.06],              // 5  / 100 ("Flexible")
-      ['10', 0.05],             // 4  / 100 ("Flexible")
-      // ['15', 0.05],             // 4  / 100 ("Flexible")
-      // ['20', 0.05],             // 4  / 100 ("Flexible")
-      // ['30', 0.05],             // 4  / 100 ("Flexible")
+      ['1', .04],              // 4  / 100 ("Flexible")
+      ['2', .08],              // 8  / 100 ("Flexible")
+      ['3', .12],              // 12 / 100 ("Flexible")
+      ['4', .15],              // 15 / 100 ("Flexible")
+      ['5', .15],              // 15 / 100 ("Flexible")
+      ['6', .15],              // 15 / 100 ("Flexible")
+      ['7', .1],               // 10 / 100 ("Flexible")
+      ['8', .1],               // 10 / 100 ("Flexible")
+      ['9', .06],              // 6  / 100 ("Flexible")
+      ['10', .05],             // 5  / 100 ("Flexible")
+      // ['15', .05],             // 4  / 100 ("Flexible")
+      // ['20', .05],             // 4  / 100 ("Flexible")
+      // ['30', .05],             // 4  / 100 ("Flexible")
     ]
   },
   //Private: grid column amount
   gridXMagic: {
     name: 'Columns',
     options: [
-      ['1', .07],                 // 14  / 200 ("Magical")
-      ['2', .1],                  // 20  / 200 ("Magical")
+      ['1', .04],                 //  8  / 200 ("Magical")
+      ['2', .09],                 // 18  / 200 ("Magical")
       ['3', .1],                  // 20  / 200 ("Magical")
-      ['4', .11],                 // 22  / 200 ("Magical")
-      ['5', .11],                 // 22  / 200 ("Magical")
+      ['4', .13],                 // 26  / 200 ("Magical")
+      ['5', .12],                 // 24  / 200 ("Magical")
       ['6', .1],                  // 10  / 200 ("Magical")
       ['7', .09],                 // 18  / 200 ("Magical")
       ['8', .1],                  // 20  / 200 ("Magical")
       ['9', .11],                 // 22  / 200 ("Magical")
-      ['10', .11],                // 22  / 200 ("Magical")
+      ['10', .12],                // 24  / 200 ("Magical")
       // ['15', .11],                // 22  / 200 ("Magical")
       // ['20', .11],                // 22  / 200 ("Magical")
     ]
@@ -836,88 +836,88 @@ const publicOptions = {
   uniformCuts: {
     name: 'Uniform Cuts',
     options: [
-      ['True', 2 / 3],            // 200 / 300 (Total)  
-      ['False', 1 / 3],           // 100 / 300 (Total)  
+      ['True', 2 / 3],         // 200 / 300 (Total)  
+      ['False', 1 / 3],        // 100 / 300 (Total)  
     ]
   },
   //Private: uniformCuts : Publicly revealed as cutStyleCount (1,2,3,4)
   uniformCutsStyle: {
     name: 'Uniform Cuts Style',
     options: [
-      ['rOut', 1 / 2],            // 100 / 200 (Uniform)
-      ['jIn', 1 / 4],             // 50  / 200 (Uniform)
-      ['rIn', 1 / 8],             // 25  / 200 (Uniform)
-      ['jOut', 1 / 8],            // 25  / 200 (Uniform)
+      ['rOut', .4],            // 80 / 200 (Uniform)
+      ['jIn', .3],             // 60 / 200 (Uniform)
+      ['rIn', .15],            // 30 / 200 (Uniform)
+      ['jOut', .15],           // 30 / 200 (Uniform)
     ]
   },
   //Public: cutDirections
   cutDirections: {
     name: 'Cut Directions',
     options: [
-      ['Additive', 0.3],
-      ['Subtractive', 0.2],
-      ['Additive and Subtractive', 0.5],
+      ['Additive', .3],
+      ['Subtractive', .2],
+      ['Additive and Subtractive', .5],
     ]
   },
   //Public: uniformLofts
   uniformLofts: {
     name: 'Uniform Loft Depths',
     options: [
-      ['True', 0.2],
-      ['False', 0.8],
+      ['True', .2],
+      ['False', .8],
     ]
   },
   // Public: insideCuts : Inside Cuts only apply to "Square Aspect" outputs
   insideCuts: {
     name: 'Inside Cuts',
     options: [
-      ['True', 0.4, true],        // 92  / 230 (Square Aspect) 
-      ['False', 0.6, false],      // 138 / 230 (Square Aspect) 
+      ['True', .4, true],        // 92  / 230 (Square Aspect) 
+      ['False', .6, false],      // 138 / 230 (Square Aspect) 
     ]
   },
   //Public: insideCutStyle
   insideCutStyle: {
     name: 'Inside Cut Style',
     options: [
-      ['None', 0.0],              // 0  / 69 (Inside Cuts)
-      ['Cascades', 0.35],         // 24 / 69 (Inside Cuts)
-      ['Waves', 0.2],             // 14 / 69 (Inside Cuts)
-      // ['Cyma Recta', 0.2],        //  7 / 69 (Inside Cuts)
-      // ['Mixed', 0.25],            // 17 / 69 (Inside Cuts)
-      // ['Channel', 0.1],         //  7 / 69 (Inside Cuts)
+      ['None', .0],              // 0  / 69 (Inside Cuts)
+      ['Cascades', .6],         // 24 / 69 (Inside Cuts)
+      ['Waves', .4],             // 14 / 69 (Inside Cuts)
+      // ['Cyma Recta', .2],        //  7 / 69 (Inside Cuts)
+      // ['Mixed', .25],            // 17 / 69 (Inside Cuts)
+      // ['Channel', .1],         //  7 / 69 (Inside Cuts)
     ]
   },
   //Private: insideCutAmount INSTANCE USE
   insideCutAmount: {
     name: 'Inside Cut Amount',
     options: [
-      ['None', 0.0, 0],           // 0  / 69 (Inside Cuts)
-      ['Two', 0.0,],              // 0  / 69 (Inside Cuts)
-      ['Small', 0.35, 4],         // 24 / 69 (Inside Cuts)
-      ['Medium', 0.4, 3],         // 28 / 69 (Inside Cuts)
-      ['Large', 0.25, 2],         // 17 / 69 (Inside Cuts)
+      ['None', .0, 0],           // 0  / 69 (Inside Cuts)
+      ['Two', .0,],              // 0  / 69 (Inside Cuts)
+      ['Small', .35, 4],         // 24 / 69 (Inside Cuts)
+      ['Medium', .4, 3],         // 28 / 69 (Inside Cuts)
+      ['Large', .25, 2],         // 17 / 69 (Inside Cuts)
     ]
   },
   // Public: linearCuts
   linearCuts: {
     name: 'Linear Cuts',
     options: [
-      ['None', 0.7, 0],           // 70 / 100
-      ['One', 0.2, 1],            // 20 / 100
-      ['Some', 0.1, 2],           // 10 / 100
+      ['None', .7, 0],           // 70 / 100
+      ['One', .2, 1],            // 20 / 100
+      ['Some', .1, 2],           // 10 / 100
     ]
   },
   // Private: amount of extra groups to create
   extraGroups: {
     name: 'Extra Groups',
     options: [
-      ['None', 0.05],             // 15 / 300 (Total)
-      ['1', 0.05],                // 30 / 300 (Total)
-      ['2', 0.05],                // 90 / 300 (Total)      
-      ['3', 0.2],                 // 45 / 300 (Total)
-      ['4', 0.2],                 // 45 / 300 (Total)
-      ['5', 0.25],                // 45 / 300 (Total)
-      ['6', 0.25],                // 45 / 300 (Total)
+      ['None', .05],             // 15 / 300 (Total)
+      ['1', .05],                // 30 / 300 (Total)
+      ['2', .05],                // 90 / 300 (Total)      
+      ['3', .2],                 // 45 / 300 (Total)
+      ['4', .2],                 // 45 / 300 (Total)
+      ['5', .25],                // 45 / 300 (Total)
+      ['6', .25],                // 45 / 300 (Total)
     ]
   },
 
@@ -925,9 +925,9 @@ const publicOptions = {
   density: {
     name: 'Grid Density',
     options: [
-      ['So Lonely', 0.01],            // 3 / 300 (Total)
-      ['Some Availability', 0.04],    // 12 / 300 (Total)
-      ['At Capacity', 0.95],          // 285 / 300 (Total)
+      ['So Lonely', .01],            // 3 / 300 (Total)
+      ['Some Availability', .04],    // 12 / 300 (Total)
+      ['At Capacity', .95],          // 285 / 300 (Total)
     ]
   },
   // #endregion
@@ -945,22 +945,22 @@ const publicOptions = {
       ['Simple Pattern', .125],        // 37 / 300 (Total)
       ['Complex Pattern', .225],       // 67 / 300 (Total)
       ['Snake', .2],                   // 60 / 300 (Total)
-      // ['Snakes', 0.1],                  // 30 / 300 (Total)
-      // ['Triangles', 0.1],
+      // ['Snakes', .1],                  // 30 / 300 (Total)
+      // ['Triangles', .1],
     ]
   },
   // Public: style of seed
   seed2: {
     name: 'Secondary GridSeed Style',
     options: [
-      ['Modifier', 0.45],               // 135 / 300 (Total)
-      ['Noise', 0.025],                 // 8   / 300 (Total)
-      ['Random Comb', 0.025],           // 8   / 300 (Total)
-      ['Squares', 0.1],                 // 30  / 300 (Total)   // Spheres
-      ['Rectangles', 0.1],              // 30  / 300 (Total)   // Pills
-      ['Simple Pattern', 0.1],          // 30  / 300 (Total)
-      ['Complex Pattern', 0.1],         // 30  / 300 (Total)
-      ['Snake', 0.1],                   // 30  / 300 (Total)
+      ['Modifier', .45],               // 135 / 300 (Total)
+      ['Noise', .025],                 // 8   / 300 (Total)
+      ['Random Comb', .025],           // 8   / 300 (Total)
+      ['Squares', .1],                 // 30  / 300 (Total)   // Spheres
+      ['Rectangles', .1],              // 30  / 300 (Total)   // Pills
+      ['Simple Pattern', .1],          // 30  / 300 (Total)
+      ['Complex Pattern', .1],         // 30  / 300 (Total)
+      ['Snake', .1],                   // 30  / 300 (Total)
     ]
   },
 
@@ -968,22 +968,21 @@ const publicOptions = {
   rectOverlap: {
     name: 'Rectangular Overlap',
     options: [
-      ['Never', 0.6, 0],                      // 60 / 100
-      ['Always', 0.1, 1],                     // 10 / 100
-      ['Sometimes', 0.3, 2],                  // 30 / 100 
+      ['Never', .6, 0],                      // 60 / 100
+      ['Always', .1, 1],                     // 10 / 100
+      ['Sometimes', .3, 2],                  // 30 / 100 
     ],
   },
   // Private: Instance style of modifier
   modifierStyle: {
     name: 'Modifier Style',
     options: [
-      ['Noise', 0.1],                     // 10 / 100
-      ['Snake', 0.25],                     // 10 / 100 
-      ['Outline Single Direction', 0.15], // 15 / 100
-      ['Outline Some Directions', 0.1],   // 40 / 100
-      ['Outline', 0.1],                   // 20 / 100
-      ['Outlines', 0.3],                  // 10 / 100
-      // ['Double Concentric', 0.1],        // 10 / 100
+      ['Noise', .1],                      // 10 / 100
+      ['Snake', .25],                     // 25 / 100 
+      ['Outline Single Direction', .15],  // 15 / 100
+      ['Outline Some Directions', .1],    // 10 / 100
+      ['Outline', .1],                    // 10 / 100
+      ['Outlines', .3],                   // 30 / 100
     ]
   },
 
@@ -996,33 +995,33 @@ const publicOptions = {
   frameWidth: {
     name: 'Frame Width',
     options: [
-      ['Minimum', 0.15, 0],        // 15 / 100 ("Flexible")     10 / 300 (Total)
-      ['Small', 0.4, 1],           // 40 / 100 ("Flexible")
-      ['Medium', 0.25, 2],         // 25 / 100 ("Flexible")
-      ['Large', 0.2, 3],           // 20 / 100 ("Flexible")
+      ['Minimum', .15, 0],        // 15 / 100 ("Flexible")     10 / 300 (Total)
+      ['Small', .4, 1],           // 40 / 100 ("Flexible")
+      ['Medium', .25, 2],         // 25 / 100 ("Flexible")
+      ['Large', .2, 3],           // 20 / 100 ("Flexible")
     ],
   },
   // Public: Frame Divisions
   frameDivs: {
     name: 'Frame Divisions',
     options: [
-      ['1', 0.3],               // 90  / 300 (Total)
-      ['2', 0.35],              // 105  / 300 (Total)
-      ['3', 0.2],               // 60  / 300 (Total)
-      ['4', 0.1],               // 30 / 300 (Total)
-      ['5', 0.05],              // 15  / 300 (Total)       
+      ['1', .3],               // 90  / 300 (Total)
+      ['2', .35],              // 105  / 300 (Total)
+      ['3', .2],               // 60  / 300 (Total)
+      ['4', .1],               // 30 / 300 (Total)
+      ['5', .05],              // 15  / 300 (Total)       
     ]
   },
   // Public: Frame Divisions
   frameSpacing: {
     name: 'Frame Spacing',
     options: [
-      ['Whole', 0.2, 1],            // 120 / 300 (Total)
-      ['Thirds', 0.15, 3],          // 30  / 300 (Total)
-      ['Quarters', 0.2, 4],         // 60  / 300 (Total)
-      ['Fifths', 0.15, 5],          // 30  / 300 (Total)  
-      ['Eighths', 0.15, 8],         // 30  / 300 (Total)     
-      ['Ninths', 0.15, 9],          // 30  / 300 (Total)   
+      ['Whole', .2, 1],            // 120 / 300 (Total)
+      ['Thirds', .15, 3],          // 30  / 300 (Total)
+      ['Quarters', .2, 4],         // 60  / 300 (Total)
+      ['Fifths', .15, 5],          // 30  / 300 (Total)  
+      ['Eighths', .15, 8],         // 30  / 300 (Total)     
+      ['Ninths', .15, 9],          // 30  / 300 (Total)   
     ],
     // values: [1, 3, 4, 5, 8, 9],
   },
@@ -1030,22 +1029,22 @@ const publicOptions = {
   frameCascades: {
     name: 'Frame Cascades',
     options: [
-      ['None', 0.75, 0],            // 195 / 300 (Total)
-      ['One', 0.2, 1],              // 90  / 300 (Total)
-      ['Some', 0.05, 2],            // 15  / 300 (Total)
+      ['None', .75, 0],            // 195 / 300 (Total)
+      ['One', .2, 1],              // 90  / 300 (Total)
+      ['Some', .05, 2],            // 15  / 300 (Total)
     ],
   },
   // Private: Frame Profiles
   frameProfiles: {
     name: 'Frame Profiles',
     options: [
-      ['Flat', 0.05],            // 15 / 300 (Total)
-      ['iIn', 0.025],             // 15 / 300 (Total)
-      ['iOut', 0.025],            // 15 / 300 (Total)
-      ['jIn', 0.25],             // 75 / 300 (Total)
-      ['jOut', 0.2],            // 45 / 300 (Total)
-      ['rIn', 0.15],             // 45 / 300 (Total)
-      ['rOut', 0.3],             // 90 / 300 (Total)
+      ['Flat', .05],            // 15 / 300 (Total)
+      ['iIn', .025],             // 15 / 300 (Total)
+      ['iOut', .025],            // 15 / 300 (Total)
+      ['jIn', .25],             // 75 / 300 (Total)
+      ['jOut', .2],            // 45 / 300 (Total)
+      ['rIn', .15],             // 45 / 300 (Total)
+      ['rOut', .3],             // 90 / 300 (Total)
     ]
   },
   // #endregion
@@ -1054,7 +1053,7 @@ const publicOptions = {
   // symmetryStyle: {                                                                 //UNUSED:
   //   name: 'Symmetry Style',
   //   options: [
-  //     ['None', 0.6],
+  //     ['None', .6],
   //     ['Horizontal Reflection', .1],
   //     ['Vertical Reflection', .1],
   //     ['Quadrant Reflection', .08],
@@ -1071,7 +1070,7 @@ const publicOptions = {
   // symmetryUse: {
   //   name: 'Symmetry Use',
   //   options: [
-  //     ['All', 0.5],
+  //     ['All', .5],
   //     ['Empty Groups', .1], // removed if (Density === 'At Capacity') in #calcDensity()
   //     ['Assigned Groups', .2],// removed if (Density === 'At Capacity') in #calcDensity()
   //     ['One Group', .1], // removed if (groupsCount < 2) in #calcGroupCounts()
@@ -1085,62 +1084,62 @@ const publicOptions = {
   gridTraversalDirection: {
     name: 'Grid Traversal Direction',
     options: [
-      ['Horizontal', 0.5],
-      ['Vertical', 0.5]
+      ['Horizontal', .5],
+      ['Vertical', .5]
     ]
   },
   // Private: (INSTANCE USE) quadrant/corner to start from
   startQuad: {
     name: 'Starting Quadrant',
     options: [
-      ['Top Left', 0.25],
-      ['Top Right', 0.25],
-      ['Bottom Right', 0.25],
-      ['Bottom Left', 0.25]
+      ['Top Left', .25],
+      ['Top Right', .25],
+      ['Bottom Right', .25],
+      ['Bottom Left', .25]
     ]
   },
   // Private: (INSTANCE USE) style of additive cut
   additiveStyle: {
     name: 'Additive Style',
     options: [
-      // ['i', 0.1],
-      ['j', 0.4],
-      ['r', 0.5],
-      // ['v', 0.3],
+      // ['i', .1],
+      ['j', .4],
+      ['r', .5],
+      // ['v', .3],
     ]
   },
   // Private: (INSTANCE USE) style of subtractive cut
   subtractiveStyle: {
     name: 'Subtractive Style',
     options: [
-      // ['i', 0.1],
-      ['j', 0.5],
-      ['r', 0.4],
-      // ['v', 0.175],
+      // ['i', .1],
+      ['j', .5],
+      ['r', .4],
+      // ['v', .175],
     ]
   },
   // Private: (INSTANCE USE) (subtractive) depth of cutouts
   // groupDepth: {
   //   name: 'Depth',
   //   options: [
-  //     ['0.25', 0.025],
-  //     ['0.5', 0.05],
-  //     ['0.666', 0.075],
-  //     ['0.75', 0.075],
-  //     ['0.875', 0.1],
-  //     ['1', 0.6],
-  //     // ['2', 0.075],
+  //     ['.25', .025],
+  //     ['.5', .05],
+  //     ['.666', .075],
+  //     ['.75', .075],
+  //     ['.875', .1],
+  //     ['1', .6],
+  //     // ['2', .075],
   //   ]
   // },
   // Private: (INSTANCE USE) (additive) height of addons
   // groupHeight: {
   //   name: 'Height',
   //   options: [
-  //     ['0.25', 0.025],
-  //     ['0.5', 0.075],
-  //     ['0.666', 0.1],
-  //     ['0.8', 0.2],
-  //     ['1', 0.6],
+  //     ['.25', .025],
+  //     ['.5', .075],
+  //     ['.666', .1],
+  //     ['.8', .2],
+  //     ['1', .6],
   //   ]
   // },
 
@@ -1148,10 +1147,10 @@ const publicOptions = {
   // cascadeSteps: {
   //   name: 'Cascade Step Amount',
   //   options: [
-  //     ['1', 0.4],
-  //     ['2', 0.3],
-  //     ['3', 0.2],
-  //     ['4', 0.1],
+  //     ['1', .4],
+  //     ['2', .3],
+  //     ['3', .2],
+  //     ['4', .1],
   //   ]
   // },
   // #endregion

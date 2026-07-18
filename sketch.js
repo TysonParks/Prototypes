@@ -90,6 +90,9 @@ function setupColors() {
 
 // FUNC: setupBackground()
 function setupBackground() {
+  if (typeof window.ensureArtworkPageBackground === 'function') {
+    window.ensureArtworkPageBackground()
+  }
   BG = createDiv().id('BG')
     .size(windowWidth, windowHeight)
     .style('background', backgroundColor)

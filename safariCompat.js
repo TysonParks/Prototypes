@@ -38,11 +38,19 @@
   'use strict'
 
   // FLAG: default ON. Toggle at runtime via SafariCompat.enable() / .disable().
-  // Persisted via sessionStorage so disable() + reload() stays disabled.
-  if (sessionStorage.getItem('SAFARI_GROUP_ISOLATE_WORKAROUND') === 'false') {
-    window.SAFARI_GROUP_ISOLATE_WORKAROUND = false
-  } else if (typeof window.SAFARI_GROUP_ISOLATE_WORKAROUND === 'undefined') {
-    window.SAFARI_GROUP_ISOLATE_WORKAROUND = true
+  // Persisted via sessionStorage when available. Art Blocks live-view iframes are
+  // often sandboxed without allow-same-origin — reading sessionStorage throws
+  // SecurityError and aborts the script (blank live view on artist-staging).
+  try {
+    if (sessionStorage.getItem('SAFARI_GROUP_ISOLATE_WORKAROUND') === 'false') {
+      window.SAFARI_GROUP_ISOLATE_WORKAROUND = false
+    } else if (typeof window.SAFARI_GROUP_ISOLATE_WORKAROUND === 'undefined') {
+      window.SAFARI_GROUP_ISOLATE_WORKAROUND = true
+    }
+  } catch (_storageErr) {
+    if (typeof window.SAFARI_GROUP_ISOLATE_WORKAROUND === 'undefined') {
+      window.SAFARI_GROUP_ISOLATE_WORKAROUND = true
+    }
   }
 
   const FILTER_ID = 'webkit-group-isolate'
@@ -486,12 +494,16 @@
     isEnabled: () => window.SAFARI_GROUP_ISOLATE_WORKAROUND,
     disable: () => {
       window.SAFARI_GROUP_ISOLATE_WORKAROUND = false
-      sessionStorage.setItem('SAFARI_GROUP_ISOLATE_WORKAROUND', 'false')
+      try {
+        sessionStorage.setItem('SAFARI_GROUP_ISOLATE_WORKAROUND', 'false')
+      } catch (_e) { /* sandboxed iframe */ }
       console.log('[SafariCompat] workaround DISABLED — persists across reload; call SafariCompat.enable() to restore')
     },
     enable: () => {
       window.SAFARI_GROUP_ISOLATE_WORKAROUND = true
-      sessionStorage.removeItem('SAFARI_GROUP_ISOLATE_WORKAROUND')
+      try {
+        sessionStorage.removeItem('SAFARI_GROUP_ISOLATE_WORKAROUND')
+      } catch (_e) { /* sandboxed iframe */ }
       console.log('[SafariCompat] workaround ENABLED')
     },
   }

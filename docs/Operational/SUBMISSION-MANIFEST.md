@@ -101,6 +101,13 @@ python3 scripts/split-ab-chunks.py   # chunk an existing dist/submission/prototy
 `Identifier 'tokenData' has already been declared` (blank outputs). Local
 preview injects `tokenData` in `dist/preview/index.html` via `build.sh`.
 
+**Page chrome (AB generator):** The platform does not load `style.css`. Early
+`sketchGlobals.js` paints `html`/`body` black and defeats generator
+`canvas { left/right/top/bottom: 0 }` for cardinal display canvases. Without
+this, live view flashes white on load and, after **cardinal/smooth** rotation
+(when `#BG` is hidden), the viewport stays white with an off-center pivot.
+Affects **Safari always** and **Chrome when R-toggled to cardinal** — not a
+WebKit-only bug.
 ### On-chain single-segment hotfix (tokenData)
 
 If the script is already deployed in 22×23552 segments and only the stub must
@@ -109,6 +116,15 @@ boundaries stay aligned, then **UPDATE segment 2 only**
 (`chunk-02-of-22.js`). See `dist/submission/chunks/HOTFIX-tokenData.txt`.
 A normal `./build.sh --strip --chunks` after removing the stub shifts all
 later segments — use that only when you intend a full re-upload.
+
+### On-chain single-segment hotfix (sessionStorage / live view)
+
+Art Blocks collection **Live view** embeds the generator in a sandboxed iframe
+without `allow-same-origin`. Reading `sessionStorage` throws `SecurityError` and
+can abort early script evaluation → blank live view while the full generator tab
+still works. `safariCompat.js` now try/catches storage access. For an already
+deployed 22-segment script, see `dist/submission/chunks/HOTFIX-sessionStorage.txt`
+(**UPDATE segment 1 only**).
 
 ---
 
@@ -122,7 +138,11 @@ concatenated. Do **not** gzip the whole file and slice compressed bytes.
 ### Workflow
 
 ```bash
-./build.sh --strip --chunks
+./build.sh --strip --chunks              # default: 18 segments (Sepolia auto was 17)
+./build.sh --strip --chunks --chunk-count 18
+./build.sh --strip --chunks --chunk-limit 23552   # conservative if paste rejects
+python3 scripts/split-ab-chunks.py --count 18
+python3 scripts/split-ab-chunks.py --limit 23552
 # → dist/submission/chunks/chunk-01-of-NN.js … chunk-NN-of-NN.js
 # → dist/submission/chunks/MANIFEST.txt  (sha256, sizes, gzip-9 estimates)
 ```
@@ -130,11 +150,11 @@ concatenated. Do **not** gzip the whole file and slice compressed bytes.
 1. **UPDATE** existing script index 0 with `chunk-01` (UI may forbid deleting the first segment).
 2. **ADD** `chunk-02` … `chunk-NN` in order. Leave **Script Compression ON**.
 3. On a failed tx, retry the **same** chunk file — do not re-split mid-upload.
-4. Preview after all indices land; do not lock until render works.
+4. If replacing a prior deploy with a **different segment count**, remove trailing old segments (or replace the full set) so on-chain `scriptCount` matches.
+5. Preview after all indices land; do not lock until render works.
 
-Default plaintext limit: **23552 bytes** (matches Sepolia auto-chunker review UI, 2026-07-09).
+Default: **18 chunks** via `ceil(bundle_bytes / 18)` plaintext limit (one above Sepolia auto’s 17). That often exceeds the 23552 UI review size; it relies on Script Compression. If the dashboard rejects a paste, re-split with `--chunk-limit 23552` (more segments, safer).
 Override: `python3 scripts/split-ab-chunks.py --limit 23000`.
-
 ### Sepolia compression / chunk math (2026-07-09 reference)
 
 Hold these numbers when estimating gas / segment count if the auto-chunk pipeline
@@ -146,6 +166,7 @@ is unavailable again.
 | Auto UI (Script Compression ON) | **17** chunks × **23552** B review size |
 | Implied auto payload | 17 × 23552 = **400 384** B |
 | Naive plaintext split @ 23552 of same ~500 KB file | **22** chunks |
+| Manual default (this repo) | **18** chunks via `ceil(bytes/18)` (~27.8 KB plaintext; gzip-9 est. ≪ 24 KB) |
 | Local whole-file gzip-9 of that strip build | **~107 578** B (~21.5% of plaintext) |
 | Local split@23552 then gzip-9 each | 22 segments, each well under 24 KB compressed |
 
@@ -153,10 +174,8 @@ is unavailable again.
 The 17 vs 22 discrepancy is unresolved (dashboard packing vs source delta at
 upload time). For planning:
 
-- **Conservative tx count:** `ceil(bundle_bytes / 23552)` (plaintext split).
-- **Optional soft factor from this event only:** auto UI showed ~17/22 ≈ **0.77×**
-  fewer segments than naive plaintext — use only as a rough gas guess, not as a
-  split algorithm.
-
+- **Preferred manual count:** 18 (`./build.sh --strip --chunks`) — matches auto UI ±1.
+- **Conservative tx count:** `ceil(bundle_bytes / 23552)` if paste rejects larger plaintext.
+- **Soft factor from Sepolia auto only:** ~17/22 ≈ **0.77×** vs naive plaintext.
 `scripts/split-ab-chunks.py` embeds this reference in every `MANIFEST.txt` and
 prints per-chunk gzip-9 estimates for packing intuition.
