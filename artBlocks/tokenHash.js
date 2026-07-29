@@ -1552,7 +1552,8 @@ const lastHash_era3_v2_ab = [
 
 // Era 4 — v2 FeatureSet + AB PRNG (post–Feature-weight retune; append new QA here)
 const lastHash_era4_v2_ab = [
-
+  '0xe8fc3385e348c622c73769836570fe16dbbec97d9b78f3c9031e751f626ccd25', // 1537 METH: // Proximal Wrap: //FUNC:
+  '0x4f9ae266ea1e7efc139aa1a029378e225e464305734c8d2bd005415c9a589502', // 1538 METH: // Proximal Wrap: //FUNC:
 ]
 
 const lastHashEras = {
